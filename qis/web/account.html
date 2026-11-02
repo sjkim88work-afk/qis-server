@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>QIS 비밀번호 변경</title>
+<link rel="icon" type="image/png" href="/icons/favicon-32.png">
+<style>
+:root{--ink:#1d2433;--sub:#667085;--line:#d5dbe5;--pri:#1f5fbf;--bad:#c0392b;--ok:#1a8f5a}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#f4f6f9;font-family:'Malgun Gothic','맑은 고딕','Apple SD Gothic Neo',sans-serif;color:var(--ink)}
+.card{background:#fff;border:1px solid #e3e7ee;border-radius:12px;padding:28px 28px 22px;width:min(400px,calc(100vw - 32px))}
+h1{margin:0 0 6px;font-size:19px}
+p.sub{margin:0 0 16px;color:var(--sub);font-size:13px;line-height:1.55}
+.note{background:#fff7e0;border:1px solid #f0d49b;color:#5c4210;border-radius:7px;padding:9px 11px;font-size:12.5px;margin-bottom:14px;display:none}
+label{display:block;font-size:12.5px;color:var(--sub);margin:12px 0 5px}
+input{width:100%;padding:10px 11px;border:1px solid var(--line);border-radius:7px;font:inherit;font-size:14px}
+.row{display:flex;gap:8px;margin-top:20px}
+button{flex:1;padding:10px;border:1px solid var(--line);border-radius:7px;background:#fff;font:inherit;font-size:14px;cursor:pointer}
+button.p{background:var(--pri);border-color:var(--pri);color:#fff;font-weight:600}
+.err{color:var(--bad);font-size:13px;min-height:18px;margin-top:12px}
+.err.ok{color:var(--ok)}
+.rule{font-size:12px;color:var(--sub);margin-top:6px}
+</style>
+</head>
+<body>
+<form class="card" id="f">
+  <h1>비밀번호 변경</h1>
+  <p class="sub" id="who"></p>
+  <div class="note" id="first">처음 로그인했거나 관리자가 비밀번호를 초기화했습니다. 본인만 아는 새 비밀번호로 바꿔야 QIS를 쓸 수 있습니다.</div>
+  <label for="o">현재 비밀번호</label>
+  <input id="o" type="password" autocomplete="current-password" required>
+  <label for="n">새 비밀번호</label>
+  <input id="n" type="password" autocomplete="new-password" required>
+  <div class="rule">8자 이상, 영문과 숫자를 모두 포함 · 아이디는 넣을 수 없음</div>
+  <label for="n2">새 비밀번호 확인</label>
+  <input id="n2" type="password" autocomplete="new-password" required>
+  <div class="row"><button type="button" id="back">돌아가기</button><button class="p" type="submit" id="b">변경</button></div>
+  <div class="err" id="e" role="alert"></div>
+</form>
+<script>
+const $=id=>document.getElementById(id);
+const first=new URLSearchParams(location.search).get('first');
+if(first){$('first').style.display='block';$('back').textContent='로그아웃'}
+fetch('/api/me',{credentials:'same-origin'}).then(r=>r.ok?r.json():Promise.reject()).then(j=>{$('who').textContent=`${j.user.name} (${j.user.username}) · ${j.user.roleName} 권한`;if(j.user.mustChange){$('first').style.display='block';$('back').textContent='로그아웃'}}).catch(()=>location.href='/login');
+$('back').onclick=async()=>{if($('back').textContent==='로그아웃'){await fetch('/api/logout',{method:'POST',headers:{'X-QIS':'1'},credentials:'same-origin'});location.href='/login'}else location.href='/'};
+$('f').addEventListener('submit',async ev=>{
+  ev.preventDefault();const e=$('e');e.className='err';e.textContent='';
+  if($('n').value!==$('n2').value){e.textContent='새 비밀번호 두 칸이 다릅니다';return}
+  $('b').disabled=true;
+  const r=await fetch('/api/me/password',{method:'POST',headers:{'Content-Type':'application/json','X-QIS':'1'},credentials:'same-origin',body:JSON.stringify({old:$('o').value,new:$('n').value})});
+  const j=await r.json().catch(()=>({}));$('b').disabled=false;
+  if(!r.ok){e.textContent=j.message||'변경하지 못했습니다';return}
+  e.className='err ok';e.textContent='변경했습니다 — 다른 PC의 로그인은 끊었습니다. 잠시 후 QIS로 이동합니다.';
+  setTimeout(()=>location.href='/',1200);
+});
+</script>
+</body>
+</html>
