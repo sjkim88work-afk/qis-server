@@ -4,6 +4,7 @@
 
 > 📘 **[설치 가이드](docs/설치_가이드.md)** — 서버 PC 설치 · 기존 데이터 가져오기 · 계정 · 방화벽 · HTTPS · 백업 · 복원 · 문제 해결 (관리자용)
 > 📗 **[사용 가이드](docs/사용_가이드.md)** — 접속 · 로그인 · 권한 · 동시 작업 · 연결 끊김 · 첨부 · 출력 (팀원용)
+> 📱 **[Tailscale로 나만 쓰기](docs/Tailscale_개인사용.md)** — 회사 PC 서버를 내 핸드폰 · 노트북에서만 접속 (개인 사용)
 
 - **사내망 전용**: 데이터는 서버 PC의 DB 파일 하나(`data/qis.db`)와 첨부 폴더에만 있고, 외부 인터넷 서비스와 연결하지 않습니다.
 - **로그인 · 권한**: 사용자마다 계정이 있고 역할은 세 가지입니다.
@@ -94,6 +95,7 @@ python -m qis import 백업.json           기존 QIS 백업 가져오기 (빈 �
 python -m qis backup                    지금 백업
 python -m qis adduser 아이디 --name 이름 --role editor|viewer|admin
 python -m qis resetpw 아이디             비밀번호 초기화 (관리자 비밀번호 분실 시)
+python -m qis set host 127.0.0.1         설정 바꾸기 (이 예: 이 PC 안에서만 받기)
 ```
 
 ## 보안 요약
