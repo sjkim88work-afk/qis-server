@@ -1,0 +1,25 @@
+# 서버 시험 — PR · main 변경마다 실행 (약 4분)
+name: test
+on:
+  pull_request:
+  push:
+    branches: [main]
+jobs:
+  api:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r requirements.txt pytest httpx
+      - run: python -m pytest -q
+  browser:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r requirements.txt playwright && python -m playwright install --with-deps chromium
+      - run: python tests/e2e_browser.py tests/sample_backup.json

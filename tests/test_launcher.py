@@ -25,8 +25,7 @@ def test_needs_init(tmp_path):
     assert launcher._needs_init(c)                 # 설정 파일 없음
     c.save()
     assert launcher._needs_init(c)                 # 설정은 있으나 사용자 없음 (설치 중단)
-    open_db = getattr(dbmod, "open_db", None)
-    d = open_db(c) if open_db else dbmod.DB(c.db_path)
+    d = dbmod.open_db(c)
     Auth(d, c).create_user("admin", "관리자", "admin", "Qadm2026x", must_change=False)
     d.close()
     assert not launcher._needs_init(c)

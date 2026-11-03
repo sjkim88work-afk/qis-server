@@ -142,6 +142,43 @@ class SqliteDB(Database):
         with self.lock:
             self.conn.close()
 
+    # ---- 복원 (서버를 멈춘 상태에서 python -m qis restore) ----
+    @staticmethod
+    def inspect_file(path: Path) -> dict:
+        """백업 파일을 읽기 전용으로 열어 무결성 · 스키마 · 건수를 확인 (파일을 바꾸지 않음)."""
+        uri = Path(path).resolve().as_uri() + "?mode=ro&immutable=1"
+        con = sqlite3.connect(uri, uri=True)
+        con.row_factory = sqlite3.Row
+        try:
+            ok = con.execute("PRAGMA integrity_check").fetchone()[0]
+            meta = {r["k"]: r["v"] for r in con.execute("SELECT k,v FROM meta")}
+            colls = {r["coll"]: r["n"] for r in con.execute(
+                "SELECT coll, COUNT(*) n FROM records WHERE deleted=0 GROUP BY coll ORDER BY coll")}
+            users = con.execute("SELECT COUNT(*) FROM users").fetchone()[0]
+        except sqlite3.DatabaseError as e:
+            raise ValueError(f"QIS 백업 DB가 아닙니다: {e}") from e
+        finally:
+            con.close()
+        return {"integrity": ok, "schema": int(meta.get("schema") or 0), "seq": int(meta.get("seq") or 0),
+                "records": colls, "users": users}
+
+    @staticmethod
+    def replace_file(src: Path, dest: Path, keep_dir: Path) -> list[str]:
+        """dest(+ -wal · -shm)를 keep_dir 로 옮긴 뒤 src 를 dest 로 복사.
+        -wal 을 남겨 두면 SQLite가 그 내용을 복원한 파일 위에 다시 적용하므로 셋을 함께 옮긴다."""
+        import shutil
+        keep_dir.mkdir(parents=True, exist_ok=True)
+        moved = []
+        for suf in ("", "-wal", "-shm"):
+            f = Path(str(dest) + suf)
+            if f.exists():
+                shutil.move(str(f), str(keep_dir / f.name))
+                moved.append(f.name)
+        tmp = Path(str(dest) + ".restoring")
+        shutil.copy2(src, tmp)
+        tmp.replace(dest)
+        return moved
+
     def _has_table(self, name: str) -> bool:
         return self.q1("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (name,)) is not None
 
