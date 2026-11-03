@@ -1,20 +1,19 @@
-"""SQLite 저장소 (파일 하나: data/qis.db).
+"""SQLite 구현 (파일 하나: data/qis.db) — 기본 DB.
 
 · 연결 하나를 잠금으로 보호해 씀 — 품질팀 수십 명 규모에 충분
 · WAL 모드: 읽기와 쓰기가 서로 막지 않음, 갑작스런 종료에도 안전
-· 나중에 PostgreSQL로 옮길 때는 이 파일과 store.py 의 SQL만 바꾸면 됨
 """
 from __future__ import annotations
 
 import sqlite3
 import threading
 from contextlib import contextmanager
-from datetime import datetime, timezone
 from pathlib import Path
 
-SCHEMA_VERSION = 1
+from .base import Database
 
-SCHEMA = """
+# 스키마 1 — 1차 버전의 테이블 그대로. 이후 변경은 2, 3 … 으로 추가 (postgres 쪽도 같은 번호로)
+SCHEMA_1 = """
 CREATE TABLE IF NOT EXISTS meta (k TEXT PRIMARY KEY, v TEXT);
 
 -- 기록: 불량 · NCR · 협력사 · 부품 · 입고 … 한 건 = 한 줄 (내용은 JSON)
@@ -75,11 +74,11 @@ CREATE TABLE IF NOT EXISTS files (
 """
 
 
-def now() -> str:
-    return datetime.now(timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")
+class SqliteDB(Database):
+    kind = "sqlite"
+    backup_suffix = ".sqlite"
+    MIGRATIONS = {1: SCHEMA_1}
 
-
-class DB:
     def __init__(self, path: Path):
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
@@ -90,16 +89,15 @@ class DB:
             self.conn.execute("PRAGMA journal_mode=WAL")
             self.conn.execute("PRAGMA synchronous=FULL")
             self.conn.execute("PRAGMA foreign_keys=ON")
-            self.conn.executescript(SCHEMA)
-            if self.get_meta("schema") is None:
-                self.set_meta("schema", str(SCHEMA_VERSION))
-                self.set_meta("seq", "0")
-                self.set_meta("created", now())
+            # 스키마 1은 모두 IF NOT EXISTS 라 매번 실행해도 안전 (1차 버전과 같은 동작: 빠진 테이블 · 인덱스 보충)
+            self.conn.executescript(SCHEMA_1)
+        self.migrate()
 
-    # ---- 기본 ----
+    def describe(self) -> str:
+        return f"sqlite ({self.path})"
+
     @contextmanager
     def tx(self):
-        """쓰기 묶음: 전부 저장되거나 전부 취소."""
         with self.lock:
             self.conn.execute("BEGIN IMMEDIATE")
             try:
@@ -118,35 +116,20 @@ class DB:
         with self.lock:
             return self.conn.execute(sql, args).fetchone()
 
-    def x(self, sql: str, args=()):
+    def x(self, sql: str, args=()) -> None:
         with self.lock:
-            return self.conn.execute(sql, args)
+            self.conn.execute(sql, args)
 
-    def get_meta(self, k: str):
-        r = self.q1("SELECT v FROM meta WHERE k=?", (k,))
-        return r["v"] if r else None
+    def json_text(self, col: str, key: str) -> str:
+        _check_ident(col)
+        _check_ident(key)
+        return f"json_extract({col},'$.{key}')"
 
-    def set_meta(self, k: str, v: str) -> None:
-        self.x("INSERT INTO meta(k,v) VALUES(?,?) ON CONFLICT(k) DO UPDATE SET v=excluded.v", (k, v))
-
-    def next_seq(self, c) -> int:
-        """트랜잭션 안에서 호출."""
-        s = int(c.execute("SELECT v FROM meta WHERE k='seq'").fetchone()["v"]) + 1
-        c.execute("UPDATE meta SET v=? WHERE k='seq'", (str(s),))
-        return s
-
-    def seq(self) -> int:
-        return int(self.get_meta("seq") or 0)
-
-    def audit(self, c, *, user=None, action: str, coll=None, rec_id=None, label=None, detail=None, ip=None):
-        import json
-        c.execute(
-            "INSERT INTO audit(ts,user_id,username,name,action,coll,rec_id,label,detail,ip) VALUES(?,?,?,?,?,?,?,?,?,?)",
-            (now(), user["id"] if user else None, user["username"] if user else None, user["name"] if user else None,
-             action, coll, rec_id, label, json.dumps(detail, ensure_ascii=False) if detail is not None else None, ip))
+    def insert_id(self, c, sql: str, args=()) -> int:
+        return c.execute(sql, args).lastrowid
 
     def backup_to(self, dest: Path) -> None:
-        """실행 중에도 일관된 사본을 만든다 (SQLite 온라인 백업)."""
+        """SQLite 온라인 백업 — 쓰는 중에도 일관된 사본."""
         dest.parent.mkdir(parents=True, exist_ok=True)
         tmp = dest.with_suffix(".tmp")
         out = sqlite3.connect(str(tmp))
@@ -155,6 +138,19 @@ class DB:
         out.close()
         tmp.replace(dest)
 
-    def close(self):
+    def close(self) -> None:
         with self.lock:
             self.conn.close()
+
+    def _has_table(self, name: str) -> bool:
+        return self.q1("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (name,)) is not None
+
+    def _run_script(self, sql: str) -> None:
+        with self.lock:
+            self.conn.executescript(sql)
+
+
+def _check_ident(s: str) -> None:
+    """SQL 식에 그대로 넣는 이름은 영문 · 숫자 · _ 만 허용."""
+    if not s.replace("_", "").isalnum() or not s.isascii():
+        raise ValueError(f"허용되지 않는 이름: {s!r}")

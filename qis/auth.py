@@ -98,13 +98,12 @@ class Auth:
         p = pw_problem(password, username)
         if p:
             raise AuthError(p, "weak_password")
-        if self.db.q1("SELECT 1 FROM users WHERE username=?", (username,)):
+        if self.db.q1("SELECT 1 FROM users WHERE lower(username)=lower(?)", (username,)):
             raise AuthError("이미 있는 아이디입니다", "dup_username")
         with self.db.tx() as c:
-            cur = c.execute(
-                "INSERT INTO users(username,name,role,pw_hash,active,must_change,created_at) VALUES(?,?,?,?,1,?,?)",
+            uid = self.db.insert_id(
+                c, "INSERT INTO users(username,name,role,pw_hash,active,must_change,created_at) VALUES(?,?,?,?,1,?,?)",
                 (username, name, role, hash_pw(password), 1 if must_change else 0, now()))
-            uid = cur.lastrowid
             self.db.audit(c, user=by, action="user.create", coll="users", rec_id=str(uid), label=f"{name} ({username})",
                           detail={"role": role}, ip=ip)
         return public_user(self.get_user(uid))
@@ -175,7 +174,7 @@ class Auth:
 
     # ---- 로그인 ----
     def login(self, username: str, password: str, *, ip=None, ua=None) -> tuple[str, dict]:
-        u = self.db.q1("SELECT * FROM users WHERE username=?", ((username or "").strip(),))
+        u = self.db.q1("SELECT * FROM users WHERE lower(username)=lower(?)", ((username or "").strip(),))
         if not u:
             check_pw(password or "", _DUMMY)  # 아이디 유무를 시간 차로 알 수 없게
             with self.db.tx() as c:

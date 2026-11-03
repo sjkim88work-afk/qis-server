@@ -21,7 +21,7 @@ from . import __version__
 from .auth import ROLES, Auth, AuthError
 from .backup import Backup
 from .config import load_config
-from .db import DB
+from .db import DBConfigError, db_ready, open_db
 from .files import Files
 from .store import Store
 
@@ -42,6 +42,14 @@ def _pw(prompt="비밀번호"):
 
 
 def main(argv=None):
+    try:
+        return _main(argv)
+    except DBConfigError as e:
+        print("DB 설정 오류:", e)
+        return 1
+
+
+def _main(argv=None):
     ap = argparse.ArgumentParser(prog="qis", description="QIS 품질정보시스템 서버 " + __version__)
     ap.add_argument("--data", help="데이터 폴더 (기본: ./data)")
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -78,9 +86,9 @@ def main(argv=None):
         if a.company:
             cfg.company = a.company
         cfg.save()
-        db = DB(cfg.db_path)
+        db = open_db(cfg)
         auth = Auth(db, cfg)
-        print(f"데이터 폴더: {cfg.data_dir}")
+        print(f"데이터 폴더: {cfg.data_dir} · DB: {db.describe()}")
         if auth.user_count():
             print("이미 사용자가 있습니다 — 설정 파일만 확인했습니다.")
             return 0
@@ -114,7 +122,7 @@ def main(argv=None):
     if a.cmd == "serve":
         import uvicorn
         from .app import create_app
-        if not cfg.db_path.exists():
+        if not db_ready(cfg):
             print("먼저 python -m qis init 으로 설치하세요")
             return 1
         kw = {}
@@ -126,12 +134,12 @@ def main(argv=None):
         uvicorn.run(create_app(cfg), host=cfg.host, port=cfg.port, log_level="info", proxy_headers=False, **kw)
         return 0
 
-    db = DB(cfg.db_path)
+    db = open_db(cfg)
     auth = Auth(db, cfg)
     store = Store(db, cfg)
 
     if a.cmd == "import":
-        by = db.q1("SELECT * FROM users WHERE username=?", (a.by,)) if a.by else \
+        by = db.q1("SELECT * FROM users WHERE lower(username)=lower(?)", (a.by,)) if a.by else \
             db.q1("SELECT * FROM users WHERE role='admin' AND active=1 ORDER BY id LIMIT 1")
         if not by:
             print("가져오기를 실행할 관리자 계정이 없습니다 — 먼저 init")
@@ -171,7 +179,7 @@ def main(argv=None):
         return 0
 
     if a.cmd == "resetpw":
-        u = db.q1("SELECT * FROM users WHERE username=?", (a.username,))
+        u = db.q1("SELECT * FROM users WHERE lower(username)=lower(?)", (a.username,))
         if not u:
             print("없는 아이디입니다")
             return 1

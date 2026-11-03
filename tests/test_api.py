@@ -7,7 +7,7 @@ from fastapi.testclient import TestClient
 from qis.app import create_app
 from qis.auth import Auth
 from qis.config import Config
-from qis.db import DB
+from qis.db import open_db
 
 H = {"X-QIS": "1"}
 
@@ -18,7 +18,7 @@ def env(tmp_path):
     cfg.data_dir = tmp_path / "data"
     cfg.backup_dir = str(tmp_path / "bk")
     cfg.data_dir.mkdir()
-    db = DB(cfg.db_path)
+    db = open_db(cfg)
     a = Auth(db, cfg)
     a.create_user("admin", "관리자", "admin", "Qadm2026x", must_change=False)
     a.create_user("kim", "김작성", "editor", "Editor1234", must_change=False)

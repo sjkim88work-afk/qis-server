@@ -19,6 +19,8 @@ class Config:
     data_dir: Path = field(default_factory=lambda: Path(os.environ.get("QIS_DATA_DIR", "data")).resolve())
     host: str = "0.0.0.0"
     port: int = 8080
+    # DB — 비우면 SQLite(데이터 폴더의 qis.db). 형식은 qis/db/__init__.py 참고
+    db_url: str = ""
     # HTTPS — 사내 인증서 파일 경로 (둘 다 있으면 HTTPS로 실행)
     ssl_certfile: str = ""
     ssl_keyfile: str = ""
