@@ -26,6 +26,31 @@
   - 서버 연결이 끊기거나 로그인이 만료돼도, 고친 내용은 창에 남아 있다가 다시 연결되면 저장됩니다.
   - 지운 첨부는 휴지통 폴더로 옮겨집니다.
 
+## 가장 쉬운 시작 (더블클릭 한 번)
+
+Python 3.11 이상만 설치돼 있으면, 폴더 맨 위의 파일 하나로 설치부터 실행까지 됩니다.
+
+| PC | 실행할 파일 |
+|---|---|
+| Windows | `start-windows.bat` |
+| Mac | `start-mac.command` |
+
+- **처음 실행할 때**
+  - 필요한 프로그램을 설치하고 관리자 계정(아이디·이름·비밀번호)을 묻습니다.
+  - 서버를 켜고 브라우저를 엽니다.
+- **다음부터:** 바로 서버가 켜지고 브라우저가 열립니다. 이미 켜져 있으면 브라우저만 엽니다.
+- **접속 주소:** 창에 핸드폰·다른 PC용 주소가 표시됩니다. 창을 닫거나 `Ctrl+C`를 누르면 서버가 멈춥니다.
+- **Mac에서 "열지 않음" 경고가 나올 때** (인터넷에서 받은 파일이라 막힘. **휴지통으로 이동은 누르지 말고 완료**를 누릅니다). 아래 중 하나로 엽니다.
+  1. **시스템 설정 › 개인정보 보호 및 보안**을 엽니다. 아래쪽 보안 항목에서 `start-mac.command`의 **그래도 열기**를 누르고 다시 더블클릭합니다.
+  2. 터미널에서 한 번만 실행합니다. 그다음부터는 더블클릭으로 열립니다.
+     ```
+     xattr -dr com.apple.quarantine ~/Downloads/qis-server
+     ```
+     (경로는 압축을 푼 폴더)
+  3. 터미널에서 `bash ~/Downloads/qis-server/start-mac.command`로 바로 실행합니다.
+
+아래의 `scripts/windows/` 방법도 그대로 쓸 수 있습니다. 자동 시작 등록(`register_startup.bat`)은 그쪽 파일을 씁니다.
+
 ## 설치 (Windows 서버 PC)
 
 1. **Python 3.11 이상**을 설치합니다([python.org](https://www.python.org)). 설치할 때 *Add python.exe to PATH*를 체크하세요.
@@ -55,6 +80,7 @@
 | 항목 | 기본값 | 설명 |
 |---|---|---|
 | `port` | 8080 | 접속 포트 |
+| `db_url` | (비움) | 비우면 SQLite(`data/qis.db`). `sqlite:///경로/qis.db`로 다른 파일 지정 가능. PostgreSQL은 다음 단계에서 지원 |
 | `ssl_certfile` · `ssl_keyfile` | (비움) | 사내 인증서 파일 경로. 둘 다 넣으면 HTTPS로 실행됩니다 |
 | `backup_dir` | `data/backup` | 백업 폴더. 다른 PC · 네트워크 드라이브 권장 (예: `\\\\fileserver\\QIS백업`) |
 | `backup_keep` | 30 | 날짜별 DB 사본 보관 개수 |
@@ -119,7 +145,17 @@ python -m qis resetpw 아이디             비밀번호 초기화 (관리자 �
 - 승인 흐름: 귀책 판정 · NCR 발행 · 종결 시 팀장 승인, 종결 기록 잠금
 - 회신 기한 임박 · 초과 메일 알림
 - 단가 · COPQ 금액 조회 권한 분리
-- 사용자 증가 시 PostgreSQL로 이전 (`qis/db.py` · `qis/store.py`만 수정)
+- 사용자 증가 시 PostgreSQL로 이전 — `qis/db/postgres.py` 추가 + `migrate` 명령 (아래 'DB 구조' 참고)
+
+## DB 구조
+
+- DB 관련 코드는 `qis/db/`에만 있습니다.
+  - `base.py`: 공통 기능과 SQL 작성 규칙
+  - `sqlite.py`: SQLite 구현 (기본)
+  - `__init__.py`: `db_url` 설정으로 구현을 고르는 `open_db`
+- 다른 모듈(store · auth · files · backup · app)은 `open_db(cfg)`로 받은 DB의 공통 기능만 씁니다.
+- `tests/test_db.py`가 `qis/db/` 밖에 SQLite 전용 문법(`INSERT OR REPLACE`, `json_extract`, `lastrowid`, `PRAGMA` 등)이 들어오면 실패시킵니다. 그래서 PostgreSQL 구현을 추가할 때 다른 파일은 고칠 필요가 없습니다.
+- 테이블을 바꿀 때는 각 구현의 `MIGRATIONS`에 같은 번호로 추가합니다. 서버를 시작하면 아직 적용하지 않은 번호만 적용됩니다.
 
 ## 개발 · 시험
 
