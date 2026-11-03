@@ -18,7 +18,7 @@ from .backup import Backup
 from .config import Config, load_config
 from .db import open_db
 from .files import Files
-from .store import Forbidden, Store
+from .store import COLLS, Forbidden, Store
 
 WEB = Path(__file__).parent / "web"
 COOKIE = "qis_sid"
@@ -292,6 +292,8 @@ def create_app(cfg: Config | None = None, *, start_backup=True) -> FastAPI:
         p = request.query_params
         if not p.get("coll") or not p.get("id"):
             raise ValueError("기록을 지정하세요")
+        if user["role"] != "admin" and p.get("coll") not in (*COLLS, "doc", "files"):
+            raise Forbidden("이 이력은 관리자만 볼 수 있습니다")
         return {"items": store.audit_list(coll=p.get("coll"), rec_id=p.get("id"), limit=300)}
 
     @app.get("/api/admin/versions")
@@ -313,7 +315,7 @@ def create_app(cfg: Config | None = None, *, start_backup=True) -> FastAPI:
     def export(request: Request, user=Depends(admin_only)):
         data = store.export()
         if request.query_params.get("photos") == "1":
-            data["photos"] = files.get_many(files.all_ids())
+            data["photos"] = files.get_many(files.all_ids(), limit=None)
         with db.tx() as c:
             db.audit(c, user=user, action="export", label="QIS 백업 내려받기",
                      detail={"photos": "photos" in data}, ip=ip_of(request))

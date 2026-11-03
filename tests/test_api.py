@@ -154,7 +154,7 @@ def test_files_and_backup_and_import(env, tmp_path):
     assert vw.post("/api/files/get", json={"ids": ["ph1", "nope"]}, headers=H).json()["files"][0]["name"] == "a.jpg"
     assert ed.post("/api/files/delete", json={"ids": ["ph1"]}, headers=H).json()["deleted"] == 1
     assert ed.post("/api/files/get", json={"ids": ["ph1"]}, headers=H).json()["files"] == []
-    assert (cfg.files_dir / "_trash" / "ph1.json").exists()   # 지워도 휴지통에 남음
+    assert list((cfg.files_dir / "_trash").glob("ph1_*.json"))   # 지워도 휴지통에 남음 (시각이 붙은 이름)
 
     # 백업
     info = ad.post("/api/admin/backup", headers=H).json()["info"]

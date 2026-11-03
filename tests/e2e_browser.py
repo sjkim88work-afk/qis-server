@@ -194,6 +194,7 @@ def main(seed_path):
             con.execute("DELETE FROM sessions WHERE user_id=(SELECT id FROM users WHERE username='kim')"); con.commit(); con.close()
             A.evaluate("()=>{const d=db.defects.find(x=>x.id==='d5');d.qty=55;touch(d);save()}"); A.wait_for_timeout(1200)
             ok("로그인이 만료" in A.inner_text("#alertBar"), "로그인 만료 안내 (변경은 창에 보관)")
+            ok(A.evaluate("srvUnsaved()") is True, "로그인 만료 중 보내지 못한 변경 → 창 닫기 확인 대상")
             ctx2 = A.context.new_page()
             ctx2.goto(URL + "/login"); ctx2.fill("#u", "kim"); ctx2.fill("#p", "Qk1m2026b"); ctx2.click("#b"); ctx2.wait_for_timeout(800)
             ctx2.close()

@@ -103,11 +103,16 @@ Python 3.11 이상만 설치돼 있으면, 폴더 맨 위의 파일 하나로 �
 
 **복원 순서**
 
-1. 서버를 멈춥니다.
-2. `data/qis.db`를 다른 이름으로 옮겨 둡니다.
-3. 원하는 날짜의 `qis_….sqlite`를 `data/qis.db`로 복사합니다.
-4. 백업의 `files/` 내용을 `data/files/`에 덮어씁니다.
-5. 서버를 다시 시작합니다.
+1. 서버를 멈춥니다(서버 창을 닫거나 `Ctrl+C`).
+2. 아래 명령을 실행합니다. 백업 파일을 검사하고 건수를 보여 준 뒤, 확인하면 복원합니다.
+   ```
+   python -m qis restore 백업폴더/db/qis_YYYYMMDD_HHMM.sqlite
+   ```
+   - 지금 DB(`qis.db` · `qis.db-wal` · `qis.db-shm`)는 지우지 않고 `data/restore_before_시각/`에 보관합니다.
+   - 백업 폴더의 `files/`에서 지금 없는 첨부만 채웁니다(있는 첨부는 덮어쓰지 않음).
+3. 서버를 다시 시작하고, 열려 있던 사용자 화면은 모두 새로고침(F5)합니다.
+
+> `qis.db`만 손으로 바꾸면 안 됩니다. 서버가 강제 종료된 뒤에는 `qis.db-wal`에 최근 변경이 남아 있어, 그 내용이 복원한 파일 위에 다시 적용됩니다.
 
 관리 화면 › 백업 · 데이터에서 **지금 백업**, **내보내기(JSON)**를 할 수 있습니다.
 
@@ -118,6 +123,7 @@ python -m qis init                      처음 설치 (설정 파일 · 첫 관�
 python -m qis serve                     서버 실행
 python -m qis import 백업.json           기존 QIS 백업 가져오기 (빈 서버)
 python -m qis backup                    지금 백업
+python -m qis restore 백업.sqlite         백업으로 복원 (서버를 멈춘 뒤 · 지금 DB는 보관)
 python -m qis adduser 아이디 --name 이름 --role editor|viewer|admin
 python -m qis resetpw 아이디             비밀번호 초기화 (관리자 비밀번호 분실 시)
 ```

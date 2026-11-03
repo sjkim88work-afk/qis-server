@@ -68,10 +68,9 @@ def _open_when_ready(cfg):
 def _needs_init(cfg) -> bool:
     if not (cfg.data_dir / "qis.json").exists():
         return True
-    from . import db as dbmod
     from .auth import Auth
-    open_db = getattr(dbmod, "open_db", None)
-    db = open_db(cfg) if open_db else dbmod.DB(cfg.db_path)
+    from .db import open_db
+    db = open_db(cfg)
     try:
         return Auth(db, cfg).user_count() == 0
     finally:

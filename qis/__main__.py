@@ -40,7 +40,17 @@ def _pw(prompt="비밀번호"):
         return a
 
 
+def _safe_console():
+    """출력할 수 없는 문자는 ?로 바꿔 씀 — 로그 파일로 보낼 때 인코딩 오류로 서버가 멈추지 않게."""
+    for s in (sys.stdout, sys.stderr):
+        try:
+            s.reconfigure(errors="replace")
+        except Exception:
+            pass
+
+
 def main(argv=None):
+    _safe_console()
     try:
         return _main(argv)
     except DBConfigError as e:
@@ -63,6 +73,9 @@ def _main(argv=None):
     p.add_argument("file")
     p.add_argument("--by", help="가져오기 실행자 아이디 (기본: 첫 관리자)")
     sub.add_parser("backup", help="지금 백업")
+    p = sub.add_parser("restore", help="백업 DB 파일로 복원 (서버를 멈춘 뒤)")
+    p.add_argument("file", help="backup/db/qis_YYYYMMDD_HHMM.sqlite")
+    p.add_argument("--yes", action="store_true", help="확인 질문 없이 진행")
     p = sub.add_parser("adduser", help="사용자 추가")
     p.add_argument("username")
     p.add_argument("--name", required=True)
@@ -98,6 +111,31 @@ def _main(argv=None):
             return 1
         print(f"관리자 '{username}' 를 만들었습니다. {'설정 파일: ' + str(cfg.data_dir / 'qis.json') if first else ''}")
         print("다음: python -m qis serve")
+        return 0
+
+    if a.cmd == "restore":
+        from .restore import RestoreError, check, restore
+        try:
+            info = check(cfg, a.file)
+        except RestoreError as e:
+            print("복원할 수 없습니다:", e)
+            return 1
+        print(f"백업 파일: {a.file}")
+        print("  기록:", ", ".join(f"{k} {v}" for k, v in info["records"].items()) or "없음", f"· 사용자 {info['users']}명 · 변경 순번 {info['seq']}")
+        if not a.yes and input("지금 데이터를 이 백업으로 바꿉니다 (지금 DB는 따로 보관). 계속할까요? [y/N] ").strip().lower() not in ("y", "yes", "예"):
+            print("취소했습니다")
+            return 1
+        try:
+            r = restore(cfg, a.file)
+        except RestoreError as e:
+            print("복원 실패:", e)
+            return 1
+        print("복원했습니다.")
+        if r["kept"]:
+            print(f"  복원 전 DB 보관: {r['kept']}  ({', '.join(r['moved'])})")
+        if r["files_filled"]:
+            print(f"  백업 폴더에서 빠진 첨부 {r['files_filled']}개를 채웠습니다")
+        print("  서버를 다시 시작하고, 열려 있던 모든 사용자 화면은 새로고침(F5)하세요.")
         return 0
 
     if a.cmd == "serve":
