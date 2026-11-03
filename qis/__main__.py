@@ -6,6 +6,7 @@
   python -m qis backup    지금 백업
   python -m qis adduser   사용자 추가
   python -m qis resetpw   비밀번호 초기화 (관리자 비밀번호를 잊었을 때)
+  python -m qis set 항목 값   설정 바꾸기 (예: set host 127.0.0.1 — 이 PC 안에서만 받기, Tailscale 개인 사용)
 
 데이터 폴더는 --data 또는 환경변수 QIS_DATA_DIR (기본: 실행 위치의 data)
 """
@@ -60,6 +61,9 @@ def main(argv=None):
     p.add_argument("--name", required=True)
     p.add_argument("--role", choices=list(ROLES), default="editor")
     p.add_argument("--password")
+    p = sub.add_parser("set", help="설정 바꾸기 (data/qis.json)")
+    p.add_argument("key")
+    p.add_argument("value")
     p = sub.add_parser("resetpw", help="비밀번호 초기화")
     p.add_argument("username")
     p.add_argument("--password")
@@ -92,6 +96,21 @@ def main(argv=None):
         print("다음: python -m qis serve")
         return 0
 
+    if a.cmd == "set":
+        if a.key == "data_dir" or a.key not in cfg.__dataclass_fields__:
+            print("바꿀 수 있는 항목:", ", ".join(k for k in cfg.__dataclass_fields__ if k != "data_dir"))
+            return 1
+        cur = getattr(cfg, a.key)
+        try:
+            val = type(cur)(a.value) if not isinstance(cur, bool) else a.value.lower() in ("1", "true", "yes")
+        except ValueError:
+            print(f"{a.key} 는 {type(cur).__name__} 값이어야 합니다")
+            return 1
+        setattr(cfg, a.key, val)
+        cfg.save()
+        print(f"{a.key}: {cur!r} → {val!r}  (서버를 다시 시작하면 적용)")
+        return 0
+
     if a.cmd == "serve":
         import uvicorn
         from .app import create_app
@@ -102,6 +121,8 @@ def main(argv=None):
         if cfg.https:
             kw.update(ssl_certfile=cfg.ssl_certfile, ssl_keyfile=cfg.ssl_keyfile)
         print(f"QIS 서버 {__version__} — {'https' if cfg.https else 'http'}://{cfg.host}:{cfg.port}  (데이터: {cfg.data_dir})")
+        if cfg.host in ("127.0.0.1", "localhost"):
+            print("  이 PC 안에서만 접속을 받습니다 (다른 PC · 사내망 접속 차단). 핸드폰은 Tailscale 주소로 접속하세요.")
         uvicorn.run(create_app(cfg), host=cfg.host, port=cfg.port, log_level="info", proxy_headers=False, **kw)
         return 0
 
