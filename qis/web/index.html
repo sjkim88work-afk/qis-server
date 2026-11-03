@@ -1677,7 +1677,9 @@ function renderDash(){
   ds.forEach(d=>{const s=supName(d.supplierId)||'(미지정)';supMap[s]=(supMap[s]||0)+num(d.qty);typeMap[d.type||'(미지정)']=(typeMap[d.type||'(미지정)']||0)+1});
   let banner='';
   const total=COLLS.reduce((a,c)=>a+db[c].length,0);
-  if(!total&&/^https?:$/.test(location.protocol))banner=`<div class="banner">📦 <b>예전 HTML 파일로 쓰던 데이터가 있나요?</b> 데이터가 사라졌다면 <button class="b s p" onclick="restoreFromFolder()">백업 폴더에서 복원</button> — 백업 폴더에서 가장 최근 백업을 찾아 되살립니다. 예전 HTML 파일의 데이터는 그 파일에서 <b>백업</b>을 누른 뒤 <button class="b s" onclick="pickImport('replace')">백업 파일로 복원</button>. <span class="muted">처음 쓰는 경우에는 <b>기준정보</b>에서 협력사·부품을 등록하세요.</span></div>`;
+  // 서버형은 복원 · 가져오기가 관리자 전용(관리 화면)이라 대시보드 안내를 띄우지 않음
+  if(SRV){}
+  else if(!total&&/^https?:$/.test(location.protocol))banner=`<div class="banner">📦 <b>예전 HTML 파일로 쓰던 데이터가 있나요?</b> 데이터가 사라졌다면 <button class="b s p" onclick="restoreFromFolder()">백업 폴더에서 복원</button> — 백업 폴더에서 가장 최근 백업을 찾아 되살립니다. 예전 HTML 파일의 데이터는 그 파일에서 <b>백업</b>을 누른 뒤 <button class="b s" onclick="pickImport('replace')">백업 파일로 복원</button>. <span class="muted">처음 쓰는 경우에는 <b>기준정보</b>에서 협력사·부품을 등록하세요.</span></div>`;
   else if(!total)banner=`<div class="banner">데이터가 비어 있습니다. <b>기준정보</b>에서 협력사·부품을 등록하거나(엑셀 붙여넣기 지원), <b>불량 관리</b>에서 불량을 등록하세요. 기존 백업 파일이 있으면 <a class="lk" onclick="state.setTab='backup';go('data')">설정·백업</a>에서 복원할 수 있습니다.</div>`;
   const li=(arr,fn)=>arr.length?arr.slice(0,8).map(fn).join('')+(arr.length>8?`<li class="muted">외 ${arr.length-8}건</li>`:''):'';
   const own=x=>!czOwns(x.n,'ncr'),ownD=d=>!czOwns(d,'defect');
