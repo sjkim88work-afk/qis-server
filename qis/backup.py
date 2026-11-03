@@ -1,7 +1,7 @@
 """서버 자동 백업.
 
 매일 정한 시각(기본 02시) 이후 첫 확인 때 한 번:
-  backup/db/qis_YYYYMMDD_HHMM.sqlite   DB 전체 사본 (보관 개수만큼 유지)
+  backup/db/qis_YYYYMMDD_HHMM.sqlite   DB 전체 사본 (확장자는 DB 종류에 따라) (보관 개수만큼 유지)
   backup/json/QIS_서버백업_YYYYMMDD.json  기록 전체 (기존 QIS 화면에서 '백업으로 교체'로 열 수 있음, 사진 제외)
   backup/files/…                        첨부 파일 사본 (새 파일만 복사, 지우지 않음)
 backup_dir 을 다른 PC · 네트워크 드라이브로 지정하면 서버 PC가 고장 나도 복구 가능.
@@ -37,14 +37,14 @@ class Backup:
             day = stamp[:8]
             (self.root / "db").mkdir(parents=True, exist_ok=True)
             (self.root / "json").mkdir(parents=True, exist_ok=True)
-            dbf = self.root / "db" / f"qis_{stamp}.sqlite"
+            dbf = self.root / "db" / f"qis_{stamp}{self.db.backup_suffix}"
             self.db.backup_to(dbf)
             jf = self.root / "json" / f"QIS_서버백업_{day}.json"
             tmp = jf.with_suffix(".tmp")
             tmp.write_text(json.dumps(self.store.export(), ensure_ascii=False), encoding="utf-8")
             tmp.replace(jf)
             copied = self._mirror_files()
-            self._prune(self.root / "db", "qis_*.sqlite")
+            self._prune(self.root / "db", f"qis_*{self.db.backup_suffix}")
             self._prune(self.root / "json", "QIS_서버백업_*.json")
             info = {"at": now(), "reason": reason, "db": dbf.name, "files_copied": copied,
                     "seconds": round(time.time() - t0, 1), "dir": str(self.root)}
@@ -89,7 +89,7 @@ class Backup:
         d = self.root / "db"
         if not d.exists():
             return []
-        return [{"name": f.name, "size": f.stat().st_size} for f in sorted(d.glob("qis_*.sqlite"), reverse=True)]
+        return [{"name": f.name, "size": f.stat().st_size} for f in sorted(d.glob(f"qis_*{self.db.backup_suffix}"), reverse=True)]
 
     def due(self) -> bool:
         n = datetime.now()

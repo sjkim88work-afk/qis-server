@@ -55,6 +55,7 @@
 | 항목 | 기본값 | 설명 |
 |---|---|---|
 | `port` | 8080 | 접속 포트 |
+| `db_url` | (비움) | 비우면 SQLite(`data/qis.db`). `sqlite:///경로/qis.db`로 다른 파일 지정 가능. PostgreSQL은 다음 단계에서 지원 |
 | `ssl_certfile` · `ssl_keyfile` | (비움) | 사내 인증서 파일 경로. 둘 다 넣으면 HTTPS로 실행됩니다 |
 | `backup_dir` | `data/backup` | 백업 폴더. 다른 PC · 네트워크 드라이브 권장 (예: `\\\\fileserver\\QIS백업`) |
 | `backup_keep` | 30 | 날짜별 DB 사본 보관 개수 |
@@ -119,7 +120,17 @@ python -m qis resetpw 아이디             비밀번호 초기화 (관리자 �
 - 승인 흐름: 귀책 판정 · NCR 발행 · 종결 시 팀장 승인, 종결 기록 잠금
 - 회신 기한 임박 · 초과 메일 알림
 - 단가 · COPQ 금액 조회 권한 분리
-- 사용자 증가 시 PostgreSQL로 이전 (`qis/db.py` · `qis/store.py`만 수정)
+- 사용자 증가 시 PostgreSQL로 이전 — `qis/db/postgres.py` 추가 + `migrate` 명령 (아래 'DB 구조' 참고)
+
+## DB 구조
+
+- DB 관련 코드는 `qis/db/`에만 있습니다.
+  - `base.py`: 공통 기능과 SQL 작성 규칙
+  - `sqlite.py`: SQLite 구현 (기본)
+  - `__init__.py`: `db_url` 설정으로 구현을 고르는 `open_db`
+- 다른 모듈(store · auth · files · backup · app)은 `open_db(cfg)`로 받은 DB의 공통 기능만 씁니다.
+- `tests/test_db.py`가 `qis/db/` 밖에 SQLite 전용 문법(`INSERT OR REPLACE`, `json_extract`, `lastrowid`, `PRAGMA` 등)이 들어오면 실패시킵니다. 그래서 PostgreSQL 구현을 추가할 때 다른 파일은 고칠 필요가 없습니다.
+- 테이블을 바꿀 때는 각 구현의 `MIGRATIONS`에 같은 번호로 추가합니다. 서버를 시작하면 아직 적용하지 않은 번호만 적용됩니다.
 
 ## 개발 · 시험
 

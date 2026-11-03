@@ -143,7 +143,7 @@ class Store:
                 if r.get("ok") and r["coll"] in ("ncrs", "cases") and r.get("_no"):
                     key = "no" if r["coll"] == "ncrs" else "CaseNo"
                     dup = c.execute(
-                        f"SELECT COUNT(*) n FROM records WHERE coll=? AND deleted=0 AND id<>? AND json_extract(data,'$.{key}')=?",
+                        f"SELECT COUNT(*) n FROM records WHERE coll=? AND deleted=0 AND id<>? AND {self.db.json_text('data', key)}=?",
                         (r["coll"], r["id"], r["_no"])).fetchone()["n"]
                     if dup:
                         warns.append(f"{COLL_NAME[r['coll']]} 번호 중복: {r['_no']} — 다른 사용자가 같은 번호를 먼저 썼습니다. 번호를 확인하세요")
@@ -222,7 +222,9 @@ class Store:
         seq = self.db.next_seq(c)
         t = now()
         if row and row["data"] and not (coll == "doc" and rid == "bom"):  # BOM은 크기가 커서 버전 보관 제외
-            c.execute("INSERT OR REPLACE INTO record_versions(coll,id,rev,data,saved_at,saved_by) VALUES(?,?,?,?,?,?)",
+            c.execute("""INSERT INTO record_versions(coll,id,rev,data,saved_at,saved_by) VALUES(?,?,?,?,?,?)
+                         ON CONFLICT(coll,id,rev) DO UPDATE SET data=excluded.data, saved_at=excluded.saved_at,
+                         saved_by=excluded.saved_by""",
                       (coll, rid, row["rev"], row["data"], t, user["username"]))
         if result is None:
             c.execute("UPDATE records SET rev=?, seq=?, deleted=1, updated_at=?, updated_by=? WHERE coll=? AND id=?",

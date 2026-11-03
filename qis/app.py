@@ -16,7 +16,7 @@ from . import __version__
 from .auth import ROLES, Auth, AuthError, public_user
 from .backup import Backup
 from .config import Config, load_config
-from .db import DB
+from .db import open_db
 from .files import Files
 from .store import Forbidden, Store
 
@@ -32,7 +32,7 @@ CSP = ("default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'
 def create_app(cfg: Config | None = None, *, start_backup=True) -> FastAPI:
     cfg = cfg or load_config()
     cfg.data_dir.mkdir(parents=True, exist_ok=True)
-    db = DB(cfg.db_path)
+    db = open_db(cfg)
     auth = Auth(db, cfg)
     store = Store(db, cfg)
     files = Files(db, cfg)
