@@ -56,6 +56,12 @@ def main():
             pg.wait_for_function("typeof dataReady!=='undefined'&&dataReady")
             pg.wait_for_timeout(800)
             ok(pg.url == r.base_url + "/", "자동 입장 (로그인 없음): " + pg.url)
+            # pywebview 다리는 new Function · eval 로 만들어짐 — 프로그램 창의 CSP가 이를 막으면 창 ↔ 프로그램 연결이 죽음
+            pg.route("**/csp_probe.js", lambda route: route.fulfill(content_type="text/javascript", body=
+                "try{window.__nf=new Function('return 1')()}catch(e){window.__nf='ERR '+e.name}"
+                "try{window.__ev=eval('1+1')}catch(e){window.__ev='ERR '+e.name}"))
+            pg.evaluate("new Promise(r=>{var s=document.createElement('script');s.src='/csp_probe.js';s.onload=r;s.onerror=r;document.head.appendChild(s)})")
+            ok(pg.evaluate("[window.__nf,window.__ev]") == [1, 2], "프로그램 창 CSP: new Function · eval 허용 (pywebview 다리)")
             ok(pg.evaluate("db.defects.length") == 5, "가져온 기록이 보임")
             ok(pg.evaluate("SRV.desktop") == "solo" and pg.evaluate("SRV.name") == "김선중", "혼자 쓰기 · 이름")
             ok(not pg.is_visible("button[onclick='srvLogout()']"), "로그아웃 버튼 숨김")

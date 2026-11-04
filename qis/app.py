@@ -28,8 +28,10 @@ CSP = ("default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'
        "img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; media-src 'self' data: blob:; "
        "frame-src 'self' data: blob:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; "
        "form-action 'self'; frame-ancestors 'none'")
-# 데스크톱 창: 내려받을 파일(blob:)을 읽어 프로그램의 '저장' 창으로 넘기려면 blob: 읽기가 필요
-CSP_DESKTOP = CSP.replace("connect-src 'self'", "connect-src 'self' blob: data:")
+# 데스크톱 창(프로그램 창에서 온 요청에만): pywebview 가 화면 ↔ 프로그램 다리를 new Function · eval 로 만들므로
+# 'unsafe-eval' 허용, 내려받을 파일(blob:)을 읽어 프로그램의 '저장' 창으로 넘기려면 blob: 읽기 허용
+CSP_DESKTOP = CSP.replace("script-src 'self' 'unsafe-inline'", "script-src 'self' 'unsafe-inline' 'unsafe-eval'") \
+                 .replace("connect-src 'self'", "connect-src 'self' blob: data:")
 
 
 def create_app(cfg: Config | None = None, *, start_backup=True, desktop: dict | None = None) -> FastAPI:

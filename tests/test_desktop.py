@@ -109,6 +109,12 @@ def test_solo_localhost_only_and_no_login(solo):
     assert st == 200, body
     st, _, _ = get(op, r.base_url + "/desktop.js")
     assert st == 200
+    # 프로그램 창에는 pywebview 다리(new Function · eval)가 돌도록 unsafe-eval 허용, 일반 접속에는 없음
+    req = urllib.request.Request(r.base_url + "/")
+    with op.open(req, timeout=10) as resp:
+        assert "'unsafe-eval'" in resp.headers["Content-Security-Policy"]
+    with opener().open(r.base_url + "/login", timeout=10) as resp:
+        assert "'unsafe-eval'" not in resp.headers["Content-Security-Policy"]
 
 
 def test_solo_ignores_lan_host(data):
