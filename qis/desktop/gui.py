@@ -8,6 +8,7 @@ from __future__ import annotations
 import base64
 import logging
 import re
+import shutil
 import sys
 import tempfile
 import threading
@@ -36,6 +37,32 @@ def _safe_name(name: str, default: str = "QIS_파일") -> str:
     return n[:120] or default
 
 
+# 첨부 '열어보기'(이 PC의 기본 프로그램으로 바로 실행)는 실행될 수 없는 보기 전용 형식만.
+# 그 밖의 형식(실행 파일 · 스크립트 · 매크로가 들 수 있는 문서 · html 등)은 저장 위치를 묻는 창으로 돌린다.
+OPEN_MIME_EXT = {"application/pdf": ".pdf", "image/png": ".png", "image/jpeg": ".jpg", "image/gif": ".gif",
+                 "image/webp": ".webp", "image/bmp": ".bmp", "text/plain": ".txt", "text/csv": ".csv"}
+OPEN_EXT = {".pdf", ".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".txt", ".csv"}
+OPEN_DIR = "QIS_열어보기"
+
+
+def _mime_of(d: str) -> str:
+    head = d.split(",", 1)[0][5:] if isinstance(d, str) and d.startswith("data:") else ""
+    return head.split(";", 1)[0].strip().lower()
+
+
+def open_name(name: str, data_url: str) -> str | None:
+    """열어보기용 파일 이름 (확장자는 허용 목록 안에서만). 열어보면 안 되는 형식이면 None."""
+    n = _safe_name(name, "첨부")
+    ext = Path(n).suffix.lower()
+    if ext in OPEN_EXT:
+        return n
+    ext = OPEN_MIME_EXT.get(_mime_of(data_url))
+    if not ext:
+        return None
+    stem = Path(n).stem if Path(n).suffix else n
+    return _safe_name(stem, "첨부")[:100] + ext
+
+
 def _decode_data_url(d: str) -> bytes:
     if not isinstance(d, str) or not d.startswith("data:") or "," not in d:
         raise ValueError("파일 내용이 올바르지 않습니다")
@@ -47,45 +74,76 @@ def _decode_data_url(d: str) -> bytes:
 
 
 class DesktopApi:
-    """화면의 window.pywebview.api — 공개 메서드만 화면에 보임 (밑줄로 시작하는 속성은 숨김)."""
+    """화면의 window.pywebview.api — 공개 메서드만 화면에 보임 (밑줄로 시작하는 속성은 숨김).
+    모든 메서드는 창에 열린 페이지가 QIS 것일 때만 동작 (_ok)."""
 
     def __init__(self, ctl: "Controller"):
         self._c = ctl
 
+    def _ok(self, what: str) -> bool:
+        """pywebview 는 창에 뜬 페이지가 어디 것이든 이 다리를 붙이므로, QIS 밖의 페이지가 열려 있으면 거부.
+        (pywebview 가 인자 이름을 읽어 화면 쪽 함수를 만들므로 꾸밈 함수 대신 메서드마다 직접 확인)"""
+        if self._c.api_trusted():
+            return True
+        log.warning("다리 호출 거부 (QIS 밖의 페이지가 열려 있음): %s", what)
+        return False
+
     # 첫 실행 · 모드 바꾸기 화면
     def setup(self, d):
+        if not self._ok("setup"):
+            return None
         return self._c.apply_setup(d if isinstance(d, dict) else {})
 
     def cancel_setup(self):
+        if not self._ok("cancel_setup"):
+            return None
         self._c.back_to_app()
 
     def recover(self, choice):
+        if not self._ok("recover"):
+            return None
         return self._c.apply_recover(str(choice))
 
     def go_app(self):
+        if not self._ok("go_app"):
+            return None
         self._c.back_to_app()
 
     # QIS 화면 보조 (desktop.js)
     def reenter(self):
+        if not self._ok("reenter"):
+            return None
         r = self._c.runner
         return r.enter_url if r and r.mode == "solo" else None
 
     def open_page(self, path):
+        if not self._ok("open_page"):
+            return None
         self._c.open_page(str(path))
 
     def open_report(self, html):
+        if not self._ok("open_report"):
+            return None
         self._c.open_report(str(html))
 
     def save_file(self, name, data_url):
+        if not self._ok("save_file"):
+            return None
         return self._c.save_file(str(name), data_url)
 
     def open_file(self, name, data_url):
+        if not self._ok("open_file"):
+            return None
         return self._c.open_file(str(name), data_url)
 
     def export_backup(self):
+        if not self._ok("export_backup"):
+            return None
         return self._c.export_backup()
 
     def open_url(self, url):
+        if not self._ok("open_url"):
+            return None
         u = str(url)
         if re.match(r"^(mailto:|https?://)", u, re.I):
             webbrowser.open(u)
@@ -102,6 +160,8 @@ class Controller:
         self.state = "init"          # setup · app · busy · recover
         self.api = DesktopApi(self)
         self._closing_ok = False
+        self._api_wins: list = []    # 다리(js_api)를 붙인 창들 — 주 창 · open_page 창
+        self._own_bases: set[str] = set()   # 이번 실행에서 이 프로그램이 연 서버 주소들 (복원 뒤 포트가 바뀌어도 열린 창 인정)
         self._op = threading.Lock()  # 가져오기 · 복원 · 모드 바꾸기는 한 번에 하나만
 
     # ------------------------------------------------------------ 실행
@@ -122,18 +182,68 @@ class Controller:
             self.settings = core.DesktopSettings.load(self.data_dir)
             first_html, first_url = self._first_screen()
             core.mark_running(self.data_dir)
+            shutil.rmtree(Path(tempfile.gettempdir()) / OPEN_DIR, ignore_errors=True)   # 지난번 열어본 첨부 정리
             webview.settings["ALLOW_DOWNLOADS"] = True
             if self.cfg.https:
                 webview.settings["IGNORE_SSL_ERRORS"] = True   # 자기 PC(127.0.0.1)로만 접속 — 사내 인증서 이름 불일치 허용
             self.window = webview.create_window(
                 TITLE, url=first_url, html=first_html, js_api=self.api, width=1440, height=920,
                 min_size=(900, 600), menu=self._menu(), text_select=True, zoomable=True)
+            self._watch(self.window, main=True)
             self.window.events.closing += self._on_closing
             self.window.events.closed += self._on_closed
             webview.start(private_mode=False, storage_path=str(self.data_dir / "webview"))
             return 0
         finally:
             self.shutdown()
+
+    # ------------------------------------------------------------ 다리 보호
+    def _trusted_url(self, u: str | None) -> bool:
+        """QIS 서버 주소 · 프로그램이 직접 그린 화면(about: · data: · file:)이면 True."""
+        if not u or re.match(r"^(about|data|file):", u, re.I):
+            return True
+        bases = set(self._own_bases)
+        if self.runner:
+            bases.add(self.runner.base_url)
+        return any(u == b or u.startswith(b + "/") for b in bases)
+
+    def api_trusted(self) -> bool:
+        for w in list(self._api_wins):
+            try:
+                if not w.events.loaded.is_set():
+                    continue
+                u = w.get_current_url()
+            except Exception:
+                continue
+            if not self._trusted_url(u):
+                log.warning("QIS 밖의 페이지: %s", u)
+                return False
+        return True
+
+    def _watch(self, w, main: bool = False):
+        """다리를 붙인 창 등록 + QIS 밖의 주소로 이동하면 되돌림."""
+        self._api_wins.append(w)
+
+        def loaded():
+            try:
+                u = w.get_current_url()
+            except Exception:
+                return
+            if self._trusted_url(u):
+                return
+            log.warning("QIS 밖의 주소로 이동 차단: %s", u)
+            if self.runner and self.runner.running:
+                w.load_url(self.runner.enter_url if main else self.runner.base_url + "/")
+            else:
+                w.load_html(pages.message_page("QIS", "QIS 밖의 주소는 이 창에서 열 수 없습니다."))
+
+        def closed():
+            try:
+                self._api_wins.remove(w)
+            except ValueError:
+                pass
+        w.events.loaded += loaded
+        w.events.closed += closed
 
     def shutdown(self):
         if self.runner:
@@ -166,6 +276,7 @@ class Controller:
     def _start_server(self) -> str:
         core.prepare(self.cfg, self.settings)
         self.runner = core.ServerRunner(self.cfg, self.settings).start()
+        self._own_bases.add(self.runner.base_url)
         self.state = "app"
         return self.runner.enter_url
 
@@ -291,7 +402,8 @@ class Controller:
 
     def _lan_html(self) -> str:
         from ..launcher import _lan_addresses
-        return pages.lan_info_page(_lan_addresses(self.runner.cfg), self.runner.port, sys.platform.startswith("win"))
+        return pages.lan_info_page(_lan_addresses(self.runner.cfg), self.runner.port, sys.platform.startswith("win"),
+                                   https=self.runner.cfg.https)
 
     # ------------------------------------------------------------ 새 창 · 파일
     def open_page(self, path: str):
@@ -300,8 +412,9 @@ class Controller:
             log.warning("새 창 거부: %r", path)
             return
         log.info("새 창: %s", path)
-        webview.create_window(TITLE, url=self.runner.base_url + path, js_api=self.api, width=1300, height=880,
-                              text_select=True, zoomable=True)
+        w = webview.create_window(TITLE, url=self.runner.base_url + path, js_api=self.api, width=1300, height=880,
+                                  text_select=True, zoomable=True)
+        self._watch(w)
 
     def open_report(self, html: str):
         import webview
@@ -330,11 +443,17 @@ class Controller:
             return f"저장하지 못했습니다: {e}"
 
     def open_file(self, name: str, data_url):
+        """첨부 열어보기 — 보기 전용 형식(PDF · 그림 · 글자)만 이 PC의 기본 프로그램으로 연다.
+        다른 형식은 실행될 수 있으므로 바로 열지 않고 저장 위치를 묻는다."""
         try:
+            fn = open_name(name, data_url)
+            if not fn:
+                log.warning("열어보기 거부 (형식 %r · 이름 %r) → 저장 창", _mime_of(data_url), name)
+                return self.save_file(name, data_url)
             data = _decode_data_url(data_url)
-            d = Path(tempfile.gettempdir()) / "QIS_열어보기"
+            d = Path(tempfile.gettempdir()) / OPEN_DIR
             d.mkdir(exist_ok=True)
-            p = d / _safe_name(name, "첨부")
+            p = d / fn
             p.write_bytes(data)
             core.open_in_os(p)
             return None
