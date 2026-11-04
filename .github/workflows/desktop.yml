@@ -1,0 +1,89 @@
+# 데스크톱 프로그램 빌드 — 맥(QIS.app, Apple Silicon arm64) · 윈도우(QIS.exe)
+#   PR · main 변경: 두 OS에서 빌드되고 실행 점검(--selftest)을 통과하는지만 확인
+#   태그(v1.2.0 등) · 릴리스 발행 · 수동 실행(버전 입력): QIS-mac.zip · QIS-windows.zip 을 릴리스 자산으로 올림
+name: desktop
+on:
+  pull_request:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "릴리스로 낼 버전 (예: v1.1.0) — 비우면 빌드만"
+        required: false
+        default: ""
+permissions:
+  contents: read
+concurrency:
+  group: desktop-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-14          # Apple Silicon (arm64)
+            name: mac
+          - os: windows-latest
+            name: windows
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: 설치
+        run: python -m pip install -r requirements-desktop.txt pytest httpx
+      - name: 데스크톱 시험
+        run: python -m pytest -q tests/test_desktop.py
+      - name: 빌드
+        run: pyinstaller --noconfirm --clean packaging/QIS.spec
+      - name: 실행 점검 · 압축 (맥)
+        if: runner.os == 'macOS'
+        run: |
+          file dist/QIS.app/Contents/MacOS/QIS
+          codesign --verify --verbose dist/QIS.app || true
+          dist/QIS.app/Contents/MacOS/QIS --selftest selftest.json || { cat selftest.json; exit 1; }
+          cat selftest.json
+          ditto -c -k --sequesterRsrc --keepParent dist/QIS.app QIS-mac.zip
+      - name: 실행 점검 · 압축 (윈도우)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $p = Start-Process -FilePath "dist\QIS\QIS.exe" -ArgumentList "--selftest", "$PWD\selftest.json" -Wait -PassThru
+          Get-Content selftest.json -Encoding utf8
+          if ($p.ExitCode -ne 0) { throw "selftest 실패 (exit $($p.ExitCode))" }
+          Compress-Archive -Path "dist\QIS" -DestinationPath "QIS-windows.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: QIS-${{ matrix.name }}
+          path: QIS-${{ matrix.name }}.zip
+          retention-days: 14
+
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/') || (github.event_name == 'workflow_dispatch' && inputs.tag != '')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: out
+          merge-multiple: true
+      - name: 릴리스 만들기 · 자산 올리기
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag || github.ref_name }}
+        run: |
+          ls -la out
+          if ! gh release view "$TAG" -R "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release create "$TAG" -R "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "QIS $TAG" --notes \
+              "QIS 데스크톱 프로그램 $TAG — 맥(Apple Silicon): QIS-mac.zip · 윈도우: QIS-windows.zip. 설치 방법: docs/데스크톱_프로그램.md"
+          fi
+          gh release upload "$TAG" out/QIS-mac.zip out/QIS-windows.zip --clobber -R "$GITHUB_REPOSITORY"

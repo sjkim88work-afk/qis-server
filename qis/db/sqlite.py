@@ -138,6 +138,11 @@ class SqliteDB(Database):
         out.close()
         tmp.replace(dest)
 
+    def checkpoint(self) -> None:
+        """WAL(qis.db-wal)의 내용을 qis.db 에 모두 합치고 WAL을 비움 — 프로그램을 닫을 때."""
+        with self.lock:
+            self.conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+
     def close(self) -> None:
         with self.lock:
             self.conn.close()
@@ -161,6 +166,45 @@ class SqliteDB(Database):
             con.close()
         return {"integrity": ok, "schema": int(meta.get("schema") or 0), "seq": int(meta.get("seq") or 0),
                 "records": colls, "users": users}
+
+    @staticmethod
+    def check_file(path: Path) -> str:
+        """비정상 종료 뒤 검사: 'ok' 또는 문제 설명. inspect_file 과 달리 보통 방식으로 열어
+        WAL(qis.db-wal)에 남은 내용까지 반영해 검사한다 (SQLite가 WAL을 자동 복구)."""
+        try:
+            con = sqlite3.connect(str(path), timeout=10)
+            try:
+                rows = con.execute("PRAGMA integrity_check").fetchall()
+                con.execute("SELECT COUNT(*) FROM records").fetchone()
+            finally:
+                con.close()
+        except sqlite3.DatabaseError as e:
+            return f"DB를 열 수 없습니다: {e}"
+        msg = "; ".join(str(r[0]) for r in rows[:5])
+        return "ok" if msg == "ok" else msg
+
+    @staticmethod
+    def copy_file(src: Path, dest: Path) -> None:
+        """다른 QIS DB 파일(예: 서버판 data/qis.db)을 원본은 바꾸지 않고 WAL 내용까지 담아 한 파일로 복사."""
+        con = sqlite3.connect(f"{Path(src).resolve().as_uri()}?mode=ro", uri=True, timeout=10)
+        out = sqlite3.connect(str(dest))
+        try:
+            con.backup(out)
+        finally:
+            out.close()
+            con.close()
+
+    def copy_users_from(self, old_path: Path) -> int:
+        """보관한 이전 DB의 사용자 계정을 이 (빈) DB로 옮김 — 데스크톱 '백업으로 바꾸기' 때."""
+        cols = "id,username,name,role,pw_hash,active,must_change,created_at,last_login,fail_count,locked_until"
+        with self.lock:
+            self.conn.execute("ATTACH DATABASE ? AS old", (str(old_path),))
+            try:
+                with self.tx() as c:
+                    n = c.execute(f"INSERT INTO users({cols}) SELECT {cols} FROM old.users").rowcount
+            finally:
+                self.conn.execute("DETACH DATABASE old")
+        return n
 
     @staticmethod
     def replace_file(src: Path, dest: Path, keep_dir: Path) -> list[str]:
