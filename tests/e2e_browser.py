@@ -235,6 +235,15 @@ def main(seed_path):
             M.click("button:has-text('지금 백업')"); M.wait_for_timeout(1500)
             ok("qis_" in M.inner_text("#view"), "관리: 지금 백업")
             ok(os.listdir(os.path.join(tmp, "data", "backup", "db")), "백업 파일 생성")
+            # 알림 (텔레그램) — 텔레그램 서버는 브라우저에서 흉내낼 수 없으므로 설정 · 미리 보기 · 토큰 비노출만
+            M.click("nav button:has-text('알림')"); M.wait_for_timeout(600)
+            ok("봇 토큰" in M.inner_text("#view") and "받을 곳" in M.inner_text("#view"), "관리: 알림 (텔레그램) 화면")
+            M.fill("#tgTok", "123:SECRET"); M.click("#tgTok ~ button"); M.wait_for_timeout(700)
+            ok("저장됨" in M.inner_text("#view") and "123:SECRET" not in M.content(), "관리: 토큰 저장 — 화면에 다시 내려오지 않음")
+            M.fill("#tgChat", "-100777"); M.click("#tgChat ~ button"); M.wait_for_timeout(700)
+            M.click("button:has-text('미리 보기')"); M.wait_for_timeout(700)
+            ok("아침 품질 요약" in M.inner_text("#tgPrev"), "관리: 아침 요약 미리 보기")
+            ok("123:SECRET" not in B.evaluate("JSON.stringify(db)"), "작성자 화면 데이터에 토큰 없음")
             # 사용자 추가
             M.click("nav button:has-text('사용자')"); M.wait_for_timeout(500)
             M.fill("#nu", "park"); M.fill("#nn", "박신규"); M.fill("#np", "Qp4rk2026"); M.click("button:has-text('추가')"); M.wait_for_timeout(800)

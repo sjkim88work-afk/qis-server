@@ -152,7 +152,7 @@ python -m qis set host 127.0.0.1         설정 바꾸기 (이 예: 이 PC 안�
 
 - 회사 계정 로그인(Active Directory / Microsoft Entra ID) 연동
 - 승인 흐름: 귀책 판정 · NCR 발행 · 종결 시 팀장 승인, 종결 기록 잠금
-- 회신 기한 임박 · 초과 메일 알림
+- 회신 기한 임박 · 초과 메일 알림 (텔레그램 아침 요약은 1.3.0에서 제공 — 관리 › 알림)
 - 단가 · COPQ 금액 조회 권한 분리
 - 사용자 증가 시 PostgreSQL로 이전 — `qis/db/postgres.py` 추가 + `migrate` 명령 (아래 'DB 구조' 참고)
 

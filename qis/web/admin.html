@@ -64,11 +64,11 @@ async function api(path,opt={}){
 }
 const post=(p,b,m='POST')=>api(p,{method:m,body:JSON.stringify(b||{})});
 const fmt=t=>{if(!t)return '';const d=new Date(t);if(isNaN(d))return t;const p=n=>String(n).padStart(2,'0');return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`};
-const TABS=[['users','사용자'],['audit','변경 이력'],['backup','백업 · 데이터']];
+const TABS=[['users','사용자'],['audit','변경 이력'],['backup','백업 · 데이터'],['telegram','알림 (텔레그램)']];
 const ROLES={viewer:'조회',editor:'작성',admin:'관리자'};
 const ROLE_HELP={viewer:'보기 · 검색 · 출력만',editor:'등록 · 수정 (기준정보 삭제 · BOM 교체 · 설정 제외)',admin:'모든 기능 + 사용자 · 이력 · 백업 관리'};
 const ACT={create:'등록',update:'수정',delete:'삭제',restore:'복원','file.add':'첨부 추가','file.delete':'첨부 삭제',login:'로그인','login.fail':'로그인 실패',logout:'로그아웃',
-  'user.create':'사용자 추가','user.update':'사용자 변경','user.reset_password':'비밀번호 초기화','user.change_password':'비밀번호 변경',backup:'백업',export:'내보내기',import:'가져오기'};
+  'user.create':'사용자 추가','user.update':'사용자 변경','user.reset_password':'비밀번호 초기화','user.change_password':'비밀번호 변경',backup:'백업',export:'내보내기',import:'가져오기',telegram:'텔레그램 요약 전송','telegram.update':'알림 설정 변경'};
 const COLL={defects:'불량',ncrs:'NCR',suppliers:'협력사',parts:'부품',receipts:'입고',reviews:'월간 검토',issues:'이슈',cases:'RCA',actions:'RCA 조치',doc:'설정·BOM',files:'첨부',users:'사용자'};
 let tab=location.hash.slice(1)||'users',me=null;
 const A={items:[],more:false,f:{coll:'',user:'',action:'',q:'',from:'',to:'',id:''}};
@@ -80,6 +80,7 @@ async function render(){
   try{
     if(tab==='users')v.innerHTML=await renderUsers();
     else if(tab==='audit')v.innerHTML=await renderAudit();
+    else if(tab==='telegram')v.innerHTML=await renderTelegram();
     else v.innerHTML=await renderBackup();
   }catch(e){v.innerHTML=`<div class="card"><b>불러오지 못했습니다</b> — ${esc(e.message)}</div>`}
 }
@@ -175,6 +176,30 @@ async function renderBackup(){
     <div class="card"><h2>기존 QIS 데이터 가져오기</h2><p class="help">개인 QIS(HTML)에서 ‘백업’으로 받은 JSON 파일을 <b>빈 서버</b>에 한 번 가져옵니다. 사진 포함 백업이면 사진 · 첨부도 함께 들어옵니다. 서버에 기록이 이미 있으면 가져올 수 없습니다.</p>
     <div class="row"><button class="b" onclick="$('#impFile').click()">백업 파일 선택</button><span id="impMsg" class="muted"></span></div></div>`;
 }
+/* ---- 알림 (텔레그램) ---- */
+const TG={chats:null};
+async function renderTelegram(){
+  const t=await api('/api/admin/telegram');
+  const ck=(k,v)=>`<input type="checkbox" ${v?'checked':''} onchange="tgSet({${k}:this.checked})">`;
+  return `<div class="card"><h2>텔레그램 아침 요약</h2><p class="help">매일 <b>${esc(t.time)}</b>에 서버가 지연 건 · 오늘 기한 · 이슈 분류 대기를 텔레그램 그룹으로 한 번 보냅니다. 아무도 접속하지 않아도 보내며, 사용자가 여럿이어도 한 번만 갑니다. 봇 토큰은 서버 설정 파일(qis.json)에만 저장되고 화면에는 내려보내지 않습니다.<br>
+    설정 순서: ① 텔레그램에서 <b>@BotFather</b> → <code>/newbot</code> → 받은 토큰을 아래에 입력 ② 받을 그룹에 봇을 초대하고 그 그룹에 아무 메시지나 한 번 보내기 ③ ‘받을 곳 찾기’ → 그룹 선택 ④ 시험 전송 ⑤ 자동 전송 켜기</p>
+    <div class="kv"><div>봇 토큰</div><div><input id="tgTok" type="password" placeholder="${t.token_set?'저장됨 — 바꾸려면 새 토큰 입력':'123456789:AA…'}" style="width:280px" autocomplete="off"> <button class="b" onclick="tgSet({token:$('#tgTok').value.trim()})" >저장</button> ${t.token_set?'<span class="bg ok">저장됨</span>':'<span class="bg warn">없음</span>'}</div>
+    <div>받을 곳 (chat ID)</div><div><input id="tgChat" value="${esc(t.chat)}" placeholder="그룹은 -로 시작하는 숫자" style="width:200px"> <button class="b" onclick="tgSet({chat:$('#tgChat').value.trim()})">저장</button> <button class="b" onclick="tgFind()" ${t.token_set?'':'disabled'}>받을 곳 찾기</button><div id="tgChats" class="row" style="margin-top:6px">${TG.chats?tgChatBtns():''}</div></div>
+    <div>시험 전송</div><div><button class="b" onclick="tgTest(this)" ${t.token_set&&t.chat?'':'disabled'}>시험 메시지 보내기</button></div>
+    <div>자동 전송</div><div><label>${ck('on',t.on)} 켜기</label></div>
+    <div>보낼 시각</div><div><input id="tgTime" type="time" value="${esc(t.time)}" onchange="tgSet({time:this.value})"></div>
+    <div>주말에도</div><div><label>${ck('weekend',t.weekend)} 토 · 일요일에도 보냄</label></div>
+    <div>세부 내용 포함</div><div><label>${ck('detail',t.detail)} 조치 제목 · 이슈 제목 · 다음 행동 문구까지</label> <span class="muted">— 끄면 번호 · 구분 · 기한만 (회사 정보 반출 규정에 맞춰 고르세요)</span></div>
+    <div>마지막 전송</div><div>${t.sent?esc(t.sent):'<span class="muted">아직 없음</span>'}${t.error?` <span class="bg bad">${esc(fmt(t.error.at))}</span> ${esc(t.error.error)}`:''}</div></div>
+    <div class="row" style="margin-top:12px"><button class="b" onclick="tgPreview()">미리 보기</button><button class="b p" onclick="tgSend(this)" ${t.token_set&&t.chat?'':'disabled'}>지금 요약 보내기</button></div>
+    <pre id="tgPrev" class="muted" style="white-space:pre-wrap;display:none;margin-top:10px;font-size:13px;line-height:1.6"></pre></div>`;
+}
+const tgChatBtns=()=>TG.chats.length?TG.chats.map(c=>`<button class="b" onclick="tgSet({chat:'${esc(c.id)}'})">${esc(c.title)} <span class="muted">(${esc(c.type)} · ${esc(c.id)})</span></button>`).join(''):'<span class="muted">찾은 대화가 없습니다 — 봇을 그룹에 초대한 뒤 그 그룹에 아무 메시지나 한 번 보내고 다시 누르세요</span>';
+async function tgSet(ch){try{await post('/api/admin/telegram',ch);toast('저장했습니다')}catch(e){toast(e.message)}render()}
+async function tgFind(){const b=$('#tgChats');b.innerHTML='<span class="muted">찾는 중…</span>';try{const {chats}=await post('/api/admin/telegram/chats');TG.chats=chats;b.innerHTML=tgChatBtns()}catch(e){b.innerHTML=`<span class="bg bad">${esc(e.message)}</span>`}}
+async function tgTest(btn){btn.disabled=true;try{await post('/api/admin/telegram/test');toast('시험 메시지를 보냈습니다 — 텔레그램에서 확인하세요')}catch(e){toast('전송 실패: '+e.message)}btn.disabled=false}
+async function tgSend(btn){btn.disabled=true;btn.textContent='보내는 중…';try{await post('/api/admin/telegram/send');toast('요약을 보냈습니다')}catch(e){toast('전송 실패: '+e.message)}render()}
+async function tgPreview(){const p=$('#tgPrev');try{const {text}=await api('/api/admin/telegram/preview');p.textContent=text;p.style.display=''}catch(e){toast(e.message)}}
 async function backupNow(btn){btn.disabled=true;btn.textContent='백업 중…';try{const {info}=await post('/api/admin/backup');toast(`백업 완료 — ${info.db}`)}catch(e){toast(e.message)}render()}
 $('#impFile').addEventListener('change',async e=>{
   const f=e.target.files[0];if(!f)return;const m=$('#impMsg');m.textContent='읽는 중…';

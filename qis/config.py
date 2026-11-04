@@ -35,6 +35,13 @@ class Config:
     max_bom_mb: float = 60.0
     max_file_mb: float = 30.0      # 첨부 1개 최대 크기 (base64 포함)
     company: str = ""
+    # 텔레그램 아침 요약 — 관리 화면 › 알림에서 설정 (토큰은 이 파일에만, 화면에는 내려보내지 않음)
+    telegram_on: bool = False
+    telegram_token: str = ""
+    telegram_chat: str = ""
+    telegram_time: str = "08:00"
+    telegram_weekend: bool = False   # True면 주말에도
+    telegram_detail: bool = False    # True면 조치 · 이슈 제목까지
 
     @property
     def db_path(self) -> Path:
@@ -73,5 +80,8 @@ def load_config(data_dir: str | Path | None = None) -> Config:
         if env is None or k == "data_dir":
             continue
         cur = getattr(cfg, k)
-        setattr(cfg, k, type(cur)(env) if not isinstance(cur, Path) else Path(env))
+        if isinstance(cur, bool):
+            setattr(cfg, k, env.strip().lower() in ("1", "true", "yes", "on"))
+        else:
+            setattr(cfg, k, type(cur)(env) if not isinstance(cur, Path) else Path(env))
     return cfg
