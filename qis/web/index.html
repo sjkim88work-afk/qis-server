@@ -1611,7 +1611,7 @@ function fitCells(root){
 }
 (()=>{let q=null;const run=()=>{q=null;try{fitCells($('#view'))}catch(e){}try{roSweep($('#view'))}catch(e){}try{fitCharts(document)}catch(e){}};
   const start=()=>{const v=$('#view');if(!v)return setTimeout(start,50);new MutationObserver(()=>{if(!q)q=requestAnimationFrame(run)}).observe(v,{childList:true,subtree:true});run()};start()})();
-const APP_VER='0.6.1';  // QIS (구 개인 QMS) — 변경 내역: CHANGELOG.md
+const APP_VER='0.6.2';  // QIS (구 개인 QMS) — 변경 내역: CHANGELOG.md
 function renderBrand(){
   const S=db.settings,tab=(TABS.find(t=>t[0]===state.tab)||[])[1]||'';
   $('#brand').innerHTML=S.logo?`<img class="brandlogo" src="${S.logo}" alt="로고">`:'';
@@ -1955,7 +1955,7 @@ function editIssue(id){
   </div>
   <div class="help">모르는 칸은 비워 두세요. 품목 · 귀책 · 불량 유형은 처리 방향을 정할 때 정합니다. 긴급 · 특별특성 건은 즉시 조치 내용을 꼭 남기세요.</div>
   <div class="sec">사진 <span class="muted" style="font-weight:normal;font-size:12px">클릭 · 끌어다 놓기 · Ctrl+V</span></div><div id="photoBox"></div>`;
-  openModal(id?`${i.no} 수정`:'이슈 등록',body,[{label:'취소',fn:closeModal},...(id?[]:[{label:'저장 (분류는 나중에)',fn:()=>saveIssue(null,false)}]),{label:id?'저장':'저장하고 기록 · 분류로',cls:'p',fn:()=>saveIssue(id,true)}]);
+  openModal(id?`${i.no} 수정`:'이슈 등록',body,[...(id?[{label:'삭제',cls:'d',fn:()=>delIssue(id)}]:[]),{label:'취소',fn:closeModal},...(id?[]:[{label:'저장 (분류는 나중에)',fn:()=>saveIssue(null,false)}]),{label:id?'저장':'저장하고 기록 · 분류로',cls:'p',fn:()=>saveIssue(id,true)}]);
   initPhotoBox(i.photos||[]);
 }
 async function saveIssue(id,open){
@@ -1993,7 +1993,7 @@ function issDetailHTML(i){
   <div class="card">
     <div class="row" style="gap:8px;align-items:center"><span class="mono muted">${esc(i.no)}</span><span class="bg ${ISS_UCLS[i.urg]||'mut'}">${esc(i.urg||'보통')}</span>${i.special?'<span class="bg svA">CC/SC 특별특성</span>':''}<span class="bg ${ISS_SCLS[st]}">${st}</span>
       <h2 style="margin:0;font-size:20px">${esc(i.title)}</h2><span style="flex:1"></span>
-      ${RO?'':`${i.closedAt?`<button class="b" onclick="issReopen('${i.id}')">다시 열기</button>`:''}<button class="b" onclick="editIssue('${i.id}')">수정</button>`}</div>
+      ${RO?'':`${i.closedAt?`<button class="b" onclick="issReopen('${i.id}')">다시 열기</button>`:''}<button class="b" onclick="editIssue('${i.id}')">수정</button><button class="b d" onclick="delIssue('${i.id}')">삭제</button>`}</div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-top:14px;font-size:13px">
       ${kv('발견',esc(issAt(i.at)),esc([i.source,i.loc].filter(Boolean).join(' · ')))}
       ${kv('품목 (추정)',esc(i.partNo||'미정'),p?esc(`${p.name} · ${supName(p.supplierId)||'협력사 미지정'}`):'')}
@@ -2025,6 +2025,20 @@ function issDetailHTML(i){
         ${i.closedAt?`<div class="muted" style="font-size:12px;margin-top:8px">종결 ${esc(i.closedAt)} — ${esc(i.closeReason||'')}</div>`:fol?`<div class="muted" style="font-size:12px;margin-top:8px">${of.length?`진행 중 ${of.length}건 — 모두 끝나면 이슈를 종결하세요`:'후속 건이 모두 끝났습니다 — ‘종결’로 이슈를 닫으세요'}</div>`:''}</div>
     </div>
   </div>`;
+}
+async function delIssue(id){
+  const i=issById(id);if(!i)return;
+  const L=issLinks(i),ph=[...(i.photos||[]),...logPhotoIds(i.logs)],nl=(i.logs||[]).filter(l=>!l.void).length;
+  if(!await askConfirm({title:`${i.no}을(를) 삭제할까요?`,items:[esc(i.title),`기록 ${nl}건${ph.length?` · 사진 ${ph.length}장`:''} 함께 삭제`],
+    note:L.n?`이 이슈에서 만든 후속 건 ${L.n}건(불량 · NCR · RCA)은 지우지 않습니다 — 이슈 연결만 끊깁니다.`:''}))return;
+  const snap=await takeSnap(ph);
+  db.defects.forEach(d=>{if(d.issueId===id){delete d.issueId;touch(d)}});
+  (db.cases||[]).forEach(c=>{if(c.IssueId===id){c.IssueId='';touch(c)}});
+  if(ph.length){photoDel(ph).catch(()=>{});ph.forEach(x=>db.deleted.push({id:x,at:now()}));photoStr=null}
+  removeRec('issues',id);
+  if($('#modal').classList.contains('on'))closeModal(true);
+  if(state.issId===id)state.issId=null;
+  save();render();offerUndo(snap,`${i.no}을(를) 삭제했습니다`);
 }
 async function issPhotos(i){const b=$('#issPh');if(!b||!(i.photos||[]).length)return;
   try{const rs=await photoGetMany(i.photos);if(!$('#issPh'))return;b.innerHTML=rs.map((p,k)=>`<img src="${p.thumb||p.data}" alt="${esc(p.caption||'이슈 사진')}" title="${esc(p.caption||'')}" style="width:140px;height:100px;object-fit:cover;border-radius:6px;cursor:pointer" onclick="issLb('${i.id}',${k})">`).join('')}catch(e){}}
@@ -7082,7 +7096,7 @@ async function a3Report(kind,id){
 }
 
 /* ---- 읽기 전용 사본 모드 ---- */
-const RO_FN=['saveDefect','saveNcr','saveInv','saveIca','saveSup','delDefect','delSup','delPart','delCost','openMasterImport','openBomImport','openRcvImport','openRcvLineImport','editReceipts',
+const RO_FN=['saveDefect','saveNcr','saveInv','saveIca','saveSup','delDefect','delIssue','delSup','delPart','delCost','openMasterImport','openBomImport','openRcvImport','openRcvLineImport','editReceipts',
   'bomClear','resetAll','pickImport','exportJSON','exportSqlite','restoreFromFolder','pickRoot','unlinkRoot','dkAdd','dkRemove','pickDir','unlinkDir','photoDirNow','setS','setFx','ncrQuickNotify','rcvDefect','czNewCaseModal','czFromDefect','czFromNcr','czApplyVerdict',
   'ncrFromDefect','quickSup','pwaInstall','openImport','chooseQmsDir','makeShareFile','offerNcrAfterVerdict','addCost','addLabor','addBaseCost','addContact','unlinkDefect','miApply','bomApply','rlApply','riCommit','routeGo'].filter(n=>typeof window[n]==='function');
 const RO_RE=new RegExp('\\b('+RO_FN.join('|')+')\\(|\\b(edit(Defect|Ncr|Sup|Part))\\(\\)');

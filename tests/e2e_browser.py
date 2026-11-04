@@ -158,6 +158,19 @@ def main(seed_path):
             ok(A.evaluate("i=>issById(i).logs.some(l=>l.text==='B 기록')&&issStatus(issById(i))==='조사 중'", iid), "B 기록 → A 반영 · 조사 중")
             C.evaluate("srvSync()"); C.wait_for_timeout(500); C.evaluate("go('issue')"); C.wait_for_timeout(300)
             ok(C.locator("#view button:has-text('이슈 등록'):visible").count() == 0 and "서버 이슈 시험" in C.inner_text("#view"), "조회: 이슈 보기만 (등록 버튼 없음)")
+            # 이슈 삭제: 조회는 삭제 버튼 없음 · 작성자 삭제 → 사진 휴지통 · 연결된 불량은 남고 연결만 끊김 · B 반영
+            C.evaluate("i=>issOpen(i)", iid); C.wait_for_timeout(300)
+            ok(C.locator("#view button:has-text('삭제'):visible").count() == 0, "조회: 이슈 삭제 버튼 없음")
+            A.evaluate("i=>{const d={id:'diss',date:today(),partNo:'P-ISS',qty:1,photos:[],issueId:i};db.defects.push(touch(d));issById(i).defectIds=['diss'];touch(issById(i));save()}", iid); A.wait_for_timeout(1200)
+            A.evaluate("i=>issOpen(i)", iid); A.wait_for_timeout(300)
+            ok(A.locator("#view button:has-text('삭제'):visible").count() == 1, "작성자: 이슈 상세에 삭제 버튼")
+            A.click("#view button:has-text('삭제')"); A.wait_for_timeout(1500)
+            ok(A.evaluate("i=>!issById(i)&&state.issId===null", iid), "이슈 삭제 → 목록으로")
+            ok(A.evaluate("()=>{const d=db.defects.find(x=>x.id==='diss');return !!d&&!d.issueId}"), "연결된 불량은 남고 이슈 연결만 끊김")
+            B.evaluate("srvSync()"); B.wait_for_timeout(800)
+            ok(B.evaluate("i=>!issById(i)", iid), "이슈 삭제 → B 반영")
+            ok(not A.evaluate("srvApi('/api/files/ids').then(j=>j.ids.includes('iph1'))"), "이슈 사진도 삭제 (서버 휴지통)")
+            A.evaluate("()=>{removeRec('defects','diss');save()}"); A.wait_for_timeout(800)
 
             # --- 5. 권한: 작성자는 기준정보 삭제 · 설정 불가 ---
             A.evaluate("delSup('s1')"); A.wait_for_timeout(300)
