@@ -1,0 +1,5 @@
+# 데스크톱 프로그램 빌드용 (서버판만 쓸 때는 필요 없음)
+-r requirements.txt
+pywebview>=6,<7
+pyinstaller>=6.10,<7
+pillow

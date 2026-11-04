@@ -1,0 +1,55 @@
+# -*- mode: python ; coding: utf-8 -*-
+"""QIS 데스크톱 묶음 설정 — pyinstaller packaging/QIS.spec
+  맥: dist/QIS.app  (arm64)      윈도우: dist/QIS/QIS.exe (폴더째 배포)
+"""
+import re
+import sys
+from pathlib import Path
+
+from PyInstaller.utils.hooks import collect_data_files, collect_submodules
+
+ROOT = Path(SPECPATH).parent
+VERSION = re.search(r'__version__\s*=\s*"([^"]+)"', (ROOT / "qis" / "__init__.py").read_text(encoding="utf-8")).group(1)
+MAC = sys.platform == "darwin"
+ICON = str(ROOT / "qis" / "web" / "icons" / "icon-512.png")   # Pillow 가 .icns / .ico 로 바꿔 줌
+
+hidden = collect_submodules("uvicorn") + collect_submodules("qis") + ["webview"]
+datas = [(str(ROOT / "qis" / "web"), "qis/web")] + collect_data_files("webview")
+
+a = Analysis(
+    [str(ROOT / "packaging" / "qis_desktop.py")],
+    pathex=[str(ROOT)],
+    datas=datas,
+    hiddenimports=hidden,
+    excludes=["tkinter", "pytest", "playwright", "IPython", "numpy"],
+    noarchive=False,
+)
+pyz = PYZ(a.pure)
+exe = EXE(
+    pyz, a.scripts, [],
+    exclude_binaries=True,
+    name="QIS",
+    console=False,
+    icon=ICON,
+    target_arch="arm64" if MAC else None,
+    codesign_identity=None,
+    upx=False,
+)
+coll = COLLECT(exe, a.binaries, a.datas, name="QIS", upx=False)
+if MAC:
+    app = BUNDLE(
+        coll,
+        name="QIS.app",
+        icon=ICON,
+        bundle_identifier="kr.pha.qis",
+        version=VERSION,
+        info_plist={
+            "CFBundleDisplayName": "QIS",
+            "CFBundleName": "QIS",
+            "CFBundleShortVersionString": VERSION,
+            "CFBundleVersion": VERSION,
+            "NSHighResolutionCapable": True,
+            "LSMinimumSystemVersion": "11.0",
+            "NSHumanReadableCopyright": "QIS 품질정보시스템",
+        },
+    )

@@ -23,3 +23,4 @@ jobs:
           python-version: "3.11"
       - run: pip install -r requirements.txt playwright && python -m playwright install --with-deps chromium
       - run: python tests/e2e_browser.py tests/sample_backup.json
+      - run: python tests/e2e_desktop.py

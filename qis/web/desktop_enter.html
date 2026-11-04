@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><title>QIS</title>
+<style>body{font-family:-apple-system,"Malgun Gothic","맑은 고딕",sans-serif;padding:48px;color:#1f2937}</style></head>
+<body>
+<p id="m">QIS 화면으로 들어가는 중…</p>
+<script>
+/* 데스크톱 '이 PC 혼자 쓰기' 모드의 로그인 화면 대신 — 프로그램 창이면 비밀번호 없이 다시 들어감 */
+(function(){
+  var done=false;
+  function go(){var a=window.pywebview&&window.pywebview.api;if(!a||!a.reenter||done)return;done=true;
+    a.reenter().then(function(u){if(u)location.href=u})}
+  if(window.pywebview&&window.pywebview.api)go();else window.addEventListener('pywebviewready',go);
+  setTimeout(function(){if(!done)document.getElementById('m').textContent=
+    '이 화면은 QIS 데스크톱 프로그램 창에서만 열립니다. 프로그램 메뉴 ‘보기 › 화면 새로 고침’을 누르세요.'},4000);
+})();
+</script>
+</body></html>

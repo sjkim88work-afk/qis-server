@@ -77,6 +77,9 @@ class Database(ABC):
     def describe(self) -> str:
         return self.kind
 
+    def checkpoint(self) -> None:
+        """종료 전 정리 (SQLite: WAL 내용을 DB 파일에 합침). 서버형 DB는 할 일 없음."""
+
     def schema_version(self) -> int:
         if not self._has_table("meta"):
             return 0

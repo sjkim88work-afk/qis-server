@@ -5,6 +5,7 @@ API : /api/... (로그인 세션 쿠키 필요, 변경 요청은 X-QIS 헤더 �
 """
 from __future__ import annotations
 
+import hmac
 import json
 import re
 from pathlib import Path
@@ -27,10 +28,15 @@ CSP = ("default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'
        "img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; media-src 'self' data: blob:; "
        "frame-src 'self' data: blob:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; "
        "form-action 'self'; frame-ancestors 'none'")
+# 데스크톱 창: 내려받을 파일(blob:)을 읽어 프로그램의 '저장' 창으로 넘기려면 blob: 읽기가 필요
+CSP_DESKTOP = CSP.replace("connect-src 'self'", "connect-src 'self' blob: data:")
 
 
-def create_app(cfg: Config | None = None, *, start_backup=True) -> FastAPI:
+def create_app(cfg: Config | None = None, *, start_backup=True, desktop: dict | None = None) -> FastAPI:
+    """desktop: 데스크톱 프로그램(qis.desktop)에서 띄울 때만 —
+       {"mode": "solo" | "lan", "token": 자동 입장 열쇠(solo), "user": 로컬 관리자 아이디(solo)}"""
     cfg = cfg or load_config()
+    solo = bool(desktop and desktop.get("mode") == "solo")
     cfg.data_dir.mkdir(parents=True, exist_ok=True)
     db = open_db(cfg)
     auth = Auth(db, cfg)
@@ -40,6 +46,7 @@ def create_app(cfg: Config | None = None, *, start_backup=True) -> FastAPI:
     app = FastAPI(title="QIS", version=__version__, docs_url=None, redoc_url=None, openapi_url=None)
     app.state.cfg, app.state.db, app.state.auth, app.state.store, app.state.files, app.state.backup = \
         cfg, db, auth, store, files, backup
+    app.state.desktop = desktop
 
     if start_backup:
         @app.on_event("startup")
@@ -59,7 +66,7 @@ def create_app(cfg: Config | None = None, *, start_backup=True) -> FastAPI:
                 return JSONResponse({"error": "csrf", "message": "잘못된 요청입니다"}, status_code=403)
         resp = await call_next(request)
         h = resp.headers
-        h["Content-Security-Policy"] = CSP
+        h["Content-Security-Policy"] = CSP_DESKTOP if desktop else CSP
         h["X-Content-Type-Options"] = "nosniff"
         h["X-Frame-Options"] = "DENY"
         h["Referrer-Policy"] = "same-origin"
@@ -133,8 +140,12 @@ def create_app(cfg: Config | None = None, *, start_backup=True) -> FastAPI:
             return RedirectResponse("/account?first=1", status_code=303)
         info = {"user": u["username"], "name": u["name"], "role": u["role"], "roleName": ROLES[u["role"]],
                 "server": __version__, "company": cfg.company}
+        if desktop:
+            info["desktop"] = desktop.get("mode")
         tag = '<script id="qisServer" type="application/json">' + \
               json.dumps(info, ensure_ascii=False).replace("</", "<\\/") + "</script>"
+        if desktop:   # 데스크톱 창 보조 (새 창 · 보고서 창 · 혼자 쓰기 화면 정리) — 화면 파일은 그대로
+            tag += '\n<script src="/desktop.js"></script>'
         return HTMLResponse(index_html().replace("<head>", "<head>\n" + tag, 1))
 
     def static_page(name: str):
@@ -144,7 +155,29 @@ def create_app(cfg: Config | None = None, *, start_backup=True) -> FastAPI:
     def login_page(request: Request):
         if page_user(request):
             return RedirectResponse("/", status_code=303)
+        if solo:   # 혼자 쓰기: 비밀번호 없이 다시 들어가기
+            return static_page("desktop_enter.html")
         return static_page("login.html")
+
+    if desktop:
+        @app.get("/desktop.js")
+        def desktop_js():
+            return FileResponse(WEB / "desktop.js", media_type="text/javascript")
+
+    if solo:
+        @app.get("/desktop/enter")
+        def desktop_enter(request: Request, k: str = ""):
+            """프로그램이 창을 열 때만 아는 열쇠(k)로 로컬 관리자 세션을 연다 — 127.0.0.1 전용 실행에서만."""
+            if not desktop.get("token") or not hmac.compare_digest(k.encode(), str(desktop["token"]).encode()):
+                raise HTTPException(403, "잘못된 요청입니다")
+            u = db.q1("SELECT * FROM users WHERE lower(username)=lower(?) AND active=1", (desktop.get("user") or "",))
+            if not u:
+                raise HTTPException(403, "이 PC 사용자 계정이 없습니다 — 프로그램을 다시 시작하세요")
+            token, _ = auth.open_session(u, ip=ip_of(request), ua=request.headers.get("user-agent"),
+                                         action="login.desktop")
+            resp = RedirectResponse("/", status_code=303)
+            set_cookie(resp, token)
+            return resp
 
     @app.get("/account", response_class=HTMLResponse)
     def account_page(request: Request):
