@@ -164,7 +164,7 @@ def test_files_and_backup_and_import(env, tmp_path):
     # 가져오기: 기록이 있으면 거부
     bk = {"settings": {"company": "X"}, "defects": [{"id": "x1"}], "ncrs": [], "photos": [f]}
     sync(ed, [{"coll": "defects", "id": "z", "rev": 0, "data": {"id": "z"}}])
-    assert ad.post("/api/admin/import", json=bk, headers=H).status_code == 400
+    assert ad.post("/api/admin/import", json=bk, headers=H).status_code == 409   # 기록이 있으면 바꿀지 물음
 
 
 def test_import_into_empty(env):
@@ -199,3 +199,48 @@ def test_user_admin(env):
     # 마지막 관리자 강등 불가
     me = [x for x in ad.get("/api/admin/users").json()["users"] if x["username"] == "admin"][0]
     assert ad.patch(f"/api/admin/users/{me['id']}", json={"role": "editor"}, headers=H).status_code == 400
+
+
+# ---- 관리자: 데이터 비우기 · 기록이 있어도 가져오기 (바꾸기) ----
+SAMPLE = __import__("pathlib").Path(__file__).parent / "sample_backup.json"
+
+
+def test_admin_reset_and_replace_import(env):
+    app, cfg = env
+    a = client(app, "admin", "Qadm2026x")
+    data = json.loads(SAMPLE.read_text(encoding="utf-8"))
+    data["photos"] = [{"id": "ph1", "name": "a.png", "data": "data:image/png;base64,AAAA"}]
+    r = a.post("/api/admin/import", json=data, headers=H)
+    assert r.status_code == 200 and r.json()["imported"]["defects"] == 5
+    # 작성자 화면이 떠 있음 (현재 순번 기억)
+    k = client(app, "kim", "Editor1234")
+    seq = k.get("/api/boot").json()["seq"]
+    # 기록이 있으면 그냥은 거부 (409 has_records), 바꾸기면 비운 뒤 가져옴
+    r = a.post("/api/admin/import", json=data, headers=H)
+    assert r.status_code == 409 and r.json()["error"] == "has_records"
+    r = a.post("/api/admin/import", json={**data, "_replace": True}, headers=H)
+    assert r.status_code == 200 and r.json()["imported"]["defects"] == 5, r.text
+    boot = a.get("/api/boot").json()
+    assert len([x for x in boot["records"] if x["coll"] == "defects"]) == 5          # 같은 id 로 되살아남 (중복 없음)
+    assert all(x["rev"] >= 2 for x in boot["records"] if x["coll"] == "defects")
+    assert list((cfg.backup_path / "db").glob("qis_*_before_import.sqlite"))        # 바꾸기 전 자동 백업
+    # 다른 사용자 화면은 변경 순번으로 바뀐 기록(되살아난 최종 상태)을 받음
+    pulled = sync(k, [], since=seq).json()["pulled"]
+    assert len(pulled) >= 5 and all(p["data"] for p in pulled)
+    # 비우기: 확인 문구 필요, 백업 받고 모두 지움, 첨부는 휴지통으로
+    assert a.post("/api/admin/reset", json={"confirm": "x"}, headers=H).status_code == 400
+    r = a.post("/api/admin/reset", json={"confirm": "비우기"}, headers=H)
+    assert r.status_code == 200 and r.json()["cleared"]["defects"] == 5 and r.json()["cleared"]["files"] == 1
+    assert r.json()["backup"].endswith("_before_reset.sqlite")
+    assert a.get("/api/boot").json()["records"] == []
+    assert a.get("/api/files/ids").json()["ids"] == []
+    pulled = sync(k, [], since=k.get("/api/boot").json()["seq"] - 20).json()["pulled"]
+    assert pulled and all(p["data"] is None for p in pulled)                        # 열린 화면들은 지움을 받음
+    assert list((cfg.files_dir / "_trash").glob("reset_*/ph/ph1.json"))
+    # 작성자는 못 함
+    assert k.post("/api/admin/reset", json={"confirm": "비우기"}, headers=H).status_code == 403
+    # 비운 뒤 다시 가져오기는 묻지 않고 됨
+    assert a.post("/api/admin/import", json=data, headers=H).status_code == 200
+    # 이력에 남음
+    acts = [x["action"] for x in a.get("/api/admin/audit").json()["items"]]
+    assert "reset" in acts and acts.count("import") >= 3

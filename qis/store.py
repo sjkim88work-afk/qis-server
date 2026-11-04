@@ -255,11 +255,30 @@ class Store:
         return out
 
     # ---- 가져오기 (기존 QIS 백업 JSON) ----
+    def has_records(self) -> bool:
+        return self.db.q1("SELECT COUNT(*) n FROM records WHERE deleted=0")["n"] > 0
+
+    def clear_all(self, user, ip=None) -> dict:
+        """모든 기록을 '지움'으로 표시 (내용은 남기고, 변경 순번을 올려 열린 화면들도 비워짐). 관리자 전용 — 가져오기 전 · 시험 초기화.
+        되돌리려면 백업 DB로 복원 (호출 전에 백업을 받아 둘 것)."""
+        cnt = {}
+        t = now()
+        with self.db.tx() as c:
+            rows = c.execute("SELECT coll,id,rev,data FROM records WHERE deleted=0").fetchall()
+            for r in rows:
+                c.execute("INSERT INTO record_versions(coll,id,rev,data,saved_at,saved_by) "
+                          "SELECT ?,?,?,?,?,? WHERE NOT EXISTS (SELECT 1 FROM record_versions WHERE coll=? AND id=? AND rev=?)",
+                          (r["coll"], r["id"], r["rev"], r["data"], t, user["name"], r["coll"], r["id"], r["rev"]))
+                c.execute("UPDATE records SET deleted=1, rev=rev+1, seq=?, updated_at=?, updated_by=? WHERE coll=? AND id=?",
+                          (self.db.next_seq(c), t, user["name"], r["coll"], r["id"]))
+                cnt[r["coll"]] = cnt.get(r["coll"], 0) + 1
+            self.db.audit(c, user=user, action="reset", label="모든 기록 비우기", detail=cnt, ip=ip)
+        return cnt
+
     def import_backup(self, user, backup: dict, ip=None) -> dict:
-        """빈 서버에 기존 QIS 백업을 넣는다. 이미 기록이 있으면 거부."""
-        n = self.db.q1("SELECT COUNT(*) n FROM records")["n"]
-        if n:
-            raise ValueError("서버에 이미 기록이 있습니다 — 빈 서버에만 가져올 수 있습니다")
+        """빈 서버(지운 기록만 있는 서버 포함)에 기존 QIS 백업을 넣는다. 살아 있는 기록이 있으면 거부."""
+        if self.has_records():
+            raise ValueError("서버에 이미 기록이 있습니다 — 먼저 관리 화면에서 데이터를 비우거나, 바꾸기를 선택하세요")
         if not isinstance(backup, dict) or not isinstance(backup.get("defects"), list) or not isinstance(backup.get("settings"), dict):
             raise ValueError("QIS 백업 형식이 아닙니다")
         cnt = {}
@@ -267,8 +286,14 @@ class Store:
         with self.db.tx() as c:
             def put(coll, rid, data):
                 seq = self.db.next_seq(c)
-                c.execute("INSERT INTO records(coll,id,rev,seq,data,deleted,updated_at,updated_by) VALUES(?,?,1,?,?,0,?,?)",
-                          (coll, rid, seq, json.dumps(data, ensure_ascii=False, separators=(",", ":")), t, user["name"]))
+                js = json.dumps(data, ensure_ascii=False, separators=(",", ":"))
+                old = c.execute("SELECT rev FROM records WHERE coll=? AND id=?", (coll, rid)).fetchone()
+                if old:   # 비운 뒤 다시 가져온 같은 id — 되살리고 버전을 올림
+                    c.execute("UPDATE records SET rev=?, seq=?, data=?, deleted=0, updated_at=?, updated_by=? WHERE coll=? AND id=?",
+                              (old["rev"] + 1, seq, js, t, user["name"], coll, rid))
+                else:
+                    c.execute("INSERT INTO records(coll,id,rev,seq,data,deleted,updated_at,updated_by) VALUES(?,?,1,?,?,0,?,?)",
+                              (coll, rid, seq, js, t, user["name"]))
             for coll in COLLS:
                 seen = set()
                 for r in backup.get(coll) or []:

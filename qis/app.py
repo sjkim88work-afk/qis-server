@@ -427,10 +427,29 @@ def create_app(cfg: Config | None = None, *, start_backup=True, desktop: dict | 
                      detail={"photos": "photos" in data}, ip=ip_of(request))
         return JSONResponse(data, headers={"Content-Disposition": "attachment; filename=\"QIS_server_export.json\""})
 
+    def reset_all(user, ip, reason):
+        """비우기 전 DB 백업 → 기록 · 첨부 비우기. 되돌리려면 그 백업으로 복원."""
+        info = backup.run(reason, user=user)
+        cnt = store.clear_all(user, ip=ip)
+        cnt["files"] = files.clear_all(user, ip=ip)
+        return {"cleared": cnt, "backup": info["db"]}
+
+    @app.post("/api/admin/reset")
+    async def reset(request: Request, user=Depends(admin_only)):
+        b = await request.json()
+        if b.get("confirm") != "비우기":
+            raise ValueError("확인 문구가 맞지 않습니다")
+        return reset_all(user, ip_of(request), "before_reset")
+
     @app.post("/api/admin/import")
     async def import_(request: Request, user=Depends(admin_only)):
         b = await request.json()
         photos = b.pop("photos", None)
+        replace = bool(b.pop("_replace", False))
+        if store.has_records():
+            if not replace:
+                return JSONResponse({"error": "has_records", "message": "서버에 이미 기록이 있습니다"}, status_code=409)
+            reset_all(user, ip_of(request), "before_import")
         cnt = store.import_backup(user, b, ip=ip_of(request))
         if isinstance(photos, list) and photos:
             ok = [p for p in photos if isinstance(p, dict) and p.get("id")]
