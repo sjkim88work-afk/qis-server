@@ -37,6 +37,14 @@ def create_app(cfg: Config | None = None, *, start_backup=True, desktop: dict | 
        {"mode": "solo" | "lan", "token": 자동 입장 열쇠(solo), "user": 로컬 관리자 아이디(solo)}"""
     cfg = cfg or load_config()
     solo = bool(desktop and desktop.get("mode") == "solo")
+    WIN_COOKIE = "qis_win"
+
+    def in_window(request: Request) -> bool:
+        """프로그램 창에서 온 요청인지 — 창을 열 때 받은 표시 쿠키로 구분.
+        사내 서버 모드에서 팀원 브라우저로 접속한 화면에는 데스크톱 보조를 붙이지 않는다."""
+        k = request.cookies.get(WIN_COOKIE) or ""
+        t = str((desktop or {}).get("token") or "")
+        return bool(t) and hmac.compare_digest(k.encode(), t.encode())
     cfg.data_dir.mkdir(parents=True, exist_ok=True)
     db = open_db(cfg)
     auth = Auth(db, cfg)
@@ -66,7 +74,7 @@ def create_app(cfg: Config | None = None, *, start_backup=True, desktop: dict | 
                 return JSONResponse({"error": "csrf", "message": "잘못된 요청입니다"}, status_code=403)
         resp = await call_next(request)
         h = resp.headers
-        h["Content-Security-Policy"] = CSP_DESKTOP if desktop else CSP
+        h["Content-Security-Policy"] = CSP_DESKTOP if desktop and in_window(request) else CSP
         h["X-Content-Type-Options"] = "nosniff"
         h["X-Frame-Options"] = "DENY"
         h["Referrer-Policy"] = "same-origin"
@@ -140,11 +148,12 @@ def create_app(cfg: Config | None = None, *, start_backup=True, desktop: dict | 
             return RedirectResponse("/account?first=1", status_code=303)
         info = {"user": u["username"], "name": u["name"], "role": u["role"], "roleName": ROLES[u["role"]],
                 "server": __version__, "company": cfg.company}
-        if desktop:
+        win = bool(desktop) and in_window(request)
+        if win:
             info["desktop"] = desktop.get("mode")
         tag = '<script id="qisServer" type="application/json">' + \
               json.dumps(info, ensure_ascii=False).replace("</", "<\\/") + "</script>"
-        if desktop:   # 데스크톱 창 보조 (새 창 · 보고서 창 · 혼자 쓰기 화면 정리) — 화면 파일은 그대로
+        if win:   # 데스크톱 창 보조 (새 창 · 보고서 창 · 혼자 쓰기 화면 정리) — 화면 파일은 그대로
             tag += '\n<script src="/desktop.js"></script>'
         return HTMLResponse(index_html().replace("<head>", "<head>\n" + tag, 1))
 
@@ -164,6 +173,19 @@ def create_app(cfg: Config | None = None, *, start_backup=True, desktop: dict | 
         def desktop_js():
             return FileResponse(WEB / "desktop.js", media_type="text/javascript")
 
+    def set_win_cookie(resp: Response):
+        resp.set_cookie(WIN_COOKIE, str(desktop["token"]), httponly=True, samesite="strict", secure=cfg.https, path="/")
+
+    if desktop and not solo:
+        @app.get("/desktop/window")
+        def desktop_window(k: str = ""):
+            """사내 서버 모드: 프로그램 창 표시 쿠키만 붙이고 로그인 화면으로 (로그인은 그대로 필요)."""
+            if not desktop.get("token") or not hmac.compare_digest(k.encode(), str(desktop["token"]).encode()):
+                raise HTTPException(403, "잘못된 요청입니다")
+            resp = RedirectResponse("/", status_code=303)
+            set_win_cookie(resp)
+            return resp
+
     if solo:
         @app.get("/desktop/enter")
         def desktop_enter(request: Request, k: str = ""):
@@ -177,6 +199,7 @@ def create_app(cfg: Config | None = None, *, start_backup=True, desktop: dict | 
                                          action="login.desktop")
             resp = RedirectResponse("/", status_code=303)
             set_cookie(resp, token)
+            set_win_cookie(resp)
             return resp
 
     @app.get("/account", response_class=HTMLResponse)

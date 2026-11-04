@@ -183,7 +183,8 @@ class ServerRunner:
         self.mode = settings.mode
         if self.mode not in MODES:
             raise ValueError("모드를 먼저 고르세요")
-        self.token = secrets.token_urlsafe(32) if self.mode == "solo" else None
+        # 실행마다 새 열쇠: 혼자 쓰기는 자동 입장, 사내 서버는 '프로그램 창' 표시용 (로그인은 따로 필요)
+        self.token = secrets.token_urlsafe(32)
         self.app = None
         self.server = None
         self.thread = None
@@ -205,7 +206,7 @@ class ServerRunner:
         """창이 처음 여는 주소: 혼자 쓰기는 자동 입장, 사내 서버는 로그인 화면."""
         if self.mode == "solo":
             return f"{self.base_url}/desktop/enter?k={self.token}"
-        return self.base_url + "/"
+        return f"{self.base_url}/desktop/window?k={self.token}"
 
     @property
     def bound(self) -> tuple[str, int]:

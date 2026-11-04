@@ -166,7 +166,11 @@ def test_lan_mode_login(data):
                            headers={"Content-Type": "application/json", "X-QIS": "1"})
         assert st_ == 200, body
         st_, body, _ = get(op, r.base_url + "/")
-        assert '"desktop": "lan"' in body
+        assert '"desktop"' not in body and "/desktop.js" not in body   # 팀원 브라우저: 일반 서버 화면 그대로
+        st_, _, _ = get(op, r.base_url + "/desktop/window?k=wrong")
+        assert st_ == 403
+        st_, body, url = get(op, r.enter_url)                          # 프로그램 창: 표시 쿠키 → 창 보조 붙음
+        assert url == r.base_url + "/" and '"desktop": "lan"' in body and "/desktop.js" in body
     finally:
         r.stop()
     # 이미 있는 아이디면 비밀번호를 새로 정함

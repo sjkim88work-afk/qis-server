@@ -297,12 +297,15 @@ class Controller:
     def open_page(self, path: str):
         import webview
         if not self.runner or not re.match(r"^/(?!/)[\w\-./?=&%]*$", path):
+            log.warning("새 창 거부: %r", path)
             return
+        log.info("새 창: %s", path)
         webview.create_window(TITLE, url=self.runner.base_url + path, js_api=self.api, width=1300, height=880,
                               text_select=True, zoomable=True)
 
     def open_report(self, html: str):
         import webview
+        log.info("보고서 창 (%d자)", len(html))
         webview.create_window("QIS 보고서", html=html, width=1200, height=900, text_select=True, zoomable=True)
 
     def _ask_save(self, name: str, types=()):
