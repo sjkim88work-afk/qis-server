@@ -91,6 +91,8 @@ def ensure_solo_user(cfg: Config, name: str = "") -> dict:
                     db.audit(c, action="user.update", coll="users", rec_id=str(u["id"]),
                              label=f"{name} ({SOLO_USER})", detail={"desktop": "solo"})
         u = db.q1("SELECT id, username, name, role FROM users WHERE lower(username)=lower(?)", (SOLO_USER,))
+        with db.tx() as c:   # 지난 실행의 자동 입장 세션은 모두 끝냄 (실행마다 새 열쇠 · 새 세션)
+            c.execute("DELETE FROM sessions WHERE user_id=?", (u["id"],))
         return dict(u)
     finally:
         db.close()
@@ -216,8 +218,9 @@ class ServerRunner:
     def _runtime_cfg(self) -> Config:
         c = self.base_cfg
         if self.mode == "solo":
-            # 혼자 쓰기: 이 PC 안에서만, HTTPS 불필요, 창을 켜 둔 동안 로그인 만료 없음 (qis.json 은 바꾸지 않음)
-            return dataclasses.replace(c, host="127.0.0.1", ssl_certfile="", ssl_keyfile="", session_hours=24 * 365)
+            # 혼자 쓰기: 이 PC 안에서만, HTTPS 불필요 (qis.json 은 바꾸지 않음).
+            # 로그인은 마지막 사용 후 하루 유지 — 넘으면 창이 비밀번호 없이 다시 들어감(desktop_enter.html)
+            return dataclasses.replace(c, host="127.0.0.1", ssl_certfile="", ssl_keyfile="", session_hours=24)
         if c.host in ("127.0.0.1", "localhost"):
             return c          # 사용자가 일부러 127.0.0.1 로 정한 경우(Tailscale 개인 사용 등)는 존중
         return dataclasses.replace(c, host="0.0.0.0")
@@ -319,6 +322,9 @@ def prepare(cfg: Config, settings: DesktopSettings) -> None:
         try:
             n = db.q1("SELECT COUNT(*) n FROM users WHERE role='admin' AND active=1 AND lower(username)<>lower(?)",
                       (SOLO_USER,))["n"]
+            with db.tx() as c:   # 혼자 쓰기 때의 자동 입장 세션이 사내 서버 모드로 이어지지 않게
+                c.execute("DELETE FROM sessions WHERE user_id IN (SELECT id FROM users WHERE lower(username)=lower(?))",
+                          (SOLO_USER,))
         finally:
             db.close()
         if not n:

@@ -130,8 +130,11 @@ def create_app(cfg: Config | None = None, *, start_backup=True, desktop: dict | 
         return JSONResponse({"error": "invalid", "message": str(exc)}, status_code=400)
 
     def set_cookie(resp: Response, token: str):
-        resp.set_cookie(COOKIE, token, httponly=True, samesite="strict", secure=cfg.https, path="/",
-                        max_age=cfg.session_hours * 3600 * 14)
+        # 혼자 쓰기(데스크톱): 프로그램을 닫으면 사라지는 쿠키 — 창 저장소(webview 폴더)에 로그인이 남지 않게.
+        #   다시 열면 프로그램이 새 열쇠로 자동 입장하므로 불편 없음.
+        # 그 밖: 마지막 사용 후 session_hours 동안 유지(서버가 확인) · 쿠키 자체는 최대 30일
+        max_age = None if solo else min(cfg.session_hours * 3600 * 14, 30 * 24 * 3600)
+        resp.set_cookie(COOKIE, token, httponly=True, samesite="strict", secure=cfg.https, path="/", max_age=max_age)
 
     # ---- 화면 ----
     _idx = {"mtime": 0, "html": ""}

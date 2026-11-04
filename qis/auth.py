@@ -12,6 +12,8 @@ import hashlib
 import hmac
 import re
 import secrets
+import threading
+import time
 from datetime import datetime, timedelta, timezone
 
 from .db import DB, now
@@ -72,9 +74,37 @@ def public_user(u) -> dict:
 
 
 class Auth:
+    IP_FAIL_FACTOR = 4           # 한 IP에서 (계정 잠금 횟수 × 4)번 실패하면 그 IP를 잠금 시간 동안 차단
+
     def __init__(self, db: DB, cfg):
         self.db = db
         self.cfg = cfg
+        self._ip_fails: dict[str, list[float]] = {}
+        self._ip_lock = threading.Lock()
+
+    # ---- 접속 주소(IP)별 실패 기록 (메모리 — 서버를 다시 켜면 비워짐) ----
+    def _ip_window(self) -> float:
+        return self.cfg.login_lock_minutes * 60
+
+    def _ip_blocked(self, ip) -> bool:
+        if not ip:
+            return False
+        cut = time.monotonic() - self._ip_window()
+        with self._ip_lock:
+            fs = [t for t in self._ip_fails.get(ip, []) if t > cut]
+            if fs:
+                self._ip_fails[ip] = fs
+            else:
+                self._ip_fails.pop(ip, None)
+            return len(fs) >= self.cfg.login_max_fail * self.IP_FAIL_FACTOR
+
+    def _ip_fail(self, ip):
+        if not ip:
+            return
+        with self._ip_lock:
+            self._ip_fails.setdefault(ip, []).append(time.monotonic())
+            if len(self._ip_fails) > 10000:           # 메모리 보호
+                self._ip_fails.clear()
 
     # ---- 사용자 ----
     def user_count(self) -> int:
@@ -174,9 +204,13 @@ class Auth:
 
     # ---- 로그인 ----
     def login(self, username: str, password: str, *, ip=None, ua=None) -> tuple[str, dict]:
+        if self._ip_blocked(ip):
+            raise AuthError(f"이 PC에서 로그인 실패가 너무 많습니다 — {self.cfg.login_lock_minutes}분 뒤 다시 시도하세요",
+                            "ip_locked")
         u = self.db.q1("SELECT * FROM users WHERE lower(username)=lower(?)", ((username or "").strip(),))
         if not u:
             check_pw(password or "", _DUMMY)  # 아이디 유무를 시간 차로 알 수 없게
+            self._ip_fail(ip)
             with self.db.tx() as c:
                 self.db.audit(c, action="login.fail", label=(username or "")[:40], detail={"reason": "no_user"}, ip=ip)
             raise AuthError("아이디 또는 비밀번호가 맞지 않습니다", "bad_login")
@@ -184,6 +218,7 @@ class Auth:
         if lock and lock > datetime.now(timezone.utc):
             raise AuthError(f"로그인 실패가 많아 잠겼습니다 — {self.cfg.login_lock_minutes}분 뒤 다시 시도하세요", "locked")
         if not check_pw(password or "", u["pw_hash"]):
+            self._ip_fail(ip)
             fails = u["fail_count"] + 1
             until = None
             if fails >= self.cfg.login_max_fail:

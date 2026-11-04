@@ -54,6 +54,8 @@ input,select{border:1px solid #d5dbe5;border-radius:6px;padding:6px 8px;font:inh
 <script>
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+// 클릭 코드(onclick) 안의 글자: JS 문자열로 만든 뒤 HTML 이스케이프 — esc() 만 쓰면 브라우저가 &#39; 를 ' 로 되돌려 코드가 끼어들 수 있음
+const jsq=s=>esc(JSON.stringify(String(s??'')));
 const toast=m=>{const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('on'),3200)};
 async function api(path,opt={}){
   const r=await fetch(path,{credentials:'same-origin',...opt,headers:{...(opt.body?{'Content-Type':'application/json'}:{}),'X-QIS':'1',...(opt.headers||{})}});
@@ -93,9 +95,9 @@ async function renderUsers(){
     <td><select onchange="setUser(${u.id},{role:this.value})" ${u.id===me.id?'title="본인 역할은 다른 관리자가 바꿉니다"':''}>${Object.entries(ROLES).map(([k,l])=>`<option value="${k}" ${u.role===k?'selected':''}>${l}</option>`).join('')}</select></td>
     <td>${u.active?'<span class="bg ok">사용</span>':'<span class="bg bad">중지</span>'}${u.mustChange?' <span class="bg warn">비밀번호 변경 대기</span>':''}</td>
     <td class="nw muted">${fmt(u.lastLogin)||'-'}</td>
-    <td class="nw"><button class="b" onclick="resetPw(${u.id},'${esc(u.name)}')">비밀번호 초기화</button>
+    <td class="nw"><button class="b" onclick="resetPw(${u.id},${jsq(u.name)})">비밀번호 초기화</button>
       ${u.id===me.id?'':u.active?`<button class="b d" onclick="setUser(${u.id},{active:false})">사용 중지</button>`:`<button class="b" onclick="setUser(${u.id},{active:true})">다시 사용</button>`}
-      <span class="lk" style="margin-left:6px" onclick="A.f={coll:'',user:'${esc(u.username)}',action:'',q:'',from:'',to:'',id:''};go('audit')">이력</span></td></tr>`;
+      <span class="lk" style="margin-left:6px" onclick="A.f={coll:'',user:${jsq(u.username)},action:'',q:'',from:'',to:'',id:''};go('audit')">이력</span></td></tr>`;
   return `<div class="card"><h2>사용자 추가</h2><p class="help">처음 로그인하면 본인 비밀번호로 바꾸게 됩니다. 임시 비밀번호는 직접 전달하세요 (8자 이상, 영문+숫자).</p>
     <div class="row"><input id="nu" placeholder="아이디 (예: sjkim)" style="width:150px"><input id="nn" placeholder="이름" style="width:120px">
     <select id="nr">${Object.entries(ROLES).map(([k,l])=>`<option value="${k}" ${k==='editor'?'selected':''}>${l} — ${ROLE_HELP[k]}</option>`).join('')}</select>
@@ -149,7 +151,7 @@ async function renderAudit(more){
     ${A.items.map(it=>`<tr><td class="nw muted">${fmt(it.ts)}</td><td class="nw">${esc(it.name||it.username||'')}</td>
       <td class="nw"><span class="bg ${it.action==='delete'||it.action==='file.delete'||it.action==='login.fail'?'bad':it.action==='create'?'ok':''}">${esc(ACT[it.action]||it.action)}</span></td>
       <td class="nw">${esc(COLL[it.coll]||it.coll||'')}</td>
-      <td>${it.rec_id&&it.coll&&it.coll!=='files'&&it.coll!=='users'?`<span class="lk" onclick="A.f={coll:'${esc(it.coll)}',id:'${esc(it.rec_id)}',user:'',action:'',q:'',from:'',to:''};render()">${esc(it.label||it.rec_id)}</span>`:esc(it.label||'')}</td>
+      <td>${it.rec_id&&it.coll&&it.coll!=='files'&&it.coll!=='users'?`<span class="lk" onclick="A.f={coll:${jsq(it.coll)},id:${jsq(it.rec_id)},user:'',action:'',q:'',from:'',to:''};render()">${esc(it.label||it.rec_id)}</span>`:esc(it.label||'')}</td>
       <td>${changes(it)}</td></tr>`).join('')||'<tr><td colspan="6" class="muted">이력이 없습니다</td></tr>'}
     </tbody></table></div>${A.more?`<div style="text-align:center;margin-top:10px"><button class="b" onclick="moreAudit()">더 보기</button></div>`:''}</div>`;
 }
@@ -203,7 +205,7 @@ async function renderTelegram(){
     <div class="row" style="margin-top:12px"><button class="b" onclick="tgPreview()">미리 보기</button><button class="b p" onclick="tgSend(this)" ${t.token_set&&t.chat?'':'disabled'}>지금 요약 보내기</button></div>
     <pre id="tgPrev" class="muted" style="white-space:pre-wrap;display:none;margin-top:10px;font-size:13px;line-height:1.6"></pre></div>`;
 }
-const tgChatBtns=()=>TG.chats.length?TG.chats.map(c=>`<button class="b" onclick="tgSet({chat:'${esc(c.id)}'})">${esc(c.title)} <span class="muted">(${esc(c.type)} · ${esc(c.id)})</span></button>`).join(''):'<span class="muted">찾은 대화가 없습니다 — 봇을 그룹에 초대한 뒤 그 그룹에 아무 메시지나 한 번 보내고 다시 누르세요</span>';
+const tgChatBtns=()=>TG.chats.length?TG.chats.map(c=>`<button class="b" onclick="tgSet({chat:${jsq(c.id)}})">${esc(c.title)} <span class="muted">(${esc(c.type)} · ${esc(c.id)})</span></button>`).join(''):'<span class="muted">찾은 대화가 없습니다 — 봇을 그룹에 초대한 뒤 그 그룹에 아무 메시지나 한 번 보내고 다시 누르세요</span>';
 async function tgSet(ch){try{await post('/api/admin/telegram',ch);toast('저장했습니다')}catch(e){toast(e.message)}render()}
 async function tgFind(){const b=$('#tgChats');b.innerHTML='<span class="muted">찾는 중…</span>';try{const {chats}=await post('/api/admin/telegram/chats');TG.chats=chats;b.innerHTML=tgChatBtns()}catch(e){b.innerHTML=`<span class="bg bad">${esc(e.message)}</span>`}}
 async function tgTest(btn){btn.disabled=true;try{await post('/api/admin/telegram/test');toast('시험 메시지를 보냈습니다 — 텔레그램에서 확인하세요')}catch(e){toast('전송 실패: '+e.message)}btn.disabled=false}

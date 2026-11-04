@@ -112,13 +112,18 @@ function act(c){document.querySelectorAll('button').forEach(function(b){b.disabl
     return _page("QIS — 복구", body, script)
 
 
-def lan_info_page(addresses: list[str], port: int, windows: bool) -> str:
+def lan_info_page(addresses: list[str], port: int, windows: bool, https: bool = False) -> str:
     rows = "".join(f"<li><code>{html.escape(a)}</code></li>" for a in addresses) or "<li>사내망 주소를 찾지 못했습니다 — 네트워크 연결을 확인하세요</li>"
     fw = (f"<p class=muted>다른 PC에서 안 열리면: 처음 실행 때 뜬 Windows 방화벽 창에서 ‘액세스 허용’을 눌렀는지 확인하세요. "
           f"또는 관리자 권한 명령 창에서 <code>netsh advfirewall firewall add rule name=\"QIS\" dir=in action=allow protocol=TCP localport={port}</code></p>"
           if windows else "<p class=muted>맥에서 ‘들어오는 네트워크 연결을 허용할까요?’ 창이 뜨면 ‘허용’을 누르세요.</p>")
+    warn = "" if https else (
+        "<div class=box style='border-color:#f59e0b;background:#fffbeb'><b>⚠ 암호화되지 않은 연결(http)입니다</b>"
+        "<p class=muted style='margin:6px 0 0'>같은 사내망에서 오가는 아이디 · 비밀번호 · 기록 내용을 다른 사람이 엿볼 수 있습니다. "
+        "IT에서 받은 인증서를 데이터 폴더의 <code>qis.json</code>에 <code>ssl_certfile</code> · <code>ssl_keyfile</code>로 넣고 "
+        "프로그램을 다시 열면 https로 바뀝니다 (사용 안내서 ‘사내 서버 모드 HTTPS’).</p></div>")
     body = f"""
-<h1>🏢 사내 서버로 켜졌습니다</h1>
+<h1>🏢 사내 서버로 켜졌습니다</h1>{warn}
 <div class=box><h2>다른 PC · 핸드폰 접속 주소 (같은 사내망 · Wi-Fi)</h2><ul>{rows}</ul>{fw}
 <p class=muted>이 PC가 켜져 있고 QIS 창이 열려 있는 동안만 접속됩니다. 메뉴 ‘설정 › 접속 주소 보기’에서 다시 볼 수 있습니다.</p></div>
 <button class=p onclick="ready(function(){{api().go_app()}})">QIS 열기 (로그인)</button>
