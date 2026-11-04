@@ -16,6 +16,7 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Redirect
 from . import __version__
 from .auth import ROLES, Auth, AuthError, public_user
 from .backup import Backup
+from .telegram import Telegram, TelegramError
 from .config import Config, load_config
 from .db import open_db
 from .files import Files
@@ -53,20 +54,24 @@ def create_app(cfg: Config | None = None, *, start_backup=True, desktop: dict | 
     store = Store(db, cfg)
     files = Files(db, cfg)
     backup = Backup(db, store, cfg)
+    telegram = Telegram(db, store, cfg)
     app = FastAPI(title="QIS", version=__version__, docs_url=None, redoc_url=None, openapi_url=None)
     app.state.cfg, app.state.db, app.state.auth, app.state.store, app.state.files, app.state.backup = \
         cfg, db, auth, store, files, backup
     app.state.desktop = desktop
+    app.state.telegram = telegram
 
     if start_backup:
         @app.on_event("startup")
         def _start():
             auth.purge_sessions()
             backup.start()
+            telegram.start()
 
         @app.on_event("shutdown")
         def _stop():
             backup.stop()
+            telegram.stop()
 
     # ---- 공통: 보안 헤더 · 위조 요청 차단 ----
     @app.middleware("http")
@@ -368,6 +373,49 @@ def create_app(cfg: Config | None = None, *, start_backup=True, desktop: dict | 
     @app.post("/api/admin/backup")
     def backup_now(user=Depends(admin_only)):
         return {"info": backup.run("manual", user=user)}
+
+    # ---- 텔레그램 아침 요약 (관리자) ----
+    @app.get("/api/admin/telegram")
+    def telegram_info(user=Depends(admin_only)):
+        return telegram.status()
+
+    @app.post("/api/admin/telegram")
+    async def telegram_set(request: Request, user=Depends(admin_only)):
+        ch = await request.json()
+        try:
+            telegram.update(ch if isinstance(ch, dict) else {})
+        except ValueError as e:
+            raise HTTPException(400, str(e))
+        with db.tx() as c:
+            db.audit(c, user=user, action="telegram.update", label="알림 설정 변경",
+                     detail={k: ("***" if k == "token" else v) for k, v in (ch or {}).items()}, ip=ip_of(request))
+        return telegram.status()
+
+    @app.get("/api/admin/telegram/preview")
+    def telegram_preview(user=Depends(admin_only)):
+        return {"text": telegram.summary()}
+
+    @app.post("/api/admin/telegram/test")
+    def telegram_test(user=Depends(admin_only)):
+        try:
+            telegram.send_text("[QIS] 텔레그램 알림 시험 전송입니다.")
+        except TelegramError as e:
+            raise HTTPException(400, str(e))
+        return {"ok": True}
+
+    @app.post("/api/admin/telegram/send")
+    def telegram_send(user=Depends(admin_only)):
+        try:
+            return {"text": telegram.send_summary("manual", user=user)}
+        except TelegramError as e:
+            raise HTTPException(400, str(e))
+
+    @app.post("/api/admin/telegram/chats")
+    def telegram_chats(user=Depends(admin_only)):
+        try:
+            return {"chats": telegram.find_chats()}
+        except TelegramError as e:
+            raise HTTPException(400, str(e))
 
     @app.get("/api/admin/export")
     def export(request: Request, user=Depends(admin_only)):
