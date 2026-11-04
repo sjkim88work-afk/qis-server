@@ -142,6 +142,23 @@ def main(seed_path):
             A.evaluate("srvSync()"); A.wait_for_timeout(600)
             ok(not A.evaluate("!!db.defects.find(x=>x.id==='dnew')"), "삭제 → A 반영")
 
+            # --- 4b. 이슈 (0.6.0): A 등록 · 사진 → B 반영 · 기록 추가 → A 반영 ---
+            A.evaluate("()=>{window.askConfirm=async()=>true;go('issue');editIssue()}"); A.wait_for_timeout(300)
+            A.fill("#mf [name=title]", "서버 이슈 시험")
+            A.check("#mf [name=contain]"); A.fill("#mf [name=containText]", "재공 보류")
+            A.evaluate("()=>{curPhotos.push({id:'iph1',name:'i.jpg',caption:'',data:'data:image/jpeg;base64,AAAA',thumb:'data:image/jpeg;base64,AAAA',createdAt:now(),isNew:true})}")
+            A.evaluate("saveIssue(null,true)"); A.wait_for_timeout(1500)
+            iid = A.evaluate("(db.issues.find(i=>i.title==='서버 이슈 시험')||{}).id")
+            ok(bool(iid) and A.evaluate("state.tab") == "issue", "이슈 등록 (작성자)")
+            B.evaluate("srvSync()"); B.wait_for_timeout(800)
+            ok(B.evaluate("i=>{const x=db.issues.find(y=>y.id===i);return !!x&&x.logs.length===2&&x.photos[0]==='iph1'}", iid), "이슈 → B 반영 (기록 · 사진 목록)")
+            ok(B.evaluate("photoGetMany(['iph1']).then(a=>a.length)") == 1, "B: 이슈 사진을 서버에서 읽음")
+            B.evaluate("i=>{issLog(issById(i),'회의','B 기록',{who:'생산팀'});touch(issById(i));save()}", iid); B.wait_for_timeout(1000)
+            A.evaluate("srvSync()"); A.wait_for_timeout(800)
+            ok(A.evaluate("i=>issById(i).logs.some(l=>l.text==='B 기록')&&issStatus(issById(i))==='조사 중'", iid), "B 기록 → A 반영 · 조사 중")
+            C.evaluate("srvSync()"); C.wait_for_timeout(500); C.evaluate("go('issue')"); C.wait_for_timeout(300)
+            ok(C.locator("#view button:has-text('이슈 등록'):visible").count() == 0 and "서버 이슈 시험" in C.inner_text("#view"), "조회: 이슈 보기만 (등록 버튼 없음)")
+
             # --- 5. 권한: 작성자는 기준정보 삭제 · 설정 불가 ---
             A.evaluate("delSup('s1')"); A.wait_for_timeout(300)
             ok("관리자만" in A.inner_text("#toast"), "작성자: 협력사 삭제 → 관리자만")

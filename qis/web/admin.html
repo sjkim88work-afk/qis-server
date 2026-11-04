@@ -69,7 +69,7 @@ const ROLES={viewer:'조회',editor:'작성',admin:'관리자'};
 const ROLE_HELP={viewer:'보기 · 검색 · 출력만',editor:'등록 · 수정 (기준정보 삭제 · BOM 교체 · 설정 제외)',admin:'모든 기능 + 사용자 · 이력 · 백업 관리'};
 const ACT={create:'등록',update:'수정',delete:'삭제',restore:'복원','file.add':'첨부 추가','file.delete':'첨부 삭제',login:'로그인','login.fail':'로그인 실패',logout:'로그아웃',
   'user.create':'사용자 추가','user.update':'사용자 변경','user.reset_password':'비밀번호 초기화','user.change_password':'비밀번호 변경',backup:'백업',export:'내보내기',import:'가져오기'};
-const COLL={defects:'불량',ncrs:'NCR',suppliers:'협력사',parts:'부품',receipts:'입고',reviews:'월간 검토',cases:'이슈·RCA',actions:'RCA 조치',doc:'설정·BOM',files:'첨부',users:'사용자'};
+const COLL={defects:'불량',ncrs:'NCR',suppliers:'협력사',parts:'부품',receipts:'입고',reviews:'월간 검토',issues:'이슈',cases:'RCA',actions:'RCA 조치',doc:'설정·BOM',files:'첨부',users:'사용자'};
 let tab=location.hash.slice(1)||'users',me=null;
 const A={items:[],more:false,f:{coll:'',user:'',action:'',q:'',from:'',to:'',id:''}};
 
