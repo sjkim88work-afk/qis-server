@@ -1,5 +1,5 @@
 /* QIS 데스크톱 프로그램 창 보조 — 서버가 데스크톱 모드로 화면을 보낼 때만 붙임 (index.html 은 그대로).
-   · 새 창(관리 화면 · 다시 로그인) → 프로그램 새 창으로
+   · 관리 화면 → 저장 후 같은 창에서 이동, 다시 로그인 → 프로그램 새 창
    · 보고서 · 인쇄 미리보기(window.open('') 후 document.write) → 프로그램 새 창으로
    · 첨부 열기(새 탭) → 이 PC의 기본 프로그램으로, 파일 내려받기 → 저장 위치를 묻는 창으로
    · 백업 · 복원 · 가져오기 → 프로그램 메뉴 안내 (브라우저 폴더 선택을 쓰지 않음)
@@ -23,7 +23,12 @@
           close:function(){var h=buf;if(!w.closed)withApi(function(a){a.open_report(h)})}}};
       return w;
     }
-    if(/^\/(?!\/)/.test(u)){withApi(function(a){a.open_page(u)});return null}
+    if(/^\/(?!\/)/.test(u)){
+      if(/^\/login/.test(u)){withApi(function(a){a.open_page(u)});return null}   // 다시 로그인: 이 창의 미저장 내용을 지키려고 새 창
+      // 관리 화면 등: 보내지 않은 변경을 먼저 저장한 뒤 이 창에서 이동 ('QIS로 돌아가기'로 복귀)
+      Promise.resolve(typeof window.srvSync==='function'?window.srvSync():0).catch(function(){}).then(function(){location.href=u});
+      return null;
+    }
     return nativeOpen.apply(window,arguments);
   };
 

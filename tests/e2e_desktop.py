@@ -56,14 +56,20 @@ def main():
             pg.wait_for_function("typeof dataReady!=='undefined'&&dataReady")
             pg.wait_for_timeout(800)
             ok(pg.url == r.base_url + "/", "자동 입장 (로그인 없음): " + pg.url)
+            # pywebview 다리는 new Function · eval 로 만들어짐 — 프로그램 창의 CSP가 이를 막으면 창 ↔ 프로그램 연결이 죽음
+            pg.route("**/csp_probe.js", lambda route: route.fulfill(content_type="text/javascript", body=
+                "try{window.__nf=new Function('return 1')()}catch(e){window.__nf='ERR '+e.name}"
+                "try{window.__ev=eval('1+1')}catch(e){window.__ev='ERR '+e.name}"))
+            pg.evaluate("new Promise(r=>{var s=document.createElement('script');s.src='/csp_probe.js';s.onload=r;s.onerror=r;document.head.appendChild(s)})")
+            ok(pg.evaluate("[window.__nf,window.__ev]") == [1, 2], "프로그램 창 CSP: new Function · eval 허용 (pywebview 다리)")
             ok(pg.evaluate("db.defects.length") == 5, "가져온 기록이 보임")
             ok(pg.evaluate("SRV.desktop") == "solo" and pg.evaluate("SRV.name") == "김선중", "혼자 쓰기 · 이름")
             ok(not pg.is_visible("button[onclick='srvLogout()']"), "로그아웃 버튼 숨김")
             ok(not pg.is_visible("button[onclick=\"location.href='/account'\"]"), "비밀번호 버튼 숨김")
-            # 관리 화면 → 프로그램 새 창
-            pg.evaluate("window.open('/admin','qisAdmin')")
+            # 다시 로그인 → 프로그램 새 창 (이 창의 미저장 내용 유지)
+            pg.evaluate("window.open('/login','qisLogin')")
             pg.wait_for_timeout(100)
-            ok(calls(pg, "open_page") == [["open_page", "/admin"]], "관리 화면 → 프로그램 새 창")
+            ok(calls(pg, "open_page") == [["open_page", "/login"]], "다시 로그인 → 프로그램 새 창")
             # 보고서 창 → 프로그램 새 창(html)
             pg.evaluate("dashReport()")
             pg.wait_for_timeout(300)
@@ -93,6 +99,11 @@ def main():
             pg.evaluate("db.suppliers.push({id:'sx1',name:'시험협력사',contacts:[]});persist()")
             pg.wait_for_timeout(1500)
             ok(not pg.evaluate("srvUnsaved()"), "변경이 서버에 저장됨")
+            # 관리 화면 → 저장 후 같은 창에서 이동
+            pg.evaluate("window.open('/admin','qisAdmin')")
+            pg.wait_for_url(r.base_url + "/admin", timeout=5000)
+            pg.wait_for_selector("text=QIS로 돌아가기")
+            ok(pg.url == r.base_url + "/admin", "관리 화면 열림 (같은 창)")
             ok(not errs, f"화면 오류 없음 {errs}")
             b.close()
     finally:

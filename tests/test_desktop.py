@@ -109,6 +109,12 @@ def test_solo_localhost_only_and_no_login(solo):
     assert st == 200, body
     st, _, _ = get(op, r.base_url + "/desktop.js")
     assert st == 200
+    # 프로그램 창에는 pywebview 다리(new Function · eval)가 돌도록 unsafe-eval 허용, 일반 접속에는 없음
+    req = urllib.request.Request(r.base_url + "/")
+    with op.open(req, timeout=10) as resp:
+        assert "'unsafe-eval'" in resp.headers["Content-Security-Policy"]
+    with opener().open(r.base_url + "/login", timeout=10) as resp:
+        assert "'unsafe-eval'" not in resp.headers["Content-Security-Policy"]
 
 
 def test_solo_ignores_lan_host(data):
@@ -166,7 +172,11 @@ def test_lan_mode_login(data):
                            headers={"Content-Type": "application/json", "X-QIS": "1"})
         assert st_ == 200, body
         st_, body, _ = get(op, r.base_url + "/")
-        assert '"desktop": "lan"' in body
+        assert '"desktop"' not in body and "/desktop.js" not in body   # 팀원 브라우저: 일반 서버 화면 그대로
+        st_, _, _ = get(op, r.base_url + "/desktop/window?k=wrong")
+        assert st_ == 403
+        st_, body, url = get(op, r.enter_url)                          # 프로그램 창: 표시 쿠키 → 창 보조 붙음
+        assert url == r.base_url + "/" and '"desktop": "lan"' in body and "/desktop.js" in body
     finally:
         r.stop()
     # 이미 있는 아이디면 비밀번호를 새로 정함
