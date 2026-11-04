@@ -20,8 +20,10 @@ class RestoreError(Exception):
 
 
 def _server_running(cfg) -> bool:
+    from .desktop.instance import InstanceLock
     from .launcher import _is_qis
-    return _is_qis(cfg) is not None
+    # 데스크톱 프로그램(QIS.app · QIS.exe)은 빈 포트를 쓰므로 데이터 폴더 잠금으로도 확인
+    return InstanceLock(cfg.data_dir).in_use_elsewhere() or _is_qis(cfg) is not None
 
 
 def check(cfg, src: Path) -> dict:
@@ -43,7 +45,8 @@ def check(cfg, src: Path) -> dict:
 def restore(cfg, src: Path, *, check_server=True) -> dict:
     info = check(cfg, src)
     if check_server and _server_running(cfg):
-        raise RestoreError(f"서버가 켜져 있습니다 ({cfg.port}번 포트). 서버 창을 닫거나 Ctrl+C 로 멈춘 뒤 다시 실행하세요")
+        raise RestoreError(f"서버가 켜져 있습니다 ({cfg.port}번 포트 · 또는 QIS 프로그램이 데이터 폴더를 쓰는 중). "
+                           "서버 창 · QIS 창을 닫거나 Ctrl+C 로 멈춘 뒤 다시 실행하세요")
     _, dest = parse_db_url(cfg)
     dest = Path(dest)
     keep = cfg.data_dir / f"restore_before_{datetime.now().strftime('%Y%m%d_%H%M%S')}"

@@ -598,6 +598,8 @@ const SHARE=(()=>{try{const e=document.getElementById('qmsShare');return e?JSON.
 // 사내 서버에서 열었을 때: 서버가 넣어 준 로그인 사용자 정보 (조회 권한이면 읽기 전용)
 const SRV=(()=>{if(SHARE)return null;try{const e=document.getElementById('qisServer');return e?JSON.parse(e.textContent):null}catch(e){return null}})();
 const RO=!!SHARE||!!(SRV&&SRV.role==='viewer');
+// 데스크톱 프로그램(QIS.app · QIS.exe)에서 열림: 'solo'(이 PC 혼자) · 'server'(사내 서버) — 창 안에서 새 창 · 폴더 선택을 쓰지 않고 프로그램이 대신 함
+const DESK=SRV&&SRV.desktop||'';
 const RO_PH=new Map(SHARE&&Array.isArray(SHARE.photos)?SHARE.photos.filter(p=>p&&p.id).map(p=>[p.id,p]):[]);
 /* ================= 기본 유틸 ================= */
 const KEY='personalQMS_v1';
@@ -883,15 +885,45 @@ async function srvPhotoAll(){const j=await srvApi('/api/files/ids');return srvPh
 // ---- 화면 ----
 async function srvLogout(){try{await srvSync()}catch(e){}try{await srvApi('/api/logout',{})}catch(e){}location.href='/login'}
 function srvAdminOnly(){toast('관리자만 할 수 있습니다')}
+function srvOpenAdmin(){if(DESK)deskGo('/admin');else window.open('/admin','qisAdmin')}
+function srvRelogin(){if(!DESK){window.open('/login','qisLogin');return}
+  const lost=srvUnsaved();askConfirm({title:'로그인 화면으로 갈까요?',msg:lost?'<b>아직 저장하지 못한 변경은 사라집니다.</b> 남겨야 하면 취소한 뒤 내용을 따로 적어 두세요.':'',ok:'로그인 화면으로',danger:lost}).then(y=>{if(y)location.href='/login'})}
+/* ---- 데스크톱 프로그램: 데이터 · 백업 폴더 · 가져오기는 프로그램(파이썬)이 PC의 기본 대화상자로 처리 ---- */
+async function deskGo(url){try{await srvSync()}catch(e){}location.href=url}
+async function deskOpen(name,payload){try{await srvApi('/api/desktop/open',{name,...payload});toast(`‘${name}’ — PC 기본 프로그램으로 엽니다`)}catch(e){toast('열지 못했습니다 — '+e.message)}}
+async function deskCall(path,body){try{return await srvApi(path,body||{})}catch(e){toast(e.message);return null}}
+async function deskLoad(){const j=await deskCall('/api/desktop/info',{});if(!j)return;const set=(i,h)=>{const e=$('#'+i);if(e)e.innerHTML=h};
+  set('deskData',`<code>${esc(j.dataDir)}</code>`);set('deskBk',`<code>${esc(j.backupDir)}</code>`);
+  set('deskAddr',(j.addresses||[]).map(u=>`<code>${esc(u)}</code>`).join('<br>')+(j.notice?`<br><span class="bad">${esc(j.notice)}</span>`:'')+
+    (j.windows?`<br><span class="muted">다른 PC에서 안 열리면 Windows 방화벽에서 QIS를 허용하세요.</span>`:''))}
+async function deskBackupDir(reset){const j=await deskCall('/api/desktop/backup-dir',reset?{reset:true}:{});if(j&&!j.cancelled){toast('백업 폴더: '+j.dir);deskLoad()}}
+async function deskBackupNow(){toast('백업 중…');const j=await deskCall('/api/desktop/backup-now');if(j)toast(`백업했습니다 — ${j.info.db} · ${j.info.dir}`)}
+async function deskImport(kind){try{await srvSync()}catch(e){}const j=await deskCall('/api/desktop/import',{kind});if(!j||j.cancelled)return;
+  if(j.restart){toast('데이터를 바꾸는 중입니다 — 잠시 뒤 QIS가 다시 열립니다');return}
+  const n=j.imported||{},t=Object.entries(n).filter(([k])=>!/^photos/.test(k)).reduce((a,[,v])=>a+(+v||0),0);
+  toast(`가져왔습니다 — 기록 ${t}건${n.photos?` · 사진 · 첨부 ${n.photos}개`:''}${n.photos_skipped?` (내용 없는 사진 ${n.photos_skipped}건 제외)`:''}`);setTimeout(()=>location.reload(),1500)}
+function deskPanel(){
+  if(!srvCanAdmin())return '';
+  const btn=(lbl,fn,cls='')=>`<button class="b ${cls}" onclick="${fn}">${lbl}</button>`,row=h=>`<span style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">${h}</span>`;
+  setTimeout(deskLoad,0);
+  return sg('이 PC의 QIS 프로그램',
+    sv('사용 방식',DESK==='solo'?'<b>이 PC 혼자 쓰기</b> — 이 PC 안에서만 열리고, 로그인 없이 씁니다.':'<b>사내 서버</b> — 같은 사내망의 PC · 핸드폰에서 아래 주소로 접속해 로그인합니다. 이 창을 닫으면 접속이 끊깁니다.',btn('바꾸기',"deskGo('/desktop/setup')"))+
+    (DESK==='server'?sv('접속 주소','<span id="deskAddr">…</span>',''):'')+
+    sv('데이터 폴더','DB · 첨부 · 설정이 있는 곳. 프로그램을 새 버전으로 바꿔도 그대로 남습니다.<br><span id="deskData">…</span>',btn('폴더 열기',"deskCall('/api/desktop/open-folder',{which:'data'})"))+
+    sv('백업 폴더','매일 자동 백업 · 지금 백업이 저장되는 곳. 다른 드라이브 · 네트워크 폴더를 권장합니다.<br><span id="deskBk">…</span>',
+      row(btn('지금 백업','deskBackupNow()','p')+btn('폴더 열기',"deskCall('/api/desktop/open-folder',{which:'backup'})")+btn('바꾸기','deskBackupDir()')+btn('기본값','deskBackupDir(true)')))+
+    sv('기존 데이터 가져오기','개인판 백업(<code>QIS_최신백업.json</code> · <code>QIS_data.json</code>)은 <b>빈 데이터에만</b> 넣습니다. 서버판 <code>data</code> 폴더 · 서버 백업 DB(<code>.sqlite</code>)는 지금 데이터를 <b>그 내용으로 바꿉니다</b> (지금 데이터는 지우지 않고 보관).',
+      row(btn('백업 파일 고르기',"deskImport('file')")+btn('서버판 data 폴더 고르기',"deskImport('folder')"))));
+}
 function srvPanel(){
   const st=srvState,R={viewer:'조회',editor:'작성',admin:'관리자'};
   const btn=(lbl,fn,cls='')=>`<button class="b ${cls}" onclick="${fn}">${lbl}</button>`;
-  return sg('사내 서버',
-      sv('연결','데이터는 사내 서버에 저장됩니다. 이 PC에는 남지 않습니다.',`<span class="${st.ok===false?'bg bad':'bg ok'}">${st.ok===false?'연결 끊김':'연결됨'}</span> <span class="muted">${st.at?'마지막 동기화 '+loc(st.at.toISOString()):''}</span>`)+
-      sv('로그인 사용자',`${esc(SRV.name)} (${esc(SRV.user)}) · ${R[SRV.role]||SRV.role} 권한`,`<span style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">${btn('비밀번호 변경',"location.href='/account'")}${btn('로그아웃','srvLogout()')}</span>`))+
+  return (DESK?deskPanel():'')+(DESK==='solo'?'':sg('사내 서버',
+      sv('연결',DESK?'데이터는 이 PC의 QIS 데이터 폴더에 저장되고, 다른 PC · 핸드폰은 이 PC에 접속해 씁니다.':'데이터는 사내 서버에 저장됩니다. 이 PC에는 남지 않습니다.',`<span class="${st.ok===false?'bg bad':'bg ok'}">${st.ok===false?'연결 끊김':'연결됨'}</span> <span class="muted">${st.at?'마지막 동기화 '+loc(st.at.toISOString()):''}</span>`)+
+      sv('로그인 사용자',`${esc(SRV.name)} (${esc(SRV.user)}) · ${R[SRV.role]||SRV.role} 권한`,`<span style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">${btn('비밀번호 변경',"location.href='/account'")}${btn('로그아웃','srvLogout()')}</span>`)))+
     sg('백업 · 변경 이력',
-      sv('서버 자동 백업','매일 새벽 서버가 DB · 첨부를 백업 폴더에 저장합니다. 복원은 관리자가 서버에서 합니다.','')+
-      sv('변경 이력','누가 · 언제 · 무엇을 바꿨는지 모든 저장 · 삭제가 기록됩니다.',srvCanAdmin()?btn('관리 화면 열기',"window.open('/admin','qisAdmin')",'p'):'<span class="muted">관리자 화면에서 조회</span>'))+
+      sv(DESK?'자동 백업':'서버 자동 백업',DESK?'매일 DB · 기록 · 첨부를 백업 폴더에 저장합니다 (위 ‘백업 폴더’).':'매일 새벽 서버가 DB · 첨부를 백업 폴더에 저장합니다. 복원은 관리자가 서버에서 합니다.','')+
+      sv('변경 이력','누가 · 언제 · 무엇을 바꿨는지 모든 저장 · 삭제가 기록됩니다.',srvCanAdmin()?btn('관리 화면 열기','srvOpenAdmin()','p'):'<span class="muted">관리자 화면에서 조회</span>'))+
     sg('공유 · 내보내기',
       sv('읽기 전용 공유','지금 데이터를 HTML 파일 하나로 만듭니다. 서버 밖으로 나가는 사본이니 받을 사람을 가려서 보내세요. 기준정보는 빼고 만듭니다.',
         `<span style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">${btn('사진 제외','makeShareFile(false)')}</span>`)+
@@ -984,7 +1016,7 @@ function renderAlert(){
   const b=$('#alertBar');if(!b)return;
   if(tabLocked&&!loadFailed){b.style.display='flex';b.innerHTML=`<span>🔒 <b>다른 창(또는 탭)에서 QIS가 열려 있어 이 창은 보기 전용입니다.</b> 두 창에서 동시에 저장하면 한쪽 입력이 사라질 수 있어 막았습니다. 입력은 먼저 연 창에서 하세요 — 그 창을 닫으면 이 창이 최신 내용으로 바뀌고 편집할 수 있게 됩니다.</span>`;return}
   if(SRV&&!loadFailed){
-    if(srvState.expired){b.style.display='flex';b.innerHTML=`<span>🔒 <b>로그인이 만료되었습니다.</b> 아직 서버에 보내지 못한 변경은 이 창에 남아 있습니다 — 창을 닫지 말고 다시 로그인하세요. 로그인하면 자동으로 저장됩니다.</span><span style="flex:1"></span><button class="b s p" onclick="window.open('/login','qisLogin')">다시 로그인</button><button class="b s" onclick="srvState.expired=false;srvSync()">저장 다시 시도</button>`;return}
+    if(srvState.expired){b.style.display='flex';b.innerHTML=`<span>🔒 <b>로그인이 만료되었습니다.</b> 아직 서버에 보내지 못한 변경은 이 창에 남아 있습니다 — 창을 닫지 말고 다시 로그인하세요. 로그인하면 자동으로 저장됩니다.</span><span style="flex:1"></span><button class="b s p" onclick="srvRelogin()">다시 로그인</button><button class="b s" onclick="srvState.expired=false;srvSync()">저장 다시 시도</button>`;return}
     if(srvState.ok===false){b.style.display='flex';b.innerHTML=`<span>⚠ <b>서버에 연결할 수 없습니다</b> (${esc(srvState.err)}). ${srvState.pend?`저장하지 못한 변경 ${srvState.pend}건은 이 창에 남아 있고, 연결되면 자동으로 저장합니다 — <b>창을 닫지 마세요.</b>`:'연결되면 자동으로 다시 받아옵니다.'}</span><span style="flex:1"></span><button class="b s p" onclick="srvSync()">다시 시도</button>`;return}
   }
   if(storageBlocked){b.style.display='flex';b.style.background='#fff7e0';b.style.borderBottomColor='#f0d49b';b.style.color='#5c4210';b.innerHTML=`<span>💡 <b>미리보기 화면에서는 데이터가 저장되지 않습니다.</b> 이 창은 보안상 브라우저 저장소가 막혀 있어, 여기서 입력한 내용은 창을 닫으면 사라집니다. 실제로 쓰려면 파일을 내려받아 <b>Edge 또는 Chrome에서 직접</b> 여세요.</span>`;return}
@@ -1655,8 +1687,9 @@ async function clearLogo(){if(!await askConfirm({title:'로고를 삭제할까�
 const REPORT_HEAD=`<style>@page{size:A4;margin:11mm}.rbar{position:sticky;top:0;background:#14213d;color:#fff;padding:8px 12px;display:flex;gap:8px;align-items:center;margin:-24px -24px 16px;font-family:'Malgun Gothic',sans-serif;font-size:13px}.rbar button{font:inherit;padding:5px 12px;border-radius:5px;border:0;cursor:pointer}.rbar .pp{background:#fff;color:#14213d;font-weight:bold}@media print{.rbar{display:none}}</style></head>`;
 const REPORT_BAR=`<div class="rbar"><span style="flex:1">인쇄 미리보기 — 인쇄 창에서 ‘대상: PDF로 저장’을 고르면 PDF 파일로 저장됩니다.</span><button class="pp" onclick="window.print()">인쇄 / PDF 저장</button><button onclick="window.close()">닫기</button></div><script>window.addEventListener('load',function(){setTimeout(function(){try{window.print()}catch(e){}},400)})<\/script>`;
 const inFrame=(()=>{try{return window.self!==window.top}catch(e){return true}})();
-function reportWin(){let w=null;try{w=window.open('','_blank')}catch(e){}if(w){try{w.document.write('<p style="font-family:sans-serif;padding:20px">보고서 준비 중…</p>')}catch(e){w=null}}return w}
+function reportWin(){if(DESK)return null;let w=null;try{w=window.open('','_blank')}catch(e){}if(w){try{w.document.write('<p style="font-family:sans-serif;padding:20px">보고서 준비 중…</p>')}catch(e){w=null}}return w}
 function reportShow(w,html,fname){
+  if(DESK&&!w){deskOpen(fname,{html});return}   // 데스크톱: PC 기본 브라우저로 열어 인쇄 · PDF 저장
   if(w&&!w.closed){try{w.document.open();w.document.write(html);w.document.close();return}catch(e){}}
   download(fname,html,'text/html;charset=utf-8');
   toast('새 창을 열 수 없어 보고서 파일을 내려받았습니다. 내려받은 파일을 열면 인쇄 창이 뜹니다.');
@@ -3722,6 +3755,7 @@ async function docOpenRec(r){
   if(!r)return;let data=r.data;
   if(!data||!isFileURL(data)){const g=await photoGet(r.id);data=g&&g.data}
   if(!data||!isFileURL(data)){toast('문서를 불러오지 못했습니다');return}
+  if(DESK){deskOpen(r.name||'첨부',{data});return}   // 데스크톱: PC 기본 프로그램으로
   let blob=await (await fetch(data)).blob();if(r.mime&&(!blob.type||/octet-stream/.test(blob.type)))blob=new Blob([blob],{type:r.mime});const url=URL.createObjectURL(blob);
   const a=document.createElement('a');a.href=url;
   if(/pdf|image|text/i.test(blob.type)){a.target='_blank';a.rel='noopener'}else a.download=r.name;
@@ -7048,9 +7082,9 @@ if(SRV){
   ['hdrBk','hdrInstall'].forEach(i=>{const e=$('#'+i);if(e)e.style.display='none'});
   const R={viewer:'조회',editor:'작성',admin:'관리자'};
   $('#hdrBk').insertAdjacentHTML('beforebegin',`<span class="noprint" id="srvUser" title="${esc(SRV.user)} · ${R[SRV.role]||''} 권한" style="font-size:12px;opacity:.9">👤 ${esc(SRV.name)} <span style="opacity:.7">· ${R[SRV.role]||SRV.role}</span></span>`+
-    `<button class="b s noprint" onclick="location.href='/account'" title="내 비밀번호 바꾸기">비밀번호</button>`+
-    (srvCanAdmin()?`<button class="b s noprint" onclick="window.open('/admin','qisAdmin')" title="사용자 · 변경 이력 · 백업">관리</button>`:'')+
-    `<button class="b s noprint" onclick="srvLogout()">로그아웃</button>`);
+    (DESK==='solo'?'':`<button class="b s noprint" onclick="location.href='/account'" title="내 비밀번호 바꾸기">비밀번호</button>`)+
+    (srvCanAdmin()?`<button class="b s noprint" onclick="srvOpenAdmin()" title="사용자 · 변경 이력 · 백업">관리</button>`:'')+
+    (DESK==='solo'?'':`<button class="b s noprint" onclick="srvLogout()">로그아웃</button>`));
   // 서버가 맡는 기능 (브라우저 저장소 · PC 폴더 · 파일 백업/복원)
   ['resetAll','pickImport','restoreFromFolder','pickRoot','unlinkRoot','pickDir','unlinkDir','photoDirNow','chooseQmsDir','openImport']
     .forEach(n=>{if(typeof window[n]==='function')window[n]=function(){toast('사내 서버 모드에서는 서버가 백업 · 복원합니다 — 관리자 화면을 쓰세요')}});

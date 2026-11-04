@@ -133,6 +133,7 @@ def create_app(cfg: Config | None = None, *, start_backup=True) -> FastAPI:
             return RedirectResponse("/account?first=1", status_code=303)
         info = {"user": u["username"], "name": u["name"], "role": u["role"], "roleName": ROLES[u["role"]],
                 "server": __version__, "company": cfg.company}
+        info.update(getattr(app.state, "page_extra", None) or {})   # 데스크톱 프로그램: {"desktop": "solo" | "server"}
         tag = '<script id="qisServer" type="application/json">' + \
               json.dumps(info, ensure_ascii=False).replace("</", "<\\/") + "</script>"
         return HTMLResponse(index_html().replace("<head>", "<head>\n" + tag, 1))

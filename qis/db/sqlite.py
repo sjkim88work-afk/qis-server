@@ -139,8 +139,48 @@ class SqliteDB(Database):
         tmp.replace(dest)
 
     def close(self) -> None:
+        """닫기 전에 WAL 내용을 본 파일에 모두 옮김 (체크포인트) — 프로그램을 끈 뒤 qis.db 하나만으로 완전한 상태."""
         with self.lock:
+            try:
+                self.conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+            except sqlite3.Error:
+                pass
             self.conn.close()
+
+    # ---- 데스크톱 프로그램: 비정상 종료 뒤 검사 · 다른 데이터 폴더 가져오기 ----
+    @staticmethod
+    def check_file(path: Path) -> str:
+        """DB 파일을 열어 손상 검사 (quick_check). 'ok' 이면 정상, 아니면 문제 설명.
+        보통 방식으로 열기 때문에 강제 종료로 남은 -wal 내용도 함께 반영해 검사한다."""
+        path = Path(path)
+        if not path.exists():
+            return "ok"
+        try:
+            con = sqlite3.connect(str(path))
+            try:
+                rows = con.execute("PRAGMA quick_check").fetchall()
+                con.execute("SELECT COUNT(*) FROM sqlite_master").fetchone()
+            finally:
+                con.close()
+        except sqlite3.DatabaseError as e:
+            return str(e)
+        msg = "; ".join(str(r[0]) for r in rows[:5])
+        return "ok" if msg == "ok" else msg
+
+    @staticmethod
+    def snapshot(src: Path, dest: Path) -> None:
+        """다른 QIS DB(다른 서버판 data 폴더 등)의 일관된 사본을 만든다 — 그쪽 -wal 내용까지 포함, 원본은 바꾸지 않음."""
+        dest = Path(dest)
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        tmp = dest.with_suffix(".tmp")
+        con = sqlite3.connect(Path(src).resolve().as_uri() + "?mode=ro", uri=True)
+        out = sqlite3.connect(str(tmp))
+        try:
+            con.backup(out)
+        finally:
+            out.close()
+            con.close()
+        tmp.replace(dest)
 
     # ---- 복원 (서버를 멈춘 상태에서 python -m qis restore) ----
     @staticmethod

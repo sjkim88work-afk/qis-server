@@ -166,6 +166,11 @@ def _main(argv=None):
         kw = {}
         if cfg.https:
             kw.update(ssl_certfile=cfg.ssl_certfile, ssl_keyfile=cfg.ssl_keyfile)
+        from .desktop.instance import InstanceLock
+        lock = InstanceLock(cfg.data_dir)
+        if not lock.acquire(mark=False):
+            print(f"이 데이터 폴더({cfg.data_dir})를 다른 QIS 서버 · QIS 프로그램이 쓰고 있습니다 — 그쪽을 닫은 뒤 실행하세요")
+            return 1
         print(f"QIS 서버 {__version__} — {'https' if cfg.https else 'http'}://{cfg.host}:{cfg.port}  (데이터: {cfg.data_dir})")
         if cfg.host in ("127.0.0.1", "localhost"):
             print("  이 PC 안에서만 접속을 받습니다 (다른 PC · 사내망 접속 차단). 핸드폰은 Tailscale 주소로 접속하세요.")

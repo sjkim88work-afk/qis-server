@@ -196,6 +196,11 @@ class Auth:
             raise AuthError("아이디 또는 비밀번호가 맞지 않습니다" + (" — 계정이 잠겼습니다" if until else ""), "bad_login")
         if not u["active"]:
             raise AuthError("사용이 중지된 계정입니다 — 관리자에게 문의하세요", "inactive")
+        return self.start_session(u, ip=ip, ua=ua)
+
+    def start_session(self, u, *, ip=None, ua=None, action="login") -> tuple[str, dict]:
+        """비밀번호 확인을 마친 사용자의 세션을 만든다.
+        데스크톱 '이 PC 혼자 쓰기'는 프로그램만 아는 실행 열쇠로 확인한 뒤 이것을 부름 (action='login.desktop')."""
         token = secrets.token_urlsafe(32)
         th = hashlib.sha256(token.encode()).hexdigest()
         t = now()
@@ -203,7 +208,7 @@ class Auth:
             c.execute("UPDATE users SET fail_count=0, locked_until=NULL, last_login=? WHERE id=?", (t, u["id"]))
             c.execute("INSERT INTO sessions(token_hash,user_id,created_at,last_seen,ip,ua) VALUES(?,?,?,?,?,?)",
                       (th, u["id"], t, t, ip, (ua or "")[:200]))
-            self.db.audit(c, user=u, action="login", label=u["username"], ip=ip)
+            self.db.audit(c, user=u, action=action, label=u["username"], ip=ip)
         return token, public_user(self.get_user(u["id"]))
 
     def session_user(self, token: str | None):

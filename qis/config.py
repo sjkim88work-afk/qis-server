@@ -35,6 +35,8 @@ class Config:
     max_bom_mb: float = 60.0
     max_file_mb: float = 30.0      # 첨부 1개 최대 크기 (base64 포함)
     company: str = ""
+    # 데스크톱 프로그램(QIS.app · QIS.exe) 사용 방식 — "" (서버판 · 아직 안 고름) · "solo" (이 PC 혼자) · "server" (사내 서버)
+    desktop_mode: str = ""
 
     @property
     def db_path(self) -> Path:

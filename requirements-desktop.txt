@@ -1,0 +1,5 @@
+# 데스크톱 프로그램(QIS.app · QIS.exe) 빌드 · 실행용 — 서버판만 쓰면 requirements.txt 만 있으면 됨
+-r requirements.txt
+pywebview>=5.3,<7
+pyinstaller>=6.10,<7
+pillow>=10

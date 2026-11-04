@@ -4,6 +4,7 @@
 
 > 📘 **[설치 가이드](docs/설치_가이드.md)** — 서버 PC 설치 · 기존 데이터 가져오기 · 계정 · 방화벽 · HTTPS · 백업 · 복원 · 문제 해결 (관리자용)
 > 📗 **[사용 가이드](docs/사용_가이드.md)** — 접속 · 로그인 · 권한 · 동시 작업 · 연결 끊김 · 첨부 · 출력 (팀원용)
+> 💻 **[데스크톱 프로그램](docs/데스크톱_프로그램.md)** — 파이썬 없이 더블클릭으로 여는 QIS.app · QIS.exe (혼자 쓰기 / 사내 서버 모드 · 데이터 위치 · 가져오기 · 업데이트)
 > 📱 **[Tailscale로 나만 쓰기](docs/Tailscale_개인사용.md)** — 회사 PC 서버를 내 핸드폰 · 노트북에서만 접속 (개인 사용)
 
 - **사내망 전용**: 데이터는 서버 PC의 DB 파일 하나(`data/qis.db`)와 첨부 폴더에만 있고, 외부 인터넷 서비스와 연결하지 않습니다.
@@ -28,6 +29,8 @@
   - 지운 첨부는 휴지통 폴더로 옮겨집니다.
 
 ## 가장 쉬운 시작 (더블클릭 한 번)
+
+> 파이썬 설치도 번거로우면 **[데스크톱 프로그램](docs/데스크톱_프로그램.md)**(Releases의 `QIS-mac.zip` · `QIS-windows.zip`)을 쓰세요.
 
 Python 3.11 이상만 설치돼 있으면, 폴더 맨 위의 파일 하나로 설치부터 실행까지 됩니다.
 
@@ -169,7 +172,7 @@ python -m qis set host 127.0.0.1         설정 바꾸기 (이 예: 이 PC 안�
 
 ```
 pip install -r requirements.txt pytest httpx playwright
-python -m pytest -q                         # API 시험
+python -m pytest -q                         # API · 데스크톱 시험
 python tests/e2e_browser.py tests/sample_backup.json       # 화면 시험 (두 사람 동시 작업 · 권한 · 끊김 · 만료 · 관리 화면)
 ```
 

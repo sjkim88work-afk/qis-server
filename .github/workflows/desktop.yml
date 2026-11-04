@@ -1,0 +1,89 @@
+# 데스크톱 프로그램 빌드 — PR · main 푸시마다 맥(arm64) · 윈도우 빌드가 되는지 확인하고,
+# v로 시작하는 태그(예: v1.2.0)를 올리면 QIS-mac.zip · QIS-windows.zip 을 GitHub 릴리스 자산으로 올린다.
+name: desktop
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt pytest httpx playwright
+      - run: python -m playwright install --with-deps chromium
+      - run: python -m pytest -q
+      - run: python tests/e2e_browser.py tests/sample_backup.json
+
+  build:
+    needs: test
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-14          # Apple Silicon (arm64)
+            name: mac
+          - os: windows-latest
+            name: windows
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements-desktop.txt
+      - run: python scripts/desktop/make_icons.py
+      - run: pyinstaller --clean --noconfirm scripts/desktop/QIS.spec
+      - name: 실행 확인 (창 없이 서버만)
+        shell: bash
+        run: |
+          python - <<'EOF2'
+          import os, pathlib
+          p = pathlib.Path("dist/QIS.app/Contents/MacOS/QIS") if os.path.exists("dist/QIS.app") else pathlib.Path("dist/QIS/QIS.exe")
+          assert p.exists(), p
+          web = (pathlib.Path("dist/QIS.app/Contents/Resources/qis/web") if p.name == "QIS" else pathlib.Path("dist/QIS/_internal/qis/web"))
+          assert (web / "index.html").exists(), web
+          print("ok", p)
+          EOF2
+      - name: 압축 (mac)
+        if: matrix.name == 'mac'
+        run: cd dist && ditto -c -k --keepParent QIS.app ../QIS-mac.zip
+      - name: 압축 (windows)
+        if: matrix.name == 'windows'
+        shell: pwsh
+        run: Compress-Archive -Path dist/QIS -DestinationPath QIS-windows.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: QIS-${{ matrix.name }}
+          path: QIS-${{ matrix.name }}.zip
+          retention-days: 14
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: out
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          name: QIS 데스크톱 ${{ github.ref_name }}
+          body: |
+            더블클릭으로 실행하는 QIS 프로그램입니다. 설치 · 사용법: docs/데스크톱_프로그램.md
+            - **QIS-mac.zip** — Apple Silicon 맥 (처음 열 때: 우클릭 › 열기)
+            - **QIS-windows.zip** — Windows 10/11 (압축을 풀고 QIS.exe)
+          files: |
+            out/QIS-mac.zip
+            out/QIS-windows.zip
