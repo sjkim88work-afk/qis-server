@@ -18,7 +18,7 @@ import re
 
 from .db import DB, now
 
-COLLS = ("suppliers", "parts", "defects", "ncrs", "receipts", "reviews", "cases", "actions")
+COLLS = ("suppliers", "parts", "defects", "ncrs", "receipts", "reviews", "cases", "actions", "issues")
 DOCS = ("settings", "bom")              # coll='doc' 인 단일 문서
 MASTER = ("suppliers", "parts")
 EDITOR_SETTINGS_KEYS = {"owners"}       # 작성자가 바꿀 수 있는 설정 (불량 담당자 추가 등)
@@ -27,7 +27,7 @@ SKIP_DIFF = {"updatedAt", "_dirty"}
 NO_CONFLICT = SKIP_DIFF | {"createdAt"}   # 동시 수정 판정에서 빼는 자동 항목
 
 COLL_NAME = {"suppliers": "협력사", "parts": "부품", "defects": "불량", "ncrs": "NCR", "receipts": "입고",
-             "reviews": "월간 검토", "cases": "이슈·RCA", "actions": "RCA 조치", "doc": "설정"}
+             "reviews": "월간 검토", "cases": "RCA", "actions": "RCA 조치", "issues": "이슈", "doc": "설정"}
 
 
 def label_of(coll: str, rid: str, d: dict | None) -> str:
@@ -51,6 +51,8 @@ def label_of(coll: str, rid: str, d: dict | None) -> str:
         return g("CaseNo", "Title")
     if coll == "actions":
         return g("Title")
+    if coll == "issues":
+        return g("no", "title")
     return rid
 
 
