@@ -59,7 +59,7 @@ async function api(path,opt={}){
   const r=await fetch(path,{credentials:'same-origin',...opt,headers:{...(opt.body?{'Content-Type':'application/json'}:{}),'X-QIS':'1',...(opt.headers||{})}});
   if(r.status===401){location.href='/login';throw new Error('로그인 필요')}
   const j=await r.json().catch(()=>({}));
-  if(!r.ok)throw new Error(j.message||('오류 '+r.status));
+  if(!r.ok)throw Object.assign(new Error(j.message||('오류 '+r.status)),{code:j.error,status:r.status});
   return j;
 }
 const post=(p,b,m='POST')=>api(p,{method:m,body:JSON.stringify(b||{})});
@@ -172,8 +172,17 @@ async function renderBackup(){
     <div class="row" style="margin-top:12px"><button class="b p" onclick="backupNow(this)">지금 백업</button></div></div>
     <div class="card"><h2>내보내기</h2><p class="help">QIS 백업 형식(JSON)으로 내려받습니다. 서버를 쓸 수 없을 때 기존 QIS 화면(HTML)에서 ‘백업으로 교체’로 열어 볼 수 있습니다. 내려받기도 이력에 남습니다.</p>
     <div class="row"><a class="b" href="/api/admin/export">기록만 (사진 제외)</a><a class="b" href="/api/admin/export?photos=1">사진 · 첨부 포함</a></div></div>
-    <div class="card"><h2>기존 QIS 데이터 가져오기</h2><p class="help">개인 QIS(HTML)에서 ‘백업’으로 받은 JSON 파일을 <b>빈 서버</b>에 한 번 가져옵니다. 사진 포함 백업이면 사진 · 첨부도 함께 들어옵니다. 서버에 기록이 이미 있으면 가져올 수 없습니다.</p>
-    <div class="row"><button class="b" onclick="$('#impFile').click()">백업 파일 선택</button><span id="impMsg" class="muted"></span></div></div>`;
+    <div class="card"><h2>기존 QIS 데이터 가져오기</h2><p class="help">개인 QIS(HTML)에서 ‘백업’으로 받은 JSON 파일을 가져옵니다. 사진 포함 백업이면 사진 · 첨부도 함께 들어옵니다. 서버에 기록이 이미 있으면 <b>지금 데이터를 비우고 바꿀지</b> 묻습니다 — 바꾸기 전에 DB 백업을 자동으로 받아 두므로 복원할 수 있습니다. 사용자 계정 · 변경 이력은 그대로 남습니다.</p>
+    <div class="row"><button class="b" onclick="$('#impFile').click()">백업 파일 선택</button><span id="impMsg" class="muted"></span></div></div>
+    <div class="card"><h2>데이터 비우기 (시험용)</h2><p class="help">모든 기록 · 첨부를 지워 처음 상태로 만듭니다. 사용자 계정 · 변경 이력은 남고, 비우기 전 DB 백업을 자동으로 받아 둡니다 (위 ‘DB 사본’의 <code>…_before_reset</code>). 열려 있는 다른 사용자 화면도 비워집니다. 정식 사용 중에는 쓰지 마세요.</p>
+    <div class="row"><button class="b" onclick="resetAll()">모든 기록 비우기…</button></div></div>`;
+}
+async function resetAll(){
+  const w=prompt('모든 기록 · 첨부를 비웁니다. 비우기 전 DB 백업을 자동으로 받아 둡니다.\n계속하려면 "비우기" 라고 입력하세요.');
+  if(w===null)return;
+  try{const r=await post('/api/admin/reset',{confirm:w.trim()});
+    toast(`비웠습니다 — ${Object.entries(r.cleared).map(([k,v])=>`${COLL[k]||k} ${v}`).join(' · ')||'기록 없음'} · 백업 ${r.backup}`);render()}
+  catch(e){toast(e.message)}
 }
 async function backupNow(btn){btn.disabled=true;btn.textContent='백업 중…';try{const {info}=await post('/api/admin/backup');toast(`백업 완료 — ${info.db}`)}catch(e){toast(e.message)}render()}
 $('#impFile').addEventListener('change',async e=>{
@@ -181,7 +190,14 @@ $('#impFile').addEventListener('change',async e=>{
   try{const data=JSON.parse(await f.text());
     if(!confirm(`${f.name}\n불량 ${(data.defects||[]).length}건 · NCR ${(data.ncrs||[]).length}건 · 협력사 ${(data.suppliers||[]).length}곳${Array.isArray(data.photos)?` · 사진/첨부 ${data.photos.length}개`:''}\n\n서버로 가져올까요?`)){m.textContent='';return}
     m.textContent='가져오는 중… (사진이 많으면 몇 분 걸립니다)';
-    const {imported}=await post('/api/admin/import',data);
+    let imported;
+    try{({imported}=await post('/api/admin/import',data))}
+    catch(err){
+      if(err.code!=='has_records')throw err;
+      if(!confirm('서버에 이미 기록이 있습니다.\n\n지금 기록 · 첨부를 모두 비우고 이 백업으로 바꿀까요?\n(비우기 전 DB 백업을 자동으로 받습니다 · 사용자 계정 · 변경 이력은 유지)')){m.textContent='';return}
+      m.textContent='비우고 가져오는 중…';
+      ({imported}=await post('/api/admin/import',{...data,_replace:true}));
+    }
     m.textContent='';toast('가져왔습니다 — '+Object.entries(imported).map(([k,v])=>`${COLL[k]||k} ${v}`).join(' · '));
   }catch(err){m.textContent='';toast('가져오기 실패: '+err.message)}
   e.target.value='';

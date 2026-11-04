@@ -35,6 +35,8 @@ class Backup:
             t0 = time.time()
             stamp = datetime.now().strftime("%Y%m%d_%H%M")
             day = stamp[:8]
+            if reason not in ("auto", "manual"):   # 비우기 · 가져오기 전 안전 사본 — 같은 분에 겹쳐도 덮어쓰지 않게
+                stamp = datetime.now().strftime("%Y%m%d_%H%M%S") + "_" + reason
             (self.root / "db").mkdir(parents=True, exist_ok=True)
             (self.root / "json").mkdir(parents=True, exist_ok=True)
             dbf = self.root / "db" / f"qis_{stamp}{self.db.backup_suffix}"

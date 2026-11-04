@@ -105,6 +105,19 @@ class Files:
                 n += 1
         return n
 
+    def clear_all(self, user, ip=None) -> int:
+        """모든 첨부를 휴지통(_trash/reset_<시각>/)으로 옮기고 목록에서 '지움' 표시 — 데이터 비우기."""
+        dest = self.root / "_trash" / f"reset_{_stamp()}"
+        n = 0
+        with self.db.tx() as c:
+            for d in list(self.root.iterdir()):
+                if d.is_dir() and not d.name.startswith("_"):
+                    dest.mkdir(parents=True, exist_ok=True)
+                    shutil.move(str(d), str(dest / d.name))
+            n = c.execute("UPDATE files SET deleted=1, deleted_at=?, deleted_by=? WHERE deleted=0", (now(), user["name"])).rowcount
+            self.db.audit(c, user=user, action="reset", coll="files", label="모든 첨부 비우기", detail={"files": n, "kept": dest.name}, ip=ip)
+        return n
+
     def delete_many(self, user, ids: list[str], ip=None) -> int:
         if user["role"] == "viewer":
             raise Forbidden("조회 권한은 첨부를 지울 수 없습니다")
