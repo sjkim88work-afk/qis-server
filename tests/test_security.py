@@ -105,6 +105,7 @@ def app_ctl(tmp_path, monkeypatch):
     monkeypatch.setattr(core, "open_in_os", lambda p: opened.append(Path(p)))
     monkeypatch.setattr(gui.tempfile, "gettempdir", lambda: str(tmp_path / "tmp"))
     (tmp_path / "tmp").mkdir()
+    c._ask_save = lambda name, types=(): (c.window.saved.append(name), None)[1]   # 저장 창: 사용자가 취소 (CI엔 pywebview 없음)
     c._opened = opened
     yield c
     c.shutdown()
