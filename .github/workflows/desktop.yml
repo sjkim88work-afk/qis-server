@@ -53,10 +53,10 @@ jobs:
           if tag:
               v = tag.lstrip("vV")
               if not re.fullmatch(r"\d+(\.\d+){1,3}([.-][0-9A-Za-z.]+)?", v):
-                  raise SystemExit(f"버전 형식이 아닙니다: {tag}")
+                  raise SystemExit(f"bad version tag: {tag}")
               s = re.sub(r'__version__\s*=\s*"[^"]*"', f'__version__ = "{v}"', s)
               f.write_text(s, encoding="utf-8")
-          print(re.search(r'__version__\s*=\s*"([^"]*)"', s).group(0), "(태그:", tag or "없음", ")")
+          print(re.search(r'__version__\s*=\s*"([^"]*)"', s).group(0), "(tag:", tag or "none", ")")   # 윈도우 콘솔(cp1252)이라 영문으로
       - name: 빌드
         run: pyinstaller --noconfirm --clean packaging/QIS.spec
       - name: 실행 점검 · 압축 (맥)
