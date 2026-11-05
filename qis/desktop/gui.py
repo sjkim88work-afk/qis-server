@@ -19,6 +19,7 @@ from pathlib import Path
 from .. import __version__
 from . import core, pages
 from .lock import AlreadyRunning, InstanceLock
+from . import paths
 from .paths import user_data_dir
 
 log = logging.getLogger("qis.desktop")
@@ -169,6 +170,8 @@ class Controller:
         import webview
         core.setup_logging(self.data_dir)
         log.info("QIS 데스크톱 %s 시작 · 데이터 폴더 %s", __version__, self.data_dir)
+        if paths.migration_note:
+            log.warning(paths.migration_note)
         try:
             self.lock.acquire()
         except AlreadyRunning as e:
@@ -293,6 +296,14 @@ class Controller:
         return False
 
     def _flush_and_close(self):
+        if self.runner and self.runner.mode == "lan":
+            n = self._lan_others()
+            who = f"지금 다른 사용자 {n}명이 접속해 있습니다.\n" if n else ""
+            if not self.window.create_confirmation_dialog(
+                    "QIS — 사내 서버 끄기",
+                    f"{who}창을 닫으면 사내 서버도 꺼져 다른 PC · 핸드폰에서 QIS에 접속할 수 없게 됩니다.\n"
+                    "(다른 사용자가 작성 중이던 내용은 저장되지 않을 수 있습니다)\n\n그래도 닫을까요?"):
+                return
         ev, res = threading.Event(), {}
 
         def cb(v):
@@ -308,6 +319,21 @@ class Controller:
             return
         self._closing_ok = True
         self.window.destroy()
+
+    def _lan_others(self, minutes: int = 15) -> int:
+        """사내 서버 모드: 최근 minutes분 안에 다른 PC · 핸드폰에서 QIS를 쓴 사용자 수.
+        이 PC의 프로그램 창은 127.0.0.1 로 접속하므로 세지 않음."""
+        try:
+            from datetime import timedelta, timezone
+            db = self.runner.app.state.db
+            since = (datetime.now(timezone.utc) - timedelta(minutes=minutes)).isoformat(timespec="milliseconds")
+            since = since.replace("+00:00", "Z")
+            r = db.q1("SELECT COUNT(DISTINCT user_id) n FROM sessions WHERE last_seen >= ? "
+                      "AND COALESCE(ip,'') NOT IN ('127.0.0.1','::1','localhost')", (since,))
+            return int(r["n"] or 0)
+        except Exception:
+            log.exception("접속 사용자 수 확인 실패")
+            return 0
 
     def _on_closed(self):
         import webview
