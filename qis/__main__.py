@@ -22,7 +22,7 @@ from .auth import ROLES, Auth, AuthError
 from .backup import Backup
 from .config import load_config
 from .db import DBConfigError, db_ready, open_db
-from .files import Files
+from .files import Files, has_body
 from .store import Store
 
 
@@ -192,13 +192,14 @@ def _main(argv=None):
             return 1
         if isinstance(photos, list):
             fs = Files(db, cfg)
-            ok = [p for p in photos if isinstance(p, dict) and p.get("id") and p.get("data")]
+            ok = [p for p in photos if isinstance(p, dict) and p.get("id")]
             for i in range(0, len(ok), 50):
                 fs.put_many(by, ok[i:i + 50])
-            cnt["photos"] = len(ok)
-            skipped = len(photos) - len(ok)
-            if skipped:
-                print(f"  사진 정보만 있고 내용이 없는 {skipped}건은 건너뜀 (사진 포함 백업으로 다시 가져오세요)")
+            cnt["photos"] = sum(1 for p in ok if has_body(p))
+            meta_only = len(ok) - cnt["photos"]
+            if meta_only:
+                print(f"  사진 정보만 있고 내용이 없는 {meta_only}건 — 관리 화면 › 백업 · 데이터 › '빠진 사진 채우기'에서 "
+                      "사진 포함 백업이나 사진·첨부 폴더로 채우세요")
         print("가져왔습니다:", ", ".join(f"{k} {v}" for k, v in cnt.items()))
         return 0
 

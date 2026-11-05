@@ -20,6 +20,33 @@ from .store import Forbidden
 
 # 첨부 id: 영문 · 숫자로 시작, 영문 · 숫자 · _ · - 만 (경로 · Windows 특수 문자 차단)
 FILE_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$")
+# 개인 QIS 가 '아직 받지 못한 사진' 자리에 두는 회색 자리표시 이미지 — 사진 본체가 아님
+PH_IMG_HEAD = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAkCAIAAABAJy5d"
+DATA_URL_RE = re.compile(r"^data:[\w.+-]+/[\w.+-]+(;[^,;]*)*;base64,[A-Za-z0-9+/]")
+
+
+def has_body(rec) -> bool:
+    """첨부 기록에 실제 내용(data URL)이 있는지. 사진 정보만 있는 기록(개인 QIS 사진 폴더 방식)은 False."""
+    d = rec.get("data") if isinstance(rec, dict) else None
+    return isinstance(d, str) and not d.startswith(PH_IMG_HEAD) and bool(DATA_URL_RE.match(d[:300]))
+
+
+def photo_refs(data) -> list[str]:
+    """기록(JSON) 안에서 첨부 ID 참조를 모두 찾는다: photos 목록 · …Docs 목록 (어디에 있든 — 진행 기록 · 이력 포함)."""
+    out: list[str] = []
+
+    def walk(o):
+        if isinstance(o, dict):
+            for k, v in o.items():
+                if (k == "photos" or k.endswith("Docs")) and isinstance(v, list):
+                    out.extend(x for x in v if isinstance(x, str) and FILE_ID_RE.match(x))
+                else:
+                    walk(v)
+        elif isinstance(o, list):
+            for v in o:
+                walk(v)
+    walk(data)
+    return out
 
 
 def _stamp() -> str:
@@ -53,6 +80,37 @@ class Files:
 
     def all_ids(self) -> list[str]:
         return [r["id"] for r in self.db.q("SELECT id FROM files WHERE deleted=0")]
+
+    def missing(self) -> dict:
+        """기록이 가리키는데 내용이 없는 첨부 — 가져오기 때 '사진 정보만' 들어온 것 · 파일이 사라진 것.
+        각 항목: id · 개인 QIS 사진 폴더의 파일 이름(file, 있으면) · 이름 · 종류 · 어느 기록이 쓰는지."""
+        LABEL = {"defects": "불량", "ncrs": "NCR", "issues": "이슈", "cases": "RCA", "receipts": "입고"}
+        refs: dict[str, list[str]] = {}
+        for r in self.db.q("SELECT coll, id, data FROM records WHERE deleted=0 AND data IS NOT NULL"):
+            try:
+                d = json.loads(r["data"])
+            except Exception:
+                continue
+            lab = f"{LABEL.get(r['coll'], r['coll'])} {d.get('no') or d.get('partNo') or d.get('date') or r['id']}" if isinstance(d, dict) else r["coll"]
+            for fid in photo_refs(d):
+                refs.setdefault(fid, [])
+                if lab not in refs[fid]:
+                    refs[fid].append(lab)
+        out = []
+        for fid, labs in refs.items():
+            p = self.path(fid)
+            meta = {}
+            if p.exists():
+                try:
+                    meta = json.loads(p.read_text(encoding="utf-8"))
+                except Exception:
+                    meta = {}
+                if has_body(meta):
+                    continue
+            out.append({"id": fid, "file": meta.get("file") or "", "name": meta.get("name") or "",
+                        "kind": meta.get("kind") or "photo", "refs": labs[:5]})
+        out.sort(key=lambda x: (x["refs"][0] if x["refs"] else "", x["id"]))
+        return {"referenced": len(refs), "missing": out}
 
     def put_many(self, user, recs: list[dict], ip=None) -> int:
         if user["role"] == "viewer":

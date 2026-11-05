@@ -19,7 +19,7 @@ from .backup import Backup
 from .telegram import Telegram, TelegramError
 from .config import Config, load_config
 from .db import open_db
-from .files import Files
+from .files import Files, has_body
 from .store import COLLS, Forbidden, Store
 
 WEB = Path(__file__).parent / "web"
@@ -437,6 +437,11 @@ def create_app(cfg: Config | None = None, *, start_backup=True, desktop: dict | 
         cnt["files"] = files.clear_all(user, ip=ip)
         return {"cleared": cnt, "backup": info["db"]}
 
+    @app.get("/api/admin/photos/missing")
+    def photos_missing(user=Depends(admin_only)):
+        """기록이 가리키는데 내용이 없는 첨부 목록 — 관리 화면 '빠진 사진 채우기'."""
+        return files.missing()
+
     @app.post("/api/admin/reset")
     async def reset(request: Request, user=Depends(admin_only)):
         b = await request.json()
@@ -458,7 +463,9 @@ def create_app(cfg: Config | None = None, *, start_backup=True, desktop: dict | 
             ok = [p for p in photos if isinstance(p, dict) and p.get("id")]
             for i in range(0, len(ok), 50):
                 files.put_many(user, ok[i:i + 50], ip=ip_of(request))
-            cnt["photos"] = len(ok)
+            cnt["photos"] = sum(1 for p in ok if has_body(p))
+            if len(ok) != cnt["photos"]:
+                cnt["photos_meta_only"] = len(ok) - cnt["photos"]
         return {"imported": cnt}
 
     return app
