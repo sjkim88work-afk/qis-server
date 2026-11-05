@@ -12,7 +12,7 @@ import tempfile
 from pathlib import Path
 
 
-def selftest(out: str | None) -> int:
+def selftest(out: str | None, unblocked: int = 0) -> int:
     """묶음 프로그램(PyInstaller)에 서버 · 화면 파일 · 창 라이브러리가 모두 들어갔는지 확인."""
     import http.cookiejar
     import socket
@@ -20,7 +20,7 @@ def selftest(out: str | None) -> int:
 
     from .. import __version__
     from . import core
-    res = {"version": __version__, "platform": sys.platform, "checks": {}}
+    res = {"version": __version__, "platform": sys.platform, "checks": {}, "unblocked": unblocked}
     ok = True
 
     def chk(name, cond, detail=""):
@@ -79,10 +79,21 @@ def main(argv=None) -> int:
     ap.add_argument("--data", help="데이터 폴더")
     ap.add_argument("--selftest", nargs="?", const="", default=None, metavar="결과.json")
     a, _ = ap.parse_known_args(argv)      # 맥이 붙이는 -psn_… 같은 인자는 무시
+    from . import winfix
+    n = winfix.unblock()                   # 윈도우: 받은 zip 의 '인터넷에서 받은 파일' 표시 지우기 (창 라이브러리 전에)
     if a.selftest is not None:
-        return selftest(a.selftest or None)
-    from .gui import Controller
-    return Controller(Path(a.data) if a.data else None).run()
+        return selftest(a.selftest or None, n)
+    try:
+        from .gui import Controller
+        return Controller(Path(a.data) if a.data else None).run()
+    except Exception as e:
+        # 오류 내용(영문 traceback) 대신 할 일을 알려 주는 창 · 자세한 내용은 logs/desktop.log
+        import logging
+        logging.getLogger("qis.desktop").exception("시작 실패")
+        if getattr(sys, "frozen", False):
+            winfix.message_box("QIS", winfix.startup_error_text(e))
+            return 1
+        raise
 
 
 if __name__ == "__main__":

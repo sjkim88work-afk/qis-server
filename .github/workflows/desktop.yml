@@ -59,6 +59,25 @@ jobs:
           Get-Content selftest.json -Encoding utf8
           if ($p.ExitCode -ne 0) { throw "selftest 실패 (exit $($p.ExitCode))" }
           Compress-Archive -Path "dist\QIS" -DestinationPath "QIS-windows.zip"
+      - name: 인터넷에서 받은 zip 처럼 시험 (윈도우)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          # 받은 zip 을 푼 상태 재현: QIS.exe 를 뺀 모든 파일에 (QIS.exe 는 사람이 SmartScreen '실행'으로 넘기는 부분 · CI에선 창이 떠서 멈춤) '인터넷에서 받은 파일' 표시(Zone.Identifier, ZoneId=3)
+          Copy-Item -Recurse dist\QIS motw\QIS
+          Get-ChildItem motw\QIS -Recurse -File | Where-Object { $_.Name -ne "QIS.exe" } | ForEach-Object { Set-Content -Path $_.FullName -Stream Zone.Identifier -Value "[ZoneTransfer]`r`nZoneId=3" }
+          # 1) 보정 없이: 회사 PC에서 본 오류가 재현되는지 (정보용)
+          $env:QIS_NO_UNBLOCK = "1"
+          $p = Start-Process -FilePath "motw\QIS\QIS.exe" -ArgumentList "--selftest", "$PWD\motw_off.json" -Wait -PassThru
+          Get-Content motw_off.json -Encoding utf8
+          Write-Host "보정 없이 exit $($p.ExitCode) (1 이면 재현됨)"
+          Remove-Item Env:QIS_NO_UNBLOCK
+          # 2) 보정 켜고: 반드시 통과 + 표시가 지워졌는지
+          $p = Start-Process -FilePath "motw\QIS\QIS.exe" -ArgumentList "--selftest", "$PWD\motw_on.json" -Wait -PassThru
+          Get-Content motw_on.json -Encoding utf8
+          if ($p.ExitCode -ne 0) { throw "차단 표시가 있는 상태에서 selftest 실패 (exit $($p.ExitCode))" }
+          $left = Get-ChildItem motw\QIS -Recurse -Filter *.dll | Where-Object { Get-Item $_.FullName -Stream Zone.Identifier -ErrorAction SilentlyContinue }
+          if ($left) { throw "차단 표시가 남은 DLL: $($left.Count)개" }
       - uses: actions/upload-artifact@v4
         with:
           name: QIS-${{ matrix.name }}
