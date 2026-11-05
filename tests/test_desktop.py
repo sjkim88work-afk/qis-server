@@ -1,6 +1,7 @@
 """데스크톱 프로그램(qis.desktop) 시험 — 창(pywebview)은 띄우지 않고 서버 기동 · 종료 로직만: python -m pytest -q"""
 import http.cookiejar
 import json
+import os
 import socket
 import sqlite3
 import urllib.error
@@ -363,3 +364,119 @@ def test_controller_recover(data):
         assert list(data.glob("restore_before_*"))                     # 손상된 DB도 지우지 않고 보관
     finally:
         c.shutdown()
+
+
+# ---------------------------------------------------------------- 윈도우 데이터 폴더 이전 (Roaming → Local)
+def _old_folder(root):
+    import json as _j
+    old = root / "Roaming" / "QIS"
+    (old / "files").mkdir(parents=True)
+    (old / "qis.db").write_bytes(b"db")
+    (old / "files" / "a.json").write_text("{}", encoding="utf-8")
+    (old / "qis.json").write_text(_j.dumps({"ssl_certfile": str(old / "cert" / "qis.crt"), "port": 8080,
+                                            "backup_dir": "D:\\\\백업"}), encoding="utf-8")
+    return old
+
+
+def test_migrate_legacy_moves_and_fixes_paths(tmp_path):
+    import json as _j
+    from qis.desktop import paths
+    old = _old_folder(tmp_path)
+    new = tmp_path / "Local" / "QIS"
+    assert paths.migrate_legacy(old, new) == new
+    assert (new / "qis.db").read_bytes() == b"db" and (new / "files" / "a.json").exists()
+    assert not old.exists()
+    cfg = _j.loads((new / "qis.json").read_text(encoding="utf-8"))
+    assert cfg["ssl_certfile"] == str(new / "cert" / "qis.crt") and cfg["backup_dir"] == "D:\\\\백업"
+    assert "옮겼습니다" in paths.migration_note
+    assert paths.migrate_legacy(old, new) == new               # 두 번째 실행: 할 일 없음
+
+
+def test_migrate_legacy_copy_when_rename_fails(tmp_path, monkeypatch):
+    from qis.desktop import paths
+    old = _old_folder(tmp_path)
+    new = tmp_path / "Local" / "QIS"
+    real = os.rename
+
+    def rename(a, b):                                           # 다른 드라이브(네트워크 리디렉션)처럼: 첫 이름 바꾸기 실패
+        if Path(a) == old and Path(b) == new:
+            raise OSError("cross-device")
+        return real(a, b)
+    monkeypatch.setattr(paths.os, "rename", rename)
+    assert paths.migrate_legacy(old, new) == new
+    assert (new / "qis.db").exists() and not old.exists()
+    kept = list((tmp_path / "Roaming").glob("QIS_이전됨_*"))
+    assert len(kept) == 1 and (kept[0] / "qis.db").exists()     # 원본은 지우지 않고 보관
+
+
+def test_migrate_legacy_keeps_old_when_busy_or_new_has_data(tmp_path):
+    from qis.desktop import paths
+    from qis.desktop.lock import InstanceLock
+    old = _old_folder(tmp_path)
+    new = tmp_path / "Local" / "QIS"
+    with InstanceLock(old):                                     # 예전 버전이 실행 중 → 그대로 예전 폴더
+        assert paths.migrate_legacy(old, new) == old
+    assert (old / "qis.db").exists() and not new.exists()
+    new.mkdir(parents=True)
+    (new / "desktop.json").write_text("{}", encoding="utf-8")
+    assert paths.migrate_legacy(old, new) == new and (old / "qis.db").exists()   # 새 폴더에 데이터 있으면 손대지 않음
+
+
+def test_migrate_legacy_failure_falls_back(tmp_path, monkeypatch):
+    from qis.desktop import paths
+    old = _old_folder(tmp_path)
+    new = tmp_path / "Local" / "QIS"
+    monkeypatch.setattr(paths.os, "rename", lambda a, b: (_ for _ in ()).throw(OSError("denied")))
+    assert paths.migrate_legacy(old, new) == old and (old / "qis.db").exists()
+    assert not (tmp_path / "Local" / "QIS.moving").exists() and "실패" in paths.migration_note
+
+
+def test_windows_data_dir_is_local(tmp_path, monkeypatch):
+    from qis.desktop import paths
+    monkeypatch.delenv("QIS_DESKTOP_DIR", raising=False)
+    import types
+    monkeypatch.setattr(paths, "sys", types.SimpleNamespace(platform="win32"))   # 잠금(lock.py)은 실제 OS 방식 그대로
+    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path / "Local"))
+    monkeypatch.setenv("APPDATA", str(tmp_path / "Roaming"))
+    _old_folder(tmp_path)
+    p = paths.user_data_dir()
+    assert p == (tmp_path / "Local" / "QIS").resolve() and (p / "qis.db").exists()
+
+
+# ---------------------------------------------------------------- 사내 서버 모드: 창 닫기 전 경고
+def _wait_destroyed(w, n=60):
+    import time
+    for _ in range(n):
+        if w.destroyed:
+            return True
+        time.sleep(0.05)
+    return w.destroyed
+
+
+def test_lan_close_warns_about_other_users(ctl, data):
+    port = core.free_port()
+    assert ctl.apply_setup({"mode": "lan", "admin": "admin", "admin_name": "관리자", "password": "Qadm2026x",
+                            "port": str(port)}) == {"ok": True}
+    db = ctl.runner.app.state.db
+    uid = db.q1("SELECT id FROM users WHERE username='admin'")["id"]
+    with db.tx() as c:                                          # 다른 PC(10.0.0.5)에서 방금 쓴 세션 + 이 PC 창 세션
+        c.execute("INSERT INTO sessions(token_hash,user_id,created_at,last_seen,ip) VALUES('t1',?,?,?,'10.0.0.5')",
+                  (uid, core.now(), core.now()))
+        c.execute("INSERT INTO sessions(token_hash,user_id,created_at,last_seen,ip) VALUES('t2',?,?,?,'127.0.0.1')",
+                  (uid, core.now(), core.now()))
+    assert ctl._lan_others() == 1
+    ctl.window.confirm = False                                  # '아니요' → 닫히지 않음
+    assert ctl._on_closing() is False
+    import time
+    time.sleep(0.3)
+    assert not ctl.window.destroyed and "다른 사용자 1명" in ctl.window.dialogs[-1]
+    assert "사내 서버도 꺼져" in ctl.window.dialogs[-1]
+    ctl.window.confirm = True                                   # '예' → 닫힘
+    assert ctl._on_closing() is False and _wait_destroyed(ctl.window)
+
+
+def test_solo_close_has_no_lan_warning(ctl, data):
+    ctl.apply_setup({"mode": "solo"})
+    ctl.window.confirm = False
+    assert ctl._on_closing() is False and _wait_destroyed(ctl.window)
+    assert not any("사내 서버" in d for d in ctl.window.dialogs)
