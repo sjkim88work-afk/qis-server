@@ -440,6 +440,7 @@ td.nw,td .nwi,td>b:first-child,td>a:first-child>b:first-child{white-space:nowrap
 }
 @media screen and (max-width:1366px){
   main{padding-left:14px;padding-right:14px}
+  #dtab .tw th,#dtab .tw td{padding-left:5px;padding-right:5px}
   .card{padding-left:12px;padding-right:12px}
   .tw td,.tw th{padding-left:6px;padding-right:6px}
 }
@@ -466,6 +467,12 @@ td.nw,td .nwi,td>b:first-child,td>a:first-child>b:first-child{white-space:nowrap
 .docbox .doc.add{border-style:dashed;color:var(--pri);cursor:pointer;font-weight:600;padding:10px 14px}
 .docbox .docwarn{flex-basis:100%;font-size:12px;color:var(--warn);background:var(--warnb);border-radius:6px;padding:6px 10px}
 div.act{display:flex;gap:6px;align-items:center;margin:2px 0;white-space:nowrap}
+/* 불량 목록의 후속 조치 · 상태 칸: 배지는 한 줄, 뒤의 설명 글은 화면이 좁으면 배지 아래로 (가로 스크롤 방지) */
+td.actc div.act{flex-wrap:wrap;white-space:normal;row-gap:1px}
+td.actc div.act .ak{align-self:flex-start;line-height:19px}
+td.actc div.act>.bg,td.actc div.act>a,td.stc .bg{white-space:nowrap}
+td.actc div.act>span:not(.ak),td.actc div.act>.muted{flex:1 1 90px;min-width:0;font-size:11.5px;line-height:1.35}
+td.stc{white-space:normal}
 div.act .ak{font:600 10.5px/1 var(--f-mono);color:var(--sub);width:26px;flex:none}
 div.act a.bg{cursor:pointer}
 /* 접이식 구역 표시 */
@@ -2365,7 +2372,7 @@ function actCell(d){
   if(iv.farReq){const ii=invInfo(d);line('FAR',iv.verdict?`<a class="bg ok" onclick="editInv('${d.id}')">판정 ${esc(iv.verdict)}</a>`:`<a class="bg ${ii.cls}" onclick="editInv('${d.id}')">${esc(ii.label.replace('FAR ',''))}</a>`)}
   else if(r==='미정'&&!done)line('FAR',`<button class="b s noprint" onclick="editInv('${d.id}','inv_farReq')">FAR 요청</button>`);
   // RCA (사내 원인분석)
-  if(c)line('RCA',`<a class="bg inf" onclick="czOpenCase('${c.id}','cause')" title="${esc(c.Title||'')}">${esc(c.CaseNo)} · ${esc(c.Stage||'')}</a>`);
+  if(c)line('RCA',`<a class="bg inf" onclick="czOpenCase('${c.id}','cause')" title="${esc(c.Title||'')}">${esc(c.CaseNo)}</a> <span class="muted" style="font-size:11.5px">${esc(c.Stage||'')}</span>`);
   else if(!done&&!(d.ica&&(icaStarted(d.ica)||d.ica.doneDate))&&(['사내','공동','미정'].includes(r)||(r==='협력사'&&stageOf(d.source)>=2&&d.escJudge!=='샘플링 한계')))
     line('RCA',`<button class="b s noprint" onclick="czFromDefect('${d.id}')" title="${r==='협력사'?'수입검사에서 왜 못 걸렀는지 사내 유출 원인 분석':'사내 원인분석 요청'}">${r==='협력사'?'유출 RCA':'RCA 요청'}</button>`);
   // 사내 대책 (RCA가 없을 때)
@@ -2381,7 +2388,7 @@ function defectTable(){
   const gc={A:0,B:0,C:0};ds.forEach(d=>gc[sevOf(d).grade]++);
   return `<div class="row" style="margin-bottom:8px"><span>심각도 <span class="bg svA">A ${gc.A}</span> <span class="bg svB">B ${gc.B}</span> <span class="bg svC">C ${gc.C}</span> · </span><span><b>${ds.length.toLocaleString()}</b>건 · 수량 <b>${sum(ds,'qty').toLocaleString()}</b> · 비용 <b>${won(sum(ds,costTotal))}</b>원</span></div>
   <div class="tw"><table><thead><tr><th>발생일</th><th>발생처</th><th>심각도</th><th>부품</th><th>사진</th><th>차종</th><th>협력사</th><th>유형</th><th class="n">수량</th><th>처리</th><th>귀책</th><th class="n">비용(원)</th><th>후속 조치</th><th>담당</th><th>상태</th><th class="noprint"></th></tr></thead><tbody>
-  ${ds.map(d=>`<tr><td style="white-space:nowrap">${esc(d.date)}</td><td>${esc(d.source)}</td><td>${sevBadge(d)}</td><td>${d.partNo||d.partName?`<b>${esc(d.partNo)}</b><br><span class="muted">${esc(d.partName)}</span>`:invOpen(d)?'<span class="bg warn">원인 부품 조사 중</span>':'<span class="muted">원인 부품 없음</span>'}${d.fgNo||d.fgName?`<br><span class="muted" style="font-size:11px" title="발견 품목 (완성품)">▸ 발견: ${esc(d.fgNo||d.fgName)}${d.fgQty?` (${num(d.fgQty)})`:''}</span>`:''}</td><td>${photoBadge(d)}</td><td>${esc(d.model)}</td><td>${esc(supName(d.supplierId))}</td><td>${esc(d.type)}</td><td class="n">${num(d.qty).toLocaleString()}</td><td>${esc(d.disposition)}</td><td>${esc(d.resp)}${d.resp==='공동'&&d.inv&&d.inv.share!==''&&d.inv.share!=null?`<br><span class="muted" style="font-size:11px">협력사 ${num(d.inv.share)}%</span>`:''}</td><td class="n" style="white-space:nowrap">${costTotal(d)?`<a class="lk" onclick="openCost('${d.id}')">${won(costTotal(d))}</a>`:needCost(d)?`<a class="bg warn" style="cursor:pointer" onclick="openCost('${d.id}')">입력</a>`:`<a class="lk muted" onclick="openCost('${d.id}')">0</a>`}${claimStatus(d)?`<br><span class="bg ${CLAIM_CLS[claimStatus(d)]}" style="font-size:11px">${claimStatus(d)}</span>`:''}</td><td style="white-space:nowrap">${actCell(d)}</td><td>${esc(d.owner)}</td><td style="white-space:nowrap">${stageBadges(d)}<br>${(()=>{const n=(d.logs||[]).length,l=lastLog(d);return `<a class="bg ${n?'inf':'mut'}" style="cursor:pointer;font-size:10.5px" onclick="openLog('${d.id}')" title="${n?esc(l.date+' '+l.kind+': '+l.text.slice(0,80)):'진행 기록 추가'}">📝 ${n||'+'}</a>`})()}</td><td class="noprint" style="white-space:nowrap"><button class="b s" onclick="editDefect('${d.id}')">상세</button></td></tr>`).join('')||'<tr><td colspan="16" class="muted" style="text-align:center;padding:30px">조건에 맞는 불량이 없습니다.</td></tr>'}
+  ${ds.map(d=>`<tr><td style="white-space:nowrap">${esc(d.date)}</td><td>${esc(d.source)}</td><td>${sevBadge(d)}</td><td>${d.partNo||d.partName?`<b>${esc(d.partNo)}</b><br><span class="muted">${esc(d.partName)}</span>`:invOpen(d)?'<span class="bg warn">원인 부품 조사 중</span>':'<span class="muted">원인 부품 없음</span>'}${d.fgNo||d.fgName?`<br><span class="muted" style="font-size:11px" title="발견 품목 (완성품)">▸ 발견: ${esc(d.fgNo||d.fgName)}${d.fgQty?` (${num(d.fgQty)})`:''}</span>`:''}</td><td>${photoBadge(d)}</td><td>${esc(d.model)}</td><td>${esc(supName(d.supplierId))}</td><td>${esc(d.type)}</td><td class="n">${num(d.qty).toLocaleString()}</td><td>${esc(d.disposition)}</td><td>${esc(d.resp)}${d.resp==='공동'&&d.inv&&d.inv.share!==''&&d.inv.share!=null?`<br><span class="muted" style="font-size:11px">협력사 ${num(d.inv.share)}%</span>`:''}</td><td class="n" style="white-space:nowrap">${costTotal(d)?`<a class="lk" onclick="openCost('${d.id}')">${won(costTotal(d))}</a>`:needCost(d)?`<a class="bg warn" style="cursor:pointer" onclick="openCost('${d.id}')">입력</a>`:`<a class="lk muted" onclick="openCost('${d.id}')">0</a>`}${claimStatus(d)?`<br><span class="bg ${CLAIM_CLS[claimStatus(d)]}" style="font-size:11px">${claimStatus(d)}</span>`:''}</td><td class="actc">${actCell(d)}</td><td>${esc(d.owner)}</td><td class="stc">${stageBadges(d)}<br>${(()=>{const n=(d.logs||[]).length,l=lastLog(d);return `<a class="bg ${n?'inf':'mut'}" style="cursor:pointer;font-size:10.5px" onclick="openLog('${d.id}')" title="${n?esc(l.date+' '+l.kind+': '+l.text.slice(0,80)):'진행 기록 추가'}">📝 ${n||'+'}</a>`})()}</td><td class="noprint" style="white-space:nowrap"><button class="b s" onclick="editDefect('${d.id}')">상세</button></td></tr>`).join('')||'<tr><td colspan="16" class="muted" style="text-align:center;padding:30px">조건에 맞는 불량이 없습니다.</td></tr>'}
   </tbody></table></div>`;
 }
 function renderDefect(){
