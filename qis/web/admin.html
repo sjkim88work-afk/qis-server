@@ -51,6 +51,8 @@ input,select{border:1px solid #d5dbe5;border-radius:6px;padding:6px 8px;font:inh
 <main id="view"></main>
 <div id="toast"></div>
 <input type="file" id="impFile" accept=".json,application/json" style="display:none">
+<input type="file" id="phJson" accept=".json,application/json" style="display:none">
+<input type="file" id="phDir" webkitdirectory multiple style="display:none">
 <script>
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -71,7 +73,7 @@ const ROLES={viewer:'조회',editor:'작성',admin:'관리자'};
 const ROLE_HELP={viewer:'보기 · 검색 · 출력만',editor:'등록 · 수정 (기준정보 삭제 · BOM 교체 · 설정 제외)',admin:'모든 기능 + 사용자 · 이력 · 백업 관리'};
 const ACT={create:'등록',update:'수정',delete:'삭제',restore:'복원','file.add':'첨부 추가','file.delete':'첨부 삭제',login:'로그인','login.fail':'로그인 실패',logout:'로그아웃',
   'user.create':'사용자 추가','user.update':'사용자 변경','user.reset_password':'비밀번호 초기화','user.change_password':'비밀번호 변경',backup:'백업',export:'내보내기',import:'가져오기',telegram:'텔레그램 요약 전송','telegram.update':'알림 설정 변경'};
-const COLL={defects:'불량',ncrs:'NCR',suppliers:'협력사',parts:'부품',receipts:'입고',reviews:'월간 검토',issues:'이슈',cases:'RCA',actions:'RCA 조치',doc:'설정·BOM',files:'첨부',users:'사용자'};
+const COLL={defects:'불량',ncrs:'NCR',suppliers:'협력사',parts:'부품',receipts:'입고',reviews:'월간 검토',issues:'이슈',cases:'RCA',actions:'RCA 조치',doc:'설정·BOM',files:'첨부',users:'사용자',photos:'사진·첨부',photos_meta_only:'사진 정보만(내용 없음)'};
 let tab=location.hash.slice(1)||'users',me=null;
 const A={items:[],more:false,f:{coll:'',user:'',action:'',q:'',from:'',to:'',id:''}};
 
@@ -83,7 +85,7 @@ async function render(){
     if(tab==='users')v.innerHTML=await renderUsers();
     else if(tab==='audit')v.innerHTML=await renderAudit();
     else if(tab==='telegram')v.innerHTML=await renderTelegram();
-    else v.innerHTML=await renderBackup();
+    else{v.innerHTML=await renderBackup();phMissLoad()}
   }catch(e){v.innerHTML=`<div class="card"><b>불러오지 못했습니다</b> — ${esc(e.message)}</div>`}
 }
 
@@ -177,6 +179,10 @@ async function renderBackup(){
     <div class="row"><a class="b" href="/api/admin/export">기록만 (사진 제외)</a><a class="b" href="/api/admin/export?photos=1">사진 · 첨부 포함</a></div></div>
     <div class="card"><h2>기존 QIS 데이터 가져오기</h2><p class="help">개인 QIS(HTML)에서 ‘백업’으로 받은 JSON 파일을 가져옵니다. 사진 포함 백업이면 사진 · 첨부도 함께 들어옵니다. 서버에 기록이 이미 있으면 <b>지금 데이터를 비우고 바꿀지</b> 묻습니다 — 바꾸기 전에 DB 백업을 자동으로 받아 두므로 복원할 수 있습니다. 사용자 계정 · 변경 이력은 그대로 남습니다.</p>
     <div class="row"><button class="b" onclick="$('#impFile').click()">백업 파일 선택</button><span id="impMsg" class="muted"></span></div></div>
+    <div class="card"><h2>빠진 사진 채우기</h2><p class="help">기록은 사진을 가리키는데 서버에 사진 내용이 없는 경우입니다 (개인 QIS에서 <b>사진 정보만</b> 든 파일 — 1분 자동 저장 <code>QMS_data.json</code> · <code>…_사진제외.json</code> — 로 가져왔을 때). 기록은 그대로 두고 사진만 채웁니다. 두 가지 중 편한 쪽을 쓰세요.<br>
+    ① 개인 QIS의 <b>백업 폴더</b>에 있는 <code>QMS_백업_날짜_시각.json</code>(사진 포함) 선택 &nbsp; ② 개인 QIS의 <b>QIS 폴더</b>(또는 그 안의 <code>사진·첨부</code> 폴더) 통째로 선택 — 파일 이름으로 맞춥니다</p>
+    <div id="phMiss" class="muted">확인 중…</div>
+    <div class="row" style="margin-top:8px"><button class="b" onclick="$('#phJson').click()">① 사진 포함 백업(JSON)에서</button><button class="b" onclick="$('#phDir').click()">② 사진·첨부 폴더에서</button><span id="phMsg" class="muted"></span></div></div>
     <div class="card"><h2>데이터 비우기 (시험용)</h2><p class="help">모든 기록 · 첨부를 지워 처음 상태로 만듭니다. 사용자 계정 · 변경 이력은 남고, 비우기 전 DB 백업을 자동으로 받아 둡니다 (위 ‘DB 사본’의 <code>…_before_reset</code>). 열려 있는 다른 사용자 화면도 비워집니다. 정식 사용 중에는 쓰지 마세요.</p>
     <div class="row"><button class="b" onclick="resetAll()">모든 기록 비우기…</button></div></div>`;
 }
@@ -212,6 +218,63 @@ async function tgTest(btn){btn.disabled=true;try{await post('/api/admin/telegram
 async function tgSend(btn){btn.disabled=true;btn.textContent='보내는 중…';try{await post('/api/admin/telegram/send');toast('요약을 보냈습니다')}catch(e){toast('전송 실패: '+e.message)}render()}
 async function tgPreview(){const p=$('#tgPrev');try{const {text}=await api('/api/admin/telegram/preview');p.textContent=text;p.style.display=''}catch(e){toast(e.message)}}
 async function backupNow(btn){btn.disabled=true;btn.textContent='백업 중…';try{const {info}=await post('/api/admin/backup');toast(`백업 완료 — ${info.db}`)}catch(e){toast(e.message)}render()}
+/* ---- 빠진 사진 채우기 ---- */
+let PHM=null;
+async function phMissLoad(){
+  const el=$('#phMiss');if(!el)return;
+  try{PHM=await api('/api/admin/photos/missing');const m=PHM.missing;
+    if(!m.length){el.innerHTML=`<span class="bg ok">빠진 사진 없음</span> <span class="muted">기록이 가리키는 첨부 ${PHM.referenced}개 모두 있음</span>`;return}
+    el.innerHTML=`<span class="bg warn">빠진 사진 · 첨부 ${m.length}개</span> <span class="muted">(기록이 가리키는 첨부 ${PHM.referenced}개 중)</span><div style="margin-top:6px;font-size:12.5px;line-height:1.7">${m.slice(0,8).map(x=>`${esc(x.refs[0]||'')} — <code>${esc(x.file||x.name||x.id)}</code>`).join('<br>')}${m.length>8?`<br><span class="muted">외 ${m.length-8}개</span>`:''}</div>`;
+  }catch(e){el.innerHTML=`<span class="bg bad">${esc(e.message)}</span>`}
+}
+const MIME={jpg:'image/jpeg',jpeg:'image/jpeg',png:'image/png',gif:'image/gif',webp:'image/webp',bmp:'image/bmp',pdf:'application/pdf',xlsx:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',xls:'application/vnd.ms-excel',docx:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',doc:'application/msword',pptx:'application/vnd.openxmlformats-officedocument.presentationml.presentation',txt:'text/plain',csv:'text/csv',zip:'application/zip'};
+const fileToURL=f=>new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=()=>rej(r.error);r.readAsDataURL(f)});
+const hasBody=p=>p&&typeof p.data==='string'&&/^data:[\w.+-]+\/[\w.+-]+(;[^,;]*)*;base64,[A-Za-z0-9+/]/.test(p.data)&&!p.data.startsWith('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAkCAIAAABAJy5d');
+async function phPutAll(recs,msg){
+  // 한 요청에 8MB 정도씩 나눠 올림
+  let n=0,batch=[],size=0;
+  const flush=async()=>{if(!batch.length)return;msg.textContent=`올리는 중… ${n+batch.length}/${recs.length}`;const r=await post('/api/files/put',{files:batch});n+=r.saved;batch=[];size=0};
+  for(const r of recs){const sz=r.data.length;if(batch.length&&size+sz>8*1048576)await flush();batch.push(r);size+=sz}
+  await flush();return n;
+}
+$('#phJson').addEventListener('change',async e=>{
+  const f=e.target.files[0];e.target.value='';if(!f)return;const msg=$('#phMsg');
+  try{
+    if(!PHM)await phMissLoad();const need=new Set(PHM.missing.map(x=>x.id));if(!need.size){toast('빠진 사진이 없습니다');return}
+    msg.textContent='읽는 중…';const j=JSON.parse(await f.text());const all=Array.isArray(j.photos)?j.photos:[];
+    const recs=all.filter(p=>p&&need.has(p.id)&&hasBody(p));
+    const metaOnly=all.filter(p=>p&&need.has(p.id)&&!hasBody(p)).length;
+    if(!recs.length){msg.textContent='';toast(metaOnly?`이 파일에는 사진 정보만 있고 내용이 없습니다 (${metaOnly}개) — QMS_백업_날짜_시각.json 을 고르거나 ② 사진 폴더를 쓰세요`:'이 파일에 빠진 사진에 해당하는 내용이 없습니다');return}
+    if(!confirm(`${f.name}\n빠진 ${need.size}개 중 ${recs.length}개를 이 파일에서 찾았습니다.\n\n서버에 채울까요?`)){msg.textContent='';return}
+    const n=await phPutAll(recs,msg);msg.textContent='';toast(`사진 ${n}개를 채웠습니다`);await phMissLoad();
+  }catch(err){msg.textContent='';toast('채우기 실패: '+err.message)}
+});
+$('#phDir').addEventListener('change',async e=>{
+  const fs=[...e.target.files];e.target.value='';if(!fs.length)return;const msg=$('#phMsg');
+  try{
+    if(!PHM)await phMissLoad();const miss=PHM.missing;if(!miss.length){toast('빠진 사진이 없습니다');return}
+    msg.textContent='폴더 읽는 중…';
+    // 폴더 안의 QMS_*.json 에서 사진 정보(id → 파일 이름 · 이름 · 설명)를 모은다 (사진 폴더 방식 백업은 정보만 들어 있음)
+    const meta=new Map();
+    for(const f of fs.filter(f=>/^QMS_.*\.json$/i.test(f.name)).sort((a,b)=>b.lastModified-a.lastModified)){
+      try{const j=JSON.parse(await f.text());(j.photos||[]).forEach(p=>{if(p&&p.id&&!meta.has(p.id))meta.set(p.id,p)})}catch(_){}
+    }
+    const byName=new Map(fs.map(f=>[f.name,f]));
+    const recs=[],notFound=[];
+    for(const m of miss){
+      const info=meta.get(m.id)||{};const cand=[m.file,info.file,m.id+'.jpg',m.id+'.png',m.id+'.pdf'].filter(Boolean);
+      const f=cand.map(n=>byName.get(n)).find(Boolean);
+      if(!f){notFound.push(m.file||info.file||m.id);continue}
+      const ext=(f.name.split('.').pop()||'').toLowerCase(),mime=f.type||MIME[ext]||'application/octet-stream';
+      if(f.size>25*1048576){notFound.push(f.name+' (25MB 초과)');continue}
+      const data=await fileToURL(f);
+      recs.push({id:m.id,name:info.name||m.name||f.name,mime,size:f.size,kind:info.kind||m.kind||(mime.startsWith('image/')?'photo':'doc'),caption:info.caption||'',createdAt:info.createdAt||new Date(f.lastModified).toISOString(),file:f.name,data});
+    }
+    if(!recs.length){msg.textContent='';toast(`맞는 파일을 찾지 못했습니다 — 찾는 이름 예: ${notFound.slice(0,3).join(', ')}`);return}
+    if(!confirm(`빠진 ${miss.length}개 중 ${recs.length}개의 파일을 폴더에서 찾았습니다.${notFound.length?`\n못 찾음 ${notFound.length}개: ${notFound.slice(0,3).join(', ')}${notFound.length>3?' …':''}`:''}\n\n서버에 채울까요?`)){msg.textContent='';return}
+    const n=await phPutAll(recs,msg);msg.textContent='';toast(`사진 ${n}개를 채웠습니다${notFound.length?` · 못 찾음 ${notFound.length}개`:''}`);await phMissLoad();
+  }catch(err){msg.textContent='';toast('채우기 실패: '+err.message)}
+});
 $('#impFile').addEventListener('change',async e=>{
   const f=e.target.files[0];if(!f)return;const m=$('#impMsg');m.textContent='읽는 중…';
   try{const data=JSON.parse(await f.text());
@@ -226,6 +289,8 @@ $('#impFile').addEventListener('change',async e=>{
       ({imported}=await post('/api/admin/import',{...data,_replace:true}));
     }
     m.textContent='';toast('가져왔습니다 — '+Object.entries(imported).map(([k,v])=>`${COLL[k]||k} ${v}`).join(' · '));
+    if(imported.photos_meta_only)setTimeout(()=>alert(`사진 ${imported.photos_meta_only}개는 정보만 있고 내용이 없습니다.\n아래 '빠진 사진 채우기'에서 사진 포함 백업(QMS_백업_날짜_시각.json)이나 사진·첨부 폴더로 채우세요.`),300);
+    render();
   }catch(err){m.textContent='';toast('가져오기 실패: '+err.message)}
   e.target.value='';
 });

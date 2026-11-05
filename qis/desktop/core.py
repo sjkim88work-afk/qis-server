@@ -398,7 +398,7 @@ def import_json_backup(cfg: Config, path: Path, *, replace: bool = False, by_use
 
     기록이 이미 있으면 replace=True 일 때만: 지금 DB를 restore_before_… 로 옮겨 보관하고,
     사용자 계정은 새 DB로 옮긴 뒤 가져온다 (변경 이력 · 이전 기록은 보관한 DB에 그대로 남음)."""
-    from ..files import Files
+    from ..files import Files, has_body
     from ..store import Store
     data = json.loads(Path(path).read_text(encoding="utf-8"))
     if not isinstance(data, dict) or not isinstance(data.get("defects"), list) or not isinstance(data.get("settings"), dict):
@@ -438,10 +438,13 @@ def import_json_backup(cfg: Config, path: Path, *, replace: bool = False, by_use
         cnt = Store(db, cfg).import_backup(by, data)
         if isinstance(photos, list):
             fs = Files(db, cfg)
-            ok = [p for p in photos if isinstance(p, dict) and p.get("id") and p.get("data")]
+            ok = [p for p in photos if isinstance(p, dict) and p.get("id")]
             for i in range(0, len(ok), 50):
                 fs.put_many(by, ok[i:i + 50])
-            cnt["photos"] = len(ok)
+            cnt["photos"] = sum(1 for p in ok if has_body(p))
+            meta_only = len(ok) - cnt["photos"]
+            if meta_only:   # 사진 정보(파일 이름)만 든 것도 저장해 둠 → 관리 화면 '빠진 사진 채우기'에서 파일 이름으로 맞춤
+                cnt["photos_meta_only"] = meta_only
         if kept:
             with db.tx() as c:
                 db.audit(c, user=by, action="import", label="가져오기 전 DB 보관", detail={"kept": kept})
