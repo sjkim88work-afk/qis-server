@@ -77,7 +77,7 @@ function editIssue(id){
     <label>언제 *<input type="datetime-local" name="at" value="${esc(i.at)}"></label>
     <label>담당<input name="owner" list="dlOwners" value="${esc(i.owner)}"></label>
     <label class="full">현상<textarea name="desc" placeholder="확인한 사실 — 무엇이 · 어떻게 · 몇 개">${esc(i.desc)}</textarea></label>
-    <label>품목 (추정 · 선택)<input name="partNo" list="dlParts" value="${esc(i.partNo)}" placeholder="모르면 비워 두기"></label>
+    <label>품목 (추정 · 선택)<input name="partNo" data-combo="parts" autocomplete="off" value="${esc(i.partNo)}" placeholder="품번 · 품명 · 차종 · 협력사로 검색 (모르면 비워 두기)"></label>
     <label>발견 수량 (선택)<input type="number" min="0" name="qty" value="${esc(i.qty)}"></label>
     <label>긴급도 *<select name="urg">${opts(ISS_URG,i.urg)}</select></label>
     <label class="row" style="flex-direction:row;align-items:center;gap:6px;margin-top:16px"><input type="checkbox" name="special" ${i.special?'checked':''}> 특별특성(CC/SC) 관련</label>
