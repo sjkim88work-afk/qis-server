@@ -72,15 +72,7 @@ function openRcvLineImport(){
   <div id="rlMap" style="margin-top:10px"></div>`,[{label:'취소',fn:closeModal},{label:'등록',cls:'p',fn:rlApply}]);
   setTimeout(()=>{const t=$('#rlPaste');if(t){t.focus();t.setSelectionRange(t.value.length,t.value.length)}},50);
 }
-async function rlFile(f){
-  if(!f)return;
-  try{const buf=await f.arrayBuffer();
-    if(/\.xlsx$/i.test(f.name)){const sh=await readXlsx(buf),names=Object.keys(sh);if(!names.length)throw new Error('읽을 수 있는 시트가 없습니다');rl.sheets=sh;const cur=names.find(n=>sh[n].length>1)||names[0];
-      $('#rlSheet').innerHTML=names.length>1?`시트 <select onchange="rlSet(rl.sheets[this.value],${jsq(f.name)})">${names.map(n=>`<option ${n===cur?'selected':''}>${esc(n)}</option>`).join('')}</select>`:'';rlSet(sh[cur],f.name)}
-    else if(/\.xls$/i.test(f.name))throw new Error('구버전 .xls는 엑셀에서 .xlsx로 저장 후 선택하세요');
-    else rlSet(parseCSV(decodeText(buf)),f.name);
-  }catch(e){toast('파일 읽기 실패: '+e.message)}
-}
+function rlFile(f){return sheetFile(f,rl,'#rlSheet','rlSet','rl')}
 function rlSet(rows,name){
   rows=(rows||[]).map(r=>(r||[]).map(c=>String(c??'').trim()));
   if(rows.filter(r=>r.some(c=>c)).length<2){$('#rlMap').innerHTML='<div class="muted">제목행 아래에 데이터를 붙여넣으세요.</div>';return}
@@ -236,15 +228,7 @@ function openRcvImport(){
   <div id="riMap"></div><div id="riPrev" style="margin-top:10px"></div>`,[{label:'취소',fn:closeModal},{label:'반영',cls:'p',fn:riCommit}]);
   $('#mfoot .p').disabled=true;
 }
-async function riFile(f){
-  if(!f)return;
-  try{const buf=await f.arrayBuffer();
-    if(/\.xlsx$/i.test(f.name)){const sh=await readXlsx(buf),names=Object.keys(sh);if(!names.length)throw new Error('읽을 수 있는 시트가 없습니다');ri.sheets=sh;const cur=names.find(n=>sh[n].length>1)||names[0];
-      $('#riSheet').innerHTML=names.length>1?`시트 <select onchange="riSet(ri.sheets[this.value],${jsq(f.name)})">${names.map(n=>`<option ${n===cur?'selected':''}>${esc(n)}</option>`).join('')}</select>`:'';riSet(sh[cur],f.name)}
-    else if(/\.xls$/i.test(f.name))throw new Error('구버전 .xls는 엑셀에서 .xlsx로 저장 후 선택하세요');
-    else riSet(parseCSV(decodeText(buf)),f.name);
-  }catch(e){toast('파일 읽기 실패: '+e.message)}
-}
+function riFile(f){return sheetFile(f,ri,'#riSheet','riSet','ri')}
 function riSet(rows,name){
   rows=(rows||[]).map(r=>r||[]);
   if(rows.filter(r=>r.some(c=>String(c).trim()!=='')).length<2){toast('제목행과 데이터가 있는 범위를 넣어주세요');return}

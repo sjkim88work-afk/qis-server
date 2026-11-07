@@ -3,6 +3,8 @@ const REPORT_HEAD=`<style>@page{size:A4;margin:11mm}.rbar{position:sticky;top:0;
 const REPORT_BAR=`<div class="rbar"><span style="flex:1">인쇄 미리보기 — 인쇄 창에서 ‘대상: PDF로 저장’을 고르면 PDF 파일로 저장됩니다.</span><button class="pp" onclick="window.print()">인쇄 / PDF 저장</button><button onclick="window.close()">닫기</button></div><script>window.addEventListener('load',function(){setTimeout(function(){try{window.print()}catch(e){}},400)})<\/script>`;
 const inFrame=(()=>{try{return window.self!==window.top}catch(e){return true}})();
 function reportWin(){let w=null;try{w=window.open('','_blank')}catch(e){}if(w){try{w.document.write('<p style="font-family:sans-serif;padding:20px">보고서 준비 중…</p>')}catch(e){w=null}}return w}
+/* 보고서 HTML 에 인쇄 설정(REPORT_HEAD)과 위쪽 인쇄 막대(REPORT_BAR)를 끼움 */
+function reportFrame(html){return html.replace('</head>',REPORT_HEAD).replace('<body>','<body>'+REPORT_BAR)}
 function reportShow(w,html,fname){
   if(w&&!w.closed){try{w.document.open();w.document.write(html);w.document.close();return}catch(e){}}
   download(fname,html,'text/html;charset=utf-8');
@@ -25,7 +27,7 @@ function dashReport(){
   const acts=[...replyLate.map(x=>['회신 지연',x.n.no,supName(x.n.supplierId),`기한 ${x.n.dueDate}`]),...verLate.map(x=>['유효성 지연',x.n.no,supName(x.n.supplierId),`기한 ${x.n.verifyDue}`]),...recs.map(d=>['NCR 권고',`${d.date} ${d.partName||d.partNo}`,supName(d.supplierId),ncrReasons(d).join(', ')])];
   const lbl=ms.map(x=>x.slice(2).replace('-','.'));
   const rv=getReview(m)||{};
-  const html=`<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>품질현황보고_${m}</title><style>
+  const html=reportFrame(`<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>품질현황보고_${m}</title><style>
   body{font-family:'Malgun Gothic','맑은 고딕',sans-serif;font-size:11px;color:#111;margin:24px}
   .hd{display:flex;align-items:center;gap:14px;border-bottom:2.5px solid #14213d;padding-bottom:8px}
   .hd img{max-height:46px;max-width:170px;object-fit:contain}.hd .t{flex:1}.hd h1{font-size:19px;margin:0}.hd .s{color:#555;margin-top:3px}
@@ -65,6 +67,6 @@ function dashReport(){
   <div class="sec"><h2>5. 주요 불량 (수량 상위)</h2>${top.length?`<table><tr><th>발생일</th><th>발생처</th><th>협력사</th><th>부품</th><th>유형</th><th class="n">수량</th><th>처리</th><th>NCR</th></tr>
     ${top.map(d=>`<tr><td>${esc(d.date)}</td><td>${esc(d.source)}</td><td>${esc(supName(d.supplierId))}</td><td>${esc(d.partNo)} ${esc(d.partName)}</td><td>${esc(d.type)}</td><td class="n">${num(d.qty).toLocaleString()}</td><td>${esc(d.disposition)}</td><td>${esc(db.ncrs.find(n=>n.id===d.ncrId)?.no||'')}</td></tr>`).join('')}</table>`:'<div>해당 월 불량 없음</div>'}</div>
   <div class="sec"><h2>6. 조치 필요 항목</h2>${acts.length?`<table><tr><th>구분</th><th>대상</th><th>협력사</th><th>내용</th></tr>${acts.slice(0,20).map(a=>`<tr><td>${esc(a[0])}</td><td>${esc(a[1])}</td><td>${esc(a[2])}</td><td>${esc(a[3])}</td></tr>`).join('')}${acts.length>20?`<tr><td colspan="4">외 ${acts.length-20}건</td></tr>`:''}</table>`:'<div>지연·권고 항목 없음</div>'}</div>
-  </body></html>`.replace('</head>',REPORT_HEAD).replace('<body>','<body>'+REPORT_BAR);
+  </body></html>`);
   reportShow(w,html,`품질현황보고_${m}.html`);
 }

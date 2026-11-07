@@ -1664,6 +1664,8 @@ const REPORT_HEAD=`<style>@page{size:A4;margin:11mm}.rbar{position:sticky;top:0;
 const REPORT_BAR=`<div class="rbar"><span style="flex:1">인쇄 미리보기 — 인쇄 창에서 ‘대상: PDF로 저장’을 고르면 PDF 파일로 저장됩니다.</span><button class="pp" onclick="window.print()">인쇄 / PDF 저장</button><button onclick="window.close()">닫기</button></div><script>window.addEventListener('load',function(){setTimeout(function(){try{window.print()}catch(e){}},400)})<\/script>`;
 const inFrame=(()=>{try{return window.self!==window.top}catch(e){return true}})();
 function reportWin(){let w=null;try{w=window.open('','_blank')}catch(e){}if(w){try{w.document.write('<p style="font-family:sans-serif;padding:20px">보고서 준비 중…</p>')}catch(e){w=null}}return w}
+/* 보고서 HTML 에 인쇄 설정(REPORT_HEAD)과 위쪽 인쇄 막대(REPORT_BAR)를 끼움 */
+function reportFrame(html){return html.replace('</head>',REPORT_HEAD).replace('<body>','<body>'+REPORT_BAR)}
 function reportShow(w,html,fname){
   if(w&&!w.closed){try{w.document.open();w.document.write(html);w.document.close();return}catch(e){}}
   download(fname,html,'text/html;charset=utf-8');
@@ -1686,7 +1688,7 @@ function dashReport(){
   const acts=[...replyLate.map(x=>['회신 지연',x.n.no,supName(x.n.supplierId),`기한 ${x.n.dueDate}`]),...verLate.map(x=>['유효성 지연',x.n.no,supName(x.n.supplierId),`기한 ${x.n.verifyDue}`]),...recs.map(d=>['NCR 권고',`${d.date} ${d.partName||d.partNo}`,supName(d.supplierId),ncrReasons(d).join(', ')])];
   const lbl=ms.map(x=>x.slice(2).replace('-','.'));
   const rv=getReview(m)||{};
-  const html=`<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>품질현황보고_${m}</title><style>
+  const html=reportFrame(`<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>품질현황보고_${m}</title><style>
   body{font-family:'Malgun Gothic','맑은 고딕',sans-serif;font-size:11px;color:#111;margin:24px}
   .hd{display:flex;align-items:center;gap:14px;border-bottom:2.5px solid #14213d;padding-bottom:8px}
   .hd img{max-height:46px;max-width:170px;object-fit:contain}.hd .t{flex:1}.hd h1{font-size:19px;margin:0}.hd .s{color:#555;margin-top:3px}
@@ -1726,7 +1728,7 @@ function dashReport(){
   <div class="sec"><h2>5. 주요 불량 (수량 상위)</h2>${top.length?`<table><tr><th>발생일</th><th>발생처</th><th>협력사</th><th>부품</th><th>유형</th><th class="n">수량</th><th>처리</th><th>NCR</th></tr>
     ${top.map(d=>`<tr><td>${esc(d.date)}</td><td>${esc(d.source)}</td><td>${esc(supName(d.supplierId))}</td><td>${esc(d.partNo)} ${esc(d.partName)}</td><td>${esc(d.type)}</td><td class="n">${num(d.qty).toLocaleString()}</td><td>${esc(d.disposition)}</td><td>${esc(db.ncrs.find(n=>n.id===d.ncrId)?.no||'')}</td></tr>`).join('')}</table>`:'<div>해당 월 불량 없음</div>'}</div>
   <div class="sec"><h2>6. 조치 필요 항목</h2>${acts.length?`<table><tr><th>구분</th><th>대상</th><th>협력사</th><th>내용</th></tr>${acts.slice(0,20).map(a=>`<tr><td>${esc(a[0])}</td><td>${esc(a[1])}</td><td>${esc(a[2])}</td><td>${esc(a[3])}</td></tr>`).join('')}${acts.length>20?`<tr><td colspan="4">외 ${acts.length-20}건</td></tr>`:''}</table>`:'<div>지연·권고 항목 없음</div>'}</div>
-  </body></html>`.replace('</head>',REPORT_HEAD).replace('<body>','<body>'+REPORT_BAR);
+  </body></html>`);
   reportShow(w,html,`품질현황보고_${m}.html`);
 }
 /* ================= 주간 보고 (최근 7일) ================= */
@@ -1740,7 +1742,7 @@ function weekReport(){
   const g={A:0,B:0,C:0};ds.forEach(d=>g[sevOf(d).grade]++);
   const kind=c=>c.kind==='ncr'?'NCR':c.kind==='rca'?'RCA':'불량';
   const tb=(h,rows,empty)=>rows.length?`<table><tr>${h.map(x=>`<th>${x}</th>`).join('')}</tr>${rows.map(r=>`<tr>${r.map(v=>`<td>${v}</td>`).join('')}</tr>`).join('')}</table>`:`<div class="em">${empty}</div>`;
-  const html=`<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>주간품질보고_${from}_${to}</title><style>
+  const html=reportFrame(`<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>주간품질보고_${from}_${to}</title><style>
   body{font-family:'Malgun Gothic','맑은 고딕',sans-serif;font-size:11px;color:#111;margin:24px}
   .hd{display:flex;align-items:center;gap:14px;border-bottom:2.5px solid #14213d;padding-bottom:8px}.hd img{max-height:46px;max-width:170px;object-fit:contain}.hd .t{flex:1}.hd h1{font-size:19px;margin:0}.hd .s{color:#555;margin-top:3px}
   table{border-collapse:collapse;width:100%}th,td{border:1px solid #888;padding:4px 6px;text-align:left;vertical-align:top}th{background:#eef1f5;white-space:nowrap}
@@ -1762,7 +1764,7 @@ function weekReport(){
   <div class="sec"><h2>4. RCA 진행</h2>${tb(['구분','RCA','제목','TIER','일자','단계'],[...cNew.map(c=>['등록',c,c.Created]),...cClose.map(c=>['종결',c,c.CloseDate])].map(([k,c,d])=>[k,esc(c.CaseNo),esc(c.Title),esc(c.Tier||''),esc(d),esc(c.Stage)]),'이번 주 RCA 등록 · 종결 없음')}</div>
   <div class="sec"><h2>5. 지연 중인 건 (${late.length}건)</h2>${tb(['구분','건','협력사','지연 내용','담당'],late.map(c=>[kind(c),esc(c.title),esc(c.sup),esc(lateTxt(c.late)),esc(c.owner)]),'지연 건 없음')}</div>
   <div class="sec"><h2>6. 다음 7일 기한 (${next.length}건)</h2>${tb(['기한','구분','건','협력사','내용'],next.map(c=>[esc(c.next.nextDate),kind(c),esc(c.title),esc(c.sup),esc(c.next.next)]),'다음 7일 안에 돌아오는 기한 없음')}</div>
-  </body></html>`.replace('</head>',REPORT_HEAD).replace('<body>','<body>'+REPORT_BAR);
+  </body></html>`);
   reportShow(w,html,`주간품질보고_${to}.html`);
 }
 /* ================= 월간 검토 의견 ================= */
@@ -2718,7 +2720,7 @@ async function printIca(id,w0){
   const keys=simple?['d4','d5','d6']:ICA_KEYS;
   let phs=[];try{phs=(await photoGetMany(d.photos||[])).slice(0,4)}catch(e){}
   const vi=icaVerify(d);
-  const html=`<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>사내 대책서 — ${esc(defLabel(d))}</title><style>body{font-family:'Malgun Gothic',sans-serif;font-size:12px;margin:24px;color:#111}table{width:100%;border-collapse:collapse;margin-bottom:12px}td,th{border:1px solid #555;padding:6px;vertical-align:top;text-align:left}th{background:#eef1f6;width:20%}h1{font-size:18px;margin:6px 0 10px}.pg{display:grid;grid-template-columns:1fr 1fr;gap:8px}.pg img{width:100%;max-height:60mm;object-fit:contain}figure{margin:0}</style></head><body>
+  const html=reportFrame(`<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>사내 대책서 — ${esc(defLabel(d))}</title><style>body{font-family:'Malgun Gothic',sans-serif;font-size:12px;margin:24px;color:#111}table{width:100%;border-collapse:collapse;margin-bottom:12px}td,th{border:1px solid #555;padding:6px;vertical-align:top;text-align:left}th{background:#eef1f6;width:20%}h1{font-size:18px;margin:6px 0 10px}.pg{display:grid;grid-template-columns:1fr 1fr;gap:8px}.pg img{width:100%;max-height:60mm;object-fit:contain}figure{margin:0}</style></head><body>
   ${logoHead()}<h1>사내 대책서 (${esc(lv==='8D'?'8D':'간이 대책')})</h1>
   <table><tr><th>발생일 / 발생처</th><td>${esc(d.date)} / ${esc(d.source)}</td><th>담당</th><td>${esc(d.owner)}</td></tr>
   ${d.fgNo||d.fgName?`<tr><th>발견 품목 (완성품)</th><td colspan="3">${esc(d.fgNo)} ${esc(d.fgName)}${d.fgQty?` · ${num(d.fgQty)} EA`:''}</td></tr>`:''}
@@ -2730,7 +2732,7 @@ async function printIca(id,w0){
   <table>${keys.map(k=>`<tr><th>${simple?SL[k]:(D8.find(x=>x[0]===k)||[k,k])[1]}</th><td style="height:46px">${nl(c[k])}</td></tr>`).join('')}
   <tr><th>표준화 반영</th><td>${ICA_STD.map(([k,l])=>`${c.std&&c.std[k]?'☑':'☐'} ${l}`).join(' &nbsp; ')}</td></tr></table>
   ${phs.length?`<div class="pg">${phs.map(p=>`<figure><img src="${p.data}"></figure>`).join('')}</div>`:''}
-  </body></html>`.replace('</head>',REPORT_HEAD).replace('<body>','<body>'+REPORT_BAR);
+  </body></html>`);
   reportShow(w,html,`사내대책서_${d.date}.html`);
 }
 function farPrint(id){
@@ -2744,7 +2746,7 @@ async function printFar(id,w0){
   const exP=new Set(iv.photoExcl||[]);let phs=[];try{phs=(await photoGetMany(invPhotoIds(d).filter(i=>!exP.has(i)))).slice(0,FAR_PH_MAX)}catch(e){}
   const due=iv.farDue||addBiz(iv.farReq||today(),num(S.farDays)||5);
   const row=(k,v)=>`<tr><th>${k}</th><td>${v||'-'}</td></tr>`;
-  const html=`<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>FAR 요청 — ${esc(defLabel(d))}</title><style>
+  const html=reportFrame(`<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>FAR 요청 — ${esc(defLabel(d))}</title><style>
   body{font-family:'Malgun Gothic',sans-serif;font-size:12px;margin:24px;color:#111}h1{font-size:19px;margin:6px 0 2px;text-align:center;letter-spacing:2px}
   .sub{text-align:center;color:#555;margin-bottom:14px}table{width:100%;border-collapse:collapse;margin-bottom:12px}th,td{border:1px solid #555;padding:6px 8px;vertical-align:top;text-align:left}
   th{background:#eef1f6;width:22%;font-weight:600}.two td{width:28%}.req li{margin:4px 0;line-height:1.5}.ntc{border:1.5px solid #b42318;color:#7a1414;padding:8px 10px;margin:10px 0;line-height:1.5}
@@ -2768,7 +2770,7 @@ async function printFar(id,w0){
   ${iv.costNotice?`<div class="ntc">※ 본 건의 원인이 귀사 부품으로 확인될 경우, 선별 · 재작업 · 폐기 · 물류 등 당사에 발생한 비용을 청구할 수 있음을 알려드립니다. 비용 내역은 원인 확정 후 별도 통보드립니다.</div>`:''}
   ${phs.length?`<b>불량 사진</b><div class="pg">${phs.map(p=>`<figure><img src="${p.data}">${p.caption?`<figcaption>${esc(p.caption)}</figcaption>`:''}</figure>`).join('')}</div>`:''}
   <div class="sig"><span>${esc(S.issuerPhone?'Tel. '+S.issuerPhone:'')} ${esc(S.issuerEmail?'E-mail. '+S.issuerEmail:'')}</span><span>${esc(S.company)} 품질 담당 ${esc(d.owner||'')}</span></div>
-  </body></html>`.replace('</head>',REPORT_HEAD).replace('<body>','<body>'+REPORT_BAR);
+  </body></html>`);
   reportShow(w,html,`FAR요청_${d.date}_${(d.partNo||d.fgNo||'').replace(/[^\w가-힣-]/g,'')}.html`);
 }
 function respChanged(init){
@@ -2955,7 +2957,7 @@ async function lgPrint(){
   const pn={};let k=0;L.forEach(l=>(l.photos||[]).forEach(id=>{if(!pn[id])pn[id]=++k}));
   const title=isN?`${o.no} · ${supName(o.supplierId)||''}`:`${defLabel(o)} · ${supName(o.supplierId)||''}`;
   const unsaved=tl.own.filter(x=>x._new||x._dirty).length;
-  const html=`<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>실행기록_${esc(isN?o.no:o.date)}</title><style>
+  const html=reportFrame(`<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>실행기록_${esc(isN?o.no:o.date)}</title><style>
   body{font-family:'Malgun Gothic','맑은 고딕',sans-serif;font-size:11px;color:#111;margin:24px}h1{font-size:17px;margin:6px 0 2px}.s{color:#555}
   table{border-collapse:collapse;width:100%;margin-top:10px}th,td{border:1px solid #999;padding:4px 6px;text-align:left;vertical-align:top}th{background:#eef1f5;white-space:nowrap}
   tr.au td{color:#555;background:#fafafa}tr.vd td{color:#888;text-decoration:line-through}tr.vd td.nt{text-decoration:none}.pre{white-space:pre-wrap}
@@ -2970,7 +2972,7 @@ async function lgPrint(){
   ${L.some(l=>(l.hist||[]).length)?`<h3>수정 이력 (원문)</h3><table><tr><th>기록</th><th>수정 시각 · 수정자</th><th>사유</th><th>수정 전 내용</th></tr>${L.filter(l=>(l.hist||[]).length).flatMap(l=>l.hist.map(h=>`<tr><td>${esc(l.date)} ${esc(l.kind)}</td><td>${esc(loc(h.at))} ${esc(h.by||'')}</td><td>${esc(h.reason||'')}</td><td class="pre">${esc(h.date)} · ${esc(h.kind)}${h.party?' · '+esc(h.party):''}\n${esc(h.text)}${h.result?'\n결과: '+esc(h.result):''}</td></tr>`)).join('')}</table>`:''}
   ${ids.length?`<h3>증빙 자료</h3><div class="ph">${ids.map(id=>P[id]?`<div><img src="${P[id].data}"><br><b>#${pn[id]}</b> ${esc(P[id].caption||P[id].name||'')}</div>`:'').join('')}</div>`:''}
   <p class="s" style="margin-top:12px">‘작성’은 기록을 입력한 시각이며 실행일과 2일 이상 차이 나면 ‘사후 기록’으로 표시됩니다. 수정된 기록은 원문과 사유가 위 이력에 남고, 취소된 기록은 지우지 않고 취소선으로 표시합니다.</p>
-  </body></html>`.replace('</head>',REPORT_HEAD).replace('<body>','<body>'+REPORT_BAR);
+  </body></html>`);
   reportShow(w,html,`실행기록_${isN?o.no:o.date}.html`);
 }
 function openLog(id){
@@ -3300,6 +3302,19 @@ async function readXlsx(buf){
   }
   return sheets;
 }
+/* 파일(xlsx · csv) 하나를 읽어 시트 선택 상자를 채우고 set(rows, fileName) 를 부름 — 협력사 성적서 · 입고 · 기준정보 · BOM 공용
+   st: 시트를 담을 상태 객체(st.sheets) · selId: 시트 선택 상자 id · setName: 전역 함수 이름(onchange 문자열에 들어가므로 이름으로) · stName: st 의 전역 이름 */
+async function sheetFile(f,st,selId,setName,stName){
+  if(!f)return;
+  const set=window[setName];
+  try{const buf=await f.arrayBuffer();
+    if(/\.xlsx$/i.test(f.name)){const sh=await readXlsx(buf),names=Object.keys(sh);if(!names.length)throw new Error('읽을 수 있는 시트가 없습니다');st.sheets=sh;const cur=names.find(n=>sh[n].length>1)||names[0];
+      $(selId).innerHTML=names.length>1?`시트 <select onchange="${setName}(${stName}.sheets[this.value],${jsq(f.name)})">${names.map(n=>`<option ${n===cur?'selected':''}>${esc(n)}</option>`).join('')}</select>`:'';set(sh[cur],f.name)}
+    else if(/\.xls$/i.test(f.name))throw new Error('구버전 .xls는 엑셀에서 .xlsx로 저장 후 선택하세요');
+    else set(parseCSV(decodeText(buf)),f.name);
+  }catch(e){toast('파일 읽기 실패: '+e.message)}
+}
+
 function parseCSV(t){
   const rows=[];let row=[],cur='',q=false;
   const sep=(t.split(/\r?\n/)[0]||'').includes('\t')?'\t':',';
@@ -3994,14 +4009,14 @@ function ncrFarPrint(){
   const w=reportWin(),S=db.settings,sid=fm.supplierId.value,sp=supById(sid),no=fm.no.value||'(저장 시 채번)';
   const att=fm.supAttn?.value||(sp?(ensureContacts(sp),(sp.contacts.find(c=>c.active!==false&&c.role==='품질 담당')||primaryOf(sp)||{}).name):'')||'';
   const row=(k,v)=>`<tr><th>${k}</th><td class="pre">${esc(v||'')}</td></tr>`;
-  const html=`<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>FAR_${esc(no)}</title><style>body{font-family:'Malgun Gothic','맑은 고딕',sans-serif;font-size:12px;color:#111;margin:24px}
+  const html=reportFrame(`<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>FAR_${esc(no)}</title><style>body{font-family:'Malgun Gothic','맑은 고딕',sans-serif;font-size:12px;color:#111;margin:24px}
   h1{font-size:18px;margin:8px 0 2px}table{border-collapse:collapse;width:100%;margin-top:10px}th,td{border:1px solid #888;padding:6px 8px;text-align:left;vertical-align:top}th{background:#eef1f5;width:28%}.pre{white-space:pre-wrap}.s{color:#555}
   .sign{margin-top:24px;display:flex;justify-content:flex-end;gap:30px}</style></head><body>${logoHead()}
   <h1>불량 분석 요청서 (Failure Analysis Request)</h1><div class="s">${esc(S.company||'')} ${esc(S.dept||'')} · 발행 ${esc(f.reqDate)} · 관련 NCR ${esc(no)}</div>
   <table>${row('수신 (To)',`${sp?sp.name:''} ${att}`)}${row('부품 (Part No. / Name)',`${fm.partNo.value} ${fm.partName.value}`)}${row('불량 내용 (Defect)',fm.title.value+(fm.actual?.value?'\n'+fm.actual.value:''))}
     ${row('요청 목적 (Purpose)',f.purpose)}${row('요청 분석 항목 (Requested analysis)',f.items.join(' / '))}${row('시료 (Samples)',`${f.sampleQty||''}${f.shipDate?` · 발송 ${f.shipDate}`:''}${f.shipRef?` · ${f.shipRef}`:''}`)}
     ${row('회신 기한 (Reply due)',f.due)}${row('회신 요구사항 (Requirements)','1. 분석 방법·조건과 측정 데이터(원본) 첨부 / Attach method, conditions and raw data\n2. 고장 메커니즘과 귀책 판단 근거 / Failure mechanism and basis of responsibility\n3. 동일 LOT 영향 범위 / Impact on the same lot\n4. 분석 후 시료 반환 여부 회신 / Advise whether samples will be returned')}</table>
-  <div class="sign"><div>담당 ${esc(fm.owner?.value||S.owners[0]||'')}</div><div>승인 ${esc(S.approver||'')}</div></div></body></html>`.replace('</head>',REPORT_HEAD).replace('<body>','<body>'+REPORT_BAR);
+  <div class="sign"><div>담당 ${esc(fm.owner?.value||S.owners[0]||'')}</div><div>승인 ${esc(S.approver||'')}</div></div></body></html>`);
   reportShow(w,html,`FAR_${no}.html`);
 }
 function typeDays(t,S){S=S||db.settings;return t==='간이 대책서'?num(S.replySimple)||5:num(S.reply8D)||num(S.replyDays)||7}
@@ -4189,7 +4204,7 @@ async function print8D(id){
   const w=reportWin();
   let phs=[];try{phs=await photoGetMany(ds.flatMap(d=>d.photos||[]))}catch(e){}
   let rds=[],nds=[];try{rds=await photoGetMany(n.replyDocs||[]);nds=await photoGetMany(n.noticeDocs||[])}catch(e){}
-  const html=(`<!doctype html><html><head><meta charset="utf-8"><title>${esc(n.no)} 8D</title><style>body{font-family:'Malgun Gothic',sans-serif;font-size:12px;margin:24px;color:#111}table{width:100%;border-collapse:collapse;margin-bottom:12px}td,th{border:1px solid #555;padding:6px;vertical-align:top}th{background:#eef1f5;width:17%;text-align:left}h1{font-size:18px;margin:0 0 12px}.sm td,.sm th{font-size:11px;width:auto}.pg{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.pg figure{margin:0;border:1px solid #999;padding:4px;break-inside:avoid}.pg img{width:100%;max-height:220px;object-fit:contain}.pg figcaption{font-size:11px;text-align:center;margin-top:3px}</style></head><body>
+  const html=reportFrame(`<!doctype html><html><head><meta charset="utf-8"><title>${esc(n.no)} 8D</title><style>body{font-family:'Malgun Gothic',sans-serif;font-size:12px;margin:24px;color:#111}table{width:100%;border-collapse:collapse;margin-bottom:12px}td,th{border:1px solid #555;padding:6px;vertical-align:top}th{background:#eef1f5;width:17%;text-align:left}h1{font-size:18px;margin:0 0 12px}.sm td,.sm th{font-size:11px;width:auto}.pg{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.pg figure{margin:0;border:1px solid #999;padding:4px;break-inside:avoid}.pg img{width:100%;max-height:220px;object-fit:contain}.pg figcaption{font-size:11px;text-align:center;margin-top:3px}</style></head><body>
   ${logoHead()}<h1>8D Report — ${esc(n.no)}</h1>
   <table><tr><th>협력사</th><td>${esc(supName(n.supplierId))}</td><th>발행일</th><td>${esc(n.issueDate)}</td></tr>
   <tr><th>부품번호</th><td>${esc(n.partNo)}</td><th>부품명</th><td>${esc(n.partName)}</td></tr>
@@ -4205,7 +4220,7 @@ async function print8D(id){
   ${ds.length?`<table class="sm"><tr><th>발생일</th><th>발생처</th><th>부품</th><th>유형</th><th>수량</th><th>납품일자</th><th>내용</th></tr>${ds.map(d=>`<tr><td>${esc(d.date)}</td><td>${esc(d.source)}</td><td>${esc(d.partNo)} ${esc(d.partName)}</td><td>${esc(d.type)}</td><td>${num(d.qty)}</td><td>${esc(d.delivDate||d.lot)}</td><td>${nl(d.desc)}</td></tr>`).join('')}</table>`:''}
   ${(()=>{const lg=[...(n.logs||[]),...ds.flatMap(d=>(d.logs||[]).map(l=>({...l,dd:d})))].sort((a,b)=>(a.date||'').localeCompare(b.date||''));return lg.length?`<table class="sm"><tr><th colspan="3" style="background:#dde4ef">조사 · 진행 경과</th></tr><tr><th>일자</th><th>구분</th><th>내용</th></tr>${lg.map(l=>`<tr><td style="white-space:nowrap">${esc(l.date)}</td><td style="white-space:nowrap">${esc(l.kind)}</td><td>${nl(l.text)}</td></tr>`).join('')}</table>`:''})()}
   ${phs.length?`<h3 style="font-size:14px">불량 사진</h3><div class="pg">${phs.map(p=>{const d=ds.find(x=>x.id===p.defectId)||{};return `<figure><img src="${p.data}"><figcaption>${esc(d.date||'')} ${esc(d.partName||d.partNo||'')}${p.caption?' · '+esc(p.caption):''}</figcaption></figure>`}).join('')}</div>`:''}
-  </body></html>`).replace('</head>',REPORT_HEAD).replace('<body>','<body>'+REPORT_BAR);
+  </body></html>`);
   reportShow(w,html,`8D_${n.no}.html`);
 }
 function exportNcrCSV(){
@@ -4288,15 +4303,7 @@ function openRcvLineImport(){
   <div id="rlMap" style="margin-top:10px"></div>`,[{label:'취소',fn:closeModal},{label:'등록',cls:'p',fn:rlApply}]);
   setTimeout(()=>{const t=$('#rlPaste');if(t){t.focus();t.setSelectionRange(t.value.length,t.value.length)}},50);
 }
-async function rlFile(f){
-  if(!f)return;
-  try{const buf=await f.arrayBuffer();
-    if(/\.xlsx$/i.test(f.name)){const sh=await readXlsx(buf),names=Object.keys(sh);if(!names.length)throw new Error('읽을 수 있는 시트가 없습니다');rl.sheets=sh;const cur=names.find(n=>sh[n].length>1)||names[0];
-      $('#rlSheet').innerHTML=names.length>1?`시트 <select onchange="rlSet(rl.sheets[this.value],${jsq(f.name)})">${names.map(n=>`<option ${n===cur?'selected':''}>${esc(n)}</option>`).join('')}</select>`:'';rlSet(sh[cur],f.name)}
-    else if(/\.xls$/i.test(f.name))throw new Error('구버전 .xls는 엑셀에서 .xlsx로 저장 후 선택하세요');
-    else rlSet(parseCSV(decodeText(buf)),f.name);
-  }catch(e){toast('파일 읽기 실패: '+e.message)}
-}
+function rlFile(f){return sheetFile(f,rl,'#rlSheet','rlSet','rl')}
 function rlSet(rows,name){
   rows=(rows||[]).map(r=>(r||[]).map(c=>String(c??'').trim()));
   if(rows.filter(r=>r.some(c=>c)).length<2){$('#rlMap').innerHTML='<div class="muted">제목행 아래에 데이터를 붙여넣으세요.</div>';return}
@@ -4452,15 +4459,7 @@ function openRcvImport(){
   <div id="riMap"></div><div id="riPrev" style="margin-top:10px"></div>`,[{label:'취소',fn:closeModal},{label:'반영',cls:'p',fn:riCommit}]);
   $('#mfoot .p').disabled=true;
 }
-async function riFile(f){
-  if(!f)return;
-  try{const buf=await f.arrayBuffer();
-    if(/\.xlsx$/i.test(f.name)){const sh=await readXlsx(buf),names=Object.keys(sh);if(!names.length)throw new Error('읽을 수 있는 시트가 없습니다');ri.sheets=sh;const cur=names.find(n=>sh[n].length>1)||names[0];
-      $('#riSheet').innerHTML=names.length>1?`시트 <select onchange="riSet(ri.sheets[this.value],${jsq(f.name)})">${names.map(n=>`<option ${n===cur?'selected':''}>${esc(n)}</option>`).join('')}</select>`:'';riSet(sh[cur],f.name)}
-    else if(/\.xls$/i.test(f.name))throw new Error('구버전 .xls는 엑셀에서 .xlsx로 저장 후 선택하세요');
-    else riSet(parseCSV(decodeText(buf)),f.name);
-  }catch(e){toast('파일 읽기 실패: '+e.message)}
-}
+function riFile(f){return sheetFile(f,ri,'#riSheet','riSet','ri')}
 function riSet(rows,name){
   rows=(rows||[]).map(r=>r||[]);
   if(rows.filter(r=>r.some(c=>String(c).trim()!=='')).length<2){toast('제목행과 데이터가 있는 범위를 넣어주세요');return}
@@ -4889,15 +4888,7 @@ function openMasterImport(kind){
   [{label:'취소',fn:closeModal},{label:'등록',cls:'p',fn:miApply}]);
 }
 function miTemplate(){const C=MIMP[mi.kind];downloadCSV(`${mi.kind==='sup'?'협력사':'부품'}_업로드양식.csv`,[C.F.map(f=>f[1].replace(/ \(.*\)/,''))])}
-async function miFile(f){
-  if(!f)return;
-  try{const buf=await f.arrayBuffer();
-    if(/\.xlsx$/i.test(f.name)){const sh=await readXlsx(buf),names=Object.keys(sh);if(!names.length)throw new Error('읽을 수 있는 시트가 없습니다');mi.sheets=sh;const cur=names.find(n=>sh[n].length>1)||names[0];
-      $('#miSheet').innerHTML=names.length>1?`시트 <select onchange="miSet(mi.sheets[this.value],${jsq(f.name)})">${names.map(n=>`<option ${n===cur?'selected':''}>${esc(n)}</option>`).join('')}</select>`:'';miSet(sh[cur],f.name)}
-    else if(/\.xls$/i.test(f.name))throw new Error('구버전 .xls는 엑셀에서 .xlsx로 저장 후 선택하세요');
-    else miSet(parseCSV(decodeText(buf)),f.name);
-  }catch(e){toast('파일 읽기 실패: '+e.message)}
-}
+function miFile(f){return sheetFile(f,mi,'#miSheet','miSet','mi')}
 function miSet(rows,name){
   rows=(rows||[]).map(r=>(r||[]).map(c=>String(c??'').trim()));
   if(rows.filter(r=>r.some(c=>c)).length<2){$('#miMap').innerHTML='<div class="muted">제목행과 데이터가 있는 범위를 넣어주세요.</div>';return}
@@ -5174,15 +5165,7 @@ function openBomImport(){
   [{label:'취소',fn:closeModal},{label:'등록',cls:'p',fn:bomApply}]);
   setTimeout(()=>{const t=$('#bomPaste');if(t){t.focus();t.setSelectionRange(t.value.length,t.value.length)}},50);
 }
-async function bomFile(f){
-  if(!f)return;
-  try{const buf=await f.arrayBuffer();
-    if(/\.xlsx$/i.test(f.name)){const sh=await readXlsx(buf),names=Object.keys(sh);if(!names.length)throw new Error('읽을 수 있는 시트가 없습니다');bi.sheets=sh;const cur=names.find(n=>sh[n].length>1)||names[0];
-      $('#bomSheet').innerHTML=names.length>1?`시트 <select onchange="bomSet(bi.sheets[this.value],${jsq(f.name)})">${names.map(n=>`<option ${n===cur?'selected':''}>${esc(n)}</option>`).join('')}</select>`:'';bomSet(sh[cur],f.name)}
-    else if(/\.xls$/i.test(f.name))throw new Error('구버전 .xls는 엑셀에서 .xlsx로 저장 후 선택하세요');
-    else bomSet(parseCSV(decodeText(buf)),f.name);
-  }catch(e){toast('파일 읽기 실패: '+e.message)}
-}
+function bomFile(f){return sheetFile(f,bi,'#bomSheet','bomSet','bi')}
 function bomSet(rows,name){
   rows=(rows||[]).map(r=>(r||[]).map(c=>String(c??'').trim()));
   if(rows.filter(r=>r.some(c=>c)).length<2){$('#bomMap').innerHTML='<div class="muted">제목행과 데이터가 있는 범위를 넣어주세요.</div>';return}
@@ -6941,7 +6924,7 @@ function czReport(){
   const ds=(c.DefectIds||[]).map(i=>db.defects.find(d=>d.id===i)).filter(Boolean),n=c.NcrId?db.ncrs.find(x=>x.id===c.NcrId):null;
   const row=(k,v)=>`<tr><th>${esc(k)}</th><td class="pre">${esc(v||'')}</td></tr>`;
   const actTable=cats=>{const l=A.filter(a=>cats.includes(a.Category));return l.length?`<table><tr><th style="width:auto">조치</th><th style="width:14%">구분</th><th style="width:14%">담당</th><th style="width:13%">기한</th><th style="width:13%">완료일</th><th style="width:10%">상태</th></tr>${l.map(a=>`<tr><td>${esc(a.Title)}</td><td>${esc(a.Category)}</td><td>${esc(a.Assignee||a.ExternalOwner)}</td><td>${esc(a.DueDate)}</td><td>${esc(a.DoneDate)}</td><td>${esc(a.ActionStatus)}</td></tr>`).join('')}</table>`:'<p class="muted">등록된 조치 없음</p>'};
-  const html=`<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>${esc(c.CaseNo)} 문제해결 보고서</title><style>
+  const html=reportFrame(`<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>${esc(c.CaseNo)} 문제해결 보고서</title><style>
   body{font-family:'Malgun Gothic','맑은 고딕',sans-serif;font-size:12px;color:#111;margin:24px}h1{font-size:18px;margin:0 0 4px}
   h3{font-size:13px;margin:16px 0 6px;padding:4px 8px;background:#eef2f7;border-radius:4px;break-after:avoid}
   table{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:6px}td,th{border:1px solid #bbb;padding:5px 7px;text-align:left;vertical-align:top}th{background:#f5f7f9;width:22%;font-weight:600}
@@ -6959,7 +6942,7 @@ function czReport(){
   <h3>D6 효과 검증</h3><table>${row('검증 기간',`${c.VerifyStart||''} ~ ${c.VerifyEnd||''}`)}${row('불량률',`개선 전 ${c.RateBefore||''} → 개선 후 ${c.RateAfter||''}`)}${row('재발 / 판정',`${c.Recurred||''} / ${c.VerifyResult||''}`)}</table>
   <h3>D7 재발 방지 · 표준화</h3><table>${row('공정 FMEA',`${c.FMEAUpdate||''} ${c.FMEARev||''}`)}${row('관리계획서',`${c.CPUpdate||''} ${c.CPRev||''}`)}${row('해당없음 사유',c.DocNAReason)}${row('수평전개',c.Yokoten)}</table>${actTable(['문서개정','수평전개','교육'])}
   <h3>D8 종결</h3><table>${row('종결일',c.CloseDate)}${row('종결 승인자',c.CloseApprover)}${row('보관기간',c.Retention)}</table>
-  </body></html>`.replace('</head>',REPORT_HEAD).replace('<body>','<body>'+REPORT_BAR);
+  </body></html>`);
   reportShow(w,html,`8D_${c.CaseNo}.html`);
 }
 

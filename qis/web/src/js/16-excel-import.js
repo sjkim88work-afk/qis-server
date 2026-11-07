@@ -46,6 +46,19 @@ async function readXlsx(buf){
   }
   return sheets;
 }
+/* 파일(xlsx · csv) 하나를 읽어 시트 선택 상자를 채우고 set(rows, fileName) 를 부름 — 협력사 성적서 · 입고 · 기준정보 · BOM 공용
+   st: 시트를 담을 상태 객체(st.sheets) · selId: 시트 선택 상자 id · setName: 전역 함수 이름(onchange 문자열에 들어가므로 이름으로) · stName: st 의 전역 이름 */
+async function sheetFile(f,st,selId,setName,stName){
+  if(!f)return;
+  const set=window[setName];
+  try{const buf=await f.arrayBuffer();
+    if(/\.xlsx$/i.test(f.name)){const sh=await readXlsx(buf),names=Object.keys(sh);if(!names.length)throw new Error('읽을 수 있는 시트가 없습니다');st.sheets=sh;const cur=names.find(n=>sh[n].length>1)||names[0];
+      $(selId).innerHTML=names.length>1?`시트 <select onchange="${setName}(${stName}.sheets[this.value],${jsq(f.name)})">${names.map(n=>`<option ${n===cur?'selected':''}>${esc(n)}</option>`).join('')}</select>`:'';set(sh[cur],f.name)}
+    else if(/\.xls$/i.test(f.name))throw new Error('구버전 .xls는 엑셀에서 .xlsx로 저장 후 선택하세요');
+    else set(parseCSV(decodeText(buf)),f.name);
+  }catch(e){toast('파일 읽기 실패: '+e.message)}
+}
+
 function parseCSV(t){
   const rows=[];let row=[],cur='',q=false;
   const sep=(t.split(/\r?\n/)[0]||'').includes('\t')?'\t':',';
