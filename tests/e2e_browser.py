@@ -75,7 +75,7 @@ def main(seed_path):
     srv = start(env)
     try:
         with sync_playwright() as p:
-            b = p.chromium.launch()
+            b = p.chromium.launch(executable_path=os.environ.get("QIS_CHROME") or None)
             # --- 처음 로그인: 비밀번호 변경 강제 ---
             ctx = b.new_context()
             pg = ctx.new_page()

@@ -9,7 +9,7 @@ function weekReport(){
   const g={A:0,B:0,C:0};ds.forEach(d=>g[sevOf(d).grade]++);
   const kind=c=>c.kind==='ncr'?'NCR':c.kind==='rca'?'RCA':'불량';
   const tb=(h,rows,empty)=>rows.length?`<table><tr>${h.map(x=>`<th>${x}</th>`).join('')}</tr>${rows.map(r=>`<tr>${r.map(v=>`<td>${v}</td>`).join('')}</tr>`).join('')}</table>`:`<div class="em">${empty}</div>`;
-  const html=`<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>주간품질보고_${from}_${to}</title><style>
+  const html=reportFrame(`<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>주간품질보고_${from}_${to}</title><style>
   body{font-family:'Malgun Gothic','맑은 고딕',sans-serif;font-size:11px;color:#111;margin:24px}
   .hd{display:flex;align-items:center;gap:14px;border-bottom:2.5px solid #14213d;padding-bottom:8px}.hd img{max-height:46px;max-width:170px;object-fit:contain}.hd .t{flex:1}.hd h1{font-size:19px;margin:0}.hd .s{color:#555;margin-top:3px}
   table{border-collapse:collapse;width:100%}th,td{border:1px solid #888;padding:4px 6px;text-align:left;vertical-align:top}th{background:#eef1f5;white-space:nowrap}
@@ -31,6 +31,6 @@ function weekReport(){
   <div class="sec"><h2>4. RCA 진행</h2>${tb(['구분','RCA','제목','TIER','일자','단계'],[...cNew.map(c=>['등록',c,c.Created]),...cClose.map(c=>['종결',c,c.CloseDate])].map(([k,c,d])=>[k,esc(c.CaseNo),esc(c.Title),esc(c.Tier||''),esc(d),esc(c.Stage)]),'이번 주 RCA 등록 · 종결 없음')}</div>
   <div class="sec"><h2>5. 지연 중인 건 (${late.length}건)</h2>${tb(['구분','건','협력사','지연 내용','담당'],late.map(c=>[kind(c),esc(c.title),esc(c.sup),esc(lateTxt(c.late)),esc(c.owner)]),'지연 건 없음')}</div>
   <div class="sec"><h2>6. 다음 7일 기한 (${next.length}건)</h2>${tb(['기한','구분','건','협력사','내용'],next.map(c=>[esc(c.next.nextDate),kind(c),esc(c.title),esc(c.sup),esc(c.next.next)]),'다음 7일 안에 돌아오는 기한 없음')}</div>
-  </body></html>`.replace('</head>',REPORT_HEAD).replace('<body>','<body>'+REPORT_BAR);
+  </body></html>`);
   reportShow(w,html,`주간품질보고_${to}.html`);
 }

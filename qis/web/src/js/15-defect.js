@@ -368,7 +368,7 @@ async function printIca(id,w0){
   const keys=simple?['d4','d5','d6']:ICA_KEYS;
   let phs=[];try{phs=(await photoGetMany(d.photos||[])).slice(0,4)}catch(e){}
   const vi=icaVerify(d);
-  const html=`<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>사내 대책서 — ${esc(defLabel(d))}</title><style>body{font-family:'Malgun Gothic',sans-serif;font-size:12px;margin:24px;color:#111}table{width:100%;border-collapse:collapse;margin-bottom:12px}td,th{border:1px solid #555;padding:6px;vertical-align:top;text-align:left}th{background:#eef1f6;width:20%}h1{font-size:18px;margin:6px 0 10px}.pg{display:grid;grid-template-columns:1fr 1fr;gap:8px}.pg img{width:100%;max-height:60mm;object-fit:contain}figure{margin:0}</style></head><body>
+  const html=reportFrame(`<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>사내 대책서 — ${esc(defLabel(d))}</title><style>body{font-family:'Malgun Gothic',sans-serif;font-size:12px;margin:24px;color:#111}table{width:100%;border-collapse:collapse;margin-bottom:12px}td,th{border:1px solid #555;padding:6px;vertical-align:top;text-align:left}th{background:#eef1f6;width:20%}h1{font-size:18px;margin:6px 0 10px}.pg{display:grid;grid-template-columns:1fr 1fr;gap:8px}.pg img{width:100%;max-height:60mm;object-fit:contain}figure{margin:0}</style></head><body>
   ${logoHead()}<h1>사내 대책서 (${esc(lv==='8D'?'8D':'간이 대책')})</h1>
   <table><tr><th>발생일 / 발생처</th><td>${esc(d.date)} / ${esc(d.source)}</td><th>담당</th><td>${esc(d.owner)}</td></tr>
   ${d.fgNo||d.fgName?`<tr><th>발견 품목 (완성품)</th><td colspan="3">${esc(d.fgNo)} ${esc(d.fgName)}${d.fgQty?` · ${num(d.fgQty)} EA`:''}</td></tr>`:''}
@@ -380,7 +380,7 @@ async function printIca(id,w0){
   <table>${keys.map(k=>`<tr><th>${simple?SL[k]:(D8.find(x=>x[0]===k)||[k,k])[1]}</th><td style="height:46px">${nl(c[k])}</td></tr>`).join('')}
   <tr><th>표준화 반영</th><td>${ICA_STD.map(([k,l])=>`${c.std&&c.std[k]?'☑':'☐'} ${l}`).join(' &nbsp; ')}</td></tr></table>
   ${phs.length?`<div class="pg">${phs.map(p=>`<figure><img src="${p.data}"></figure>`).join('')}</div>`:''}
-  </body></html>`.replace('</head>',REPORT_HEAD).replace('<body>','<body>'+REPORT_BAR);
+  </body></html>`);
   reportShow(w,html,`사내대책서_${d.date}.html`);
 }
 function farPrint(id){
@@ -394,7 +394,7 @@ async function printFar(id,w0){
   const exP=new Set(iv.photoExcl||[]);let phs=[];try{phs=(await photoGetMany(invPhotoIds(d).filter(i=>!exP.has(i)))).slice(0,FAR_PH_MAX)}catch(e){}
   const due=iv.farDue||addBiz(iv.farReq||today(),num(S.farDays)||5);
   const row=(k,v)=>`<tr><th>${k}</th><td>${v||'-'}</td></tr>`;
-  const html=`<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>FAR 요청 — ${esc(defLabel(d))}</title><style>
+  const html=reportFrame(`<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>FAR 요청 — ${esc(defLabel(d))}</title><style>
   body{font-family:'Malgun Gothic',sans-serif;font-size:12px;margin:24px;color:#111}h1{font-size:19px;margin:6px 0 2px;text-align:center;letter-spacing:2px}
   .sub{text-align:center;color:#555;margin-bottom:14px}table{width:100%;border-collapse:collapse;margin-bottom:12px}th,td{border:1px solid #555;padding:6px 8px;vertical-align:top;text-align:left}
   th{background:#eef1f6;width:22%;font-weight:600}.two td{width:28%}.req li{margin:4px 0;line-height:1.5}.ntc{border:1.5px solid #b42318;color:#7a1414;padding:8px 10px;margin:10px 0;line-height:1.5}
@@ -418,7 +418,7 @@ async function printFar(id,w0){
   ${iv.costNotice?`<div class="ntc">※ 본 건의 원인이 귀사 부품으로 확인될 경우, 선별 · 재작업 · 폐기 · 물류 등 당사에 발생한 비용을 청구할 수 있음을 알려드립니다. 비용 내역은 원인 확정 후 별도 통보드립니다.</div>`:''}
   ${phs.length?`<b>불량 사진</b><div class="pg">${phs.map(p=>`<figure><img src="${p.data}">${p.caption?`<figcaption>${esc(p.caption)}</figcaption>`:''}</figure>`).join('')}</div>`:''}
   <div class="sig"><span>${esc(S.issuerPhone?'Tel. '+S.issuerPhone:'')} ${esc(S.issuerEmail?'E-mail. '+S.issuerEmail:'')}</span><span>${esc(S.company)} 품질 담당 ${esc(d.owner||'')}</span></div>
-  </body></html>`.replace('</head>',REPORT_HEAD).replace('<body>','<body>'+REPORT_BAR);
+  </body></html>`);
   reportShow(w,html,`FAR요청_${d.date}_${(d.partNo||d.fgNo||'').replace(/[^\w가-힣-]/g,'')}.html`);
 }
 function respChanged(init){
@@ -605,7 +605,7 @@ async function lgPrint(){
   const pn={};let k=0;L.forEach(l=>(l.photos||[]).forEach(id=>{if(!pn[id])pn[id]=++k}));
   const title=isN?`${o.no} · ${supName(o.supplierId)||''}`:`${defLabel(o)} · ${supName(o.supplierId)||''}`;
   const unsaved=tl.own.filter(x=>x._new||x._dirty).length;
-  const html=`<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>실행기록_${esc(isN?o.no:o.date)}</title><style>
+  const html=reportFrame(`<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>실행기록_${esc(isN?o.no:o.date)}</title><style>
   body{font-family:'Malgun Gothic','맑은 고딕',sans-serif;font-size:11px;color:#111;margin:24px}h1{font-size:17px;margin:6px 0 2px}.s{color:#555}
   table{border-collapse:collapse;width:100%;margin-top:10px}th,td{border:1px solid #999;padding:4px 6px;text-align:left;vertical-align:top}th{background:#eef1f5;white-space:nowrap}
   tr.au td{color:#555;background:#fafafa}tr.vd td{color:#888;text-decoration:line-through}tr.vd td.nt{text-decoration:none}.pre{white-space:pre-wrap}
@@ -620,7 +620,7 @@ async function lgPrint(){
   ${L.some(l=>(l.hist||[]).length)?`<h3>수정 이력 (원문)</h3><table><tr><th>기록</th><th>수정 시각 · 수정자</th><th>사유</th><th>수정 전 내용</th></tr>${L.filter(l=>(l.hist||[]).length).flatMap(l=>l.hist.map(h=>`<tr><td>${esc(l.date)} ${esc(l.kind)}</td><td>${esc(loc(h.at))} ${esc(h.by||'')}</td><td>${esc(h.reason||'')}</td><td class="pre">${esc(h.date)} · ${esc(h.kind)}${h.party?' · '+esc(h.party):''}\n${esc(h.text)}${h.result?'\n결과: '+esc(h.result):''}</td></tr>`)).join('')}</table>`:''}
   ${ids.length?`<h3>증빙 자료</h3><div class="ph">${ids.map(id=>P[id]?`<div><img src="${P[id].data}"><br><b>#${pn[id]}</b> ${esc(P[id].caption||P[id].name||'')}</div>`:'').join('')}</div>`:''}
   <p class="s" style="margin-top:12px">‘작성’은 기록을 입력한 시각이며 실행일과 2일 이상 차이 나면 ‘사후 기록’으로 표시됩니다. 수정된 기록은 원문과 사유가 위 이력에 남고, 취소된 기록은 지우지 않고 취소선으로 표시합니다.</p>
-  </body></html>`.replace('</head>',REPORT_HEAD).replace('<body>','<body>'+REPORT_BAR);
+  </body></html>`);
   reportShow(w,html,`실행기록_${isN?o.no:o.date}.html`);
 }
 function openLog(id){

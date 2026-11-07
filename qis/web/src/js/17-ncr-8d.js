@@ -517,14 +517,14 @@ function ncrFarPrint(){
   const w=reportWin(),S=db.settings,sid=fm.supplierId.value,sp=supById(sid),no=fm.no.value||'(저장 시 채번)';
   const att=fm.supAttn?.value||(sp?(ensureContacts(sp),(sp.contacts.find(c=>c.active!==false&&c.role==='품질 담당')||primaryOf(sp)||{}).name):'')||'';
   const row=(k,v)=>`<tr><th>${k}</th><td class="pre">${esc(v||'')}</td></tr>`;
-  const html=`<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>FAR_${esc(no)}</title><style>body{font-family:'Malgun Gothic','맑은 고딕',sans-serif;font-size:12px;color:#111;margin:24px}
+  const html=reportFrame(`<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>FAR_${esc(no)}</title><style>body{font-family:'Malgun Gothic','맑은 고딕',sans-serif;font-size:12px;color:#111;margin:24px}
   h1{font-size:18px;margin:8px 0 2px}table{border-collapse:collapse;width:100%;margin-top:10px}th,td{border:1px solid #888;padding:6px 8px;text-align:left;vertical-align:top}th{background:#eef1f5;width:28%}.pre{white-space:pre-wrap}.s{color:#555}
   .sign{margin-top:24px;display:flex;justify-content:flex-end;gap:30px}</style></head><body>${logoHead()}
   <h1>불량 분석 요청서 (Failure Analysis Request)</h1><div class="s">${esc(S.company||'')} ${esc(S.dept||'')} · 발행 ${esc(f.reqDate)} · 관련 NCR ${esc(no)}</div>
   <table>${row('수신 (To)',`${sp?sp.name:''} ${att}`)}${row('부품 (Part No. / Name)',`${fm.partNo.value} ${fm.partName.value}`)}${row('불량 내용 (Defect)',fm.title.value+(fm.actual?.value?'\n'+fm.actual.value:''))}
     ${row('요청 목적 (Purpose)',f.purpose)}${row('요청 분석 항목 (Requested analysis)',f.items.join(' / '))}${row('시료 (Samples)',`${f.sampleQty||''}${f.shipDate?` · 발송 ${f.shipDate}`:''}${f.shipRef?` · ${f.shipRef}`:''}`)}
     ${row('회신 기한 (Reply due)',f.due)}${row('회신 요구사항 (Requirements)','1. 분석 방법·조건과 측정 데이터(원본) 첨부 / Attach method, conditions and raw data\n2. 고장 메커니즘과 귀책 판단 근거 / Failure mechanism and basis of responsibility\n3. 동일 LOT 영향 범위 / Impact on the same lot\n4. 분석 후 시료 반환 여부 회신 / Advise whether samples will be returned')}</table>
-  <div class="sign"><div>담당 ${esc(fm.owner?.value||S.owners[0]||'')}</div><div>승인 ${esc(S.approver||'')}</div></div></body></html>`.replace('</head>',REPORT_HEAD).replace('<body>','<body>'+REPORT_BAR);
+  <div class="sign"><div>담당 ${esc(fm.owner?.value||S.owners[0]||'')}</div><div>승인 ${esc(S.approver||'')}</div></div></body></html>`);
   reportShow(w,html,`FAR_${no}.html`);
 }
 function typeDays(t,S){S=S||db.settings;return t==='간이 대책서'?num(S.replySimple)||5:num(S.reply8D)||num(S.replyDays)||7}
@@ -712,7 +712,7 @@ async function print8D(id){
   const w=reportWin();
   let phs=[];try{phs=await photoGetMany(ds.flatMap(d=>d.photos||[]))}catch(e){}
   let rds=[],nds=[];try{rds=await photoGetMany(n.replyDocs||[]);nds=await photoGetMany(n.noticeDocs||[])}catch(e){}
-  const html=(`<!doctype html><html><head><meta charset="utf-8"><title>${esc(n.no)} 8D</title><style>body{font-family:'Malgun Gothic',sans-serif;font-size:12px;margin:24px;color:#111}table{width:100%;border-collapse:collapse;margin-bottom:12px}td,th{border:1px solid #555;padding:6px;vertical-align:top}th{background:#eef1f5;width:17%;text-align:left}h1{font-size:18px;margin:0 0 12px}.sm td,.sm th{font-size:11px;width:auto}.pg{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.pg figure{margin:0;border:1px solid #999;padding:4px;break-inside:avoid}.pg img{width:100%;max-height:220px;object-fit:contain}.pg figcaption{font-size:11px;text-align:center;margin-top:3px}</style></head><body>
+  const html=reportFrame(`<!doctype html><html><head><meta charset="utf-8"><title>${esc(n.no)} 8D</title><style>body{font-family:'Malgun Gothic',sans-serif;font-size:12px;margin:24px;color:#111}table{width:100%;border-collapse:collapse;margin-bottom:12px}td,th{border:1px solid #555;padding:6px;vertical-align:top}th{background:#eef1f5;width:17%;text-align:left}h1{font-size:18px;margin:0 0 12px}.sm td,.sm th{font-size:11px;width:auto}.pg{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.pg figure{margin:0;border:1px solid #999;padding:4px;break-inside:avoid}.pg img{width:100%;max-height:220px;object-fit:contain}.pg figcaption{font-size:11px;text-align:center;margin-top:3px}</style></head><body>
   ${logoHead()}<h1>8D Report — ${esc(n.no)}</h1>
   <table><tr><th>협력사</th><td>${esc(supName(n.supplierId))}</td><th>발행일</th><td>${esc(n.issueDate)}</td></tr>
   <tr><th>부품번호</th><td>${esc(n.partNo)}</td><th>부품명</th><td>${esc(n.partName)}</td></tr>
@@ -728,7 +728,7 @@ async function print8D(id){
   ${ds.length?`<table class="sm"><tr><th>발생일</th><th>발생처</th><th>부품</th><th>유형</th><th>수량</th><th>납품일자</th><th>내용</th></tr>${ds.map(d=>`<tr><td>${esc(d.date)}</td><td>${esc(d.source)}</td><td>${esc(d.partNo)} ${esc(d.partName)}</td><td>${esc(d.type)}</td><td>${num(d.qty)}</td><td>${esc(d.delivDate||d.lot)}</td><td>${nl(d.desc)}</td></tr>`).join('')}</table>`:''}
   ${(()=>{const lg=[...(n.logs||[]),...ds.flatMap(d=>(d.logs||[]).map(l=>({...l,dd:d})))].sort((a,b)=>(a.date||'').localeCompare(b.date||''));return lg.length?`<table class="sm"><tr><th colspan="3" style="background:#dde4ef">조사 · 진행 경과</th></tr><tr><th>일자</th><th>구분</th><th>내용</th></tr>${lg.map(l=>`<tr><td style="white-space:nowrap">${esc(l.date)}</td><td style="white-space:nowrap">${esc(l.kind)}</td><td>${nl(l.text)}</td></tr>`).join('')}</table>`:''})()}
   ${phs.length?`<h3 style="font-size:14px">불량 사진</h3><div class="pg">${phs.map(p=>{const d=ds.find(x=>x.id===p.defectId)||{};return `<figure><img src="${p.data}"><figcaption>${esc(d.date||'')} ${esc(d.partName||d.partNo||'')}${p.caption?' · '+esc(p.caption):''}</figcaption></figure>`}).join('')}</div>`:''}
-  </body></html>`).replace('</head>',REPORT_HEAD).replace('<body>','<body>'+REPORT_BAR);
+  </body></html>`);
   reportShow(w,html,`8D_${n.no}.html`);
 }
 function exportNcrCSV(){
