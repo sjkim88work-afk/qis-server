@@ -519,7 +519,7 @@ details>summary.sec:hover{color:var(--pri-d,#163d5a)}
 #mswitch a{display:none}
 body.mob #mswitch,body.pcnarrow #mswitch{display:block}
 body.mob #mswitch .mon,body.pcnarrow #mswitch .moff{display:inline}
-body.mob header #hdrBk,body.mob header #hdrInstall,body.mob header #linkInfo{display:none}
+body.mob header #hdrBk,body.mob header #hdrInstall,body.mob header #linkInfo,body.mob header #copyInfo{display:none}
 body.mob main{padding:10px 12px 0;max-width:640px;margin:0 auto}
 body.mob #nav{display:block;overflow:visible;position:sticky;top:0;z-index:5;padding:8px 12px;background:var(--card,#fff);border-bottom:1px solid var(--line,#ddd)}
 .mtabs{width:100%;display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:6px;max-width:640px;margin:0 auto}
@@ -563,6 +563,7 @@ body.mob #nav{display:block;overflow:visible;position:sticky;top:0;z-index:5;pad
   <small id="saveInfo"></small>
   <span class="sp"></span>
   <small id="linkInfo"></small>
+  <small id="copyInfo" title="QIS 저작권: 김선중 · 사내 사용 허락 (LICENSE) · 오픈소스 구성요소는 NOTICE 참고" style="opacity:.55">© 2026 김선중</small>
   <button class="b s p noprint" id="hdrInstall" style="display:none" onclick="pwaInstall()" title="바탕화면 · 시작 메뉴에 아이콘을 만들고 별도 창으로 실행합니다">앱으로 설치</button>
   <button class="b s" id="hdrBk" onclick="exportJSON(true)" title="전체 백업 (백업 폴더를 지정했으면 그 폴더에 저장)">백업</button>
 </header>

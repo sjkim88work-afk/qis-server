@@ -25,6 +25,7 @@ from .paths import user_data_dir
 log = logging.getLogger("qis.desktop")
 
 TITLE = "QIS 품질정보시스템"
+COPYRIGHT = "© 2026 김선중. All rights reserved. 사내 사용 허락 (LICENSE 참고)"
 
 # 창을 닫기 전: 보내지 못한 변경을 서버로 보내고, 그래도 남았거나 작성 창이 고친 채 열려 있으면 1
 FLUSH_JS = ("(async function(){try{if(typeof srvSync==='function')await srvSync()}catch(e){}"
@@ -688,4 +689,5 @@ class Controller:
 
     def m_about(self):
         mode = {"solo": "이 PC 혼자 쓰기", "lan": "사내 서버"}.get(self.settings.mode if self.settings else "", "미설정")
-        self._tell(f"QIS 품질정보시스템 데스크톱 · 서버 {__version__}\n사용 방식: {mode}\n데이터 폴더: {self.data_dir}")
+        self._tell(f"QIS 품질정보시스템 데스크톱 · 서버 {__version__}\n사용 방식: {mode}\n데이터 폴더: {self.data_dir}\n\n"
+                   f"{COPYRIGHT}\n오픈소스 구성요소: FastAPI · uvicorn · pywebview · sql.js 등 (NOTICE 파일 참고)")
