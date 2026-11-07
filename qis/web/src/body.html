@@ -1,0 +1,41 @@
+<header>
+  <span id="brand"></span>
+  <h1 id="appTitle">QIS</h1>
+  <small id="saveInfo"></small>
+  <span class="sp"></span>
+  <small id="linkInfo"></small>
+  <small id="copyInfo" title="QIS 저작권: 김선중 · 사내 사용 허락 (LICENSE) · 오픈소스 구성요소는 NOTICE 참고" style="opacity:.55">© 2026 김선중</small>
+  <button class="b s p noprint" id="hdrInstall" style="display:none" onclick="pwaInstall()" title="바탕화면 · 시작 메뉴에 아이콘을 만들고 별도 창으로 실행합니다">앱으로 설치</button>
+  <button class="b s" id="hdrBk" onclick="exportJSON(true)" title="전체 백업 (백업 폴더를 지정했으면 그 폴더에 저장)">백업</button>
+</header>
+<nav id="nav"></nav>
+<div id="alertBar" class="recon noprint" style="display:none;background:#fde8e8;border-bottom-color:#e5a3a3;color:#7a1414"></div>
+<div id="recon" class="recon noprint" style="display:none"></div>
+<main><div class="print-only phead" id="printHead"></div><div id="view"></div></main>
+<div id="mcard" class="mcard" onclick="mobCardClose()"></div>
+<div id="mswitch" class="noprint"><a class="lk mon" onclick="mobSet('pc')">PC 화면으로 보기</a><a class="lk moff" onclick="mobSet('mobile')">📱 모바일 화면</a></div>
+
+<div class="modal-bg" id="modal">
+  <div class="modal">
+    <div class="mh"><h2 id="mt"></h2><button class="b s" onclick="closeModal()">닫기 ✕</button></div>
+    <div class="mb" id="mbody"></div>
+    <div class="mf" id="mfoot"></div>
+  </div>
+</div>
+<div id="toast"></div>
+<div class="cbx" id="cbx"><div class="cl" id="cbxL"></div><div class="cf" id="cbxF"></div></div>
+<div id="cfm"></div>
+<div id="undo"><span id="undoMsg"></span><button onclick="doUndo()">되돌리기</button></div>
+<div id="actbar"><span id="actMsg"></span><button id="actBtn"></button><button class="x" onclick="hideAct()" title="닫기">✕</button></div>
+<div class="lb" id="lb" onclick="if(event.target===this)closeLb()">
+  <div class="lbt"><a class="b s" id="lbdl" style="text-decoration:none;background:#fff;border-radius:6px;padding:3px 9px;color:#1d2433">원본 저장</a><button class="b s" onclick="closeLb()">닫기 ✕</button></div>
+  <button class="lbn" onclick="lbMove(-1)">‹</button>
+  <figure><img id="lbimg" alt=""><figcaption id="lbcap"></figcaption></figure>
+  <button class="lbn" onclick="lbMove(1)">›</button>
+</div>
+<datalist id="dlParts"></datalist>
+<datalist id="dlOwners"></datalist>
+<datalist id="dlSources"></datalist>
+<datalist id="dlAttn"></datalist>
+<input type="file" id="fileIn" accept=".json,application/json" style="display:none">
+

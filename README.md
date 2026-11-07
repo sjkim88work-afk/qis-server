@@ -176,6 +176,19 @@ python tests/e2e_browser.py tests/sample_backup.json       # 화면 시험 (두 
 
 화면(`qis/web/index.html`)은 QIS 단일 파일과 같은 소스입니다. 서버에서 열리면 서버 모드로 동작합니다.
 
+## 화면 소스 고치기 (개발)
+
+QIS 화면은 `qis/web/index.html` **한 파일**로 동작합니다(서버 없이 열기 · 공유 파일 만들기 때문). 소스는 `qis/web/src/`에 나뉘어 있습니다.
+
+```
+qis/web/src/head.html      <head> 안 (메타 · 아이콘)
+qis/web/src/css/NN-*.css   스타일 (번호 순서로 합침)
+qis/web/src/body.html      화면 뼈대 HTML
+qis/web/src/js/NN-*.js     스크립트 (번호 순서로 한 <script> 안에 합침 — 전역 범위 공유)
+```
+
+고친 뒤 `python scripts/build_web.py`로 합치고 **src/ 와 index.html 을 함께 커밋**합니다. 둘이 다르면 시험(`tests/test_web_build.py`)이 실패합니다.
+
 ## 저작권
 
 © 2026 김선중. All rights reserved. QIS는 저작자가 개인적으로 만든 소프트웨어이며, 재직 중인 회사와 임직원의 사내 품질 업무 사용을 허락합니다. 자세한 조건은 [LICENSE](LICENSE), 사용한 오픈소스 구성요소는 [NOTICE](NOTICE)를 보세요.

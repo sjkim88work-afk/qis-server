@@ -14,7 +14,11 @@ MAC = sys.platform == "darwin"
 ICON = str(ROOT / "qis" / "web" / "icons" / "icon-512.png")   # Pillow 가 .icns / .ico 로 바꿔 줌
 
 hidden = collect_submodules("uvicorn") + collect_submodules("qis") + ["webview"]
-datas = [(str(ROOT / "qis" / "web"), "qis/web"), (str(ROOT / "LICENSE"), "."), (str(ROOT / "NOTICE"), ".")] + collect_data_files("webview")
+# 화면 파일: qis/web 전체에서 src/ (합치기 전 소스)는 뺀다 — 프로그램은 합친 index.html 만 쓴다
+WEB = ROOT / "qis" / "web"
+datas = [(str(p), str(Path("qis/web") / p.relative_to(WEB).parent)) for p in WEB.rglob("*")
+         if p.is_file() and "src" not in p.relative_to(WEB).parts]
+datas += [(str(ROOT / "LICENSE"), "."), (str(ROOT / "NOTICE"), ".")] + collect_data_files("webview")
 
 a = Analysis(
     [str(ROOT / "packaging" / "qis_desktop.py")],
