@@ -1,0 +1,28 @@
+QIS 품질정보시스템 — 제3자 오픈소스 고지
+=========================================
+
+QIS는 아래 오픈소스 소프트웨어를 사용합니다. 각 소프트웨어의 저작권은 각 저작자에게 있으며
+각자의 라이선스를 따릅니다. 전체 라이선스 문구는 각 프로젝트 저장소 또는 설치된 패키지 안에 있습니다.
+
+서버 · 데스크톱 (파이썬)
+  FastAPI          MIT          https://github.com/fastapi/fastapi
+  Starlette        BSD-3-Clause https://github.com/encode/starlette
+  Pydantic         MIT          https://github.com/pydantic/pydantic
+  uvicorn          BSD-3-Clause https://github.com/encode/uvicorn
+  pywebview        BSD-3-Clause https://github.com/r0x0r/pywebview   (데스크톱 프로그램)
+  PyInstaller      GPL-2.0 (빌드 도구 예외 조항 포함) https://github.com/pyinstaller/pyinstaller  (빌드에만 사용, 배포물에 라이선스 전파 없음)
+  Pillow           MIT-CMU      https://github.com/python-pillow/Pillow  (빌드 때 아이콘 변환에만 사용)
+  Python 표준 라이브러리  PSF License  https://www.python.org
+
+화면 (브라우저)
+  sql.js           MIT          https://github.com/sql-js/sql.js   (qis/web/lib/, 라이선스: qis/web/lib/sql.js-LICENSE)
+  SQLite           Public Domain https://sqlite.org
+
+데이터베이스
+  SQLite (파이썬 sqlite3 모듈을 통해)  Public Domain
+
+아이콘 · 글꼴
+  QIS 아이콘(qis/web/icons/)은 저작자가 직접 만든 것입니다.
+  화면 글꼴은 사용자 PC의 시스템 글꼴을 씁니다.
+
+본 목록은 2026-11-08 기준이며, 구성요소를 추가하거나 바꾸면 이 파일도 함께 갱신합니다.

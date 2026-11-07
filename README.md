@@ -175,3 +175,7 @@ python tests/e2e_browser.py tests/sample_backup.json       # 화면 시험 (두 
 ```
 
 화면(`qis/web/index.html`)은 QIS 단일 파일과 같은 소스입니다. 서버에서 열리면 서버 모드로 동작합니다.
+
+## 저작권
+
+© 2026 김선중. All rights reserved. QIS는 저작자가 개인적으로 만든 소프트웨어이며, 재직 중인 회사와 임직원의 사내 품질 업무 사용을 허락합니다. 자세한 조건은 [LICENSE](LICENSE), 사용한 오픈소스 구성요소는 [NOTICE](NOTICE)를 보세요.

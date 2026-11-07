@@ -14,7 +14,7 @@ MAC = sys.platform == "darwin"
 ICON = str(ROOT / "qis" / "web" / "icons" / "icon-512.png")   # Pillow 가 .icns / .ico 로 바꿔 줌
 
 hidden = collect_submodules("uvicorn") + collect_submodules("qis") + ["webview"]
-datas = [(str(ROOT / "qis" / "web"), "qis/web")] + collect_data_files("webview")
+datas = [(str(ROOT / "qis" / "web"), "qis/web"), (str(ROOT / "LICENSE"), "."), (str(ROOT / "NOTICE"), ".")] + collect_data_files("webview")
 
 a = Analysis(
     [str(ROOT / "packaging" / "qis_desktop.py")],
@@ -41,7 +41,7 @@ if MAC:
         coll,
         name="QIS.app",
         icon=ICON,
-        bundle_identifier="kr.pha.qis",
+        bundle_identifier="kr.sjkim.qis",
         version=VERSION,
         info_plist={
             "CFBundleDisplayName": "QIS",
@@ -50,6 +50,6 @@ if MAC:
             "CFBundleVersion": VERSION,
             "NSHighResolutionCapable": True,
             "LSMinimumSystemVersion": "11.0",
-            "NSHumanReadableCopyright": "QIS 품질정보시스템",
+            "NSHumanReadableCopyright": "© 2026 김선중. All rights reserved.",
         },
     )

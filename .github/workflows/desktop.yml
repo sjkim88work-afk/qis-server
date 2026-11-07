@@ -26,7 +26,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: macos-14          # Apple Silicon (arm64)
+          - os: macos-15          # Apple Silicon (arm64) · macos-14 는 2026-11-02 퇴역
             name: mac
           - os: windows-latest
             name: windows
