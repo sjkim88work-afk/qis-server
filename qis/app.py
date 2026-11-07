@@ -2,28 +2,26 @@
 
 화면: /login · / (QIS 본 화면) · /account (비밀번호 변경) · /admin (사용자 · 변경 이력 · 백업)
 API : /api/... (로그인 세션 쿠키 필요, 변경 요청은 X-QIS 헤더 필요 — 다른 사이트에서의 위조 요청 차단)
+
+이 파일은 서버 객체를 만들고(app.state) 보안 헤더 · 오류 응답 같은 공통 처리를 붙인다.
+라우트는 qis/routes/ 에 역할별로 있다.
 """
 from __future__ import annotations
 
-import hmac
-import json
-import re
-from pathlib import Path
-
-from fastapi import Depends, FastAPI, HTTPException, Request
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse, Response
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import JSONResponse
 
 from . import __version__
-from .auth import ROLES, Auth, AuthError, public_user
+from .auth import Auth, AuthError
 from .backup import Backup
-from .telegram import Telegram, TelegramError
 from .config import Config, load_config
 from .db import open_db
-from .files import Files, has_body
-from .store import COLLS, Forbidden, Store
-
-WEB = Path(__file__).parent / "web"
-COOKIE = "qis_sid"
+from .files import Files
+from .routes import mount
+from .routes.deps import COOKIE, in_window  # noqa: F401  (COOKIE 는 바깥에서 참조할 수 있게 그대로 둠)
+from .routes.pages import WEB  # noqa: F401
+from .store import Forbidden, Store
+from .telegram import Telegram
 
 CSP = ("default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; "
        "img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; media-src 'self' data: blob:; "
@@ -39,15 +37,6 @@ def create_app(cfg: Config | None = None, *, start_backup=True, desktop: dict | 
     """desktop: 데스크톱 프로그램(qis.desktop)에서 띄울 때만 —
        {"mode": "solo" | "lan", "token": 자동 입장 열쇠(solo), "user": 로컬 관리자 아이디(solo)}"""
     cfg = cfg or load_config()
-    solo = bool(desktop and desktop.get("mode") == "solo")
-    WIN_COOKIE = "qis_win"
-
-    def in_window(request: Request) -> bool:
-        """프로그램 창에서 온 요청인지 — 창을 열 때 받은 표시 쿠키로 구분.
-        사내 서버 모드에서 팀원 브라우저로 접속한 화면에는 데스크톱 보조를 붙이지 않는다."""
-        k = request.cookies.get(WIN_COOKIE) or ""
-        t = str((desktop or {}).get("token") or "")
-        return bool(t) and hmac.compare_digest(k.encode(), t.encode())
     cfg.data_dir.mkdir(parents=True, exist_ok=True)
     db = open_db(cfg)
     auth = Auth(db, cfg)
@@ -92,27 +81,7 @@ def create_app(cfg: Config | None = None, *, start_backup=True, desktop: dict | 
             h["Cache-Control"] = "no-store"
         return resp
 
-    def ip_of(request: Request) -> str:
-        return request.client.host if request.client else ""
-
-    def current(request: Request):
-        s = auth.session_user(request.cookies.get(COOKIE))
-        if not s:
-            raise HTTPException(401, "로그인이 필요합니다")
-        request.state.token_hash = s[1]
-        if s[0]["must_change"] and request.url.path not in ("/api/me", "/api/me/password", "/api/logout"):
-            raise HTTPException(403, "비밀번호를 먼저 바꿔 주세요")
-        return s[0]
-
-    def admin_only(user=Depends(current)):
-        if user["role"] != "admin":
-            raise HTTPException(403, "관리자만 할 수 있습니다")
-        return user
-
-    def page_user(request: Request):
-        s = auth.session_user(request.cookies.get(COOKIE))
-        return s[0] if s else None
-
+    # ---- 오류 응답은 모두 JSON {error, message} ----
     @app.exception_handler(HTTPException)
     async def http_err(request: Request, exc: HTTPException):
         return JSONResponse({"error": "http", "message": exc.detail}, status_code=exc.status_code)
@@ -129,343 +98,5 @@ def create_app(cfg: Config | None = None, *, start_backup=True, desktop: dict | 
     async def bad(request: Request, exc: ValueError):
         return JSONResponse({"error": "invalid", "message": str(exc)}, status_code=400)
 
-    def set_cookie(resp: Response, token: str):
-        # 혼자 쓰기(데스크톱): 프로그램을 닫으면 사라지는 쿠키 — 창 저장소(webview 폴더)에 로그인이 남지 않게.
-        #   다시 열면 프로그램이 새 열쇠로 자동 입장하므로 불편 없음.
-        # 그 밖: 마지막 사용 후 session_hours 동안 유지(서버가 확인) · 쿠키 자체는 최대 30일
-        max_age = None if solo else min(cfg.session_hours * 3600 * 14, 30 * 24 * 3600)
-        resp.set_cookie(COOKIE, token, httponly=True, samesite="strict", secure=cfg.https, path="/", max_age=max_age)
-
-    # ---- 화면 ----
-    _idx = {"mtime": 0, "html": ""}
-
-    def index_html() -> str:
-        f = WEB / "index.html"
-        m = f.stat().st_mtime
-        if m != _idx["mtime"]:
-            h = f.read_text(encoding="utf-8")
-            # 외부(인터넷) 글꼴 연결 제거 — 사내망 전용, 글꼴은 PC의 맑은 고딕 사용
-            h = re.sub(r'<link[^>]+fonts\.(googleapis|gstatic)\.com[^>]*>\s*', "", h)
-            _idx.update(mtime=m, html=h)
-        return _idx["html"]
-
-    @app.get("/", response_class=HTMLResponse)
-    def home(request: Request):
-        u = page_user(request)
-        if not u:
-            return RedirectResponse("/login", status_code=303)
-        if u["must_change"]:
-            return RedirectResponse("/account?first=1", status_code=303)
-        info = {"user": u["username"], "name": u["name"], "role": u["role"], "roleName": ROLES[u["role"]],
-                "server": __version__, "company": cfg.company}
-        win = bool(desktop) and in_window(request)
-        if win:
-            info["desktop"] = desktop.get("mode")
-        tag = '<script id="qisServer" type="application/json">' + \
-              json.dumps(info, ensure_ascii=False).replace("</", "<\\/") + "</script>"
-        if win:   # 데스크톱 창 보조 (새 창 · 보고서 창 · 혼자 쓰기 화면 정리) — 화면 파일은 그대로
-            tag += '\n<script src="/desktop.js"></script>'
-        return HTMLResponse(index_html().replace("<head>", "<head>\n" + tag, 1))
-
-    def static_page(name: str):
-        return HTMLResponse((WEB / name).read_text(encoding="utf-8"))
-
-    @app.get("/login", response_class=HTMLResponse)
-    def login_page(request: Request):
-        if page_user(request):
-            return RedirectResponse("/", status_code=303)
-        if solo:   # 혼자 쓰기: 비밀번호 없이 다시 들어가기
-            return static_page("desktop_enter.html")
-        return static_page("login.html")
-
-    if desktop:
-        @app.get("/desktop.js")
-        def desktop_js():
-            return FileResponse(WEB / "desktop.js", media_type="text/javascript")
-
-    def set_win_cookie(resp: Response):
-        resp.set_cookie(WIN_COOKIE, str(desktop["token"]), httponly=True, samesite="strict", secure=cfg.https, path="/")
-
-    if desktop and not solo:
-        @app.get("/desktop/window")
-        def desktop_window(k: str = ""):
-            """사내 서버 모드: 프로그램 창 표시 쿠키만 붙이고 로그인 화면으로 (로그인은 그대로 필요)."""
-            if not desktop.get("token") or not hmac.compare_digest(k.encode(), str(desktop["token"]).encode()):
-                raise HTTPException(403, "잘못된 요청입니다")
-            resp = RedirectResponse("/", status_code=303)
-            set_win_cookie(resp)
-            return resp
-
-    if solo:
-        @app.get("/desktop/enter")
-        def desktop_enter(request: Request, k: str = ""):
-            """프로그램이 창을 열 때만 아는 열쇠(k)로 로컬 관리자 세션을 연다 — 127.0.0.1 전용 실행에서만."""
-            if not desktop.get("token") or not hmac.compare_digest(k.encode(), str(desktop["token"]).encode()):
-                raise HTTPException(403, "잘못된 요청입니다")
-            u = db.q1("SELECT * FROM users WHERE lower(username)=lower(?) AND active=1", (desktop.get("user") or "",))
-            if not u:
-                raise HTTPException(403, "이 PC 사용자 계정이 없습니다 — 프로그램을 다시 시작하세요")
-            token, _ = auth.open_session(u, ip=ip_of(request), ua=request.headers.get("user-agent"),
-                                         action="login.desktop")
-            resp = RedirectResponse("/", status_code=303)
-            set_cookie(resp, token)
-            set_win_cookie(resp)
-            return resp
-
-    @app.get("/account", response_class=HTMLResponse)
-    def account_page(request: Request):
-        if not page_user(request):
-            return RedirectResponse("/login", status_code=303)
-        return static_page("account.html")
-
-    @app.get("/admin", response_class=HTMLResponse)
-    def admin_page(request: Request):
-        u = page_user(request)
-        if not u:
-            return RedirectResponse("/login", status_code=303)
-        if u["role"] != "admin":
-            return RedirectResponse("/", status_code=303)
-        return static_page("admin.html")
-
-    @app.get("/manifest.webmanifest")
-    def manifest():
-        return FileResponse(WEB / "manifest.webmanifest", media_type="application/manifest+json")
-
-    @app.get("/lib/{name}")
-    def lib(name: str):
-        f = WEB / "lib" / name
-        if not re.match(r"^[\w.-]+$", name) or not f.is_file():
-            raise HTTPException(404, "없음")
-        return FileResponse(f, media_type="application/wasm" if name.endswith(".wasm") else None)
-
-    @app.get("/icons/{name}")
-    def icons(name: str):
-        f = WEB / "icons" / name
-        if not re.match(r"^[\w.-]+$", name) or not f.is_file():
-            raise HTTPException(404, "없음")
-        return FileResponse(f)
-
-    @app.get("/assets/{name}")
-    def assets(name: str):
-        f = WEB / "assets" / name
-        if not re.match(r"^[\w.-]+$", name) or not f.is_file():
-            raise HTTPException(404, "없음")
-        return FileResponse(f)
-
-    @app.get("/healthz")
-    def health():
-        return {"ok": True, "version": __version__}
-
-    # ---- 로그인 ----
-    @app.post("/api/login")
-    async def login(request: Request):
-        b = await request.json()
-        token, user = auth.login(b.get("username", ""), b.get("password", ""), ip=ip_of(request),
-                                 ua=request.headers.get("user-agent"))
-        resp = JSONResponse({"user": user})
-        set_cookie(resp, token)
-        return resp
-
-    @app.post("/api/logout")
-    def logout(request: Request):
-        s = auth.session_user(request.cookies.get(COOKIE))
-        if s:
-            auth.logout(s[1], s[0], ip_of(request))
-        resp = JSONResponse({"ok": True})
-        resp.delete_cookie(COOKIE, path="/")
-        return resp
-
-    @app.get("/api/me")
-    def me(user=Depends(current)):
-        return {"user": public_user(user)}
-
-    @app.post("/api/me/password")
-    async def me_pw(request: Request, user=Depends(current)):
-        b = await request.json()
-        auth.change_password(user, b.get("old", ""), b.get("new", ""), keep_token_hash=request.state.token_hash,
-                             ip=ip_of(request))
-        return {"ok": True}
-
-    # ---- 데이터 ----
-    @app.get("/api/boot")
-    def boot(user=Depends(current)):
-        return {**store.boot(), "user": public_user(user)}
-
-    @app.post("/api/sync")
-    async def sync(request: Request, user=Depends(current)):
-        b = await request.json()
-        ch = b.get("changes") or []
-        if not isinstance(ch, list) or len(ch) > 20000:
-            raise ValueError("요청 형식이 올바르지 않습니다")
-        if ch and user["role"] == "viewer":
-            raise Forbidden("조회 권한은 저장할 수 없습니다")
-        since = b.get("since")
-        return store.sync(user, int(since) if since is not None else None, ch, ip=ip_of(request))
-
-    @app.post("/api/files/get")
-    async def files_get(request: Request, user=Depends(current)):
-        b = await request.json()
-        return {"files": files.get_many(b.get("ids") or [])}
-
-    @app.get("/api/files/ids")
-    def files_ids(user=Depends(current)):
-        return {"ids": files.all_ids()}
-
-    @app.post("/api/files/put")
-    async def files_put(request: Request, user=Depends(current)):
-        b = await request.json()
-        return {"saved": files.put_many(user, b.get("files") or [], ip=ip_of(request))}
-
-    @app.post("/api/files/delete")
-    async def files_del(request: Request, user=Depends(current)):
-        b = await request.json()
-        return {"deleted": files.delete_many(user, b.get("ids") or [], ip=ip_of(request))}
-
-    # ---- 관리자 ----
-    @app.get("/api/admin/users")
-    def users(user=Depends(admin_only)):
-        return {"users": auth.list_users(), "roles": ROLES}
-
-    @app.post("/api/admin/users")
-    async def user_add(request: Request, user=Depends(admin_only)):
-        b = await request.json()
-        u = auth.create_user(b.get("username", ""), b.get("name", ""), b.get("role", "editor"), b.get("password", ""),
-                             by=user, ip=ip_of(request))
-        return {"user": u}
-
-    @app.patch("/api/admin/users/{uid}")
-    async def user_upd(uid: int, request: Request, user=Depends(admin_only)):
-        b = await request.json()
-        return {"user": auth.update_user(uid, by=user, name=b.get("name"), role=b.get("role"), active=b.get("active"),
-                                         ip=ip_of(request))}
-
-    @app.post("/api/admin/users/{uid}/reset")
-    async def user_reset(uid: int, request: Request, user=Depends(admin_only)):
-        b = await request.json()
-        auth.reset_password(uid, b.get("password", ""), by=user, ip=ip_of(request))
-        return {"ok": True}
-
-    @app.get("/api/admin/audit")
-    def audit(request: Request, user=Depends(admin_only)):
-        p = request.query_params
-        return {"items": store.audit_list(coll=p.get("coll"), rec_id=p.get("id"), user=p.get("user"),
-                                          action=p.get("action"), q=p.get("q"), frm=p.get("from"), to=p.get("to"),
-                                          before_id=p.get("before"), limit=p.get("limit") or 200)}
-
-    @app.get("/api/history")
-    def history(request: Request, user=Depends(current)):
-        """기록 한 건의 변경 이력 (모든 사용자 — 화면의 '변경 이력' 버튼)."""
-        p = request.query_params
-        if not p.get("coll") or not p.get("id"):
-            raise ValueError("기록을 지정하세요")
-        if user["role"] != "admin" and p.get("coll") not in (*COLLS, "doc", "files"):
-            raise Forbidden("이 이력은 관리자만 볼 수 있습니다")
-        return {"items": store.audit_list(coll=p.get("coll"), rec_id=p.get("id"), limit=300)}
-
-    @app.get("/api/admin/versions")
-    def versions(request: Request, user=Depends(admin_only)):
-        p = request.query_params
-        return {"versions": store.versions(p.get("coll"), p.get("id"))}
-
-    @app.get("/api/admin/backup")
-    def backup_info(user=Depends(admin_only)):
-        err = db.get_meta("last_backup_error")
-        return {"last": backup.last(), "error": json.loads(err) if err else None, "list": backup.list(),
-                "dir": str(backup.root), "keep": cfg.backup_keep, "hour": cfg.backup_hour}
-
-    @app.post("/api/admin/backup")
-    def backup_now(user=Depends(admin_only)):
-        return {"info": backup.run("manual", user=user)}
-
-    # ---- 텔레그램 아침 요약 (관리자) ----
-    @app.get("/api/admin/telegram")
-    def telegram_info(user=Depends(admin_only)):
-        return telegram.status()
-
-    @app.post("/api/admin/telegram")
-    async def telegram_set(request: Request, user=Depends(admin_only)):
-        ch = await request.json()
-        try:
-            telegram.update(ch if isinstance(ch, dict) else {})
-        except ValueError as e:
-            raise HTTPException(400, str(e))
-        with db.tx() as c:
-            db.audit(c, user=user, action="telegram.update", label="알림 설정 변경",
-                     detail={k: ("***" if k == "token" else v) for k, v in (ch or {}).items()}, ip=ip_of(request))
-        return telegram.status()
-
-    @app.get("/api/admin/telegram/preview")
-    def telegram_preview(user=Depends(admin_only)):
-        return {"text": telegram.summary()}
-
-    @app.post("/api/admin/telegram/test")
-    def telegram_test(user=Depends(admin_only)):
-        try:
-            telegram.send_text("[QIS] 텔레그램 알림 시험 전송입니다.")
-        except TelegramError as e:
-            raise HTTPException(400, str(e))
-        return {"ok": True}
-
-    @app.post("/api/admin/telegram/send")
-    def telegram_send(user=Depends(admin_only)):
-        try:
-            return {"text": telegram.send_summary("manual", user=user)}
-        except TelegramError as e:
-            raise HTTPException(400, str(e))
-
-    @app.post("/api/admin/telegram/chats")
-    def telegram_chats(user=Depends(admin_only)):
-        try:
-            return {"chats": telegram.find_chats()}
-        except TelegramError as e:
-            raise HTTPException(400, str(e))
-
-    @app.get("/api/admin/export")
-    def export(request: Request, user=Depends(admin_only)):
-        data = store.export()
-        if request.query_params.get("photos") == "1":
-            data["photos"] = files.get_many(files.all_ids(), limit=None)
-        with db.tx() as c:
-            db.audit(c, user=user, action="export", label="QIS 백업 내려받기",
-                     detail={"photos": "photos" in data}, ip=ip_of(request))
-        return JSONResponse(data, headers={"Content-Disposition": "attachment; filename=\"QIS_server_export.json\""})
-
-    def reset_all(user, ip, reason):
-        """비우기 전 DB 백업 → 기록 · 첨부 비우기. 되돌리려면 그 백업으로 복원."""
-        info = backup.run(reason, user=user)
-        cnt = store.clear_all(user, ip=ip)
-        cnt["files"] = files.clear_all(user, ip=ip)
-        return {"cleared": cnt, "backup": info["db"]}
-
-    @app.get("/api/admin/photos/missing")
-    def photos_missing(user=Depends(admin_only)):
-        """기록이 가리키는데 내용이 없는 첨부 목록 — 관리 화면 '빠진 사진 채우기'."""
-        return files.missing()
-
-    @app.post("/api/admin/reset")
-    async def reset(request: Request, user=Depends(admin_only)):
-        b = await request.json()
-        if b.get("confirm") != "비우기":
-            raise ValueError("확인 문구가 맞지 않습니다")
-        return reset_all(user, ip_of(request), "before_reset")
-
-    @app.post("/api/admin/import")
-    async def import_(request: Request, user=Depends(admin_only)):
-        b = await request.json()
-        photos = b.pop("photos", None)
-        replace = bool(b.pop("_replace", False))
-        if store.has_records():
-            if not replace:
-                return JSONResponse({"error": "has_records", "message": "서버에 이미 기록이 있습니다"}, status_code=409)
-            reset_all(user, ip_of(request), "before_import")
-        cnt = store.import_backup(user, b, ip=ip_of(request))
-        if isinstance(photos, list) and photos:
-            ok = [p for p in photos if isinstance(p, dict) and p.get("id")]
-            for i in range(0, len(ok), 50):
-                files.put_many(user, ok[i:i + 50], ip=ip_of(request))
-            cnt["photos"] = sum(1 for p in ok if has_body(p))
-            if len(ok) != cnt["photos"]:
-                cnt["photos_meta_only"] = len(ok) - cnt["photos"]
-        return {"imported": cnt}
-
+    mount(app)
     return app
