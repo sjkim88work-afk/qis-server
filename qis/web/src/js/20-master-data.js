@@ -248,15 +248,7 @@ function openMasterImport(kind){
   [{label:'취소',fn:closeModal},{label:'등록',cls:'p',fn:miApply}]);
 }
 function miTemplate(){const C=MIMP[mi.kind];downloadCSV(`${mi.kind==='sup'?'협력사':'부품'}_업로드양식.csv`,[C.F.map(f=>f[1].replace(/ \(.*\)/,''))])}
-async function miFile(f){
-  if(!f)return;
-  try{const buf=await f.arrayBuffer();
-    if(/\.xlsx$/i.test(f.name)){const sh=await readXlsx(buf),names=Object.keys(sh);if(!names.length)throw new Error('읽을 수 있는 시트가 없습니다');mi.sheets=sh;const cur=names.find(n=>sh[n].length>1)||names[0];
-      $('#miSheet').innerHTML=names.length>1?`시트 <select onchange="miSet(mi.sheets[this.value],${jsq(f.name)})">${names.map(n=>`<option ${n===cur?'selected':''}>${esc(n)}</option>`).join('')}</select>`:'';miSet(sh[cur],f.name)}
-    else if(/\.xls$/i.test(f.name))throw new Error('구버전 .xls는 엑셀에서 .xlsx로 저장 후 선택하세요');
-    else miSet(parseCSV(decodeText(buf)),f.name);
-  }catch(e){toast('파일 읽기 실패: '+e.message)}
-}
+function miFile(f){return sheetFile(f,mi,'#miSheet','miSet','mi')}
 function miSet(rows,name){
   rows=(rows||[]).map(r=>(r||[]).map(c=>String(c??'').trim()));
   if(rows.filter(r=>r.some(c=>c)).length<2){$('#miMap').innerHTML='<div class="muted">제목행과 데이터가 있는 범위를 넣어주세요.</div>';return}

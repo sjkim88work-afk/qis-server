@@ -870,7 +870,7 @@ function czReport(){
   const ds=(c.DefectIds||[]).map(i=>db.defects.find(d=>d.id===i)).filter(Boolean),n=c.NcrId?db.ncrs.find(x=>x.id===c.NcrId):null;
   const row=(k,v)=>`<tr><th>${esc(k)}</th><td class="pre">${esc(v||'')}</td></tr>`;
   const actTable=cats=>{const l=A.filter(a=>cats.includes(a.Category));return l.length?`<table><tr><th style="width:auto">조치</th><th style="width:14%">구분</th><th style="width:14%">담당</th><th style="width:13%">기한</th><th style="width:13%">완료일</th><th style="width:10%">상태</th></tr>${l.map(a=>`<tr><td>${esc(a.Title)}</td><td>${esc(a.Category)}</td><td>${esc(a.Assignee||a.ExternalOwner)}</td><td>${esc(a.DueDate)}</td><td>${esc(a.DoneDate)}</td><td>${esc(a.ActionStatus)}</td></tr>`).join('')}</table>`:'<p class="muted">등록된 조치 없음</p>'};
-  const html=`<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>${esc(c.CaseNo)} 문제해결 보고서</title><style>
+  const html=reportFrame(`<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>${esc(c.CaseNo)} 문제해결 보고서</title><style>
   body{font-family:'Malgun Gothic','맑은 고딕',sans-serif;font-size:12px;color:#111;margin:24px}h1{font-size:18px;margin:0 0 4px}
   h3{font-size:13px;margin:16px 0 6px;padding:4px 8px;background:#eef2f7;border-radius:4px;break-after:avoid}
   table{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:6px}td,th{border:1px solid #bbb;padding:5px 7px;text-align:left;vertical-align:top}th{background:#f5f7f9;width:22%;font-weight:600}
@@ -888,7 +888,7 @@ function czReport(){
   <h3>D6 효과 검증</h3><table>${row('검증 기간',`${c.VerifyStart||''} ~ ${c.VerifyEnd||''}`)}${row('불량률',`개선 전 ${c.RateBefore||''} → 개선 후 ${c.RateAfter||''}`)}${row('재발 / 판정',`${c.Recurred||''} / ${c.VerifyResult||''}`)}</table>
   <h3>D7 재발 방지 · 표준화</h3><table>${row('공정 FMEA',`${c.FMEAUpdate||''} ${c.FMEARev||''}`)}${row('관리계획서',`${c.CPUpdate||''} ${c.CPRev||''}`)}${row('해당없음 사유',c.DocNAReason)}${row('수평전개',c.Yokoten)}</table>${actTable(['문서개정','수평전개','교육'])}
   <h3>D8 종결</h3><table>${row('종결일',c.CloseDate)}${row('종결 승인자',c.CloseApprover)}${row('보관기간',c.Retention)}</table>
-  </body></html>`.replace('</head>',REPORT_HEAD).replace('<body>','<body>'+REPORT_BAR);
+  </body></html>`);
   reportShow(w,html,`8D_${c.CaseNo}.html`);
 }
 
