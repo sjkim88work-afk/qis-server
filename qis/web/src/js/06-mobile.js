@@ -172,7 +172,9 @@ function fitCells(root){
 }
 (()=>{let q=null;const run=()=>{q=null;try{fitCells($('#view'))}catch(e){}try{roSweep($('#view'))}catch(e){}try{fitCharts(document)}catch(e){}};
   const start=()=>{const v=$('#view');if(!v)return setTimeout(start,50);new MutationObserver(()=>{if(!q)q=requestAnimationFrame(run)}).observe(v,{childList:true,subtree:true});run()};start()})();
-const APP_VER='0.6.2';  // QIS (구 개인 QMS) — 변경 내역: CHANGELOG.md
+const APP_VER_FILE='0.6.2';  // 화면 파일 자체의 마지막 단독(HTML판) 버전 — 더 이상 올리지 않음
+// 머리글 · 백업 메타 · SQLite 내보내기에 적는 버전: 서버(데스크톱 프로그램)가 알려 준 버전이 있으면 그것(1.3.x), 없으면(단독 파일) 화면 파일 버전
+const APP_VER=(SRV&&SRV.server)?String(SRV.server):APP_VER_FILE;
 function renderBrand(){
   const S=db.settings,tab=(TABS.find(t=>t[0]===state.tab)||[])[1]||'';
   $('#brand').innerHTML=S.logo?`<img class="brandlogo" src="${S.logo}" alt="로고">`:'';
