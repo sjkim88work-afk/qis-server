@@ -124,6 +124,8 @@ function renderData(){
     sg('공유 · 내보내기',
       sv(tip('읽기 전용 공유','지금 데이터를 HTML 파일 하나로 만듭니다. 받은 사람은 보기 · 검색 · 출력만 되고 수정 · 저장은 안 됩니다. 파일 안에 데이터가 그대로 들어 있으니 받을 사람을 가려서 보내세요.'),'',
         `<span style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;align-items:center"><label class="row" style="gap:5px;font-size:12.5px" title="협력사 연락처 · 주소 · 단가 · BOM · 기록에 안 쓰인 협력사 · 부품을 빼고, 기록에 쓰인 협력사 · 부품 이름만 남깁니다. 기준정보 탭도 숨깁니다."><input type="checkbox" ${num(db.settings.shareNoMaster)!==0?'checked':''} onchange="db.settings.shareNoMaster=this.checked?1:0;save()"> 기준정보 빼기</label>${btn('사진 포함','makeShareFile(true)')}${btn('사진 제외','makeShareFile(false)')}</span>`)+
+      sv(tip('엑셀 통합 파일 (모든 표)','모든 데이터를 엑셀 파일 하나에 시트별로 담습니다 — 불량 · 비용 · NCR · 협력사 · 부품 · 입고 · BOM · RCA · 협력사별 월 PPM 등. 열 이름은 저장 항목 이름 그대로이고 x_ 로 시작하는 열은 앱이 계산한 값입니다. 피벗 · VLOOKUP 등 엑셀 분석용. 각 화면의 ‘엑셀 내보내기’는 그 화면 표(한글 머리글)만 담습니다.'),'',
+        `<button class="b s" onclick="exportAllXlsx(this)">만들기 (다운로드)</button>`)+
       sv(tip('SQL로 조회 (QIS.sqlite)','SQLite DB 파일로 만듭니다 — DB Browser for SQLite로 열거나 Excel · Power BI에서 SQLite ODBC로 연결합니다. 표: suppliers · parts · defects · defect_costs · ncrs · receipts · bom_rows · supplier_month(월 PPM) 등, 조회: v_defects · v_ncr_open · v_monthly, x_ 열은 앱이 계산한 값. 읽기용 사본입니다.'),'',
         btn(backupDir||lazyH.backupDir?'만들기 (폴더에 저장)':'만들기 (다운로드)','exportSqlite()')))+
     `<details class="sadv" ${advOpen?'open':''} ontoggle="if(state.setAdv!==this.open){state.setAdv=this.open;if(this.open){const y=window.scrollY;render();window.scrollTo(0,y)}}"><summary>고급 설정</summary>`+

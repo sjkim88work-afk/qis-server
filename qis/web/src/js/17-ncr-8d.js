@@ -101,7 +101,7 @@ function renderNcr(){
     <span class="muted">발행일</span><input type="date" value="${esc(f.from)}" onchange="state.nf.from=this.value;$('#ntab').innerHTML=ncrTable()"> ~ <input type="date" value="${esc(f.to)}" onchange="state.nf.to=this.value;$('#ntab').innerHTML=ncrTable()">
     <input placeholder="검색 (번호·협력사·부품·제목·담당)" value="${esc(f.q)}" oninput="state.nf.q=this.value;deb(()=>{$('#ntab').innerHTML=ncrTable()})" style="width:220px">
     ${f.sup||f.type||f.from||f.to||f.q?`<button class="b s" onclick="Object.assign(state.nf,{sup:'',type:'',from:'',to:'',q:''});render()">필터 해제</button>`:''}
-    <span style="flex:1"></span><button class="b" onclick="exportNcrCSV()">CSV(엑셀) 내보내기</button>
+    <span style="flex:1"></span><button class="b" onclick="exportNcrCSV()">엑셀 내보내기</button>
   </div>
   <div class="help" style="margin-top:8px">기준: 협력사 통보일 = 대책 요청일 (통보 전에는 회신 지연을 따지지 않고, 발행 후 ${NOTIFY_GRACE}일 넘게 미통보면 ‘통보 지연’) · 요청 후 D3 봉쇄 ${num(S.d3Days)||1}일 · 8D ${num(S.reply8D)||7}일 / 간이 ${num(S.replySimple)||5}일 내 대책서 회신 · 발행 후 D+${S.verifyDays} 내 유효성 검증. 상태는 입력한 날짜·판정으로 자동 결정됩니다 (회신일 입력 → 대책서 검토, 타당성 ‘적정’ → 승인(검증대기), 검증일+결과 ‘유효’ → 종결).</div></div>
   <div class="card" id="ntab">${ncrTable()}</div>`;

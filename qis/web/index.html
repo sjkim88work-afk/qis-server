@@ -1029,9 +1029,11 @@ function opts(arr,v,blank){let a=[...arr];if(v&&!a.includes(v))a.push(v);return 
 function supOpts(v,blankLabel='-'){return `<option value="">${blankLabel}</option>`+[...db.suppliers].sort((a,b)=>a.name.localeCompare(b.name,'ko')).map(s=>`<option value="${s.id}" ${s.id===v?'selected':''}>${esc(s.name)}${s.code?` (${esc(s.code)})`:''}</option>`).join('')}
 function fmtShort(v){if(v>=1e8)return (v/1e8).toFixed(1)+'억';if(v>=1e4)return Math.round(v/1e4).toLocaleString()+'만';if(v<10&&v%1)return v.toFixed(1);return Math.round(v).toLocaleString()}
 function lastMonths(m,n){const [y,mo]=m.split('-').map(Number);const r=[];for(let i=n-1;i>=0;i--){const d=new Date(y,mo-1-i,1);r.push(`${d.getFullYear()}-${pad(d.getMonth()+1)}`)}return r}
-function download(name,text,type='application/json'){const b=new Blob([text],{type});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500)}
+function download(name,text,type='application/json'){const b=text instanceof Blob?text:new Blob([text],{type});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500)}
 function csvCell(v){v=String(v??'');return /[",\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v}
-function downloadCSV(name,rows){download(name,'\ufeff'+rows.map(r=>r.map(csvCell).join(',')).join('\r\n'),'text/csv;charset=utf-8')}
+// 표 내려받기 — 이제 엑셀(.xlsx)로 만든다 (29-xlsx-export.js). 이름이 .csv 로 끝나도 .xlsx 로 바뀜. 진짜 CSV 가 필요하면 downloadCSVText
+function downloadCSV(name,rows){downloadXlsx(name,rows)}
+function downloadCSVText(name,rows){download(name,'\ufeff'+rows.map(r=>r.map(csvCell).join(',')).join('\r\n'),'text/csv;charset=utf-8')}
 
 /* ================= 판정 로직 ================= */
 /* ---- 심각도 평가 ---- */
@@ -2407,7 +2409,7 @@ function renderDefect(){
     <select onchange="state.df.sev=this.value;refreshDT()"><option value="">전체 심각도</option>${['A','B','C'].map(g=>`<option value="${g}" ${f.sev===g?'selected':''}>${g} (${RESP[g]})</option>`).join('')}</select>
     <select onchange="state.df.status=this.value;refreshDT()">${[['','전체 단계'],['open','미완료 전체'],['처리 대기','처리 대기'],['inv','귀책 조사 중 (FAR·RCA)'],['NCR 발행 필요','NCR 발행 필요'],['ica','사내 대책 진행'],['ncrRec','NCR 권고 · 미발행 (90일)'],['공동 귀책 — 분담 협의','공동 귀책 — 분담 협의'],['처리 중','처리 중'],['대책서 대기','대책서 대기'],['대책서 검토','대책서 검토'],['대책서 보완','대책서 보완'],['done','완료 전체'],['vwait','완료 · 검증 대기']].map(([v,l])=>`<option value="${v}" ${v===f.status?'selected':''}>${l}</option>`).join('')}</select>
     <input placeholder="검색 (부품·납품일·내용·담당)" value="${esc(f.q)}" oninput="state.df.q=this.value;deb(refreshDT)" style="width:200px">
-    <span style="flex:1"></span><button class="b" onclick="exportDefectsCSV()">CSV(엑셀) 내보내기</button>
+    <span style="flex:1"></span><button class="b" onclick="exportDefectsCSV()">엑셀 내보내기</button>
   </div></div>
   <div class="card" id="dtab">${defectTable()}</div>`;
 }
@@ -3595,7 +3597,7 @@ function renderNcr(){
     <span class="muted">발행일</span><input type="date" value="${esc(f.from)}" onchange="state.nf.from=this.value;$('#ntab').innerHTML=ncrTable()"> ~ <input type="date" value="${esc(f.to)}" onchange="state.nf.to=this.value;$('#ntab').innerHTML=ncrTable()">
     <input placeholder="검색 (번호·협력사·부품·제목·담당)" value="${esc(f.q)}" oninput="state.nf.q=this.value;deb(()=>{$('#ntab').innerHTML=ncrTable()})" style="width:220px">
     ${f.sup||f.type||f.from||f.to||f.q?`<button class="b s" onclick="Object.assign(state.nf,{sup:'',type:'',from:'',to:'',q:''});render()">필터 해제</button>`:''}
-    <span style="flex:1"></span><button class="b" onclick="exportNcrCSV()">CSV(엑셀) 내보내기</button>
+    <span style="flex:1"></span><button class="b" onclick="exportNcrCSV()">엑셀 내보내기</button>
   </div>
   <div class="help" style="margin-top:8px">기준: 협력사 통보일 = 대책 요청일 (통보 전에는 회신 지연을 따지지 않고, 발행 후 ${NOTIFY_GRACE}일 넘게 미통보면 ‘통보 지연’) · 요청 후 D3 봉쇄 ${num(S.d3Days)||1}일 · 8D ${num(S.reply8D)||7}일 / 간이 ${num(S.replySimple)||5}일 내 대책서 회신 · 발행 후 D+${S.verifyDays} 내 유효성 검증. 상태는 입력한 날짜·판정으로 자동 결정됩니다 (회신일 입력 → 대책서 검토, 타당성 ‘적정’ → 승인(검증대기), 검증일+결과 ‘유효’ → 종결).</div></div>
   <div class="card" id="ntab">${ncrTable()}</div>`;
@@ -4257,7 +4259,7 @@ function renderSup(){
   return `<div class="card noprint"><div class="row">
     <span class="muted">기간</span><input type="date" value="${state.supFrom}" onchange="state.supFrom=this.value;render()"> ~ <input type="date" value="${state.supTo}" onchange="state.supTo=this.value;render()">
     <button class="b p" onclick="openRcvLineImport()">입고 내역 업로드 (MES 거래명세서)</button><button class="b" onclick="openRcvImport()">월별 입고수량 업로드</button><button class="b" onclick="editReceipts()">직접 입력·수정</button><button class="b" onclick="editSup()">+ 협력사</button>
-    <span style="flex:1"></span><button class="b" onclick="exportSupCSV()">CSV(엑셀) 내보내기</button></div>
+    <span style="flex:1"></span><button class="b" onclick="exportSupCSV()">엑셀 내보내기</button></div>
     <div class="help" style="margin-top:8px">불량건수·A등급·PPM은 협력사 귀책·공동 귀책분만 집계합니다 (사내·고객 귀책과 귀책 조사 중·원인 불명 건은 제외). PPM = 불량수량 ÷ 기간 입고수량 × 1,000,000. 등급: A ≤ ${S.gradeA} / B ≤ ${S.gradeB} / C ≤ ${S.gradeC} / D 초과 (설정에서 변경). 입고수량이 없으면 PPM·등급은 '-'로 표시됩니다.</div></div>
   <div class="card"><div class="tw"><table><thead><tr>${sth('supq','name','협력사')}${sth('supq','items','주요 품목')}${sth('supq','cnt','불량건수','n')}${sth('supq','nA','A등급','n')}${sth('supq','qty','불량수량','n')}${sth('supq','rcv','입고수량','n')}${sth('supq','ppm','PPM','n')}${sth('supq','grade','등급')}${sth('supq','ncr','NCR','n')}${sth('supq','open','미종결','n')}${sth('supq','late','회신지연','n')}${sth('supq','avgReply','평균 회신(일)','n')}${sth('supq','avgEval','대책서 평균','n','기간 내 NCR의 최종 대책서 평가 평균')}${sth('supq','firstPass','1차 승인율','n','1차 제출에서 바로 승인된 비율')}${sth('supq','escN','에스컬레이션','n','보완요청·반려·검증 무효가 기준 횟수 이상인 NCR 수')}${sth('supq','pen','감점','n','기간 내 NCR의 협력사 평가 감점 합계')}${sth('supq','cost','COPQ(원)','n')}${sth('supq','rec','회수(원)','n')}${sth('supq','os','미회수(원)','n','현재 기준 미회수 잔액')}</tr></thead><tbody>
   ${st.map(x=>`<tr><td><a class="lk" onclick="supDetail('${x.s.id}')"><b>${esc(x.s.name)}</b></a> <span class="muted">${esc(x.s.code)}</span></td><td>${esc(x.s.items)}</td><td class="n">${x.cnt}</td><td class="n">${x.nA?`<span class="bg bad">${x.nA}</span>`:''}</td><td class="n">${x.qty.toLocaleString()}</td><td class="n">${x.rcv?x.rcv.toLocaleString():'-'}</td><td class="n">${x.ppm==null?'-':Math.round(x.ppm).toLocaleString()}</td><td><span class="bg ${gc[x.grade]}">${x.grade}</span></td><td class="n">${x.ncr}</td><td class="n">${x.open||''}</td><td class="n">${x.late?`<span class="bg bad">${x.late}</span>`:''}</td><td class="n">${x.avgReply==null?'-':x.avgReply.toFixed(1)}</td><td class="n">${x.avgEval==null?'-':`<span class="bg ${x.avgEval>=db.settings.evalPass?'ok':x.avgEval>=db.settings.evalCond?'warn':'bad'}">${Math.round(x.avgEval)}점</span>`}</td><td class="n">${x.firstPass==null?'-':Math.round(x.firstPass*100)+'%'}</td><td class="n">${x.escN?`<span class="bg bad">${x.escN}</span>`:''}</td><td class="n">${x.pen?`<span class="bg warn">${x.pen}</span>`:''}</td><td class="n">${won(x.cost)}</td><td class="n">${won(x.rec)}</td><td class="n">${x.os?`<span class="bg bad">${won(x.os)}</span>`:''}</td></tr>`).join('')||'<tr><td colspan="19" class="muted" style="text-align:center;padding:30px">협력사를 먼저 등록하세요 (기준정보 탭).</td></tr>'}
@@ -4371,7 +4373,7 @@ function rcvLinesCard(){
     <select onchange="state.rl.sup=this.value;render()"><option value="">전체 협력사</option>${sups.map(s=>`<option value="${s.id}" ${s.id===f.sup?'selected':''}>${esc(s.name)}</option>`).join('')}</select>
     <select onchange="state.rl.v=this.value;render()"><option value="">전체 판정</option>${['합격','불합격','특채'].map(v=>`<option ${v===f.v?'selected':''}>${v}</option>`).join('')}</select>
     <input placeholder="검색 (품번 · 품명 · 거래명세서 · 검사번호 · 차종)" value="${esc(f.q)}" oninput="state.rl.q=this.value;deb(()=>{const y=window.scrollY;render();window.scrollTo(0,y)})" style="flex:1;min-width:200px">
-    <button class="b s" onclick="exportRcvLinesCSV()">CSV</button></div>
+    <button class="b s" onclick="exportRcvLinesCSV()">엑셀</button></div>
   <div class="tw" style="max-height:480px"><table class="mst" style="min-width:1100px"><colgroup><col style="width:92px"><col style="width:150px"><col style="width:132px"><col style="width:96px"><col style="width:64px"><col style="width:120px"><col><col style="width:84px"><col style="width:64px"><col style="width:70px"><col style="width:120px"></colgroup>
   <thead><tr><th>입고일자</th><th>협력사</th><th>거래명세서-순번</th><th>검사번호</th><th>차종</th><th>품번</th><th>품명</th><th class="n">입고량</th><th>판정</th><th>검사자</th><th></th></tr></thead><tbody>
   ${L.slice(0,500).map(r=>`<tr${r.verdict==='불합격'?' style="background:#fdf2f2"':''}><td class="nw">${esc(r.date)}</td><td class="nw" title="${esc(supName(r.supplierId))}">${esc(supName(r.supplierId))}</td><td class="nw">${esc(r.docNo)}${r.seq?`-${esc(r.seq)}`:''}</td><td class="nw">${esc(r.inspNo)}</td><td class="nw">${esc(r.model)}</td><td class="nw"><b>${esc(r.partNo)}</b></td><td>${esc(r.partName)}</td>
@@ -4603,7 +4605,7 @@ function renderCopq(){
   const dl=d=>`<a class="lk" onclick="openCost('${d.id}')">${esc(defLabel(d))}</a>`;
   return `<div class="card noprint"><div class="row"><b>연도</b><select onchange="state.copqYear=this.value;render()">${years.map(x=>`<option ${x===y?'selected':''}>${x}</option>`).join('')}</select>
     <b style="margin-left:10px">집계 기준</b><select onchange="state.copqBasis=this.value;render()"><option value="cost" ${basis==='cost'?'selected':''}>비용 발생월 (회계 기준)</option><option value="defect" ${basis==='defect'?'selected':''}>불량 발생월</option></select>
-    <span style="flex:1"></span><button class="b" onclick="exportCopqCSV()">비용 내역 CSV</button><button class="b" onclick="exportClaimCSV()">구상 CSV</button></div>
+    <span style="flex:1"></span><button class="b" onclick="exportCopqCSV()">비용 내역 엑셀</button><button class="b" onclick="exportClaimCSV()">구상 엑셀</button></div>
     <div class="help" style="margin-top:6px">${basis==='cost'?'비용은 <b>비용 발생일</b>, 회수는 <b>회수일</b>이 속한 달에 집계합니다. 9월 불량의 클레임 비용이 11월에 확정되면 11월 비용입니다.':'불량 발생일이 속한 달에 그 불량의 모든 비용·회수를 묶어서 봅니다(불량 건별 손실 파악용).'} 내부실패 = 수입검사·공정·출하 발생 비용 / 외부실패 = 고객 발생 불량의 비용 + ‘고객클레임’ 항목 비용.</div></div>
   <div class="kpis">
     <div class="kpi"><div class="l">${y} 실패비용 합계</div><div class="v">${fmtShort(T.tot)}</div><div class="s">${won(T.tot)}원</div></div>
@@ -4683,7 +4685,7 @@ function renderMaster(){
   const models=[...new Set(db.parts.map(p=>p.model).filter(Boolean))].sort(kcmp);
   if(msState.psup&&!supById(msState.psup))msState.psup='';
   return `<div>
-  <div class="card"><h3>협력사 (${db.suppliers.length})<span class="sp"></span><button class="b s" onclick="exportContactsCSV()">연락망 CSV</button><button class="b s" onclick="openMasterImport('sup')">엑셀 업로드</button><button class="b s p" onclick="editSup()">+ 추가</button></h3>
+  <div class="card"><h3>협력사 (${db.suppliers.length})<span class="sp"></span><button class="b s" onclick="exportContactsCSV()">연락망 엑셀</button><button class="b s" onclick="openMasterImport('sup')">엑셀 업로드</button><button class="b s p" onclick="editSup()">+ 추가</button></h3>
   <div class="row" style="margin-bottom:8px"><input placeholder="검색 (코드·협력사명·약어·국가·품목·담당자)" value="${esc(msState.sq)}" oninput="msState.sq=this.value;msRefreshSup()" style="flex:1;min-width:180px"></div>
   <div id="msSup">${msSupTable()}</div></div>
   <div class="card"><h3>부품 (${db.parts.length})<span class="sp"></span><button class="b s" onclick="openMasterImport('part')">엑셀 업로드</button><button class="b s p" onclick="editPart()">+ 추가</button></h3>
@@ -4693,7 +4695,7 @@ function renderMaster(){
     ${db.bom.rows.length?`<select onchange="msState.pbom=this.value;msRefreshPart()"><option value="">BOM 전체</option><option value="y" ${msState.pbom==='y'?'selected':''}>BOM에 있음</option><option value="n" ${msState.pbom==='n'?'selected':''}>BOM에 없음</option></select>`:''}
     ${msState.psup||msState.pmodel||msState.pq||msState.pbom?`<button class="b s" onclick="msState.psup='';msState.pmodel='';msState.pq='';msState.pbom='';msRefreshPart(true)">필터 해제</button>`:''}</div>
   <div id="msPart">${msPartTable()}</div></div></div>
-  <div class="card"><h3>BOM 구성현황 <span class="muted" style="font-weight:normal;font-size:12px">왼쪽 제품을 고르면 오른쪽에 구성 트리 (레벨 · U/S)</span><span class="sp"></span>${bomIx().byFg.size?`<button class="b s" onclick="exportBomCSV()">CSV</button><button class="b s" onclick="bomClear()">전체 삭제</button>`:''}<button class="b s p" onclick="openBomImport()">BOM 업로드</button></h3>
+  <div class="card"><h3>BOM 구성현황 <span class="muted" style="font-weight:normal;font-size:12px">왼쪽 제품을 고르면 오른쪽에 구성 트리 (레벨 · U/S)</span><span class="sp"></span>${bomIx().byFg.size?`<button class="b s" onclick="exportBomCSV()">엑셀</button><button class="b s" onclick="bomClear()">전체 삭제</button>`:''}<button class="b s p" onclick="openBomImport()">BOM 업로드</button></h3>
   ${bomIx().byFg.size?`<div class="row" style="margin-bottom:8px"><input placeholder="검색 (제품 · 구성 품번 · 품명 · 차종) — 구성 품번으로 찾으면 그 품번이 들어간 제품만 남고 트리에 표시" value="${esc(msState.bq||'')}" oninput="msState.bq=this.value;deb(()=>{$('#msBom').innerHTML=bomTable()})" style="flex:1;min-width:200px"></div>`:''}
   <div id="msBom">${bomTable()}</div></div>`;
 }
@@ -4884,7 +4886,7 @@ function openMasterImport(kind){
   const C=MIMP[kind];mi={kind,rows:[],hdr:0,map:{},name:'',buyOnly:true,off:new Set(),filt:''};
   openModal(C.title,`<div class="help">엑셀(.xlsx) · CSV 파일을 올리거나, 엑셀에서 범위를 복사해 붙여넣으세요. 제목행과 열은 자동으로 찾고, 틀린 열만 바꾸면 됩니다.<br>${C.help}</div>
   <div class="row" style="margin-top:10px"><label class="b p" style="cursor:pointer">파일 선택 (.xlsx / .csv)<input type="file" accept=".xlsx,.csv,.txt" style="display:none" onchange="miFile(this.files[0]);this.value=''"></label><span id="miSheet"></span><span id="miName" class="muted"></span>
-    <span style="flex:1"></span><a class="lk" style="font-size:12px" onclick="miTemplate()">빈 양식 받기 (CSV)</a></div>
+    <span style="flex:1"></span><a class="lk" style="font-size:12px" onclick="miTemplate()">빈 양식 받기 (엑셀)</a></div>
   <textarea id="miPaste" placeholder="또는 엑셀에서 복사한 범위를 여기에 붙여넣기 (Ctrl+V) — 제목행 포함" style="min-height:80px;margin-top:8px;font-family:Consolas,monospace;font-size:12px" oninput="miSet(parseRows(this.value),'붙여넣기')"></textarea>
   <div id="miMap" style="margin-top:10px"></div>`,
   [{label:'취소',fn:closeModal},{label:'등록',cls:'p',fn:miApply}]);
@@ -5363,6 +5365,8 @@ function renderData(){
     sg('공유 · 내보내기',
       sv(tip('읽기 전용 공유','지금 데이터를 HTML 파일 하나로 만듭니다. 받은 사람은 보기 · 검색 · 출력만 되고 수정 · 저장은 안 됩니다. 파일 안에 데이터가 그대로 들어 있으니 받을 사람을 가려서 보내세요.'),'',
         `<span style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;align-items:center"><label class="row" style="gap:5px;font-size:12.5px" title="협력사 연락처 · 주소 · 단가 · BOM · 기록에 안 쓰인 협력사 · 부품을 빼고, 기록에 쓰인 협력사 · 부품 이름만 남깁니다. 기준정보 탭도 숨깁니다."><input type="checkbox" ${num(db.settings.shareNoMaster)!==0?'checked':''} onchange="db.settings.shareNoMaster=this.checked?1:0;save()"> 기준정보 빼기</label>${btn('사진 포함','makeShareFile(true)')}${btn('사진 제외','makeShareFile(false)')}</span>`)+
+      sv(tip('엑셀 통합 파일 (모든 표)','모든 데이터를 엑셀 파일 하나에 시트별로 담습니다 — 불량 · 비용 · NCR · 협력사 · 부품 · 입고 · BOM · RCA · 협력사별 월 PPM 등. 열 이름은 저장 항목 이름 그대로이고 x_ 로 시작하는 열은 앱이 계산한 값입니다. 피벗 · VLOOKUP 등 엑셀 분석용. 각 화면의 ‘엑셀 내보내기’는 그 화면 표(한글 머리글)만 담습니다.'),'',
+        `<button class="b s" onclick="exportAllXlsx(this)">만들기 (다운로드)</button>`)+
       sv(tip('SQL로 조회 (QIS.sqlite)','SQLite DB 파일로 만듭니다 — DB Browser for SQLite로 열거나 Excel · Power BI에서 SQLite ODBC로 연결합니다. 표: suppliers · parts · defects · defect_costs · ncrs · receipts · bom_rows · supplier_month(월 PPM) 등, 조회: v_defects · v_ncr_open · v_monthly, x_ 열은 앱이 계산한 값. 읽기용 사본입니다.'),'',
         btn(backupDir||lazyH.backupDir?'만들기 (폴더에 저장)':'만들기 (다운로드)','exportSqlite()')))+
     `<details class="sadv" ${advOpen?'open':''} ontoggle="if(state.setAdv!==this.open){state.setAdv=this.open;if(this.open){const y=window.scrollY;render();window.scrollTo(0,y)}}"><summary>고급 설정</summary>`+
@@ -6964,7 +6968,8 @@ function czCSV(list){
   }else if(list==='actions'){cols=['Title','Case','Category','Assignee','ExternalOwner','DueDate','DoneDate','ActionStatus'];rows=db.actions.map(a=>Object.assign({},a,{Case:cNo(a.CaseId)}))}
   else if(list==='parts'){cols=['Title','PartName','Supplier','VehicleCodes','SafetyChar','UnitPrice'];rows=db.parts.map(p=>({Title:p.partNo,PartName:p.name,Supplier:supName(p.supplierId),VehicleCodes:p.model,SafetyChar:p.safety||'해당없음',UnitPrice:p.price}))}
   else if(list==='suppliers'){cols=['Title','SupplierCode','ContactName','ContactEmail','Items'];rows=db.suppliers.map(s=>{const pc=primaryOf(s);return {Title:s.name,SupplierCode:s.code,ContactName:pc?pc.name:'',ContactEmail:pc?pc.email:'',Items:s.items}})}
-  downloadCSV(`QMS_${list}_${today().replace(/-/g,'')}.csv`,[cols,...rows.map(r=>cols.map(k=>Array.isArray(r[k])?r[k].join(';'):r[k]??''))]);
+  downloadCSVText(`QMS_${list}_${today().replace(/-/g,'')}.csv`,   // SharePoint 가져오기용이라 진짜 CSV 유지
+    [cols,...rows.map(r=>cols.map(k=>Array.isArray(r[k])?r[k].join(';'):r[k]??''))]);
 }
 
 /* ================= A3 보고서 (경영진 보고용 한 장) =================
@@ -7177,6 +7182,70 @@ bootReady.then(()=>{const g=new URLSearchParams(location.search).get('go');if(!g
   history.replaceState(null,'',location.pathname);
   if(g==='defect-new'){go('defect');setTimeout(()=>editDefect(),50)}else if(TABS.some(t=>t[0]===g))go(g)});
 if(isStandalone())document.documentElement.classList.add('standalone');
+/* ================= 엑셀(.xlsx) 파일 만들기 =================
+   외부 라이브러리 없이 xlsx(= zip 안의 SpreadsheetML)를 직접 만든다. 압축 없이(STORE) 담으므로 어떤 브라우저에서나 됨.
+   · 글자는 inlineStr 로 넣어 품번 '0001' · 긴 숫자 코드가 숫자로 바뀌지 않음 (CSV 의 고질 문제)
+   · 숫자(number)는 숫자 셀 · 머리글 굵게 + 고정 + 자동 필터 · 줄바꿈 있는 칸은 줄바꿈 표시 · 열 너비는 내용에 맞춤
+   · 시트 여러 장: xlsxBlob([{name,rows},...])                                                                    */
+const XL_CRC=(()=>{const t=new Int32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c}return t})();
+function xlCrc(u8){let c=-1;for(let i=0;i<u8.length;i++)c=XL_CRC[(c^u8[i])&255]^(c>>>8);return (c^-1)>>>0}
+function xlZip(files){                       // files: [{name, data(Uint8Array)}] → Blob (STORE)
+  const enc=new TextEncoder(),parts=[],cd=[];let off=0;
+  const u16=v=>[v&255,v>>8&255],u32=v=>[v&255,v>>8&255,v>>16&255,v>>>24&255];
+  const dosT=0x0800,dosD=((2026-1980)<<9)|(1<<5)|1;   // 고정 날짜(2026-01-01 00:00) — 내용만 중요
+  for(const f of files){const n=enc.encode(f.name),d=f.data,crc=xlCrc(d);
+    const h=new Uint8Array([80,75,3,4,...u16(20),...u16(0x0800),...u16(0),...u16(dosT),...u16(dosD),...u32(crc),...u32(d.length),...u32(d.length),...u16(n.length),...u16(0),...n]);
+    parts.push(h,d);
+    cd.push(new Uint8Array([80,75,1,2,...u16(20),...u16(20),...u16(0x0800),...u16(0),...u16(dosT),...u16(dosD),...u32(crc),...u32(d.length),...u32(d.length),...u16(n.length),...u16(0),...u16(0),...u16(0),...u16(0),...u32(0),...u32(off),...n]));
+    off+=h.length+d.length}
+  const cdLen=cd.reduce((a,c)=>a+c.length,0);
+  const eocd=new Uint8Array([80,75,5,6,...u16(0),...u16(0),...u16(files.length),...u16(files.length),...u32(cdLen),...u32(off),...u16(0)]);
+  return new Blob([...parts,...cd,eocd],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+}
+const xlEsc=s=>String(s).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F￾￿]/g,'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+function xlCol(i){let s='';i++;while(i>0){const m=(i-1)%26;s=String.fromCharCode(65+m)+s;i=(i-m-1)/26}return s}
+const xlSheetName=(s,i)=>(String(s||`Sheet${i+1}`).replace(/[\[\]:*?\/\\]/g,' ').trim().slice(0,31))||`Sheet${i+1}`;
+const xlWidth=s=>[...String(s)].reduce((a,ch)=>a+(ch.charCodeAt(0)>255?2:1),0);
+function xlSheetXml(rows){
+  const nCol=rows.reduce((a,r)=>Math.max(a,r.length),0),w=new Array(nCol).fill(4);
+  const cells=rows.map((r,ri)=>{const cs=[];for(let ci=0;ci<r.length;ci++){let v=r[ci];if(v==null||v==='')continue;const ref=xlCol(ci)+(ri+1);
+      if(typeof v==='number'&&isFinite(v)){cs.push(`<c r="${ref}"${ri?'':' s="1"'}><v>${v}</v></c>`);w[ci]=Math.max(w[ci],String(v).length)}
+      else{if(typeof v==='boolean')v=v?'예':'아니오';v=String(v);if(v.length>32767)v=v.slice(0,32764)+'…';
+        const ml=v.includes('\n'),first=ml?v.split('\n')[0]:v;w[ci]=Math.max(w[ci],Math.min(xlWidth(first),60));
+        cs.push(`<c r="${ref}" t="inlineStr" s="${ri?(ml?2:0):1}"><is><t xml:space="preserve">${xlEsc(v)}</t></is></c>`)}}
+    return `<row r="${ri+1}">${cs.join('')}</row>`}).join('');
+  const cols=nCol?`<cols>${w.map((x,i)=>`<col min="${i+1}" max="${i+1}" width="${Math.min(x+2,62)}" customWidth="1"/>`).join('')}</cols>`:'';
+  const ref=nCol&&rows.length>1?`<autoFilter ref="A1:${xlCol(nCol-1)}${rows.length}"/>`:'';
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0"${rows.length>1?'><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView>':'/>'}</sheetViews><sheetFormatPr defaultRowHeight="15"/>${cols}<sheetData>${cells}</sheetData>${ref}</worksheet>`;
+}
+function xlsxBlob(sheets){
+  const enc=new TextEncoder(),S=sheets.filter(s=>s&&s.rows),names=new Set();
+  const named=S.map((s,i)=>{let n=xlSheetName(s.name,i),b=n,k=2;while(names.has(n.toLowerCase()))n=(b.slice(0,28)+' '+k++);names.add(n.toLowerCase());return {name:n,rows:s.rows}});
+  const files=[
+    {name:'[Content_Types].xml',data:enc.encode(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>${named.map((_,i)=>`<Override PartName="/xl/worksheets/sheet${i+1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('')}</Types>`)},
+    {name:'_rels/.rels',data:enc.encode(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`)},
+    {name:'xl/workbook.xml',data:enc.encode(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>${named.map((s,i)=>`<sheet name="${xlEsc(s.name)}" sheetId="${i+1}" r:id="rId${i+1}"/>`).join('')}</sheets></workbook>`)},
+    {name:'xl/_rels/workbook.xml.rels',data:enc.encode(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${named.map((_,i)=>`<Relationship Id="rId${i+1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i+1}.xml"/>`).join('')}<Relationship Id="rId${named.length+1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`)},
+    {name:'xl/styles.xml',data:enc.encode(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="2"><font><sz val="11"/><name val="맑은 고딕"/></font><font><b/><sz val="11"/><name val="맑은 고딕"/></font></fonts><fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFE8EEF7"/></patternFill></fill></fills><borders count="1"><border/></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="3"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/><xf numFmtId="0" fontId="1" fillId="2" borderId="0" applyFont="1" applyFill="1"/><xf numFmtId="0" fontId="0" fillId="0" borderId="0" applyAlignment="1"><alignment wrapText="1" vertical="top"/></xf></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`)},
+    ...named.map((s,i)=>({name:`xl/worksheets/sheet${i+1}.xml`,data:enc.encode(xlSheetXml(s.rows))}))];
+  return xlZip(files);
+}
+/* 내려받기: downloadXlsx(name, [{name,rows}]) · 한 장이면 downloadXlsx(name, rows) 도 됨 */
+function downloadXlsx(name,sheets){
+  if(Array.isArray(sheets)&&(!sheets.length||Array.isArray(sheets[0])))sheets=[{name:String(name).replace(/\.(xlsx|csv)$/i,'').replace(/_\d{4}-\d{2}-\d{2}.*$/,'').replace(/_\d{8}$/,''),rows:sheets}];
+  let fn=String(name).replace(/\.csv$/i,'');if(!/\.xlsx$/i.test(fn))fn+='.xlsx';
+  download(fn,xlsxBlob(sheets));
+}
+/* 모든 표를 시트로 — SQLite 내보내기와 같은 표 구성(x_ 열 = 앱이 계산한 값). 엑셀에서 피벗 · VLOOKUP 용 */
+async function exportAllXlsx(btn){
+  if(btn){btn.disabled=true}
+  try{const SQL=await loadSql(),{bytes}=await buildSqlite(),sdb=new SQL.Database(bytes);
+    const tabs=sdb.exec(`SELECT name FROM sqlite_master WHERE type='table' AND name NOT IN ('about') ORDER BY name`)[0]?.values.map(v=>v[0])||[];
+    const sheets=tabs.map(t=>{const r=sdb.exec(`SELECT * FROM ${sqlId(t)}`)[0];return {name:t,rows:r?[r.columns,...r.values.map(row=>row.map(v=>v==null?'':v))]:[[]]}});
+    sdb.close();downloadXlsx(`QIS_전체_${today()}.xlsx`,sheets);toast(`엑셀 파일을 만들었습니다 — 시트 ${sheets.length}장`)}
+  catch(e){toast('엑셀 만들기 실패: '+e.message)}
+  finally{if(btn)btn.disabled=false}
+}
 </script>
 </body>
 </html>

@@ -267,7 +267,9 @@ function opts(arr,v,blank){let a=[...arr];if(v&&!a.includes(v))a.push(v);return 
 function supOpts(v,blankLabel='-'){return `<option value="">${blankLabel}</option>`+[...db.suppliers].sort((a,b)=>a.name.localeCompare(b.name,'ko')).map(s=>`<option value="${s.id}" ${s.id===v?'selected':''}>${esc(s.name)}${s.code?` (${esc(s.code)})`:''}</option>`).join('')}
 function fmtShort(v){if(v>=1e8)return (v/1e8).toFixed(1)+'억';if(v>=1e4)return Math.round(v/1e4).toLocaleString()+'만';if(v<10&&v%1)return v.toFixed(1);return Math.round(v).toLocaleString()}
 function lastMonths(m,n){const [y,mo]=m.split('-').map(Number);const r=[];for(let i=n-1;i>=0;i--){const d=new Date(y,mo-1-i,1);r.push(`${d.getFullYear()}-${pad(d.getMonth()+1)}`)}return r}
-function download(name,text,type='application/json'){const b=new Blob([text],{type});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500)}
+function download(name,text,type='application/json'){const b=text instanceof Blob?text:new Blob([text],{type});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500)}
 function csvCell(v){v=String(v??'');return /[",\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v}
-function downloadCSV(name,rows){download(name,'\ufeff'+rows.map(r=>r.map(csvCell).join(',')).join('\r\n'),'text/csv;charset=utf-8')}
+// 표 내려받기 — 이제 엑셀(.xlsx)로 만든다 (29-xlsx-export.js). 이름이 .csv 로 끝나도 .xlsx 로 바뀜. 진짜 CSV 가 필요하면 downloadCSVText
+function downloadCSV(name,rows){downloadXlsx(name,rows)}
+function downloadCSVText(name,rows){download(name,'\ufeff'+rows.map(r=>r.map(csvCell).join(',')).join('\r\n'),'text/csv;charset=utf-8')}
 
