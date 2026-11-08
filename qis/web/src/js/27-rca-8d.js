@@ -908,6 +908,7 @@ function czCSV(list){
   }else if(list==='actions'){cols=['Title','Case','Category','Assignee','ExternalOwner','DueDate','DoneDate','ActionStatus'];rows=db.actions.map(a=>Object.assign({},a,{Case:cNo(a.CaseId)}))}
   else if(list==='parts'){cols=['Title','PartName','Supplier','VehicleCodes','SafetyChar','UnitPrice'];rows=db.parts.map(p=>({Title:p.partNo,PartName:p.name,Supplier:supName(p.supplierId),VehicleCodes:p.model,SafetyChar:p.safety||'해당없음',UnitPrice:p.price}))}
   else if(list==='suppliers'){cols=['Title','SupplierCode','ContactName','ContactEmail','Items'];rows=db.suppliers.map(s=>{const pc=primaryOf(s);return {Title:s.name,SupplierCode:s.code,ContactName:pc?pc.name:'',ContactEmail:pc?pc.email:'',Items:s.items}})}
-  downloadCSV(`QMS_${list}_${today().replace(/-/g,'')}.csv`,[cols,...rows.map(r=>cols.map(k=>Array.isArray(r[k])?r[k].join(';'):r[k]??''))]);
+  downloadCSVText(`QMS_${list}_${today().replace(/-/g,'')}.csv`,   // SharePoint 가져오기용이라 진짜 CSV 유지
+    [cols,...rows.map(r=>cols.map(k=>Array.isArray(r[k])?r[k].join(';'):r[k]??''))]);
 }
 

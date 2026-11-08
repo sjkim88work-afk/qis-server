@@ -53,7 +53,7 @@ function renderDefect(){
     <select onchange="state.df.sev=this.value;refreshDT()"><option value="">전체 심각도</option>${['A','B','C'].map(g=>`<option value="${g}" ${f.sev===g?'selected':''}>${g} (${RESP[g]})</option>`).join('')}</select>
     <select onchange="state.df.status=this.value;refreshDT()">${[['','전체 단계'],['open','미완료 전체'],['처리 대기','처리 대기'],['inv','귀책 조사 중 (FAR·RCA)'],['NCR 발행 필요','NCR 발행 필요'],['ica','사내 대책 진행'],['ncrRec','NCR 권고 · 미발행 (90일)'],['공동 귀책 — 분담 협의','공동 귀책 — 분담 협의'],['처리 중','처리 중'],['대책서 대기','대책서 대기'],['대책서 검토','대책서 검토'],['대책서 보완','대책서 보완'],['done','완료 전체'],['vwait','완료 · 검증 대기']].map(([v,l])=>`<option value="${v}" ${v===f.status?'selected':''}>${l}</option>`).join('')}</select>
     <input placeholder="검색 (부품·납품일·내용·담당)" value="${esc(f.q)}" oninput="state.df.q=this.value;deb(refreshDT)" style="width:200px">
-    <span style="flex:1"></span><button class="b" onclick="exportDefectsCSV()">CSV(엑셀) 내보내기</button>
+    <span style="flex:1"></span><button class="b" onclick="exportDefectsCSV()">엑셀 내보내기</button>
   </div></div>
   <div class="card" id="dtab">${defectTable()}</div>`;
 }

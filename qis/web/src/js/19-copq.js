@@ -21,7 +21,7 @@ function renderCopq(){
   const dl=d=>`<a class="lk" onclick="openCost('${d.id}')">${esc(defLabel(d))}</a>`;
   return `<div class="card noprint"><div class="row"><b>연도</b><select onchange="state.copqYear=this.value;render()">${years.map(x=>`<option ${x===y?'selected':''}>${x}</option>`).join('')}</select>
     <b style="margin-left:10px">집계 기준</b><select onchange="state.copqBasis=this.value;render()"><option value="cost" ${basis==='cost'?'selected':''}>비용 발생월 (회계 기준)</option><option value="defect" ${basis==='defect'?'selected':''}>불량 발생월</option></select>
-    <span style="flex:1"></span><button class="b" onclick="exportCopqCSV()">비용 내역 CSV</button><button class="b" onclick="exportClaimCSV()">구상 CSV</button></div>
+    <span style="flex:1"></span><button class="b" onclick="exportCopqCSV()">비용 내역 엑셀</button><button class="b" onclick="exportClaimCSV()">구상 엑셀</button></div>
     <div class="help" style="margin-top:6px">${basis==='cost'?'비용은 <b>비용 발생일</b>, 회수는 <b>회수일</b>이 속한 달에 집계합니다. 9월 불량의 클레임 비용이 11월에 확정되면 11월 비용입니다.':'불량 발생일이 속한 달에 그 불량의 모든 비용·회수를 묶어서 봅니다(불량 건별 손실 파악용).'} 내부실패 = 수입검사·공정·출하 발생 비용 / 외부실패 = 고객 발생 불량의 비용 + ‘고객클레임’ 항목 비용.</div></div>
   <div class="kpis">
     <div class="kpi"><div class="l">${y} 실패비용 합계</div><div class="v">${fmtShort(T.tot)}</div><div class="s">${won(T.tot)}원</div></div>

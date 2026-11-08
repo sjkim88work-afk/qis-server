@@ -41,7 +41,7 @@ function renderMaster(){
   const models=[...new Set(db.parts.map(p=>p.model).filter(Boolean))].sort(kcmp);
   if(msState.psup&&!supById(msState.psup))msState.psup='';
   return `<div>
-  <div class="card"><h3>협력사 (${db.suppliers.length})<span class="sp"></span><button class="b s" onclick="exportContactsCSV()">연락망 CSV</button><button class="b s" onclick="openMasterImport('sup')">엑셀 업로드</button><button class="b s p" onclick="editSup()">+ 추가</button></h3>
+  <div class="card"><h3>협력사 (${db.suppliers.length})<span class="sp"></span><button class="b s" onclick="exportContactsCSV()">연락망 엑셀</button><button class="b s" onclick="openMasterImport('sup')">엑셀 업로드</button><button class="b s p" onclick="editSup()">+ 추가</button></h3>
   <div class="row" style="margin-bottom:8px"><input placeholder="검색 (코드·협력사명·약어·국가·품목·담당자)" value="${esc(msState.sq)}" oninput="msState.sq=this.value;msRefreshSup()" style="flex:1;min-width:180px"></div>
   <div id="msSup">${msSupTable()}</div></div>
   <div class="card"><h3>부품 (${db.parts.length})<span class="sp"></span><button class="b s" onclick="openMasterImport('part')">엑셀 업로드</button><button class="b s p" onclick="editPart()">+ 추가</button></h3>
@@ -51,7 +51,7 @@ function renderMaster(){
     ${db.bom.rows.length?`<select onchange="msState.pbom=this.value;msRefreshPart()"><option value="">BOM 전체</option><option value="y" ${msState.pbom==='y'?'selected':''}>BOM에 있음</option><option value="n" ${msState.pbom==='n'?'selected':''}>BOM에 없음</option></select>`:''}
     ${msState.psup||msState.pmodel||msState.pq||msState.pbom?`<button class="b s" onclick="msState.psup='';msState.pmodel='';msState.pq='';msState.pbom='';msRefreshPart(true)">필터 해제</button>`:''}</div>
   <div id="msPart">${msPartTable()}</div></div></div>
-  <div class="card"><h3>BOM 구성현황 <span class="muted" style="font-weight:normal;font-size:12px">왼쪽 제품을 고르면 오른쪽에 구성 트리 (레벨 · U/S)</span><span class="sp"></span>${bomIx().byFg.size?`<button class="b s" onclick="exportBomCSV()">CSV</button><button class="b s" onclick="bomClear()">전체 삭제</button>`:''}<button class="b s p" onclick="openBomImport()">BOM 업로드</button></h3>
+  <div class="card"><h3>BOM 구성현황 <span class="muted" style="font-weight:normal;font-size:12px">왼쪽 제품을 고르면 오른쪽에 구성 트리 (레벨 · U/S)</span><span class="sp"></span>${bomIx().byFg.size?`<button class="b s" onclick="exportBomCSV()">엑셀</button><button class="b s" onclick="bomClear()">전체 삭제</button>`:''}<button class="b s p" onclick="openBomImport()">BOM 업로드</button></h3>
   ${bomIx().byFg.size?`<div class="row" style="margin-bottom:8px"><input placeholder="검색 (제품 · 구성 품번 · 품명 · 차종) — 구성 품번으로 찾으면 그 품번이 들어간 제품만 남고 트리에 표시" value="${esc(msState.bq||'')}" oninput="msState.bq=this.value;deb(()=>{$('#msBom').innerHTML=bomTable()})" style="flex:1;min-width:200px"></div>`:''}
   <div id="msBom">${bomTable()}</div></div>`;
 }
@@ -242,7 +242,7 @@ function openMasterImport(kind){
   const C=MIMP[kind];mi={kind,rows:[],hdr:0,map:{},name:'',buyOnly:true,off:new Set(),filt:''};
   openModal(C.title,`<div class="help">엑셀(.xlsx) · CSV 파일을 올리거나, 엑셀에서 범위를 복사해 붙여넣으세요. 제목행과 열은 자동으로 찾고, 틀린 열만 바꾸면 됩니다.<br>${C.help}</div>
   <div class="row" style="margin-top:10px"><label class="b p" style="cursor:pointer">파일 선택 (.xlsx / .csv)<input type="file" accept=".xlsx,.csv,.txt" style="display:none" onchange="miFile(this.files[0]);this.value=''"></label><span id="miSheet"></span><span id="miName" class="muted"></span>
-    <span style="flex:1"></span><a class="lk" style="font-size:12px" onclick="miTemplate()">빈 양식 받기 (CSV)</a></div>
+    <span style="flex:1"></span><a class="lk" style="font-size:12px" onclick="miTemplate()">빈 양식 받기 (엑셀)</a></div>
   <textarea id="miPaste" placeholder="또는 엑셀에서 복사한 범위를 여기에 붙여넣기 (Ctrl+V) — 제목행 포함" style="min-height:80px;margin-top:8px;font-family:Consolas,monospace;font-size:12px" oninput="miSet(parseRows(this.value),'붙여넣기')"></textarea>
   <div id="miMap" style="margin-top:10px"></div>`,
   [{label:'취소',fn:closeModal},{label:'등록',cls:'p',fn:miApply}]);
