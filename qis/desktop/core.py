@@ -1,6 +1,6 @@
 """데스크톱 프로그램의 바탕 — 창(pywebview) 없이 동작 · 시험할 수 있는 부분.
 
-· 설정: 데이터 폴더의 desktop.json  {"mode": "solo" | "lan", "solo_name": 이름}
+· 설정: 데이터 폴더의 desktop.json  {"mode": "solo" | "lan", "solo_name": 이름, "solo_login": true/false}
     solo (이 PC 혼자 쓰기)  127.0.0.1 에만 열고(외부 접속 차단) 빈 포트 자동 선택, 로그인 없이 로컬 관리자로 입장
     lan  (사내 서버로 쓰기) 기존 서버판처럼 사내망에 공개(0.0.0.0:qis.json 의 port) · 로그인
 · 서버 켜기/끄기: ServerRunner — 같은 프로세스 안의 uvicorn. 끌 때 WAL을 DB 파일에 합치고 닫음
@@ -38,6 +38,7 @@ RUNNING = "desktop.running"
 class DesktopSettings:
     mode: str = ""               # 비어 있으면 첫 실행 — 모드를 고르는 화면부터
     solo_name: str = ""          # 혼자 쓰기: 기록(담당자 · 변경 이력)에 남을 이름
+    solo_login: bool = False     # 혼자 쓰기: 켜면 비밀번호로 잠금 — 프로그램이 자동 입장 대신 로그인 화면을 띄움
 
     @staticmethod
     def path(data_dir: Path) -> Path:
@@ -53,6 +54,7 @@ class DesktopSettings:
                 for k in ("mode", "solo_name"):
                     if isinstance(d.get(k), str):
                         setattr(s, k, d[k])
+                s.solo_login = bool(d.get("solo_login"))
             except (OSError, ValueError):
                 log.exception("desktop.json 을 읽지 못함 — 첫 실행처럼 진행")
         if s.mode not in MODES:
@@ -75,24 +77,39 @@ def desktop_config(data_dir: Path) -> Config:
 
 
 # ---------------------------------------------------------------- 계정
-def ensure_solo_user(cfg: Config, name: str = "") -> dict:
-    """혼자 쓰기용 로컬 관리자(local)를 만들거나 되살림. 비밀번호는 무작위 — 로그인 화면으로는 못 들어옴."""
+def ensure_solo_user(cfg: Config, name: str = "", password: str | None = None, *, login: bool = False) -> dict:
+    """혼자 쓰기용 로컬 관리자(local)를 만들거나 되살림.
+    · 자동 입장(login=False): 비밀번호는 무작위 — 로그인 화면으로는 못 들어옴. 지난 자동 입장 세션은 모두 끝냄.
+    · 비밀번호 잠금(login=True): password 가 주어지면 그 비밀번호로 정함(없으면 기존 비밀번호 유지). 세션은 그대로
+      두어 프로그램을 다시 열어도 24시간 안이면 다시 입력하지 않아도 됨."""
     name = (name or "").strip() or "이 PC 사용자"
+    if login and password is not None:
+        p = pw_problem(password, SOLO_USER)
+        if p:
+            raise AuthError(p, "weak_password")
     db = open_db(cfg)
     try:
         u = db.q1("SELECT * FROM users WHERE lower(username)=lower(?)", (SOLO_USER,))
+        pw = password if (login and password is not None) else ("Ql" + secrets.token_urlsafe(24) + "9")
         if not u:
-            Auth(db, cfg).create_user(SOLO_USER, name, "admin", "Ql" + secrets.token_urlsafe(24) + "9",
-                                      must_change=False)
+            Auth(db, cfg).create_user(SOLO_USER, name, "admin", pw, must_change=False)
         else:
             with db.tx() as c:
                 c.execute("UPDATE users SET role='admin', active=1, must_change=0, name=? WHERE id=?", (name, u["id"]))
                 if u["name"] != name or u["role"] != "admin" or not u["active"]:
                     db.audit(c, action="user.update", coll="users", rec_id=str(u["id"]),
                              label=f"{name} ({SOLO_USER})", detail={"desktop": "solo"})
+                if login and password is not None:
+                    c.execute("UPDATE users SET pw_hash=?, fail_count=0, locked_until=NULL WHERE id=?",
+                              (hash_pw(password), u["id"]))
+                    db.audit(c, action="user.reset_password", coll="users", rec_id=str(u["id"]),
+                             label=f"{name} ({SOLO_USER})", detail={"desktop": "solo", "login": True})
+                elif not login:
+                    c.execute("UPDATE users SET pw_hash=? WHERE id=?", (hash_pw(pw), u["id"]))   # 잠금 해제: 다시 무작위
         u = db.q1("SELECT id, username, name, role FROM users WHERE lower(username)=lower(?)", (SOLO_USER,))
-        with db.tx() as c:   # 지난 실행의 자동 입장 세션은 모두 끝냄 (실행마다 새 열쇠 · 새 세션)
-            c.execute("DELETE FROM sessions WHERE user_id=?", (u["id"],))
+        if not login:
+            with db.tx() as c:   # 지난 실행의 자동 입장 세션은 모두 끝냄 (실행마다 새 열쇠 · 새 세션)
+                c.execute("DELETE FROM sessions WHERE user_id=?", (u["id"],))
         return dict(u)
     finally:
         db.close()
@@ -205,8 +222,8 @@ class ServerRunner:
 
     @property
     def enter_url(self) -> str:
-        """창이 처음 여는 주소: 혼자 쓰기는 자동 입장, 사내 서버는 로그인 화면."""
-        if self.mode == "solo":
+        """창이 처음 여는 주소: 혼자 쓰기(잠금 없음)는 자동 입장, 사내 서버 · 비밀번호 잠금은 로그인 화면."""
+        if self.mode == "solo" and not self.settings.solo_login:
             return f"{self.base_url}/desktop/enter?k={self.token}"
         return f"{self.base_url}/desktop/window?k={self.token}"
 
@@ -247,7 +264,8 @@ class ServerRunner:
         self.host = self.cfg.host
         self.sock = self._open_socket(self.host, 0 if self.mode == "solo" else int(self.cfg.port))
         self.port = self.sock.getsockname()[1]
-        desktop = {"mode": self.mode, "token": self.token, "user": SOLO_USER}
+        desktop = {"mode": self.mode, "token": self.token, "user": SOLO_USER,
+                   "login": self.mode == "lan" or bool(self.settings.solo_login)}
         try:
             self.app = create_app(self.cfg, desktop=desktop)
             kw = {}
@@ -316,7 +334,7 @@ class ServerRunner:
 def prepare(cfg: Config, settings: DesktopSettings) -> None:
     """모드에 맞게 DB · 계정을 준비. 사내 서버 모드는 관리자 계정이 이미 있어야 함."""
     if settings.mode == "solo":
-        ensure_solo_user(cfg, settings.solo_name)
+        ensure_solo_user(cfg, settings.solo_name, login=settings.solo_login)
     elif settings.mode == "lan":
         db = open_db(cfg)
         try:

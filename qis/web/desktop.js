@@ -7,7 +7,7 @@
 (function(){
   'use strict';
   var info={};try{info=JSON.parse(document.getElementById('qisServer').textContent)||{}}catch(e){}
-  var solo=info.desktop==='solo';
+  var solo=info.desktop==='solo',auto=solo&&!info.desktopLogin;   // auto: 로그인 없이 자동 입장
   function api(){return window.pywebview&&window.pywebview.api}
   function withApi(fn){var a=api();if(a&&a.open_page)return fn(a);
     window.addEventListener('pywebviewready',function(){fn(api())},{once:true})}
@@ -74,9 +74,9 @@
           '데이터는 이 PC의 QIS 데이터 폴더에 저장됩니다 (메뉴 ‘파일 › 데이터 폴더 열기’).');
         return h};
     }
-    if(solo&&typeof window.srvLogout==='function')window.srvLogout=function(){say('이 PC 혼자 쓰기 모드에서는 로그인 없이 씁니다')};
+    if(auto&&typeof window.srvLogout==='function')window.srvLogout=function(){say('이 PC 혼자 쓰기 모드에서는 로그인 없이 씁니다')};
   });
-  if(solo){
+  if(auto){
     var st=document.createElement('style');
     st.textContent='button[onclick="srvLogout()"],button[onclick="location.href=\'/account\'"]{display:none!important}';
     (document.head||document.documentElement).appendChild(st);
