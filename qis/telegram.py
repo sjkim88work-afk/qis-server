@@ -1,8 +1,10 @@
-"""텔레그램 아침 요약 — 서버가 매일 정한 시각에 한 번 보낸다.
+"""아침 요약 알림 (텔레그램 · 팀즈) — 서버가 매일 정한 시각에 한 번 보낸다.
 
 화면(HTML판)의 '설정 › 알림 (텔레그램)'과 같은 내용(지연 · 오늘 기한 · 이슈 분류 대기)을 서버가 계산해
-텔레그램 그룹으로 보낸다. 아무도 접속하지 않아도 보내고, 사용자가 여럿이어도 한 번만 간다.
-봇 토큰은 데이터 폴더의 qis.json(서버 설정)에만 두고 화면에는 내려보내지 않는다.
+텔레그램 그룹 · 팀즈 채널(켜진 쪽 모두)로 보낸다. 아무도 접속하지 않아도 보내고, 사용자가 여럿이어도 한 번만 간다.
+봇 토큰 · 팀즈 웹훅 주소는 데이터 폴더의 qis.json(서버 설정)에만 두고 화면에는 내려보내지 않는다.
+팀즈는 옛 '수신 웹훅(Office 365 커넥터, webhook.office.com)'이 2026-05 에 끝나서 Workflows(Power Automate) 웹훅으로 보낸다:
+Teams › 채널 › 워크플로 › '웹훅 요청을 받으면 채널에 게시' → 받은 주소를 설정에 넣는다. 본문은 Adaptive Card.
 판정 기준은 화면의 lateInfo() · progDue() 와 같게 맞춘다 (바뀌면 여기도 같이).
 """
 from __future__ import annotations
@@ -271,6 +273,10 @@ class TelegramError(Exception):
     pass
 
 
+class TeamsError(TelegramError):
+    pass
+
+
 def tg_call(token: str, method: str, params: dict | None = None, timeout: float = 15) -> dict:
     if not token:
         raise TelegramError("봇 토큰이 없습니다")
@@ -291,31 +297,89 @@ def tg_call(token: str, method: str, params: dict | None = None, timeout: float 
     return j.get("result")
 
 
-class Telegram:
-    """설정(cfg.telegram_*)대로 매일 한 번 보냄. 보낸 날짜는 DB meta 'telegram_sent'."""
+# ---- 팀즈 (Workflows 웹훅) ----
+def teams_card(text: str) -> dict:
+    """요약 글을 Adaptive Card 로 — 첫 줄은 제목(굵게), 나머지는 줄바꿈 그대로."""
+    lines = (text or "").strip().split("\n")
+    body = [{"type": "TextBlock", "text": lines[0], "weight": "Bolder", "size": "Medium", "wrap": True}]
+    rest = "\n".join(lines[1:]).strip()
+    if rest:
+        body.append({"type": "TextBlock", "text": rest, "wrap": True})
+    return {"type": "message", "attachments": [{
+        "contentType": "application/vnd.microsoft.card.adaptive", "contentUrl": None,
+        "content": {"$schema": "http://adaptivecards.io/schemas/adaptive-card.json", "type": "AdaptiveCard",
+                    "version": "1.4", "msteams": {"width": "Full"}, "body": body}}]}
 
-    def __init__(self, db, store, cfg, call=tg_call):
-        self.db, self.store, self.cfg, self._call = db, store, cfg, call
+
+def teams_check_url(url: str) -> str:
+    u = (url or "").strip()
+    if not u:
+        return ""
+    if not u.lower().startswith("https://"):
+        raise ValueError("팀즈 웹훅 주소는 https:// 로 시작해야 합니다")
+    if "webhook.office.com" in u.lower():
+        raise ValueError("옛 '수신 웹훅'(webhook.office.com) 주소입니다 — 2026년 5월에 종료되었습니다. "
+                         "Teams › 채널 › 워크플로 › '웹훅 요청을 받으면 채널에 게시'로 새 주소를 받으세요")
+    return u
+
+
+def teams_post(url: str, text: str, timeout: float = 15) -> None:
+    if not url:
+        raise TeamsError("팀즈 웹훅 주소가 없습니다")
+    body = json.dumps(teams_card(text), ensure_ascii=False).encode("utf-8")
+    req = urllib.request.Request(url, data=body, headers={"Content-Type": "application/json"})
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            if r.status >= 300:
+                raise TeamsError(f"팀즈 응답 오류 ({r.status})")
+    except urllib.error.HTTPError as e:
+        detail = ""
+        try:
+            detail = e.read().decode("utf-8", "replace")[:200]
+        except Exception:
+            pass
+        raise TeamsError(f"팀즈 응답 오류 ({e.code}) {detail}".strip()) from None
+    except (urllib.error.URLError, OSError, TimeoutError) as e:
+        raise TeamsError("팀즈에 연결하지 못했습니다 — 인터넷 · 회사망 차단을 확인하세요") from e
+
+
+class Telegram:
+    """설정(cfg.telegram_* · cfg.teams_*)대로 매일 한 번 보냄. 보낸 날짜는 DB meta 'telegram_sent'.
+    (이름은 처음 만든 텔레그램 그대로 — 팀즈도 같은 일정 · 같은 글을 보낸다)"""
+
+    def __init__(self, db, store, cfg, call=tg_call, post_teams=teams_post):
+        self.db, self.store, self.cfg, self._call, self._teams = db, store, cfg, call, post_teams
         self._stop = threading.Event()
         self._lock = threading.Lock()
 
     # 설정
     @property
-    def enabled(self) -> bool:
+    def tg_enabled(self) -> bool:
         return bool(self.cfg.telegram_on and self.cfg.telegram_token and self.cfg.telegram_chat)
+
+    @property
+    def teams_enabled(self) -> bool:
+        return bool(self.cfg.teams_on and self.cfg.teams_webhook)
+
+    @property
+    def enabled(self) -> bool:
+        return self.tg_enabled or self.teams_enabled
 
     def status(self) -> dict:
         err = self.db.get_meta("telegram_error")
         return {"on": bool(self.cfg.telegram_on), "token_set": bool(self.cfg.telegram_token), "chat": self.cfg.telegram_chat,
                 "time": self.cfg.telegram_time, "weekend": bool(self.cfg.telegram_weekend), "detail": bool(self.cfg.telegram_detail),
+                "teams_on": bool(self.cfg.teams_on), "teams_webhook_set": bool(self.cfg.teams_webhook),
                 "sent": self.db.get_meta("telegram_sent") or "", "error": json.loads(err) if err else None}
 
     def update(self, ch: dict) -> None:
-        for k in ("on", "token", "chat", "time", "weekend", "detail"):
+        for k in ("on", "token", "chat", "time", "weekend", "detail", "teams_on", "teams_webhook"):
             if k in ch and ch[k] is not None:
                 v = ch[k]
-                if k in ("on", "weekend", "detail"):
+                if k in ("on", "weekend", "detail", "teams_on"):
                     v = bool(v)
+                elif k == "teams_webhook":
+                    v = teams_check_url(str(v))
                 elif k == "time":
                     v = str(v).strip()[:5] or "08:00"
                     try:
@@ -324,7 +388,7 @@ class Telegram:
                         raise ValueError("시각은 HH:MM 형식으로 입력하세요")
                 else:
                     v = str(v).strip()
-                setattr(self.cfg, "telegram_" + k, v)
+                setattr(self.cfg, k if k.startswith("teams_") else "telegram_" + k, v)
         self.cfg.save()
 
     # 보내기
@@ -336,14 +400,36 @@ class Telegram:
             raise TelegramError("받을 곳(chat ID)이 없습니다")
         self._call(self.cfg.telegram_token, "sendMessage", {"chat_id": self.cfg.telegram_chat, "text": text, "disable_web_page_preview": "true"})
 
+    def send_teams(self, text: str) -> None:
+        self._teams(self.cfg.teams_webhook, text)
+
     def send_summary(self, reason="auto", user=None) -> str:
+        """보냄 — 자동(reason="auto")이면 '자동 전송'을 켠 채널만, 손으로 누른 전송이면 설정된 채널 모두.
+        하나라도 성공하면 '보낸 날'로 기록, 실패한 채널은 오류로 남김."""
+        auto = reason == "auto"
         with self._lock:
             text = self.summary()
-            self.send_text(text)
+            targets = []
+            if self.cfg.telegram_token and self.cfg.telegram_chat and (not auto or self.cfg.telegram_on):
+                targets.append(("telegram", self.send_text))
+            if self.cfg.teams_webhook and (not auto or self.cfg.teams_on):
+                targets.append(("teams", self.send_teams))
+            if not targets:
+                raise TelegramError("보낼 곳이 없습니다 — 텔레그램 또는 팀즈를 설정하세요")
+            sent, errors = [], []
+            for name, fn in targets:
+                try:
+                    fn(text)
+                    sent.append(name)
+                except TelegramError as e:
+                    errors.append(f"{name}: {e}")
+            if not sent:
+                raise TelegramError(" · ".join(errors))
             self.db.set_meta("telegram_sent", date.today().isoformat())
-            self.db.set_meta("telegram_error", "")
+            self.db.set_meta("telegram_error", json.dumps({"at": now(), "error": " · ".join(errors)}, ensure_ascii=False) if errors else "")
             with self.db.tx() as c:
-                self.db.audit(c, user=user, action="telegram", label="아침 요약 전송", detail={"reason": reason, "chars": len(text)})
+                self.db.audit(c, user=user, action="telegram", label="아침 요약 전송",
+                              detail={"reason": reason, "chars": len(text), "to": sent, **({"failed": errors} if errors else {})})
             return text
 
     def find_chats(self) -> list[dict]:

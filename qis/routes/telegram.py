@@ -24,7 +24,7 @@ async def telegram_set(request: Request, user=Depends(admin_only)):
         raise HTTPException(400, str(e))
     with s.db.tx() as c:
         s.db.audit(c, user=user, action="telegram.update", label="알림 설정 변경",
-                   detail={k: ("***" if k == "token" else v) for k, v in (ch or {}).items()}, ip=ip_of(request))
+                   detail={k: ("***" if k in ("token", "teams_webhook") else v) for k, v in (ch or {}).items()}, ip=ip_of(request))
     return s.telegram.status()
 
 
@@ -37,6 +37,15 @@ def telegram_preview(request: Request, user=Depends(admin_only)):
 def telegram_test(request: Request, user=Depends(admin_only)):
     try:
         st(request).telegram.send_text("[QIS] 텔레그램 알림 시험 전송입니다.")
+    except TelegramError as e:
+        raise HTTPException(400, str(e))
+    return {"ok": True}
+
+
+@router.post("/teams/test")
+def teams_test(request: Request, user=Depends(admin_only)):
+    try:
+        st(request).telegram.send_teams("[QIS] 팀즈 알림 시험 전송입니다.\n이 글이 보이면 설정이 맞습니다.")
     except TelegramError as e:
         raise HTTPException(400, str(e))
     return {"ok": True}

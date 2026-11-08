@@ -68,7 +68,7 @@ async function api(path,opt={}){
 }
 const post=(p,b,m='POST')=>api(p,{method:m,body:JSON.stringify(b||{})});
 const fmt=t=>{if(!t)return '';const d=new Date(t);if(isNaN(d))return t;const p=n=>String(n).padStart(2,'0');return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`};
-const TABS=[['users','사용자'],['audit','변경 이력'],['backup','백업 · 데이터'],['telegram','알림 (텔레그램)']];
+const TABS=[['users','사용자'],['audit','변경 이력'],['backup','백업 · 데이터'],['telegram','알림 (텔레그램 · 팀즈)']];
 const ROLES={viewer:'조회',editor:'작성',admin:'관리자'};
 const ROLE_HELP={viewer:'보기 · 검색 · 출력만',editor:'등록 · 수정 (기준정보 삭제 · BOM 교체 · 설정 제외)',admin:'모든 기능 + 사용자 · 이력 · 백업 관리'};
 const ACT={create:'등록',update:'수정',delete:'삭제',restore:'복원','file.add':'첨부 추가','file.delete':'첨부 삭제',login:'로그인','login.fail':'로그인 실패',logout:'로그아웃',
@@ -193,7 +193,7 @@ async function resetAll(){
     toast(`비웠습니다 — ${Object.entries(r.cleared).map(([k,v])=>`${COLL[k]||k} ${v}`).join(' · ')||'기록 없음'} · 백업 ${r.backup}`);render()}
   catch(e){toast(e.message)}
 }
-/* ---- 알림 (텔레그램) ---- */
+/* ---- 알림 (텔레그램 · 팀즈) ---- */
 const TG={chats:null};
 async function renderTelegram(){
   const t=await api('/api/admin/telegram');
@@ -209,8 +209,15 @@ async function renderTelegram(){
     <div>세부 내용 포함</div><div><label>${ck('detail',t.detail)} 조치 제목 · 이슈 제목 · 다음 행동 문구까지</label> <span class="muted">— 끄면 번호 · 구분 · 기한만 (회사 정보 반출 규정에 맞춰 고르세요)</span></div>
     <div>마지막 전송</div><div>${t.sent?esc(t.sent):'<span class="muted">아직 없음</span>'}${t.error?` <span class="bg bad">${esc(fmt(t.error.at))}</span> ${esc(t.error.error)}`:''}</div></div>
     <div class="row" style="margin-top:12px"><button class="b" onclick="tgPreview()">미리 보기</button><button class="b p" onclick="tgSend(this)" ${t.token_set&&t.chat?'':'disabled'}>지금 요약 보내기</button></div>
-    <pre id="tgPrev" class="muted" style="white-space:pre-wrap;display:none;margin-top:10px;font-size:13px;line-height:1.6"></pre></div>`;
+    <pre id="tgPrev" class="muted" style="white-space:pre-wrap;display:none;margin-top:10px;font-size:13px;line-height:1.6"></pre></div>
+  <div class="card"><h2>팀즈(Teams) 채널로도 보내기</h2><p class="help">같은 요약을 같은 시각에 팀즈 채널에 카드로 올립니다. 텔레그램과 함께 켜거나 팀즈만 켜도 됩니다. 웹훅 주소는 서버 설정 파일(qis.json)에만 저장됩니다.<br>
+    설정 순서: ① 팀즈에서 받을 채널 이름 옆 <b>···</b> → <b>워크플로</b> → ‘<b>웹훅 요청을 받으면 채널에 게시</b>’ 선택 ② 흐름 이름 · 팀 · 채널 확인 후 만들기 ③ 마지막 화면의 <b>URL 복사</b> → 아래에 붙여 넣고 저장 ④ 시험 전송 ⑤ 자동 전송 켜기<br>
+    <span class="muted">옛 ‘수신 웹훅(Incoming Webhook)’ 앱의 webhook.office.com 주소는 2026년 5월에 종료되어 쓸 수 없습니다. 워크플로가 안 보이면 회사 IT에 Power Automate(워크플로) 앱 사용을 요청하세요.</span></p>
+    <div class="kv"><div>웹훅 주소</div><div><input id="tmHook" type="password" placeholder="${t.teams_webhook_set?'저장됨 — 바꾸려면 새 주소 입력':'https://….powerplatform.com/…/workflows/…'}" style="width:360px" autocomplete="off"> <button class="b" onclick="tgSet({teams_webhook:$('#tmHook').value.trim()})">저장</button> ${t.teams_webhook_set?'<span class="bg ok">저장됨</span>':'<span class="bg warn">없음</span>'}</div>
+    <div>시험 전송</div><div><button class="b" onclick="tmTest(this)" ${t.teams_webhook_set?'':'disabled'}>시험 카드 보내기</button></div>
+    <div>자동 전송</div><div><label>${ck('teams_on',t.teams_on)} 켜기</label> <span class="muted">— 보낼 시각 · 주말 · 세부 내용은 위 텔레그램 설정을 같이 씁니다</span></div></div></div>`;
 }
+async function tmTest(btn){btn.disabled=true;try{await post('/api/admin/telegram/teams/test');toast('시험 카드를 보냈습니다 — 팀즈 채널에서 확인하세요 (몇 초 걸릴 수 있음)')}catch(e){toast('전송 실패: '+e.message)}btn.disabled=false}
 const tgChatBtns=()=>TG.chats.length?TG.chats.map(c=>`<button class="b" onclick="tgSet({chat:${jsq(c.id)}})">${esc(c.title)} <span class="muted">(${esc(c.type)} · ${esc(c.id)})</span></button>`).join(''):'<span class="muted">찾은 대화가 없습니다 — 봇을 그룹에 초대한 뒤 그 그룹에 아무 메시지나 한 번 보내고 다시 누르세요</span>';
 async function tgSet(ch){try{await post('/api/admin/telegram',ch);toast('저장했습니다')}catch(e){toast(e.message)}render()}
 async function tgFind(){const b=$('#tgChats');b.innerHTML='<span class="muted">찾는 중…</span>';try{const {chats}=await post('/api/admin/telegram/chats');TG.chats=chats;b.innerHTML=tgChatBtns()}catch(e){b.innerHTML=`<span class="bg bad">${esc(e.message)}</span>`}}

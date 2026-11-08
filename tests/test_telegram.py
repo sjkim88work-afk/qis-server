@@ -171,3 +171,84 @@ def test_loop_sends_and_records_error(env, monkeypatch):
     fake.fail = None
     tg.send_summary("auto")
     assert tg.status()["sent"] and tg.status()["error"] is None
+
+
+# ---------------------------------------------------------------- 팀즈 (Workflows 웹훅)
+from qis.telegram import TeamsError, teams_card, teams_check_url  # noqa: E402
+
+
+class FakeTeams:
+    def __init__(self):
+        self.calls, self.fail = [], None
+
+    def __call__(self, url, text, timeout=15):
+        self.calls.append((url, text))
+        if self.fail:
+            raise TeamsError(self.fail)
+
+
+def test_teams_card_and_url_check():
+    c = teams_card("아침 품질 요약 11/08\n지연 2건\n· NCR-1 통보 지연")
+    body = c["attachments"][0]["content"]["body"]
+    assert c["type"] == "message" and c["attachments"][0]["contentType"] == "application/vnd.microsoft.card.adaptive"
+    assert body[0]["text"] == "아침 품질 요약 11/08" and body[0]["weight"] == "Bolder"
+    assert body[1]["text"] == "지연 2건\n· NCR-1 통보 지연" and body[1]["wrap"] is True
+    assert teams_check_url("  https://x.powerplatform.com/w/1  ") == "https://x.powerplatform.com/w/1"
+    assert teams_check_url("") == ""
+    with pytest.raises(ValueError):
+        teams_check_url("http://x.powerplatform.com/w/1")
+    with pytest.raises(ValueError, match="webhook.office.com"):
+        teams_check_url("https://abc.webhook.office.com/webhookb2/…")
+
+
+def test_teams_admin_api(env):
+    app, cfg = env
+    tg, tm = FakeTG(), FakeTeams()
+    app.state.telegram._call, app.state.telegram._teams = tg, tm
+    adm = login(app, "admin", "Qadm2026x")
+    # 웹훅 저장: 화면 · 이력에는 주소가 안 나감, qis.json 에만
+    bad = adm.post("/api/admin/telegram", json={"teams_webhook": "https://a.webhook.office.com/x"}, headers=H)
+    assert bad.status_code == 400 and "2026" in bad.json()["message"]
+    r = adm.post("/api/admin/telegram", json={"teams_webhook": "https://p.powerplatform.com/w/1", "teams_on": True}, headers=H).json()
+    assert r["teams_webhook_set"] and r["teams_on"] and "powerplatform" not in json.dumps(r)
+    assert load_config(cfg.data_dir).teams_webhook == "https://p.powerplatform.com/w/1"
+    assert "powerplatform" not in json.dumps(adm.get("/api/admin/audit?action=telegram.update").json()["items"])
+    # 시험 전송
+    assert adm.post("/api/admin/telegram/teams/test", headers=H).status_code == 200
+    assert tm.calls[-1][0] == "https://p.powerplatform.com/w/1" and "시험" in tm.calls[-1][1]
+    # 팀즈만 설정된 상태에서 지금 보내기 → 팀즈로만
+    r = adm.post("/api/admin/telegram/send", headers=H)
+    assert r.status_code == 200 and tm.calls[-1][1].startswith(r.json()["text"][:20]) and not tg.calls
+    au = adm.get("/api/admin/audit?action=telegram").json()["items"][0]
+    assert au["detail"]["to"] == ["teams"]
+    # 텔레그램도 설정 → 둘 다
+    adm.post("/api/admin/telegram", json={"token": "1:A", "chat": "-1", "on": True}, headers=H)
+    n_tg, n_tm = len(tg.calls), len(tm.calls)
+    adm.post("/api/admin/telegram/send", headers=H)
+    assert len(tg.calls) == n_tg + 1 and len(tm.calls) == n_tm + 1
+    # 한쪽 실패: 성공한 쪽이 있으면 200 · 보낸 날 기록 · 오류 표시
+    tm.fail = "팀즈 응답 오류 (401)"
+    app.state.db.set_meta("telegram_sent", "")
+    r = adm.post("/api/admin/telegram/send", headers=H)
+    assert r.status_code == 200
+    st = adm.get("/api/admin/telegram").json()
+    assert st["sent"] and "teams" in st["error"]["error"] and "401" in st["error"]["error"]
+    # 둘 다 실패 → 400 · 날짜 안 남김
+    tg.fail = "chat not found"
+    app.state.db.set_meta("telegram_sent", "")
+    r = adm.post("/api/admin/telegram/send", headers=H)
+    assert r.status_code == 400 and "teams" in r.json()["message"] and "telegram" in r.json()["message"]
+    assert not app.state.db.get_meta("telegram_sent")
+
+
+def test_auto_send_respects_each_channel_switch(env):
+    app, cfg = env
+    tg, tm = FakeTG(), FakeTeams()
+    t = app.state.telegram
+    t._call, t._teams = tg, tm
+    t.update({"token": "1:A", "chat": "-1", "on": False, "teams_webhook": "https://p.powerplatform.com/w/1", "teams_on": True})
+    assert t.enabled and not t.tg_enabled and t.teams_enabled
+    t.send_summary("auto")
+    assert tm.calls and not tg.calls                      # 자동: 켠 채널만
+    t.send_summary("manual")
+    assert tg.calls                                       # 손으로: 설정된 채널 모두
