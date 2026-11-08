@@ -37,21 +37,29 @@ function ready(fn){if(api())fn();else window.addEventListener('pywebviewready',f
 """
 
 
-def setup_page(*, current: str = "", solo_name: str = "", admin: str = "admin", admin_name: str = "",
-               port: int = 8080, error: str = "", can_cancel: bool = False, version: str = "") -> str:
+def setup_page(*, current: str = "", solo_name: str = "", solo_login: bool = False, admin: str = "admin",
+               admin_name: str = "", port: int = 8080, error: str = "", can_cancel: bool = False,
+               version: str = "") -> str:
     init = json.dumps({"mode": current or "solo"})
     body = f"""
 <h1>QIS 사용 방식 고르기</h1>
 <div class=muted>QIS 품질정보시스템 {html.escape(version)} · 나중에 메뉴 ‘설정 › 사용 방식 바꾸기’에서 바꿀 수 있습니다. 데이터는 그대로 유지됩니다.</div>
 <div class=cards>
   <div class=card id=c_solo onclick="pick('solo')"><h2>🖥 이 PC 혼자 쓰기</h2>
-    <ul><li>로그인 없이 바로 시작</li><li>이 PC 안에서만 열림 (다른 PC · 핸드폰 접속 차단)</li><li>개인 업무 · 시험용</li></ul></div>
+    <ul><li>바로 시작 (원하면 비밀번호 잠금)</li><li>이 PC 안에서만 열림 (다른 PC · 핸드폰 접속 차단)</li><li>개인 업무 · 시험용</li></ul></div>
   <div class=card id=c_lan onclick="pick('lan')"><h2>🏢 사내 서버로 쓰기</h2>
     <ul><li>같은 사내망의 다른 PC · 핸드폰에서 접속</li><li>사람마다 아이디 · 비밀번호로 로그인, 권한(조회 · 작성 · 관리자)</li><li>이 PC가 켜져 있고 QIS가 열려 있어야 함</li></ul></div>
 </div>
 <div class=box id=f_solo>
   <label for=sn>내 이름 <span class=muted>(담당자 · 변경 이력에 남는 이름)</span></label>
   <input id=sn value="{html.escape(solo_name)}" placeholder="예: 김선중">
+  <label style="display:flex;gap:8px;align-items:center;margin-top:14px;cursor:pointer"><input type=checkbox id=sl{' checked' if solo_login else ''} onchange="slx()" style="width:auto;margin:0">
+    비밀번호로 잠그기 <span class=muted>— 프로그램을 열 때 로그인 화면이 뜹니다 (자리 비움 · 공용 PC)</span></label>
+  <div id=f_sl style="display:none;margin-top:10px">
+    <div class=row><div><label for=sp>비밀번호 <span class=muted>(8자 이상, 영문+숫자{', 바꾸지 않으려면 비워 두기' if solo_login else ''})</span></label><input id=sp type=password autocomplete="new-password"></div>
+    <div><label for=sp2>한 번 더</label><input id=sp2 type=password autocomplete="new-password"></div></div>
+    <div class=muted>로그인 아이디는 <b>local</b> 입니다. 잊으면 ‘설정 › 사용 방식 바꾸기’에서 새로 정할 수 있습니다.</div>
+  </div>
 </div>
 <div class=box id=f_lan style="display:none">
   <div class=muted>관리자 계정 — 이 계정으로 로그인해 관리 화면에서 다른 사용자를 추가합니다. 이미 있는 아이디면 비밀번호를 새로 정합니다.</div>
@@ -72,9 +80,16 @@ function $(i){{return document.getElementById(i)}}
 function pick(m){{mode=m;$('c_solo').classList.toggle('on',m==='solo');$('c_lan').classList.toggle('on',m==='lan');
   $('f_solo').style.display=m==='solo'?'':'none';$('f_lan').style.display=m==='lan'?'':'none'}}
 pick(mode);
+var hadPw={json.dumps(bool(solo_login))};
+function slx(){{$('f_sl').style.display=$('sl').checked?'':'none'}}
+slx();
 function go(){{
-  var d={{mode:mode,solo_name:$('sn').value,admin:$('au').value,admin_name:$('an').value,password:$('ap').value,port:$('pt').value}};
+  var d={{mode:mode,solo_name:$('sn').value,solo_login:$('sl').checked,solo_password:$('sp').value,admin:$('au').value,admin_name:$('an').value,password:$('ap').value,port:$('pt').value}};
   if(mode==='lan'&&$('ap').value!==$('ap2').value){{$('err').textContent='두 번 입력한 비밀번호가 다릅니다';return}}
+  if(mode==='solo'&&$('sl').checked){{
+    if($('sp').value!==$('sp2').value){{$('err').textContent='두 번 입력한 비밀번호가 다릅니다';return}}
+    if(!$('sp').value&&!hadPw){{$('err').textContent='잠그려면 비밀번호를 정하세요';return}}
+  }}
   $('go').disabled=true;$('err').textContent='시작하는 중…';
   ready(function(){{api().setup(d).then(function(r){{if(r&&r.error){{$('err').textContent=r.error;$('go').disabled=false}}}})}});
 }}

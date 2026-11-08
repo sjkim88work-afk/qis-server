@@ -50,6 +50,8 @@ def mount(app: FastAPI) -> None:
     """화면 라우트. 데스크톱 전용 경로는 그 모드로 띄울 때만 생긴다 (app.state.desktop)."""
     desktop = app.state.desktop
     solo = bool(desktop and desktop.get("mode") == "solo")
+    auto = solo and not desktop.get("login")        # 혼자 쓰기 · 잠금 없음: 비밀번호 없이 자동 입장
+    solo_login = solo and not auto                  # 혼자 쓰기 · 비밀번호 잠금: 로그인 화면 (아이디는 local 고정)
 
     @app.get("/", response_class=HTMLResponse)
     def home(request: Request):
@@ -63,6 +65,7 @@ def mount(app: FastAPI) -> None:
         win = bool(desktop) and in_window(request)
         if win:
             info["desktop"] = desktop.get("mode")
+            info["desktopLogin"] = bool(desktop.get("login"))
         tag = '<script id="qisServer" type="application/json">' + \
               json.dumps(info, ensure_ascii=False).replace("</", "<\\/") + "</script>"
         if win:   # 데스크톱 창 보조 (새 창 · 보고서 창 · 혼자 쓰기 화면 정리) — 화면 파일은 그대로
@@ -73,8 +76,15 @@ def mount(app: FastAPI) -> None:
     def login_page(request: Request):
         if page_user(request):
             return RedirectResponse("/", status_code=303)
-        if solo:   # 혼자 쓰기: 비밀번호 없이 다시 들어가기
+        if auto:   # 혼자 쓰기: 비밀번호 없이 다시 들어가기
             return static_page("desktop_enter.html")
+        if solo_login:   # 혼자 쓰기 · 잠금: 아이디는 이 PC 계정(local)으로 고정, 비밀번호만
+            h = (WEB / "login.html").read_text(encoding="utf-8")
+            tag = ('<script id="qisSolo">document.addEventListener("DOMContentLoaded",function(){'
+                   'var u=document.getElementById("u"),p=document.getElementById("p");if(!u||!p)return;'
+                   'u.value=' + json.dumps(desktop.get("user") or "local") + ';u.readOnly=true;u.tabIndex=-1;'
+                   'u.style.opacity=".6";p.focus()})</script>')
+            return HTMLResponse(h.replace("</head>", tag + "\n</head>", 1))
         return static_page("login.html")
 
     if desktop:
@@ -82,7 +92,7 @@ def mount(app: FastAPI) -> None:
         def desktop_js():
             return FileResponse(WEB / "desktop.js", media_type="text/javascript")
 
-    if desktop and not solo:
+    if desktop and not auto:
         @app.get("/desktop/window")
         def desktop_window(request: Request, k: str = ""):
             """사내 서버 모드: 프로그램 창 표시 쿠키만 붙이고 로그인 화면으로 (로그인은 그대로 필요)."""
@@ -91,7 +101,7 @@ def mount(app: FastAPI) -> None:
             set_win_cookie(request, resp)
             return resp
 
-    if solo:
+    if auto:
         @app.get("/desktop/enter")
         def desktop_enter(request: Request, k: str = ""):
             """프로그램이 창을 열 때만 아는 열쇠(k)로 로컬 관리자 세션을 연다 — 127.0.0.1 전용 실행에서만."""

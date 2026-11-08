@@ -256,7 +256,7 @@ class Controller:
 
     def _setup_html(self, error: str = "") -> str:
         s, c = self.settings, self.cfg
-        return pages.setup_page(current=s.mode, solo_name=s.solo_name, port=c.port, error=error,
+        return pages.setup_page(current=s.mode, solo_name=s.solo_name, solo_login=s.solo_login, port=c.port, error=error,
                                 can_cancel=bool(self.runner and self.runner.running), version=__version__)
 
     def lan_html(self) -> str:
@@ -319,6 +319,12 @@ class Controller:
             try:
                 if mode == "solo":
                     self.settings.solo_name = str(d.get("solo_name") or "").strip()[:40]
+                    login = bool(d.get("solo_login"))
+                    pw = str(d.get("solo_password") or "")
+                    if login and not pw and not self.settings.solo_login:
+                        return {"error": "잠그려면 비밀번호를 정하세요"}
+                    core.ensure_solo_user(self.cfg, self.settings.solo_name, pw if (login and pw) else None, login=login)
+                    self.settings.solo_login = login
                 else:
                     core.set_lan_admin(self.cfg, str(d.get("admin") or ""), str(d.get("admin_name") or ""),
                                        str(d.get("password") or ""))

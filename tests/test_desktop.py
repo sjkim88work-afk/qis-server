@@ -10,6 +10,7 @@ from pathlib import Path
 
 import pytest
 
+from qis.auth import AuthError
 from qis.desktop import core
 from qis.desktop.lock import AlreadyRunning, InstanceLock
 from qis.desktop.paths import user_data_dir
@@ -480,3 +481,71 @@ def test_solo_close_has_no_lan_warning(ctl, data):
     ctl.window.confirm = False
     assert ctl._on_closing() is False and _wait_destroyed(ctl.window)
     assert not any("사내 서버" in d for d in ctl.window.dialogs)
+
+
+# ---------------------------------------------------------------- 혼자 쓰기 · 비밀번호 잠금
+def test_solo_login_settings_roundtrip(data):
+    core.DesktopSettings(mode="solo", solo_name="김", solo_login=True).save(data)
+    s = core.DesktopSettings.load(data)
+    assert (s.mode, s.solo_name, s.solo_login) == ("solo", "김", True)
+    (data / "desktop.json").write_text('{"mode":"solo","solo_name":"김"}', encoding="utf-8")   # 예전 파일: 잠금 없음
+    assert core.DesktopSettings.load(data).solo_login is False
+
+
+def test_solo_login_shows_login_screen(data):
+    cfg = core.desktop_config(data)
+    st = core.DesktopSettings(mode="solo", solo_name="김선중", solo_login=True)
+    core.ensure_solo_user(cfg, "김선중", "Mypw2026x", login=True)       # 설정 화면에서 비밀번호를 정함
+    core.prepare(cfg, st)                                                # 다시 시작해도 비밀번호 유지
+    r = core.ServerRunner(cfg, st).start()
+    try:
+        assert r.enter_url.startswith(r.base_url + "/desktop/window?k=")  # 자동 입장 대신 창 표시 → 로그인
+        assert get(opener(), r.base_url + "/desktop/enter?k=" + r.token)[0] == 404   # 자동 입장 경로 없음
+        op = opener()
+        s, body, url = get(op, r.enter_url)
+        assert url.endswith("/login") and 'id="qisSolo"' in body and '"local"' in body   # 진짜 로그인 화면 · 아이디 고정
+        assert "pywebview" not in body.split('id="qisSolo"')[0] or "desktop_enter" not in body
+        s, body, _ = get(op, r.base_url + "/api/login", data=json.dumps({"username": "local", "password": "wrong"}).encode(),
+                         headers={"Content-Type": "application/json", "X-QIS": "1"})
+        assert s == 400
+        s, body, _ = get(op, r.base_url + "/api/login", data=json.dumps({"username": "local", "password": "Mypw2026x"}).encode(),
+                         headers={"Content-Type": "application/json", "X-QIS": "1"})
+        assert s == 200, body
+        s, body, _ = get(op, r.base_url + "/")
+        assert '"desktop": "solo"' in body and '"desktopLogin": true' in body and "/desktop.js" in body
+        with op.open(r.base_url + "/", timeout=10) as resp:
+            assert "'unsafe-eval'" in resp.headers["Content-Security-Policy"]     # 프로그램 창 표시 쿠키는 그대로
+    finally:
+        r.stop()
+    # 잠금 해제 → 비밀번호가 무작위로 바뀌어 로그인 화면으로는 못 들어옴, 자동 입장으로
+    st2 = core.DesktopSettings(mode="solo", solo_name="김선중", solo_login=False)
+    core.ensure_solo_user(cfg, "김선중", login=False)
+    core.prepare(cfg, st2)
+    r = core.ServerRunner(cfg, st2).start()
+    try:
+        assert "/desktop/enter?k=" in r.enter_url
+        s, _, _ = get(opener(), r.base_url + "/api/login", data=json.dumps({"username": "local", "password": "Mypw2026x"}).encode(),
+                      headers={"Content-Type": "application/json", "X-QIS": "1"})
+        assert s == 400
+    finally:
+        r.stop()
+
+
+def test_solo_login_weak_password_rejected(data):
+    cfg = core.desktop_config(data)
+    with pytest.raises(AuthError):
+        core.ensure_solo_user(cfg, "김", "1234", login=True)
+
+
+def test_apply_setup_solo_login(ctl, data):
+    assert ctl.apply_setup({"mode": "solo", "solo_name": "김", "solo_login": True, "solo_password": ""}) == \
+        {"error": "잠그려면 비밀번호를 정하세요"}
+    assert ctl.apply_setup({"mode": "solo", "solo_name": "김", "solo_login": True, "solo_password": "Mypw2026x"}) == {"ok": True}
+    assert ctl.settings.solo_login is True and core.DesktopSettings.load(data).solo_login is True
+    assert "/desktop/window?k=" in ctl.runner.enter_url
+    # 다시 설정 화면: 비밀번호를 비워 두면 기존 비밀번호 유지
+    ctl.m_switch_mode()
+    assert ctl.apply_setup({"mode": "solo", "solo_name": "김", "solo_login": True, "solo_password": ""}) == {"ok": True}
+    s, _, _ = get(opener(), ctl.runner.base_url + "/api/login", data=json.dumps({"username": "local", "password": "Mypw2026x"}).encode(),
+                  headers={"Content-Type": "application/json", "X-QIS": "1"})
+    assert s == 200
