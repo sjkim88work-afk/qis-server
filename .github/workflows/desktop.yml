@@ -148,7 +148,11 @@ jobs:
           $dir = "$env:LOCALAPPDATA\Programs\QIS"
           function RunWait($exe, $args, $what) {   # 창이 떠서 멈추면 5분 뒤 실패 처리 (영원히 기다리지 않게)
             $p = Start-Process -FilePath $exe -ArgumentList $args -PassThru
-            if (-not $p.WaitForExit(300000)) { $p.Kill(); throw "$what 이(가) 5분 안에 끝나지 않음 — 조용한 모드에서 창이 뜬 것으로 보임" }
+            if (-not $p.WaitForExit(120000)) {
+              Write-Host "== 떠 있는 창 =="; Get-Process | Where-Object { $_.MainWindowTitle } | ForEach-Object { Write-Host "$($_.ProcessName): $($_.MainWindowTitle)" }
+              if (Test-Path "$PWD\setup.log") { Write-Host "== setup.log 끝부분 =="; Get-Content "$PWD\setup.log" -Tail 40 }
+              Get-Process -Name "QIS-Setup*","*.tmp","QIS" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+              $p.Kill(); throw "$what 이(가) 2분 안에 끝나지 않음 — 조용한 모드에서 창이 뜬 것으로 보임" }
             return $p.ExitCode
           }
           $code = RunWait ".\QIS-Setup.exe" @("/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/SP-", "/LOG=$PWD\setup.log") "설치"
