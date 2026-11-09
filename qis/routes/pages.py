@@ -61,7 +61,8 @@ def mount(app: FastAPI) -> None:
         if u["must_change"]:
             return RedirectResponse("/account?first=1", status_code=303)
         info = {"user": u["username"], "name": u["name"], "role": u["role"], "roleName": ROLES[u["role"]],
-                "server": __version__, "company": request.app.state.cfg.company}
+                "server": __version__, "company": request.app.state.cfg.company,
+                "update": request.app.state.updater.public()}
         win = bool(desktop) and in_window(request)
         if win:
             info["desktop"] = desktop.get("mode")
