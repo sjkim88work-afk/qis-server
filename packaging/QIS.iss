@@ -71,6 +71,6 @@ Type: filesandordirs; Name: "{app}\_internal"
 [Code]
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 begin
-  if CurUninstallStep = usPostUninstall then
+  if (CurUninstallStep = usPostUninstall) and not UninstallSilent then
     MsgBox('QIS 프로그램을 제거했습니다.' + #13#10 + '기록 · 사진 · 백업은 데이터 폴더(%LOCALAPPDATA%\QIS)에 그대로 남아 있습니다. 다시 설치하면 그대로 이어집니다.', mbInformation, MB_OK);
 end;

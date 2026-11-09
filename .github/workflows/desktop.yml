@@ -146,15 +146,20 @@ jobs:
         shell: pwsh
         run: |
           $dir = "$env:LOCALAPPDATA\Programs\QIS"
-          $p = Start-Process -FilePath ".\QIS-Setup.exe" -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/SP-" -Wait -PassThru
-          if ($p.ExitCode -ne 0) { throw "설치 실패 (exit $($p.ExitCode))" }
+          function RunWait($exe, $args, $what) {   # 창이 떠서 멈추면 5분 뒤 실패 처리 (영원히 기다리지 않게)
+            $p = Start-Process -FilePath $exe -ArgumentList $args -PassThru
+            if (-not $p.WaitForExit(300000)) { $p.Kill(); throw "$what 이(가) 5분 안에 끝나지 않음 — 조용한 모드에서 창이 뜬 것으로 보임" }
+            return $p.ExitCode
+          }
+          $code = RunWait ".\QIS-Setup.exe" @("/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/SP-", "/LOG=$PWD\setup.log") "설치"
+          if ($code -ne 0) { Get-Content setup.log -Tail 30; throw "설치 실패 (exit $code)" }
           if (-not (Test-Path "$dir\QIS.exe")) { throw "설치 위치에 QIS.exe 가 없음: $dir" }
           $p = Start-Process -FilePath "$dir\QIS.exe" -ArgumentList "--selftest", "$PWD\installed.json" -Wait -PassThru
           Get-Content installed.json -Encoding utf8
           if ($p.ExitCode -ne 0) { throw "설치본 selftest 실패 (exit $($p.ExitCode))" }
           $un = Get-ChildItem "$dir\unins*.exe" | Select-Object -First 1
-          $p = Start-Process -FilePath $un.FullName -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART" -Wait -PassThru
-          if ($p.ExitCode -ne 0) { throw "제거 실패 (exit $($p.ExitCode))" }
+          $code = RunWait $un.FullName @("/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART") "제거"
+          if ($code -ne 0) { throw "제거 실패 (exit $code)" }
           Start-Sleep 3
           if (Test-Path "$dir\QIS.exe") { throw "제거 뒤에도 QIS.exe 가 남음" }
       - name: 인터넷에서 받은 zip 처럼 시험 (윈도우)
