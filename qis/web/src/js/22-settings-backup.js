@@ -37,7 +37,7 @@ function renderData(){
   const btn=(lbl,fn,cls='')=>`<button class="b ${cls}" onclick="${fn}">${lbl}</button>`;
   const P={};
   P.general=()=>sg('회사 정보',
-    sv('회사명','상단 바, 보고서, 부적합 통보서(Company)에 표시됩니다.',sTxt('company','예: EDSCHA-PHA'))+
+    sv('회사명','상단 바, 보고서, 부적합 통보서(Company)에 표시됩니다.',sTxt('company','예: 한빛오토'))+
     sv('부서명','보고서 머리글과 통보서 Department에 표시됩니다.',sTxt('dept','예: Quality'))+
     sv('발행자 전화','부적합 통보서 하단 연락처에 표시됩니다.',sTxt('issuerPhone','예: 031-000-0000'))+
     sv('발행자 이메일','부적합 통보서 하단 연락처에 표시됩니다.',sTxt('issuerEmail','예: qa@company.com')))+
