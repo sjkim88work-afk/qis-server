@@ -26,7 +26,8 @@ DefaultDirName={userpf}\QIS
 DefaultGroupName=QIS
 DisableProgramGroupPage=yes
 PrivilegesRequired=lowest
-PrivilegesRequiredOverridesAllowed=dialog
+; 모든 사용자(Program Files)에 설치하려면 관리자 권한으로 /ALLUSERS 로 실행 (dialog 옵션은 조용한 설치에서도 창을 띄워 쓰지 않음)
+PrivilegesRequiredOverridesAllowed=commandline
 OutputDir={#OutDir}
 OutputBaseFilename=QIS-Setup-{#AppVersion}
 #ifdef IconFile
