@@ -12,3 +12,8 @@ __pycache__/
 build/
 dist/
 *.spec.bak
+
+# 라이선스 발급 비밀키 · 발급한 파일 — 절대 커밋 금지
+*.key
+*.lic
+issued.jsonl

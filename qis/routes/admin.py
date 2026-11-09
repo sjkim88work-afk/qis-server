@@ -3,11 +3,12 @@ from __future__ import annotations
 
 import json
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse
 
 from ..auth import ROLES
 from ..files import has_body
+from ..license import LicenseError
 from .deps import admin_only, ip_of, st
 
 router = APIRouter(prefix="/api/admin")
@@ -87,6 +88,27 @@ def reset_all(request: Request, user, reason: str) -> dict:
     cnt = s.store.clear_all(user, ip=ip)
     cnt["files"] = s.files.clear_all(user, ip=ip)
     return {"cleared": cnt, "backup": info["db"]}
+
+
+@router.get("/license")
+def license_status(request: Request, user=Depends(admin_only)):
+    return st(request).license.status()
+
+
+@router.post("/license")
+async def license_install(request: Request, user=Depends(admin_only)):
+    """라이선스 파일 내용(text)을 올려 설치. 서명이 맞아야 저장."""
+    s = st(request)
+    b = await request.json()
+    try:
+        r = s.license.install(str(b.get("text") or ""))
+    except LicenseError as e:
+        raise HTTPException(400, str(e))
+    with s.db.tx() as c:
+        s.db.audit(c, user=user, action="license.install", label=r.get("customer") or "라이선스",
+                   detail={"id": r.get("id"), "seats": r.get("seats"), "maintenance_until": r.get("maintenance_until"),
+                           "registered": r.get("registered")}, ip=ip_of(request))
+    return r
 
 
 @router.get("/photos/missing")

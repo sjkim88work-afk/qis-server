@@ -201,3 +201,5 @@ ul.act{margin:0;padding-left:18px}ul.act li{margin:4px 0}
 @media print{.g2{grid-template-columns:1fr 1fr!important}ul.act button,.tw button{display:none!important}.print-only{display:flex!important}header,nav,.noprint,#toast,#undo,#actbar,#cfm{display:none!important}body{background:#fff}.card,.kpi{break-inside:avoid}main{max-width:none;padding:0}.tw{max-height:none;overflow:visible}}
 #sevBox,#costBox,#evalBox,#stockBox,#linkBox,#ctBox{overflow-x:auto;max-width:100%}
 @media(max-width:600px){.g2{grid-template-columns:1fr}main{padding:12px}.card h3{flex-wrap:wrap}.card{min-width:0;overflow-wrap:anywhere}.card .row{flex-wrap:wrap}.card .row input{min-width:0;max-width:100%}}
+.licbadge{display:inline-block;margin-left:8px;padding:2px 8px;border-radius:10px;font:600 11px/1.6 var(--f);vertical-align:middle;cursor:pointer}
+.licbadge.trial{background:#fff3cd;color:#7a5a00}.licbadge.readonly{background:#fde2e2;color:#9b1c1c}

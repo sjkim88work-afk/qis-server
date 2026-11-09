@@ -231,7 +231,19 @@ class Auth:
             raise AuthError("아이디 또는 비밀번호가 맞지 않습니다" + (" — 계정이 잠겼습니다" if until else ""), "bad_login")
         if not u["active"]:
             raise AuthError("사용이 중지된 계정입니다 — 관리자에게 문의하세요", "inactive")
+        self._check_user_limit(u)
         return self.open_session(u, ip=ip, ua=ua)
+
+    user_limit = staticmethod(lambda: 0)      # 라이선스의 동시 사용자 수 (0 = 제한 없음). create_app 이 연결
+
+    def _check_user_limit(self, u) -> None:
+        n = int(self.user_limit() or 0)
+        if n <= 0:
+            return
+        since = _ts(datetime.now(timezone.utc) - timedelta(hours=self.cfg.session_hours))
+        r = self.db.q1("SELECT COUNT(DISTINCT user_id) n FROM sessions WHERE last_seen >= ? AND user_id != ?", (since, u["id"]))
+        if int(r["n"] or 0) >= n:
+            raise AuthError(f"동시 사용자 수({n}명)를 넘었습니다 — 다른 사용자가 로그아웃하거나 라이선스를 늘려야 합니다", "user_limit")
 
     def open_session(self, u, *, ip=None, ua=None, action="login") -> tuple[str, dict]:
         """확인을 마친 사용자의 세션을 연다 (로그인 · 데스크톱 '혼자 쓰기' 자동 입장)."""

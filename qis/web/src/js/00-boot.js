@@ -4,5 +4,6 @@ const APP_SRC=(()=>{try{return '<!doctype html>\n'+document.documentElement.oute
 const SHARE=(()=>{try{const e=document.getElementById('qmsShare');return e?JSON.parse(e.textContent):null}catch(e){return null}})();
 // 사내 서버에서 열었을 때: 서버가 넣어 준 로그인 사용자 정보 (조회 권한이면 읽기 전용)
 const SRV=(()=>{if(SHARE)return null;try{const e=document.getElementById('qisServer');return e?JSON.parse(e.textContent):null}catch(e){return null}})();
-const RO=!!SHARE||!!(SRV&&SRV.role==='viewer');
+const LIC=(SRV&&SRV.license)||null;   // 라이선스 상태 {mode:'full'|'trial'|'readonly', message, trial_left, ...}
+const RO=!!SHARE||!!(SRV&&SRV.role==='viewer')||!!(LIC&&LIC.mode==='readonly');
 const RO_PH=new Map(SHARE&&Array.isArray(SHARE.photos)?SHARE.photos.filter(p=>p&&p.id).map(p=>[p.id,p]):[]);

@@ -17,6 +17,7 @@ from .backup import Backup
 from .config import Config, load_config
 from .db import open_db
 from .files import Files
+from .license import License
 from .routes import mount
 from .routes.deps import COOKIE, in_window  # noqa: F401  (COOKIE 는 바깥에서 참조할 수 있게 그대로 둠)
 from .routes.pages import WEB  # noqa: F401
@@ -49,6 +50,8 @@ def create_app(cfg: Config | None = None, *, start_backup=True, desktop: dict | 
         cfg, db, auth, store, files, backup
     app.state.desktop = desktop
     app.state.telegram = telegram
+    app.state.license = License(db, cfg.data_dir)
+    auth.user_limit = lambda: app.state.license.user_limit      # 사내 서버 동시 사용자 수 (라이선스)
 
     if start_backup:
         @app.on_event("startup")

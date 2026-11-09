@@ -189,6 +189,10 @@ qis/web/src/js/NN-*.js     스크립트 (번호 순서로 한 <script> 안에 �
 
 고친 뒤 `python scripts/build_web.py`로 합치고 **src/ 와 index.html 을 함께 커밋**합니다. 둘이 다르면 시험(`tests/test_web_build.py`)이 실패합니다.
 
+## 라이선스 발급 (판매용)
+
+프로그램은 라이선스 파일(`qis.lic`) 없이 30일 평가판으로 동작하고, 그 뒤 읽기 전용이 됩니다. 발급은 `scripts/license_tool.py`로 합니다 (비밀키 보관자만). 처음 한 번 `keygen` 으로 키를 만들고 공개키를 `qis/license.py`의 `PUBLIC_KEY`에 넣어 빌드해야 합니다. 자세한 절차는 `docs/라이선스_발급.md`.
+
 ## 저작권
 
 © 2026 김선중. All rights reserved. QIS는 저작자가 개인적으로 만든 소프트웨어이며, 재직 중인 회사와 임직원의 사내 품질 업무 사용을 허락합니다. 자세한 조건은 [LICENSE](LICENSE), 사용한 오픈소스 구성요소는 [NOTICE](NOTICE)를 보세요.

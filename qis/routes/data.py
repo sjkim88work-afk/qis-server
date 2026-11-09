@@ -10,6 +10,17 @@ from .deps import current, ip_of, st
 router = APIRouter(prefix="/api")
 
 
+def writable(request: Request) -> None:
+    lic = st(request).license
+    if lic.readonly:
+        raise Forbidden("읽기 전용 상태입니다 — " + lic.status()["message"])
+
+
+@router.get("/license")
+def license_info(request: Request, user=Depends(current)):
+    return st(request).license.public()
+
+
 @router.get("/boot")
 def boot(request: Request, user=Depends(current)):
     return {**st(request).store.boot(), "user": public_user(user)}
@@ -23,6 +34,8 @@ async def sync(request: Request, user=Depends(current)):
         raise ValueError("요청 형식이 올바르지 않습니다")
     if ch and user["role"] == "viewer":
         raise Forbidden("조회 권한은 저장할 수 없습니다")
+    if ch:
+        writable(request)
     since = b.get("since")
     return st(request).store.sync(user, int(since) if since is not None else None, ch, ip=ip_of(request))
 
@@ -40,12 +53,14 @@ def files_ids(request: Request, user=Depends(current)):
 
 @router.post("/files/put")
 async def files_put(request: Request, user=Depends(current)):
+    writable(request)
     b = await request.json()
     return {"saved": st(request).files.put_many(user, b.get("files") or [], ip=ip_of(request))}
 
 
 @router.post("/files/delete")
 async def files_del(request: Request, user=Depends(current)):
+    writable(request)
     b = await request.json()
     return {"deleted": st(request).files.delete_many(user, b.get("ids") or [], ip=ip_of(request))}
 

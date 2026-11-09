@@ -41,7 +41,7 @@ jobs:
         run: python -m pip install -r requirements-desktop.txt pytest httpx
       - name: 데스크톱 시험
         run: python -m pytest -q tests/test_desktop.py
-      - name: 버전 넣기 (릴리스 태그 → qis/__init__.py)
+      - name: 버전 · 빌드 날짜 넣기 (릴리스 태그 → qis/__init__.py)
         shell: python
         env:
           TAG: ${{ inputs.tag || (startsWith(github.ref, 'refs/tags/') && github.ref_name) || '' }}
@@ -56,7 +56,11 @@ jobs:
                   raise SystemExit(f"bad version tag: {tag}")
               s = re.sub(r'__version__\s*=\s*"[^"]*"', f'__version__ = "{v}"', s)
               f.write_text(s, encoding="utf-8")
-          print(re.search(r'__version__\s*=\s*"([^"]*)"', s).group(0), "(tag:", tag or "none", ")")   # 윈도우 콘솔(cp1252)이라 영문으로
+          import datetime
+          today = datetime.date.today().isoformat()          # build date -> license maintenance check
+          s = re.sub(r'__build__\s*=\s*"[^"]*"', f'__build__ = "{today}"', s)
+          f.write_text(s, encoding="utf-8")
+          print(re.search(r'__version__\s*=\s*"([^"]*)"', s).group(0), "(tag:", tag or "none", ") build", today)   # 윈도우 콘솔(cp1252)이라 영문으로
       - name: 빌드
         run: pyinstaller --noconfirm --clean packaging/QIS.spec
       - name: 실행 점검 · 압축 (맥)

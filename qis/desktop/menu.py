@@ -8,7 +8,7 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
-from .. import __version__
+from .. import __build__, __version__
 from . import core, pages
 
 log = logging.getLogger("qis.desktop")
@@ -38,6 +38,8 @@ class MenuActions:
             Menu("설정", [
                 MenuAction("사용 방식 바꾸기 (혼자 쓰기 / 사내 서버)…", c.m_switch_mode),
                 MenuAction("접속 주소 보기", self.addresses),
+                MenuSeparator(),
+                MenuAction("라이선스…", self.license),
             ]),
             Menu("보기", [
                 MenuAction("화면 새로 고침", self.reload),
@@ -188,6 +190,13 @@ class MenuActions:
         c.state = "app"
         c.show(html=c.lan_html())
 
+    def license(self):
+        """관리 화면의 라이선스 탭 — PC 코드 확인 · 파일 등록. 평가판 · 읽기 전용 때 여기서 등록."""
+        c = self.c
+        if not self._ready():
+            return
+        c.show(url=c.runner.base_url + "/admin#license")
+
     def reload(self):
         c = self.c
         if c.state == "app" and c.runner:
@@ -196,7 +205,16 @@ class MenuActions:
     def about(self):
         c = self.c
         mode = {"solo": "이 PC 혼자 쓰기", "lan": "사내 서버"}.get(c.settings.mode if c.settings else "", "미설정")
-        self._tell(f"QIS 품질정보시스템 데스크톱 · 서버 {__version__}\n사용 방식: {mode}\n데이터 폴더: {c.data_dir}\n\n"
+        lic = ""
+        try:
+            if c.runner and c.runner.app:
+                L = c.runner.app.state.license.status()
+                lic = {"full": f"라이선스: 정식 ({L['customer']}) · 유지보수 {L['maintenance_until']}까지",
+                       "trial": f"라이선스: 평가판 — {L.get('trial_left', 0)}일 남음", "readonly": "라이선스: 읽기 전용 — " + L["message"]}[L["mode"]]
+                lic += f"\nPC 코드: {L['machine']}\n"
+        except Exception:
+            log.exception("라이선스 상태")
+        self._tell(f"QIS 품질정보시스템 데스크톱 · 서버 {__version__} (빌드 {__build__})\n사용 방식: {mode}\n데이터 폴더: {c.data_dir}\n{lic}\n"
                    f"{COPYRIGHT}\n오픈소스 구성요소: FastAPI · uvicorn · pywebview · sql.js 등 (NOTICE 파일 참고)")
 
 
