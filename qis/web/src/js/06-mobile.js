@@ -30,7 +30,7 @@ function mobRegHTML(){
   return `${done}<form id="mobForm" class="mform" onsubmit="event.preventDefault();mobSave()" oninput="mobInput(event)" onchange="mobInput(event)">
   <div class="mph" id="mobPh"></div>
   <div class="mphb"><label class="b">📷 촬영<input type="file" accept="image/*" capture="environment" hidden onchange="mobAddPhotos(this)"></label><label class="b">🖼 앨범<input type="file" accept="image/*" multiple hidden onchange="mobAddPhotos(this)"></label></div>
-  <label>부품번호 *<input name="partNo" list="dlParts" autocomplete="off" autocapitalize="characters" value="${esc(f.partNo)}" placeholder="품번 또는 품명 입력"></label>
+  <label>부품번호 *<input name="partNo" data-combo="parts" autocomplete="off" autocapitalize="characters" value="${esc(f.partNo)}" placeholder="품번 또는 품명 입력"></label>
   <div class="mhint" id="mobPart">${f.partName?`${esc(f.partName)} · ${esc(supName(f.supplierId)||'협력사 미지정')}`:''}</div>
   <label>협력사<select name="supplierId">${supOpts(f.supplierId,'선택')}</select></label>
   <div class="m2"><label>불량 유형 *<select name="type">${opts(S.defectTypes,f.type)}</select></label>
