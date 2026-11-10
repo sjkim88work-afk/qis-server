@@ -32,6 +32,10 @@ jobs:
             name: windows
     runs-on: ${{ matrix.os }}
     timeout-minutes: 40
+    env:
+      # 윈도우 설치 프로그램(QIS-Setup.exe)은 코드 서명 인증서가 있을 때만 만든다.
+      # 서명 없는 설치 프로그램은 백신(V3 등)이 평판 기반으로 막아 zip 보다 불리함 — 인증서 시크릿을 넣으면 자동으로 다시 나옴.
+      HAS_WIN_CERT: ${{ secrets.WINDOWS_CERT_PFX_BASE64 != '' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -134,8 +138,8 @@ jobs:
           # Inno 가 설치 프로그램 · 제거 프로그램에 쓸 서명 명령
           echo "QIS_SIGNTOOL=$($st.FullName) sign /f $PWD\cert.pfx /p $env:WINDOWS_CERT_PASSWORD /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 `$f" >> $env:GITHUB_ENV
           Compress-Archive -Force -Path "dist\QIS" -DestinationPath "QIS-windows.zip"
-      - name: 설치 프로그램 만들기 (윈도우 · Inno Setup)
-        if: runner.os == 'Windows'
+      - name: 설치 프로그램 만들기 (윈도우 · Inno Setup — 서명 인증서 있을 때만)
+        if: runner.os == 'Windows' && env.HAS_WIN_CERT == 'true'
         shell: pwsh
         run: |
           $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
@@ -151,7 +155,7 @@ jobs:
           Copy-Item "QIS-Setup-$ver.exe" "QIS-Setup.exe"
           Get-Item QIS-Setup.exe | Format-List Name, Length
       - name: 설치 프로그램 시험 (윈도우 · 조용히 설치 → 실행 점검 → 제거)
-        if: runner.os == 'Windows'
+        if: runner.os == 'Windows' && env.HAS_WIN_CERT == 'true'
         shell: pwsh
         run: |
           $dir = "$env:LOCALAPPDATA\Programs\QIS"
@@ -226,9 +230,12 @@ jobs:
           ls -la out
           if ! gh release view "$TAG" -R "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             gh release create "$TAG" -R "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "QIS $TAG" --notes \
-              "QIS 데스크톱 프로그램 $TAG — 윈도우: QIS-Setup.exe(설치) 또는 QIS-windows.zip(압축) · 맥(Apple Silicon): QIS-mac.dmg 또는 QIS-mac.zip. 설치 방법: docs/데스크톱_프로그램.md"
+              "QIS 데스크톱 프로그램 $TAG — 윈도우: QIS-windows.zip(압축을 풀고 QIS.exe 실행) · 맥(Apple Silicon): QIS-mac.dmg 또는 QIS-mac.zip. 설치 방법: docs/데스크톱_프로그램.md"
           fi
-          gh release upload "$TAG" out/QIS-mac.zip out/QIS-windows.zip out/QIS-Setup.exe out/QIS-mac.dmg --clobber -R "$GITHUB_REPOSITORY"
+          FILES="out/QIS-mac.zip out/QIS-windows.zip out/QIS-mac.dmg"
+          [ -f out/QIS-Setup.exe ] && FILES="$FILES out/QIS-Setup.exe"      # 서명 인증서가 있을 때만 생김
+          (cd out && sha256sum QIS-*.zip QIS-*.dmg $( [ -f QIS-Setup.exe ] && echo QIS-Setup.exe ) > SHA256SUMS.txt && cat SHA256SUMS.txt)
+          gh release upload "$TAG" $FILES out/SHA256SUMS.txt --clobber -R "$GITHUB_REPOSITORY"
       # ---- 공개 배포 저장소(qis-releases)에도 올림: 고객 · 프로그램의 업데이트 확인(latest.json)이 여기를 봄.
       #      RELEASES_TOKEN(공개 저장소 contents:write 권한의 PAT) 시크릿이 있을 때만. 없으면 이 단계는 건너뜀.
       - name: 공개 배포 저장소에 올리기 (qis-releases)
@@ -246,13 +253,16 @@ jobs:
           base = f"https://github.com/{pub}/releases/download/{tag}"
           json.dump({"version": "$VER", "build": "$TODAY", "page": f"https://github.com/{pub}/releases/tag/{tag}",
                      "notes": os.environ.get("NOTES_TXT", ""),
-                     "assets": {"windows": base + "/QIS-Setup.exe", "windows_zip": base + "/QIS-windows.zip",
+                     "assets": {"windows": base + ("/QIS-Setup.exe" if os.path.exists("out/QIS-Setup.exe") else "/QIS-windows.zip"),
+                                "windows_zip": base + "/QIS-windows.zip",
                                 "mac": base + "/QIS-mac.dmg", "mac_zip": base + "/QIS-mac.zip"}},
                     open("out/latest.json", "w", encoding="utf-8"), ensure_ascii=False, indent=1)
           EOF
           if ! gh release view "$TAG" -R "$PUB" >/dev/null 2>&1; then
-            gh release create "$TAG" -R "$PUB" --title "QIS $TAG" --notes "QIS 데스크톱 프로그램 $TAG — 윈도우: QIS-Setup.exe(설치) 또는 QIS-windows.zip · 맥(Apple Silicon): QIS-mac.dmg 또는 QIS-mac.zip"
+            gh release create "$TAG" -R "$PUB" --title "QIS $TAG" --notes "QIS 데스크톱 프로그램 $TAG — 윈도우: QIS-windows.zip · 맥(Apple Silicon): QIS-mac.dmg 또는 QIS-mac.zip"
           fi
-          gh release upload "$TAG" out/QIS-mac.zip out/QIS-windows.zip out/QIS-Setup.exe out/QIS-mac.dmg out/latest.json --clobber -R "$PUB"
+          FILES="out/QIS-mac.zip out/QIS-windows.zip out/QIS-mac.dmg out/SHA256SUMS.txt out/latest.json"
+          [ -f out/QIS-Setup.exe ] && FILES="$FILES out/QIS-Setup.exe"
+          gh release upload "$TAG" $FILES --clobber -R "$PUB"
           # 최신 릴리스로 표시해야 /releases/latest/download/latest.json 이 이 버전을 가리킴
           gh release edit "$TAG" -R "$PUB" --latest

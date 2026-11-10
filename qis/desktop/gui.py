@@ -257,12 +257,16 @@ class Controller:
     def _setup_html(self, error: str = "") -> str:
         s, c = self.settings, self.cfg
         return pages.setup_page(current=s.mode, solo_name=s.solo_name, solo_login=s.solo_login, port=c.port, error=error,
+                                lan_scope=s.lan_scope,
                                 can_cancel=bool(self.runner and self.runner.running), version=__version__)
 
     def lan_html(self) -> str:
         from ..launcher import _lan_addresses
-        return pages.lan_info_page(_lan_addresses(self.runner.cfg), self.runner.port, sys.platform.startswith("win"),
-                                   https=self.runner.cfg.https)
+        r = self.runner
+        if r.scope == "tailscale":
+            addrs = [f"{r.scheme}://{r.ts_ip}:{r.port}"] if r.ts_ip else []
+            return pages.lan_info_page(addrs, r.port, sys.platform.startswith("win"), https=r.cfg.https, tailscale=True)
+        return pages.lan_info_page(_lan_addresses(r.cfg), r.port, sys.platform.startswith("win"), https=r.cfg.https)
 
     def show(self, html=None, url=None):
         if url:
@@ -331,6 +335,7 @@ class Controller:
                     if port != self.cfg.port:
                         self.cfg.port = port
                         self.cfg.save()
+                    self.settings.lan_scope = d.get("lan_scope") if d.get("lan_scope") in core.SCOPES else "lan"
                 self.settings.mode = mode
                 url = self._start_server()
             except Exception as e:

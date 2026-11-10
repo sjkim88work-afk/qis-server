@@ -39,7 +39,7 @@ function ready(fn){if(api())fn();else window.addEventListener('pywebviewready',f
 
 def setup_page(*, current: str = "", solo_name: str = "", solo_login: bool = False, admin: str = "admin",
                admin_name: str = "", port: int = 8080, error: str = "", can_cancel: bool = False,
-               version: str = "") -> str:
+               version: str = "", lan_scope: str = "lan") -> str:
     init = json.dumps({"mode": current or "solo"})
     body = f"""
 <h1>QIS 사용 방식 고르기</h1>
@@ -68,6 +68,11 @@ def setup_page(*, current: str = "", solo_name: str = "", solo_login: bool = Fal
   <div class=row><div><label for=ap>비밀번호 <span class=muted>(8자 이상, 영문+숫자)</span></label><input id=ap type=password></div>
   <div><label for=ap2>한 번 더</label><input id=ap2 type=password></div></div>
   <label for=pt>포트 <span class=muted>(접속 주소의 번호, 보통 8080)</span></label><input id=pt value="{int(port)}" style="max-width:160px">
+  <label style="margin-top:14px">접속 허용 범위</label>
+  <label style="display:flex;gap:8px;align-items:center;cursor:pointer;font-weight:400"><input type=radio name=sc value=lan{' checked' if lan_scope != 'tailscale' else ''} style="width:auto;margin:0">
+    사내망 전체 <span class=muted>— 같은 사내망 · Wi-Fi 의 PC · 핸드폰</span></label>
+  <label style="display:flex;gap:8px;align-items:center;cursor:pointer;font-weight:400;margin-top:6px"><input type=radio name=sc value=tailscale{' checked' if lan_scope == 'tailscale' else ''} style="width:auto;margin:0">
+    Tailscale 만 <span class=muted>— 이 PC 와, 내 Tailscale 에 등록한 기기(핸드폰)만. 사내망의 다른 PC 에서는 열리지 않습니다</span></label>
 </div>
 <div class=err id=err>{html.escape(error)}</div>
 <div style="display:flex;gap:10px"><button class=p id=go onclick="go()">시작</button>
@@ -84,7 +89,8 @@ var hadPw={json.dumps(bool(solo_login))};
 function slx(){{$('f_sl').style.display=$('sl').checked?'':'none'}}
 slx();
 function go(){{
-  var d={{mode:mode,solo_name:$('sn').value,solo_login:$('sl').checked,solo_password:$('sp').value,admin:$('au').value,admin_name:$('an').value,password:$('ap').value,port:$('pt').value}};
+  var d={{mode:mode,solo_name:$('sn').value,solo_login:$('sl').checked,solo_password:$('sp').value,admin:$('au').value,admin_name:$('an').value,password:$('ap').value,port:$('pt').value,
+    lan_scope:(document.querySelector('input[name=sc]:checked')||{{}}).value||'lan'}};
   if(mode==='lan'&&$('ap').value!==$('ap2').value){{$('err').textContent='두 번 입력한 비밀번호가 다릅니다';return}}
   if(mode==='solo'&&$('sl').checked){{
     if($('sp').value!==$('sp2').value){{$('err').textContent='두 번 입력한 비밀번호가 다릅니다';return}}
@@ -95,6 +101,31 @@ function go(){{
 }}
 """
     return _page("QIS — 사용 방식", body, script)
+
+
+def _tailscale_info_page(addresses: list[str], port: int, windows: bool) -> str:
+    """접속 범위 = Tailscale 만: 이 PC(127.0.0.1)와 Tailscale 주소에만 열림."""
+    if addresses:
+        rows = "".join(f"<li><code>{html.escape(a)}</code></li>" for a in addresses)
+        head = "<h2>핸드폰 접속 주소 (Tailscale 을 켠 내 기기에서만)</h2>"
+        miss = ""
+    else:
+        rows = "<li>지금은 이 PC 에서만 열려 있습니다</li>"
+        head = "<h2>Tailscale 주소를 찾지 못했습니다</h2>"
+        miss = ("<div class=box style='border-color:#f59e0b;background:#fffbeb'><b>⚠ 이 PC 의 Tailscale 이 꺼져 있거나 설치되어 있지 않습니다</b>"
+                "<p class=muted style='margin:6px 0 0'>Tailscale 을 켜고 로그인한 뒤 QIS 를 다시 여세요. 그때까지는 다른 기기에서 접속할 수 없습니다 "
+                "(사내망으로도 열리지 않습니다).</p></div>")
+    fw = (f"<p class=muted>핸드폰에서 안 열리면 Windows 방화벽 규칙이 필요합니다 — Tailscale 대역에서 오는 연결만 허용합니다. 관리자 권한 명령 창에서<br>"
+          f"<code>netsh advfirewall firewall add rule name=\"QIS (Tailscale)\" dir=in action=allow protocol=TCP localport={port} remoteip=100.64.0.0/10</code></p>"
+          if windows else "<p class=muted>맥에서 ‘들어오는 네트워크 연결을 허용할까요?’ 창이 뜨면 ‘허용’을 누르세요.</p>")
+    body = f"""
+<h1>🔒 Tailscale 로만 접속되게 켜졌습니다</h1>{miss}
+<div class=box>{head}<ul>{rows}</ul>{fw}
+<p class=muted>사내망 · 인터넷의 다른 PC 에서는 이 주소로도, 이 PC 의 사내 IP 로도 열리지 않습니다. 오가는 내용은 Tailscale(WireGuard)이 암호화합니다.
+Tailscale 주소가 바뀌거나 Tailscale 을 나중에 켰다면 QIS 를 다시 여세요. 메뉴 ‘설정 › 접속 주소 보기’에서 다시 볼 수 있습니다.</p></div>
+<button class=p onclick="ready(function(){{api().go_app()}})">QIS 열기 (로그인)</button>
+"""
+    return _page("QIS — 접속 주소", body, API_JS)
 
 
 def busy_page(msg: str) -> str:
@@ -127,7 +158,9 @@ function act(c){document.querySelectorAll('button').forEach(function(b){b.disabl
     return _page("QIS — 복구", body, script)
 
 
-def lan_info_page(addresses: list[str], port: int, windows: bool, https: bool = False) -> str:
+def lan_info_page(addresses: list[str], port: int, windows: bool, https: bool = False, tailscale: bool = False) -> str:
+    if tailscale:
+        return _tailscale_info_page(addresses, port, windows)
     rows = "".join(f"<li><code>{html.escape(a)}</code></li>" for a in addresses) or "<li>사내망 주소를 찾지 못했습니다 — 네트워크 연결을 확인하세요</li>"
     fw = (f"<p class=muted>다른 PC에서 안 열리면: 처음 실행 때 뜬 Windows 방화벽 창에서 ‘액세스 허용’을 눌렀는지 확인하세요. "
           f"또는 관리자 권한 명령 창에서 <code>netsh advfirewall firewall add rule name=\"QIS\" dir=in action=allow protocol=TCP localport={port}</code></p>"
