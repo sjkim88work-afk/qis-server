@@ -164,9 +164,9 @@ if(SRV){
   ['hdrBk','hdrInstall'].forEach(i=>{const e=$('#'+i);if(e)e.style.display='none'});
   const R={viewer:'조회',editor:'작성',admin:'관리자'};
   $('#hdrBk').insertAdjacentHTML('beforebegin',`<span class="noprint" id="srvUser" title="${esc(SRV.user)} · ${R[SRV.role]||''} 권한" style="font-size:12px;opacity:.9">👤 ${esc(SRV.name)} <span style="opacity:.7">· ${R[SRV.role]||SRV.role}</span></span>`+
-    `<button class="b s noprint" onclick="location.href='/account'" title="내 비밀번호 바꾸기">비밀번호</button>`+
-    (srvCanAdmin()?`<button class="b s noprint" onclick="window.open('/admin','qisAdmin')" title="사용자 · 변경 이력 · 백업">관리</button>`:'')+
-    `<button class="b s noprint" onclick="srvLogout()">로그아웃</button>`);
+    `<button class="b s noprint" id="hdrPw" onclick="location.href='/account'" title="내 비밀번호 바꾸기">비밀번호</button>`+
+    (srvCanAdmin()?`<button class="b s noprint" id="hdrAdm" onclick="window.open('/admin','qisAdmin')" title="사용자 · 변경 이력 · 백업">관리</button>`:'')+
+    `<button class="b s noprint" id="hdrOut" onclick="srvLogout()">로그아웃</button>`);
   // 서버가 맡는 기능 (브라우저 저장소 · PC 폴더 · 파일 백업/복원)
   ['resetAll','pickImport','restoreFromFolder','pickRoot','unlinkRoot','pickDir','unlinkDir','photoDirNow','chooseQmsDir','openImport']
     .forEach(n=>{if(typeof window[n]==='function')window[n]=function(){toast('사내 서버 모드에서는 서버가 백업 · 복원합니다 — 관리자 화면을 쓰세요')}});
