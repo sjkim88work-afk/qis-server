@@ -218,7 +218,7 @@ ul.act{margin:0;padding-left:18px}ul.act li{margin:4px 0}
 #sevBox,#costBox,#evalBox,#stockBox,#linkBox,#ctBox{overflow-x:auto;max-width:100%}
 @media(max-width:600px){.g2{grid-template-columns:1fr}main{padding:12px}.card h3{flex-wrap:wrap}.card{min-width:0;overflow-wrap:anywhere}.card .row{flex-wrap:wrap}.card .row input{min-width:0;max-width:100%}}
 .updbadge{display:inline-block;margin-left:8px;padding:2px 8px;border-radius:10px;font:600 11px/1.6 var(--f);vertical-align:middle;background:#dcfce7;color:#14532d;text-decoration:none}
-/* ================= RCA · 사내 8D (PHA QMS 통합) ================= */
+/* ================= RCA · 사내 8D ================= */
 .cz{--line2:#eef0f3;--ink2:#56606a;--ink3:#8b949d;--acc:#1f5fbf;--acc-bg:#e9f0fb;--red:#c0392b;--red-bg:#fdeceb;--amb:#9a5b00;--amb-bg:#fff3de;--grn:#1d7a3b;--grn-bg:#e6f4eb;font-size:13.5px}
 .cz h1{font-size:18px;margin:0 0 4px}
 .cz .sub{color:var(--ink2);margin:0 0 16px}
@@ -5280,7 +5280,7 @@ function renderData(){
   const btn=(lbl,fn,cls='')=>`<button class="b ${cls}" onclick="${fn}">${lbl}</button>`;
   const P={};
   P.general=()=>sg('회사 정보',
-    sv('회사명','상단 바, 보고서, 부적합 통보서(Company)에 표시됩니다.',sTxt('company','예: EDSCHA-PHA'))+
+    sv('회사명','상단 바, 보고서, 부적합 통보서(Company)에 표시됩니다.',sTxt('company','예: 한빛오토'))+
     sv('부서명','보고서 머리글과 통보서 Department에 표시됩니다.',sTxt('dept','예: Quality'))+
     sv('발행자 전화','부적합 통보서 하단 연락처에 표시됩니다.',sTxt('issuerPhone','예: 031-000-0000'))+
     sv('발행자 이메일','부적합 통보서 하단 연락처에 표시됩니다.',sTxt('issuerEmail','예: qa@company.com')))+
@@ -6060,7 +6060,7 @@ document.addEventListener('keydown',e=>{
 });
 window.addEventListener('storage',e=>{if(e.key===KEY&&dataStore==='ls'&&dataReady){db=load();render();toast('다른 탭에서 변경된 내용을 불러왔습니다')}});
 
-/* ================= RCA · 사내 8D (PHA QMS 통합) =================
+/* ================= RCA · 사내 8D =================
    Case · Action · 단계 게이트(IATF) · 원인분석 워크시트
    부품·협력사·불량유형·담당자는 개인 QMS 기준정보를 그대로 씁니다.
    컬럼 내부 이름은 SharePoint 설계서와 동일 (CSV 내보내기용)        */
@@ -6456,7 +6456,7 @@ function czRender(){
 function czStartCard(){return `<div class="card start"><h2>RCA · 사내 8D</h2>
     <p class="sub" style="margin:0">사내 문제의 원인분석(RCA)과 공정 개선 · 내부 8D를 관리합니다. 공 · 다음 행동 · 재확인일과 IATF 단계 게이트로 끝까지 추적합니다.<br>
     <b>불량 관리</b>의 진행 보기나 <b>NCR / 8D</b> 목록에서 ‘RCA 요청’을 누르면 불량 정보·심각도가 그대로 채워집니다.</p>
-    <div class="btns"><button class="btn pri" data-act="newCase">RCA 바로 등록</button><button class="btn" onclick="go('defect')">불량 관리로 가기</button><button class="btn" onclick="state.setTab='backup';go('data')">PHA QMS 백업 가져오기</button></div></div>`;}
+    <div class="btns"><button class="btn pri" data-act="newCase">RCA 바로 등록</button><button class="btn" onclick="go('defect')">불량 관리로 가기</button><button class="btn" onclick="state.setTab='backup';go('data')">QMS 백업 가져오기</button></div></div>`;}
 function czViewToday(){
   const t=today(),k=czCounts(),open=db.cases.filter(c=>c.Status==='진행중'||c.Status==='보류');
   const mine=open.filter(c=>c.Ball==='나'&&has(c.RecheckDate)&&c.RecheckDate<=t).sort((a,b)=>a.RecheckDate.localeCompare(b.RecheckDate));

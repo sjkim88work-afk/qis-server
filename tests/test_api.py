@@ -107,7 +107,7 @@ def test_sync_roles_merge_audit(env):
     assert sync(ad, [{"coll": "suppliers", "id": "s1", "rev": 1, "base": s, "data": None}]).json()["results"][0]["ok"]
 
     # 설정: 관리자만 (작성자는 담당자 목록만)
-    st = {"company": "PHA", "owners": ["김작성"], "sevA": 12}
+    st = {"company": "한빛오토", "owners": ["김작성"], "sevA": 12}
     assert sync(ad, [{"coll": "doc", "id": "settings", "rev": 0, "data": st}]).json()["results"][0]["ok"]
     r = sync(ed, [{"coll": "doc", "id": "settings", "rev": 1, "base": st, "data": {**st, "sevA": 4}}]).json()["results"][0]
     assert not r["ok"] and r["data"]["sevA"] == 12

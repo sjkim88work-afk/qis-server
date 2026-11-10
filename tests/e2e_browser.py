@@ -60,7 +60,7 @@ def login(b, user, pw):
 def main(seed_path):
     tmp = tempfile.mkdtemp(prefix="qis_e2e_")
     env = {**os.environ, "QIS_DATA_DIR": os.path.join(tmp, "data"), "QIS_PORT": str(PORT), "QIS_HOST": "127.0.0.1"}
-    r = run("init", "--admin", "admin", "--name", "관리자", "--password", "Qadm2026x", "--company", "PHA", env=env)
+    r = run("init", "--admin", "admin", "--name", "관리자", "--password", "Qadm2026x", "--company", "한빛오토", env=env)
     ok(r.returncode == 0, "init: " + r.stdout.strip().splitlines()[-1])
     run("adduser", "kim", "--name", "김작성", "--role", "editor", "--password", "Qk1m2026a", env=env)
     run("adduser", "lee", "--name", "이조회", "--role", "viewer", "--password", "Ql3e2026a", env=env)
@@ -103,9 +103,9 @@ def main(seed_path):
             ok("서버 저장" in A.inner_text("#saveInfo") or A.inner_text("#saveInfo") == "", "저장 표시: " + A.inner_text("#saveInfo"))
             ok(A.locator("#nav button:has-text('설정')").count() == 0 and B.locator("#nav button:has-text('설정')").count() == 1,
                "설정 탭은 관리자만")
-            B.evaluate("setS('company','PHA 품질','str')"); B.wait_for_timeout(1000)
+            B.evaluate("setS('company','한빛오토 품질','str')"); B.wait_for_timeout(1000)
             A.evaluate("srvSync()"); A.wait_for_timeout(700)
-            ok(A.evaluate("db.settings.company") == "PHA 품질", "관리자가 바꾼 설정 → 작성자 화면 반영")
+            ok(A.evaluate("db.settings.company") == "한빛오토 품질", "관리자가 바꾼 설정 → 작성자 화면 반영")
             ok("관리자만" not in A.inner_text("#toast"), "작성자 화면에 설정 거부 안내 없음")
 
             # --- 1. 작성자 A 가 불량 수정 → B 에 반영 ---

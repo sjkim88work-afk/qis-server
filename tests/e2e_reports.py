@@ -6,7 +6,7 @@ ROOT = os.getcwd(); PORT = 8793; URL = f"http://127.0.0.1:{PORT}"
 out_path = sys.argv[1]
 with tempfile.TemporaryDirectory() as tmp:
     env = {**os.environ, "QIS_DATA_DIR": os.path.join(tmp, "data"), "QIS_PORT": str(PORT), "QIS_HOST": "127.0.0.1"}
-    r = subprocess.run([sys.executable, "-m", "qis", "init", "--admin", "admin", "--name", "관리자", "--password", "Qadm2026x", "--company", "PHA"], cwd=ROOT, env=env, capture_output=True, text=True)
+    r = subprocess.run([sys.executable, "-m", "qis", "init", "--admin", "admin", "--name", "관리자", "--password", "Qadm2026x", "--company", "한빛오토"], cwd=ROOT, env=env, capture_output=True, text=True)
     if r.returncode: print(r.stdout, r.stderr); sys.exit(1)
     r = subprocess.run([sys.executable, "-m", "qis", "import", "tests/sample_backup.json"], cwd=ROOT, env=env, capture_output=True, text=True)
     if r.returncode: print(r.stdout, r.stderr); sys.exit(1)
