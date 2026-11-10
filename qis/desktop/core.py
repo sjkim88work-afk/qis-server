@@ -29,6 +29,7 @@ from ..db import now, open_db, parse_db_url
 log = logging.getLogger("qis.desktop")
 
 MODES = ("solo", "lan")
+SCOPES = ("lan", "tailscale")   # 사내 서버 모드의 접속 허용 범위
 SOLO_USER = "local"          # 혼자 쓰기 모드의 로컬 관리자 아이디 (비밀번호는 아무도 모르는 무작위 값)
 RUNNING = "desktop.running"
 
@@ -39,6 +40,7 @@ class DesktopSettings:
     mode: str = ""               # 비어 있으면 첫 실행 — 모드를 고르는 화면부터
     solo_name: str = ""          # 혼자 쓰기: 기록(담당자 · 변경 이력)에 남을 이름
     solo_login: bool = False     # 혼자 쓰기: 켜면 비밀번호로 잠금 — 프로그램이 자동 입장 대신 로그인 화면을 띄움
+    lan_scope: str = "lan"       # 사내 서버: "lan" = 사내망 전체(0.0.0.0) · "tailscale" = 이 PC + Tailscale 주소(100.x)만
 
     @staticmethod
     def path(data_dir: Path) -> Path:
@@ -55,6 +57,8 @@ class DesktopSettings:
                     if isinstance(d.get(k), str):
                         setattr(s, k, d[k])
                 s.solo_login = bool(d.get("solo_login"))
+                if d.get("lan_scope") in SCOPES:
+                    s.lan_scope = d["lan_scope"]
             except (OSError, ValueError):
                 log.exception("desktop.json 을 읽지 못함 — 첫 실행처럼 진행")
         if s.mode not in MODES:
@@ -66,6 +70,26 @@ class DesktopSettings:
         tmp = f.with_suffix(".tmp")
         tmp.write_text(json.dumps(dataclasses.asdict(self), ensure_ascii=False, indent=2), encoding="utf-8")
         tmp.replace(f)
+
+
+def tailscale_ip() -> str:
+    """이 PC의 Tailscale 주소(100.64.0.0/10). Tailscale 이 꺼져 있거나 없으면 ''.
+    Tailscale 안내 주소(100.100.100.100)로 가는 길에 쓰일 내 주소를 물어봄 — 실제로 보내는 것은 없음."""
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+            s.connect(("100.100.100.100", 9))
+            ip = s.getsockname()[0]
+    except OSError:
+        return ""
+    return ip if is_tailscale_ip(ip) else ""
+
+
+def is_tailscale_ip(ip: str) -> bool:
+    try:
+        a, b = (int(x) for x in ip.split(".")[:2])
+    except ValueError:
+        return False
+    return a == 100 and 64 <= b <= 127
 
 
 def desktop_config(data_dir: Path) -> Config:
@@ -208,8 +232,11 @@ class ServerRunner:
         self.server = None
         self.thread = None
         self.sock = None
+        self.socks = []
         self.host = "127.0.0.1" if self.mode == "solo" else (cfg.host or "0.0.0.0")
         self.port = 0
+        self.scope = settings.lan_scope if self.mode == "lan" else ""
+        self.ts_ip = ""              # 접속 범위가 tailscale 일 때 실제로 연 Tailscale 주소 ('' = 못 찾음 → 이 PC 에서만 열림)
 
     # -- 주소
     @property
@@ -238,6 +265,9 @@ class ServerRunner:
             # 혼자 쓰기: 이 PC 안에서만, HTTPS 불필요 (qis.json 은 바꾸지 않음).
             # 로그인은 마지막 사용 후 하루 유지 — 넘으면 창이 비밀번호 없이 다시 들어감(desktop_enter.html)
             return dataclasses.replace(c, host="127.0.0.1", ssl_certfile="", ssl_keyfile="", session_hours=24)
+        if self.scope == "tailscale":
+            # 이 PC(127.0.0.1) + Tailscale 주소에만 엶 — 사내망 주소로는 연결 자체가 안 됨. 추가 소켓은 start() 에서
+            return dataclasses.replace(c, host="127.0.0.1")
         if c.host in ("127.0.0.1", "localhost"):
             return c          # 사용자가 일부러 127.0.0.1 로 정한 경우(Tailscale 개인 사용 등)는 존중
         return dataclasses.replace(c, host="0.0.0.0")
@@ -264,6 +294,18 @@ class ServerRunner:
         self.host = self.cfg.host
         self.sock = self._open_socket(self.host, 0 if self.mode == "solo" else int(self.cfg.port))
         self.port = self.sock.getsockname()[1]
+        self.socks = [self.sock]
+        self.ts_ip = ""
+        if self.scope == "tailscale":
+            ip = tailscale_ip()
+            if ip:
+                try:
+                    self.socks.append(self._open_socket(ip, self.port))
+                    self.ts_ip = ip
+                except PortInUse:
+                    log.exception("Tailscale 주소 %s:%s 를 열지 못함 — 이 PC 에서만 열림", ip, self.port)
+            else:
+                log.warning("접속 범위가 Tailscale 인데 Tailscale 주소를 찾지 못함 — 이 PC 에서만 열림")
         desktop = {"mode": self.mode, "token": self.token, "user": SOLO_USER,
                    "login": self.mode == "lan" or bool(self.settings.solo_login)}
         try:
@@ -274,7 +316,7 @@ class ServerRunner:
             ucfg = uvicorn.Config(self.app, log_config=None, access_log=False, proxy_headers=False,
                                   lifespan="on", timeout_graceful_shutdown=5, **kw)
             self.server = uvicorn.Server(ucfg)
-            self.thread = threading.Thread(target=self.server.run, kwargs={"sockets": [self.sock]},
+            self.thread = threading.Thread(target=self.server.run, kwargs={"sockets": list(self.socks)},
                                            name="qis-server", daemon=True)
             self.thread.start()
             t0 = time.time()
@@ -319,12 +361,13 @@ class ServerRunner:
             except Exception:
                 pass
             self.app = None
-        if self.sock:
+        for sk in (self.socks or ([self.sock] if self.sock else [])):
             try:
-                self.sock.close()
+                sk.close()
             except OSError:
                 pass
-            self.sock = None
+        self.sock = None
+        self.socks = []
         self.server = None
         self.thread = None
         log.info("서버 종료")

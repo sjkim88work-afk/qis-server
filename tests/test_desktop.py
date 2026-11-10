@@ -11,7 +11,7 @@ from pathlib import Path
 import pytest
 
 from qis.auth import AuthError
-from qis.desktop import core
+from qis.desktop import core, pages
 from qis.desktop.lock import AlreadyRunning, InstanceLock
 from qis.desktop.paths import user_data_dir
 
@@ -549,3 +549,73 @@ def test_apply_setup_solo_login(ctl, data):
     s, _, _ = get(opener(), ctl.runner.base_url + "/api/login", data=json.dumps({"username": "local", "password": "Mypw2026x"}).encode(),
                   headers={"Content-Type": "application/json", "X-QIS": "1"})
     assert s == 200
+
+
+# ---------------------------------------------------------------- 접속 범위: Tailscale 만
+def _own_ip():
+    import socket
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+            s.connect(("10.255.255.255", 1))
+            ip = s.getsockname()[0]
+    except OSError:
+        return ""
+    return "" if ip.startswith("127.") else ip
+
+
+def test_tailscale_ip_range():
+    assert core.is_tailscale_ip("100.64.0.1") and core.is_tailscale_ip("100.127.255.254")
+    assert not core.is_tailscale_ip("100.63.0.1") and not core.is_tailscale_ip("100.128.0.1")
+    assert not core.is_tailscale_ip("192.168.0.5") and not core.is_tailscale_ip("")
+    assert core.tailscale_ip() == "" or core.is_tailscale_ip(core.tailscale_ip())
+
+
+def test_lan_scope_saved(data):
+    st = core.DesktopSettings(mode="lan", lan_scope="tailscale")
+    st.save(data)
+    assert core.DesktopSettings.load(data).lan_scope == "tailscale"
+    (data / "desktop.json").write_text('{"mode":"lan","lan_scope":"everything"}', encoding="utf-8")
+    assert core.DesktopSettings.load(data).lan_scope == "lan"     # 모르는 값은 기본으로
+
+
+def test_tailscale_scope_without_tailscale(data, monkeypatch):
+    """Tailscale 이 없으면 이 PC 에서만 열림 — 사내망으로 새지 않음."""
+    monkeypatch.setattr(core, "tailscale_ip", lambda: "")
+    cfg = core.desktop_config(data)
+    cfg.port = core.free_port()
+    st = core.DesktopSettings(mode="lan", lan_scope="tailscale")
+    core.set_lan_admin(cfg, "admin", "관리자", "Qadm2026x")
+    core.prepare(cfg, st)
+    r = core.ServerRunner(cfg, st).start()
+    try:
+        assert r.bound == ("127.0.0.1", cfg.port) and r.ts_ip == "" and len(r.socks) == 1
+        assert get(opener(), r.base_url + "/healthz")[0] == 200
+        ip = _own_ip()
+        if ip:
+            with pytest.raises(OSError):
+                get(opener(), f"http://{ip}:{r.port}/healthz")   # 사내 IP 로는 연결 거부
+    finally:
+        r.stop()
+    assert "찾지 못했습니다" in pages.lan_info_page([], cfg.port, True, tailscale=True)
+
+
+def test_tailscale_scope_binds_only_that_address(data, monkeypatch):
+    """Tailscale 주소(시험에서는 이 PC 의 실제 주소로 대신)와 127.0.0.1 두 곳에만 열림."""
+    ip = _own_ip()
+    if not ip:
+        pytest.skip("네트워크 주소 없음")
+    monkeypatch.setattr(core, "tailscale_ip", lambda: ip)
+    cfg = core.desktop_config(data)
+    cfg.port = core.free_port()
+    st = core.DesktopSettings(mode="lan", lan_scope="tailscale")
+    core.set_lan_admin(cfg, "admin", "관리자", "Qadm2026x")
+    core.prepare(cfg, st)
+    r = core.ServerRunner(cfg, st).start()
+    try:
+        assert r.ts_ip == ip and sorted(s.getsockname()[0] for s in r.socks) == sorted(["127.0.0.1", ip])
+        assert get(opener(), r.base_url + "/healthz")[0] == 200
+        assert get(opener(), f"http://{ip}:{r.port}/healthz")[0] == 200
+    finally:
+        r.stop()
+    h = pages.lan_info_page([f"http://{ip}:{cfg.port}"], cfg.port, True, tailscale=True)
+    assert "remoteip=100.64.0.0/10" in h and ip in h
