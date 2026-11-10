@@ -10,6 +10,11 @@ from .deps import current, ip_of, st
 router = APIRouter(prefix="/api")
 
 
+@router.get("/update")
+def update_info(request: Request, user=Depends(current)):
+    return st(request).updater.public()
+
+
 @router.get("/boot")
 def boot(request: Request, user=Depends(current)):
     return {**st(request).store.boot(), "user": public_user(user)}

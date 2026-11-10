@@ -41,7 +41,7 @@ jobs:
         run: python -m pip install -r requirements-desktop.txt pytest httpx
       - name: 데스크톱 시험
         run: python -m pytest -q tests/test_desktop.py
-      - name: 버전 넣기 (릴리스 태그 → qis/__init__.py)
+      - name: 버전 · 빌드 날짜 넣기 (릴리스 태그 → qis/__init__.py)
         shell: python
         env:
           TAG: ${{ inputs.tag || (startsWith(github.ref, 'refs/tags/') && github.ref_name) || '' }}
@@ -56,7 +56,11 @@ jobs:
                   raise SystemExit(f"bad version tag: {tag}")
               s = re.sub(r'__version__\s*=\s*"[^"]*"', f'__version__ = "{v}"', s)
               f.write_text(s, encoding="utf-8")
-          print(re.search(r'__version__\s*=\s*"([^"]*)"', s).group(0), "(tag:", tag or "none", ")")   # 윈도우 콘솔(cp1252)이라 영문으로
+          import datetime
+          today = datetime.date.today().isoformat()
+          s = re.sub(r'__build__\s*=\s*"[^"]*"', f'__build__ = "{today}"', s)
+          f.write_text(s, encoding="utf-8")
+          print(re.search(r'__version__\s*=\s*"([^"]*)"', s).group(0), "(tag:", tag or "none", ") build", today)   # 윈도우 콘솔(cp1252)이라 영문으로
       - name: 빌드
         run: pyinstaller --noconfirm --clean packaging/QIS.spec
       - name: 실행 점검 · 압축 (맥)
@@ -217,3 +221,30 @@ jobs:
               "QIS 데스크톱 프로그램 $TAG — 윈도우: QIS-Setup.exe(설치) 또는 QIS-windows.zip(압축) · 맥(Apple Silicon): QIS-mac.dmg 또는 QIS-mac.zip. 설치 방법: docs/데스크톱_프로그램.md"
           fi
           gh release upload "$TAG" out/QIS-mac.zip out/QIS-windows.zip out/QIS-Setup.exe out/QIS-mac.dmg --clobber -R "$GITHUB_REPOSITORY"
+      # ---- 공개 배포 저장소(qis-releases)에도 올림: 고객 · 프로그램의 업데이트 확인(latest.json)이 여기를 봄.
+      #      RELEASES_TOKEN(공개 저장소 contents:write 권한의 PAT) 시크릿이 있을 때만. 없으면 이 단계는 건너뜀.
+      - name: 공개 배포 저장소에 올리기 (qis-releases)
+        if: ${{ secrets.RELEASES_TOKEN != '' }}
+        env:
+          GH_TOKEN: ${{ secrets.RELEASES_TOKEN }}
+          TAG: ${{ inputs.tag || github.ref_name }}
+          PUB: ${{ github.repository_owner }}/qis-releases
+          NOTES_TXT: ${{ github.event.release.body }}
+        run: |
+          VER="${TAG#v}"; TODAY="$(date -u +%F)"
+          python3 - <<EOF
+          import json, os
+          pub, tag = os.environ["PUB"], os.environ["TAG"]
+          base = f"https://github.com/{pub}/releases/download/{tag}"
+          json.dump({"version": "$VER", "build": "$TODAY", "page": f"https://github.com/{pub}/releases/tag/{tag}",
+                     "notes": os.environ.get("NOTES_TXT", ""),
+                     "assets": {"windows": base + "/QIS-Setup.exe", "windows_zip": base + "/QIS-windows.zip",
+                                "mac": base + "/QIS-mac.dmg", "mac_zip": base + "/QIS-mac.zip"}},
+                    open("out/latest.json", "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+          EOF
+          if ! gh release view "$TAG" -R "$PUB" >/dev/null 2>&1; then
+            gh release create "$TAG" -R "$PUB" --title "QIS $TAG" --notes "QIS 데스크톱 프로그램 $TAG — 윈도우: QIS-Setup.exe(설치) 또는 QIS-windows.zip · 맥(Apple Silicon): QIS-mac.dmg 또는 QIS-mac.zip"
+          fi
+          gh release upload "$TAG" out/QIS-mac.zip out/QIS-windows.zip out/QIS-Setup.exe out/QIS-mac.dmg out/latest.json --clobber -R "$PUB"
+          # 최신 릴리스로 표시해야 /releases/latest/download/latest.json 이 이 버전을 가리킴
+          gh release edit "$TAG" -R "$PUB" --latest
