@@ -98,7 +98,7 @@ function renderNcr(){
     <select onchange="state.nf.status=this.value;$('#ntab').innerHTML=ncrTable()">${sel.map(([v,l])=>`<option value="${v}" ${v===f.status?'selected':''}>${l}</option>`).join('')}</select>
     <select onchange="state.nf.sup=this.value;$('#ntab').innerHTML=ncrTable()">${supOpts(f.sup,'전체 협력사')}</select>
     <select onchange="state.nf.type=this.value;$('#ntab').innerHTML=ncrTable()"><option value="">전체 유형</option>${REQ_TYPES.map(t=>`<option ${t===f.type?'selected':''}>${t}</option>`).join('')}</select>
-    <span class="muted">발행일</span><input type="date" value="${esc(f.from)}" onchange="state.nf.from=this.value;$('#ntab').innerHTML=ncrTable()"> ~ <input type="date" value="${esc(f.to)}" onchange="state.nf.to=this.value;$('#ntab').innerHTML=ncrTable()">
+    <span style="display:inline-flex;align-items:center;gap:6px;white-space:nowrap"><span class="muted">발행일</span><input type="date" value="${esc(f.from)}" onchange="state.nf.from=this.value;$('#ntab').innerHTML=ncrTable()"> ~ <input type="date" value="${esc(f.to)}" onchange="state.nf.to=this.value;$('#ntab').innerHTML=ncrTable()"></span>
     <input placeholder="검색 (번호·협력사·부품·제목·담당)" value="${esc(f.q)}" oninput="state.nf.q=this.value;deb(()=>{$('#ntab').innerHTML=ncrTable()})" style="width:220px">
     ${f.sup||f.type||f.from||f.to||f.q?`<button class="b s" onclick="Object.assign(state.nf,{sup:'',type:'',from:'',to:'',q:''});render()">필터 해제</button>`:''}
     <span style="flex:1"></span><button class="b" onclick="exportNcrCSV()">엑셀 내보내기</button>
