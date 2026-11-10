@@ -155,7 +155,10 @@ def test_due_once_a_day(env):
     tg.send_summary("auto")
     assert len([c for c in fake.calls if c[1] == "sendMessage"]) == 1
     assert not tg.due(datetime.combine(datetime.now().date(), datetime.min.time()).replace(hour=9))   # 오늘은 이미 보냄
-    assert tg.due(datetime.now() + timedelta(days=1))                                                   # 내일은 다시
+    nxt = datetime.now() + timedelta(days=1)                                                            # 다음 평일 09:00 — 시험 도는 시각 · 요일에 안 흔들리게
+    while nxt.weekday() >= 5:
+        nxt += timedelta(days=1)
+    assert tg.due(nxt.replace(hour=9, minute=0))                                                        # 다른 날은 다시
 
 
 def test_loop_sends_and_records_error(env, monkeypatch):
