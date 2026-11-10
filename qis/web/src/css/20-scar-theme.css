@@ -18,6 +18,11 @@ body{font-family:var(--f-body);font-size:13.5px;line-height:1.5}
   .card{border-color:var(--line);border-radius:8px;padding:16px 18px}
   .card h3{font-size:13.5px;font-weight:700}
   .kpis{gap:0;background:var(--card);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  @media(min-width:761px){
+    .kpis:has(>.kpi:nth-child(10):last-child){grid-template-columns:repeat(5,minmax(0,1fr))}   /* 10칸 = 5 × 2 */
+    .kpis:has(>.kpi:nth-child(7):last-child){grid-template-columns:repeat(7,minmax(0,1fr))}    /* 7칸 = 한 줄 */
+    .kpis:has(>.kpi:nth-child(8):last-child){grid-template-columns:repeat(4,minmax(0,1fr))}    /* 8칸 = 4 × 2 */
+  }
   .kpi{border:0;border-radius:0;padding:14px 16px;background:var(--card);box-shadow:1px 0 0 var(--line),0 1px 0 var(--line)}
   .kpi .l{font-size:12px;color:var(--sub);font-weight:500}
   .kpi .v{font-family:var(--f-mono);font-size:26px;font-weight:600;font-variant-numeric:tabular-nums;margin-top:2px}

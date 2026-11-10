@@ -5,16 +5,16 @@ body.mob #mswitch,body.pcnarrow #mswitch{display:block}
 body.mob #mswitch .mon,body.pcnarrow #mswitch .moff{display:inline}
 body.mob header #hdrBk,body.mob header #hdrInstall,body.mob header #linkInfo,body.mob header #copyInfo{display:none}
 /* 휴대폰 머리글: 두 줄 — ① 로고(작게) · 제목 · 👤사용자  ② 저장 시각 · 버튼. 한 줄에 다 넣으면 제목이 세로로 늘어지고 사용자 이름이 한 글자씩 꺾임 */
-body.mob header{flex-wrap:wrap;gap:4px 8px;padding:8px 12px 7px}
-body.mob header .brandlogo{height:22px;max-width:104px;padding:2px 4px}
-body.mob header h1{font-size:14px;line-height:1.25;flex:1 1 120px;min-width:0;word-break:keep-all}
-body.mob header h1::before{display:none}
-body.mob header h1 span{font-size:10px!important}
-body.mob header .updbadge{font-size:10px;padding:1px 6px}
-body.mob header #srvUser{font-size:12px;white-space:nowrap}
-body.mob header .sp{flex:1 1 100%;height:0;margin:-2px 0 0}      /* 줄바꿈 */
-body.mob header #saveInfo{order:9;flex:1 1 auto;font-size:11px;white-space:nowrap}
-body.mob header .b.s{order:10;padding:3px 8px;font-size:12px;white-space:nowrap}
+:is(body.mob,body.pcnarrow) header{flex-wrap:wrap;gap:4px 8px;padding:8px 12px 7px}
+:is(body.mob,body.pcnarrow) header .brandlogo{height:22px;max-width:104px;padding:2px 4px}
+:is(body.mob,body.pcnarrow) header h1{font-size:14px;line-height:1.25;flex:1 1 120px;min-width:0;word-break:keep-all}
+:is(body.mob,body.pcnarrow) header h1::before{display:none}
+:is(body.mob,body.pcnarrow) header h1 span{font-size:10px!important}
+:is(body.mob,body.pcnarrow) header .updbadge{font-size:10px;padding:1px 6px}
+:is(body.mob,body.pcnarrow) header #srvUser{font-size:12px;white-space:nowrap}
+:is(body.mob,body.pcnarrow) header .sp{flex:1 1 100%;height:0;margin:-2px 0 0}      /* 줄바꿈 */
+:is(body.mob,body.pcnarrow) header #saveInfo{order:9;flex:1 1 auto;font-size:11px;white-space:nowrap}
+:is(body.mob,body.pcnarrow) header .b.s{order:10;padding:3px 8px;font-size:12px;white-space:nowrap}
 body.mob header #hdrPw,body.mob header #hdrAdm{display:none}   /* 비밀번호 변경 · 관리 화면은 PC 에서 */
 body.mob main{padding:10px 12px 0;max-width:640px;margin:0 auto}
 body.mob #nav{display:block;overflow:visible;position:sticky;top:0;z-index:5;padding:8px 12px;background:var(--card,#fff);border-bottom:1px solid var(--line,#ddd)}
@@ -56,3 +56,10 @@ body.mob .cbx .ci{padding:11px 12px}
 body.mob .cbx .ci b{font-size:15px}
 body.mob .cbx .ci span{font-size:12.5px;margin-top:1px}
 body.mob .cbx .cf{font-size:11px;padding:6px 12px}
+/* 좁은 화면에서 'PC 화면으로 보기': 저작권 표시는 숨겨 머리글이 화면 밖으로 밀리지 않게 */
+body.pcnarrow header #copyInfo,body.pcnarrow header #linkInfo{display:none}
+/* 휴대폰 '오늘 챙길 일': 다른 카드와 왼쪽 줄 맞춤 (ul.act 들여쓰기 제거) */
+ul.act.macts{padding-left:0;list-style:none}
+/* 휴대폰 이슈 등록 긴급도: 숨긴 라디오가 화면 폭(100%)을 차지해 가로 스크롤이 생기던 것 */
+fieldset.murg label{position:relative}
+.mform fieldset.murg input{width:1px;height:1px;padding:0;border:0;left:0;top:0}
