@@ -104,7 +104,12 @@ jobs:
         run: |
           VER=$(python -c "import re;print(re.search(r'__version__\s*=\s*\"([^\"]+)\"',open('qis/__init__.py',encoding='utf-8').read()).group(1))")
           rm -rf stage && mkdir stage && cp -R dist/QIS.app stage/ && ln -s /Applications stage/Applications
-          hdiutil create -volname "QIS $VER" -srcfolder stage -ov -format UDZO "QIS-$VER.dmg"
+          # GitHub 맥 러너에서 hdiutil 이 간헐적으로 "Resource busy" 로 실패함(v1.4.1 1차 빌드) → 최대 5번 재시도
+          for i in 1 2 3 4 5; do
+            if hdiutil create -volname "QIS $VER" -srcfolder stage -ov -format UDZO "QIS-$VER.dmg"; then break; fi
+            echo "hdiutil failed (try $i) - retrying"; rm -f "QIS-$VER.dmg"; sleep $((i*5))
+            [ "$i" = 5 ] && exit 1
+          done
           cp "QIS-$VER.dmg" QIS-mac.dmg
           ls -la QIS-mac.dmg
       - name: 실행 점검 · 압축 (윈도우)
