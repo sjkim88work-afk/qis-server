@@ -42,6 +42,9 @@ class Config:
     telegram_time: str = "08:00"
     telegram_weekend: bool = False   # True면 주말에도
     telegram_detail: bool = False    # True면 조치 · 이슈 제목까지
+    # 업데이트 확인 — 하루 한 번 latest.json 을 읽어 새 버전을 알려만 준다(자동 설치 없음). 사내망 정책상 끄려면 update_check=false
+    update_check: bool = True
+    update_url: str = "https://github.com/sjkim88work-afk/qis-releases/releases/latest/download/latest.json"
     teams_on: bool = False           # 팀즈(Workflows 웹훅)로도 같은 요약을 보냄 — 시각 · 주말 · 세부 설정은 텔레그램과 공유
     teams_webhook: str = ""          # Teams › Workflows 앱 '웹훅 요청을 받으면 채널에 게시' 흐름의 HTTP POST 주소 (qis.json 에만)
 

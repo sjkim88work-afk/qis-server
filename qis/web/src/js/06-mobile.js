@@ -178,7 +178,8 @@ const APP_VER=(SRV&&SRV.server)?String(SRV.server):APP_VER_FILE;
 function renderBrand(){
   const S=db.settings,tab=(TABS.find(t=>t[0]===state.tab)||[])[1]||'';
   $('#brand').innerHTML=S.logo?`<img class="brandlogo" src="${S.logo}" alt="로고">`:'';
-  $('#appTitle').innerHTML=`${esc(S.company?S.company+' 품질관리':'QIS')} <span style="font:600 11px/1 var(--f-mono,monospace);color:var(--sub);vertical-align:middle">ver ${APP_VER}</span>`;
+  const U=SRV&&SRV.update,upd=U&&U.available?` <a class="updbadge" href="${esc(U.page||'#')}" target="_blank" rel="noopener" title="새 버전을 내려받을 수 있습니다 (관리 › 버전 · 업데이트)">새 버전 ${esc(U.version)}</a>`:'';
+  $('#appTitle').innerHTML=`${esc(S.company?S.company+' 품질관리':'QIS')} <span style="font:600 11px/1 var(--f-mono,monospace);color:var(--sub);vertical-align:middle">ver ${APP_VER}</span>${upd}`;
   document.title=(RO?'[읽기 전용] ':'')+(S.company?S.company+' 품질관리':'QIS');  // 설치 앱 창 제목: ‘QIS - 회사 품질관리’
   $('#printHead').innerHTML=`${S.logo?`<img src="${S.logo}" alt="">`:''}<div class="t"><b>${esc(S.company||'품질관리')} — ${esc(tab)}${state.tab==='dash'?' ('+esc(state.dashMonth)+')':''}</b><span>${esc(S.dept)}</span></div><div class="d">출력일 ${today()}</div>`;
 }
