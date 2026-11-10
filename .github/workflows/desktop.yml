@@ -205,6 +205,9 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    env:
+      # if: 에서는 secrets 를 직접 쓸 수 없어(워크플로 문법 오류) env 로 옮겨 판정
+      HAS_RELEASES_TOKEN: ${{ secrets.RELEASES_TOKEN != '' }}
     steps:
       - uses: actions/download-artifact@v4
         with:
@@ -224,7 +227,7 @@ jobs:
       # ---- 공개 배포 저장소(qis-releases)에도 올림: 고객 · 프로그램의 업데이트 확인(latest.json)이 여기를 봄.
       #      RELEASES_TOKEN(공개 저장소 contents:write 권한의 PAT) 시크릿이 있을 때만. 없으면 이 단계는 건너뜀.
       - name: 공개 배포 저장소에 올리기 (qis-releases)
-        if: ${{ secrets.RELEASES_TOKEN != '' }}
+        if: env.HAS_RELEASES_TOKEN == 'true'
         env:
           GH_TOKEN: ${{ secrets.RELEASES_TOKEN }}
           TAG: ${{ inputs.tag || github.ref_name }}
