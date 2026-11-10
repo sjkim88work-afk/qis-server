@@ -71,6 +71,42 @@ jobs:
           dist/QIS.app/Contents/MacOS/QIS --selftest selftest.json || { cat selftest.json; exit 1; }
           cat selftest.json
           ditto -c -k --sequesterRsrc --keepParent dist/QIS.app QIS-mac.zip
+      - name: 코드 서명 · 공증 (맥 — 시크릿 있을 때만)
+        if: runner.os == 'macOS' && env.HAS_CERT == 'true'
+        env:
+          HAS_CERT: ${{ secrets.APPLE_CERT_P12_BASE64 != '' && 'true' || 'false' }}
+          APPLE_CERT_P12_BASE64: ${{ secrets.APPLE_CERT_P12_BASE64 }}
+          APPLE_CERT_PASSWORD: ${{ secrets.APPLE_CERT_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+        run: |
+          # 1) 임시 키체인에 Developer ID 인증서 넣기
+          echo "$APPLE_CERT_P12_BASE64" | base64 --decode > cert.p12
+          security create-keychain -p tmp build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p tmp build.keychain
+          security import cert.p12 -k build.keychain -P "$APPLE_CERT_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k tmp build.keychain
+          IDENT=$(security find-identity -v -p codesigning build.keychain | grep "Developer ID Application" | head -1 | sed -E 's/.*"(.*)"/\1/')
+          # 2) 안쪽 바이너리부터 서명 → 앱 전체 → 검증
+          find dist/QIS.app/Contents -type f \( -name "*.so" -o -name "*.dylib" -o -perm -u+x \) -print0 | xargs -0 -n1 codesign --force --options runtime --timestamp --entitlements packaging/entitlements.plist --sign "$IDENT" || true
+          codesign --force --deep --options runtime --timestamp --entitlements packaging/entitlements.plist --sign "$IDENT" dist/QIS.app
+          codesign --verify --deep --strict --verbose=2 dist/QIS.app
+          # 3) 공증 → 스테이플 → 다시 압축
+          ditto -c -k --sequesterRsrc --keepParent dist/QIS.app notarize.zip
+          xcrun notarytool submit notarize.zip --apple-id "$APPLE_ID" --team-id "$APPLE_TEAM_ID" --password "$APPLE_APP_PASSWORD" --wait
+          xcrun stapler staple dist/QIS.app
+          rm -f QIS-mac.zip && ditto -c -k --sequesterRsrc --keepParent dist/QIS.app QIS-mac.zip
+          security delete-keychain build.keychain; rm -f cert.p12
+      - name: DMG 만들기 (맥)
+        if: runner.os == 'macOS'
+        run: |
+          VER=$(python -c "import re;print(re.search(r'__version__\s*=\s*\"([^\"]+)\"',open('qis/__init__.py',encoding='utf-8').read()).group(1))")
+          rm -rf stage && mkdir stage && cp -R dist/QIS.app stage/ && ln -s /Applications stage/Applications
+          hdiutil create -volname "QIS $VER" -srcfolder stage -ov -format UDZO "QIS-$VER.dmg"
+          cp "QIS-$VER.dmg" QIS-mac.dmg
+          ls -la QIS-mac.dmg
       - name: 실행 점검 · 압축 (윈도우)
         if: runner.os == 'Windows'
         shell: pwsh
@@ -79,6 +115,61 @@ jobs:
           Get-Content selftest.json -Encoding utf8
           if ($p.ExitCode -ne 0) { throw "selftest 실패 (exit $($p.ExitCode))" }
           Compress-Archive -Path "dist\QIS" -DestinationPath "QIS-windows.zip"
+      - name: 코드 서명 준비 (윈도우 — 시크릿 있을 때만)
+        if: runner.os == 'Windows' && env.HAS_CERT == 'true'
+        shell: pwsh
+        env:
+          HAS_CERT: ${{ secrets.WINDOWS_CERT_PFX_BASE64 != '' && 'true' || 'false' }}
+          WINDOWS_CERT_PFX_BASE64: ${{ secrets.WINDOWS_CERT_PFX_BASE64 }}
+          WINDOWS_CERT_PASSWORD: ${{ secrets.WINDOWS_CERT_PASSWORD }}
+        run: |
+          [IO.File]::WriteAllBytes("$PWD\cert.pfx", [Convert]::FromBase64String($env:WINDOWS_CERT_PFX_BASE64))
+          $st = Get-ChildItem "C:\Program Files (x86)\Windows Kits\10\bin\*\x64\signtool.exe" | Sort-Object FullName -Descending | Select-Object -First 1
+          & $st.FullName sign /f "$PWD\cert.pfx" /p "$env:WINDOWS_CERT_PASSWORD" /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 "dist\QIS\QIS.exe"
+          # Inno 가 설치 프로그램 · 제거 프로그램에 쓸 서명 명령
+          echo "QIS_SIGNTOOL=$($st.FullName) sign /f $PWD\cert.pfx /p $env:WINDOWS_CERT_PASSWORD /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 `$f" >> $env:GITHUB_ENV
+          Compress-Archive -Force -Path "dist\QIS" -DestinationPath "QIS-windows.zip"
+      - name: 설치 프로그램 만들기 (윈도우 · Inno Setup)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { choco install innosetup -y --no-progress; $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" }
+          $langs = Split-Path $iscc | Join-Path -ChildPath "Languages"
+          if (-not (Test-Path "$langs\Korean.isl")) { Invoke-WebRequest "https://raw.githubusercontent.com/jrsoftware/issrc/main/Files/Languages/Korean.isl" -OutFile "$langs\Korean.isl" }
+          $ver = (Select-String -Path qis\__init__.py -Pattern '__version__\s*=\s*"([^"]+)"').Matches[0].Groups[1].Value
+          python -c "from PIL import Image; Image.open('qis/web/icons/icon-512.png').save('QIS.ico', sizes=[(256,256),(64,64),(48,48),(32,32),(16,16)])"
+          $args = @("/DAppVersion=$ver", "/DSrcDir=$PWD\dist\QIS", "/DOutDir=$PWD", "/DIconFile=$PWD\QIS.ico", "packaging\QIS.iss")
+          if ($env:QIS_SIGNTOOL) { $args = @("/DSign", "/Sqissign=$env:QIS_SIGNTOOL") + $args }
+          & $iscc @args
+          if ($LASTEXITCODE -ne 0) { throw "ISCC 실패" }
+          Copy-Item "QIS-Setup-$ver.exe" "QIS-Setup.exe"
+          Get-Item QIS-Setup.exe | Format-List Name, Length
+      - name: 설치 프로그램 시험 (윈도우 · 조용히 설치 → 실행 점검 → 제거)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $dir = "$env:LOCALAPPDATA\Programs\QIS"
+          function RunWait($exe, $argList, $what) {   # $args 는 PowerShell 예약 변수라 쓰면 안 됨   # 창이 떠서 멈추면 5분 뒤 실패 처리 (영원히 기다리지 않게)
+            $p = Start-Process -FilePath $exe -ArgumentList $argList -PassThru
+            if (-not $p.WaitForExit(120000)) {
+              Write-Host "== 떠 있는 창 =="; Get-Process | Where-Object { $_.MainWindowTitle } | ForEach-Object { Write-Host "$($_.ProcessName): $($_.MainWindowTitle)" }
+              if (Test-Path "$PWD\setup.log") { Write-Host "== setup.log 끝부분 =="; Get-Content "$PWD\setup.log" -Tail 40 }
+              Get-Process -Name "QIS-Setup*","*.tmp","QIS" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+              $p.Kill(); throw "$what 이(가) 2분 안에 끝나지 않음 — 조용한 모드에서 창이 뜬 것으로 보임" }
+            return $p.ExitCode
+          }
+          $code = RunWait ".\QIS-Setup.exe" @("/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/SP-", "/LOG=$PWD\setup.log") "설치"
+          if ($code -ne 0) { Get-Content setup.log -Tail 30; throw "설치 실패 (exit $code)" }
+          if (-not (Test-Path "$dir\QIS.exe")) { throw "설치 위치에 QIS.exe 가 없음: $dir" }
+          $p = Start-Process -FilePath "$dir\QIS.exe" -ArgumentList "--selftest", "$PWD\installed.json" -Wait -PassThru
+          Get-Content installed.json -Encoding utf8
+          if ($p.ExitCode -ne 0) { throw "설치본 selftest 실패 (exit $($p.ExitCode))" }
+          $un = Get-ChildItem "$dir\unins*.exe" | Select-Object -First 1
+          $code = RunWait $un.FullName @("/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART") "제거"
+          if ($code -ne 0) { throw "제거 실패 (exit $code)" }
+          Start-Sleep 3
+          if (Test-Path "$dir\QIS.exe") { throw "제거 뒤에도 QIS.exe 가 남음" }
       - name: 인터넷에서 받은 zip 처럼 시험 (윈도우)
         if: runner.os == 'Windows'
         shell: pwsh
@@ -101,7 +192,11 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: QIS-${{ matrix.name }}
-          path: QIS-${{ matrix.name }}.zip
+          path: |
+            QIS-${{ matrix.name }}.zip
+            QIS-Setup.exe
+            QIS-mac.dmg
+          if-no-files-found: ignore
           retention-days: 14
 
   release:
@@ -123,9 +218,9 @@ jobs:
           ls -la out
           if ! gh release view "$TAG" -R "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             gh release create "$TAG" -R "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "QIS $TAG" --notes \
-              "QIS 데스크톱 프로그램 $TAG — 맥(Apple Silicon): QIS-mac.zip · 윈도우: QIS-windows.zip. 설치 방법: docs/데스크톱_프로그램.md"
+              "QIS 데스크톱 프로그램 $TAG — 윈도우: QIS-Setup.exe(설치) 또는 QIS-windows.zip(압축) · 맥(Apple Silicon): QIS-mac.dmg 또는 QIS-mac.zip. 설치 방법: docs/데스크톱_프로그램.md"
           fi
-          gh release upload "$TAG" out/QIS-mac.zip out/QIS-windows.zip --clobber -R "$GITHUB_REPOSITORY"
+          gh release upload "$TAG" out/QIS-mac.zip out/QIS-windows.zip out/QIS-Setup.exe out/QIS-mac.dmg --clobber -R "$GITHUB_REPOSITORY"
       # ---- 공개 배포 저장소(qis-releases)에도 올림: 고객 · 프로그램의 업데이트 확인(latest.json)이 여기를 봄.
       #      RELEASES_TOKEN(공개 저장소 contents:write 권한의 PAT) 시크릿이 있을 때만. 없으면 이 단계는 건너뜀.
       - name: 공개 배포 저장소에 올리기 (qis-releases)
@@ -143,12 +238,13 @@ jobs:
           base = f"https://github.com/{pub}/releases/download/{tag}"
           json.dump({"version": "$VER", "build": "$TODAY", "page": f"https://github.com/{pub}/releases/tag/{tag}",
                      "notes": os.environ.get("NOTES_TXT", ""),
-                     "assets": {"windows": base + "/QIS-windows.zip", "mac": base + "/QIS-mac.zip"}},
+                     "assets": {"windows": base + "/QIS-Setup.exe", "windows_zip": base + "/QIS-windows.zip",
+                                "mac": base + "/QIS-mac.dmg", "mac_zip": base + "/QIS-mac.zip"}},
                     open("out/latest.json", "w", encoding="utf-8"), ensure_ascii=False, indent=1)
           EOF
           if ! gh release view "$TAG" -R "$PUB" >/dev/null 2>&1; then
-            gh release create "$TAG" -R "$PUB" --title "QIS $TAG" --notes "QIS 데스크톱 프로그램 $TAG — 윈도우: QIS-windows.zip · 맥(Apple Silicon): QIS-mac.zip"
+            gh release create "$TAG" -R "$PUB" --title "QIS $TAG" --notes "QIS 데스크톱 프로그램 $TAG — 윈도우: QIS-Setup.exe(설치) 또는 QIS-windows.zip · 맥(Apple Silicon): QIS-mac.dmg 또는 QIS-mac.zip"
           fi
-          gh release upload "$TAG" out/QIS-mac.zip out/QIS-windows.zip out/latest.json --clobber -R "$PUB"
+          gh release upload "$TAG" out/QIS-mac.zip out/QIS-windows.zip out/QIS-Setup.exe out/QIS-mac.dmg out/latest.json --clobber -R "$PUB"
           # 최신 릴리스로 표시해야 /releases/latest/download/latest.json 이 이 버전을 가리킴
           gh release edit "$TAG" -R "$PUB" --latest
