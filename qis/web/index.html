@@ -521,6 +521,18 @@ details>summary.sec:hover{color:var(--pri-d,#163d5a)}
 body.mob #mswitch,body.pcnarrow #mswitch{display:block}
 body.mob #mswitch .mon,body.pcnarrow #mswitch .moff{display:inline}
 body.mob header #hdrBk,body.mob header #hdrInstall,body.mob header #linkInfo,body.mob header #copyInfo{display:none}
+/* 휴대폰 머리글: 두 줄 — ① 로고(작게) · 제목 · 👤사용자  ② 저장 시각 · 버튼. 한 줄에 다 넣으면 제목이 세로로 늘어지고 사용자 이름이 한 글자씩 꺾임 */
+body.mob header{flex-wrap:wrap;gap:4px 8px;padding:8px 12px 7px}
+body.mob header .brandlogo{height:22px;max-width:104px;padding:2px 4px}
+body.mob header h1{font-size:14px;line-height:1.25;flex:1 1 120px;min-width:0;word-break:keep-all}
+body.mob header h1::before{display:none}
+body.mob header h1 span{font-size:10px!important}
+body.mob header .updbadge{font-size:10px;padding:1px 6px}
+body.mob header #srvUser{font-size:12px;white-space:nowrap}
+body.mob header .sp{flex:1 1 100%;height:0;margin:-2px 0 0}      /* 줄바꿈 */
+body.mob header #saveInfo{order:9;flex:1 1 auto;font-size:11px;white-space:nowrap}
+body.mob header .b.s{order:10;padding:3px 8px;font-size:12px;white-space:nowrap}
+body.mob header #hdrPw,body.mob header #hdrAdm{display:none}   /* 비밀번호 변경 · 관리 화면은 PC 에서 */
 body.mob main{padding:10px 12px 0;max-width:640px;margin:0 auto}
 body.mob #nav{display:block;overflow:visible;position:sticky;top:0;z-index:5;padding:8px 12px;background:var(--card,#fff);border-bottom:1px solid var(--line,#ddd)}
 .mtabs{width:100%;display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:6px;max-width:640px;margin:0 auto}
@@ -7140,9 +7152,9 @@ if(SRV){
   ['hdrBk','hdrInstall'].forEach(i=>{const e=$('#'+i);if(e)e.style.display='none'});
   const R={viewer:'조회',editor:'작성',admin:'관리자'};
   $('#hdrBk').insertAdjacentHTML('beforebegin',`<span class="noprint" id="srvUser" title="${esc(SRV.user)} · ${R[SRV.role]||''} 권한" style="font-size:12px;opacity:.9">👤 ${esc(SRV.name)} <span style="opacity:.7">· ${R[SRV.role]||SRV.role}</span></span>`+
-    `<button class="b s noprint" onclick="location.href='/account'" title="내 비밀번호 바꾸기">비밀번호</button>`+
-    (srvCanAdmin()?`<button class="b s noprint" onclick="window.open('/admin','qisAdmin')" title="사용자 · 변경 이력 · 백업">관리</button>`:'')+
-    `<button class="b s noprint" onclick="srvLogout()">로그아웃</button>`);
+    `<button class="b s noprint" id="hdrPw" onclick="location.href='/account'" title="내 비밀번호 바꾸기">비밀번호</button>`+
+    (srvCanAdmin()?`<button class="b s noprint" id="hdrAdm" onclick="window.open('/admin','qisAdmin')" title="사용자 · 변경 이력 · 백업">관리</button>`:'')+
+    `<button class="b s noprint" id="hdrOut" onclick="srvLogout()">로그아웃</button>`);
   // 서버가 맡는 기능 (브라우저 저장소 · PC 폴더 · 파일 백업/복원)
   ['resetAll','pickImport','restoreFromFolder','pickRoot','unlinkRoot','pickDir','unlinkDir','photoDirNow','chooseQmsDir','openImport']
     .forEach(n=>{if(typeof window[n]==='function')window[n]=function(){toast('사내 서버 모드에서는 서버가 백업 · 복원합니다 — 관리자 화면을 쓰세요')}});
