@@ -50,3 +50,9 @@ body.mob #nav{display:block;overflow:visible;position:sticky;top:0;z-index:5;pad
 .mkv span{color:var(--sub,#555)}
 .mkv b{font-weight:500;word-break:break-all}
 .mcard-in .qtrack{margin:8px 0}
+/* 휴대폰 검색 목록(부품 등): 손가락으로 고르기 좋게 */
+body.mob .cbx{border-radius:10px}
+body.mob .cbx .ci{padding:11px 12px}
+body.mob .cbx .ci b{font-size:15px}
+body.mob .cbx .ci span{font-size:12.5px;margin-top:1px}
+body.mob .cbx .cf{font-size:11px;padding:6px 12px}
