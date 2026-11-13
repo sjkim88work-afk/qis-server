@@ -23,7 +23,7 @@ function renderSup(){
   const gc={A:'ok',B:'inf',C:'warn',D:'bad','-':'mut'};
   return `<div class="card noprint"><div class="row">
     <span class="muted">기간</span><input type="date" value="${state.supFrom}" onchange="state.supFrom=this.value;render()"> ~ <input type="date" value="${state.supTo}" onchange="state.supTo=this.value;render()">
-    <button class="b p" onclick="openRcvLineImport()">입고 내역 업로드 (MES 거래명세서)</button><button class="b" onclick="openRcvImport()">월별 입고수량 업로드</button><button class="b" onclick="editReceipts()">직접 입력·수정</button><button class="b" onclick="editSup()">+ 협력사</button>
+    <button class="b p" onclick="openRcvLineImport()">입고 내역 가져오기 (MES 거래명세서)</button><button class="b" onclick="openRcvImport()">월별 입고수량 가져오기</button><button class="b" onclick="editReceipts()">직접 입력·수정</button><button class="b" onclick="editSup()">+ 협력사</button>
     <span style="flex:1"></span><button class="b" onclick="exportSupCSV()">엑셀 내보내기</button></div>
     <div class="help" style="margin-top:8px">불량건수·A등급·PPM은 협력사 귀책·공동 귀책분만 집계합니다 (사내·고객 귀책과 귀책 조사 중·원인 불명 건은 제외). PPM = 불량수량 ÷ 기간 입고수량 × 1,000,000. 등급: A ≤ ${S.gradeA} / B ≤ ${S.gradeB} / C ≤ ${S.gradeC} / D 초과 (설정에서 변경). 입고수량이 없으면 PPM·등급은 '-'로 표시됩니다.</div></div>
   <div class="card"><div class="tw"><table><thead><tr>${sth('supq','name','협력사')}${sth('supq','items','주요 품목')}${sth('supq','cnt','불량건수','n')}${sth('supq','nA','A등급','n')}${sth('supq','qty','불량수량','n')}${sth('supq','rcv','입고수량','n')}${sth('supq','ppm','PPM','n')}${sth('supq','grade','등급')}${sth('supq','ncr','NCR','n')}${sth('supq','open','미종결','n')}${sth('supq','late','회신지연','n')}${sth('supq','avgReply','평균 회신(일)','n')}${sth('supq','avgEval','대책서 평균','n','기간 내 NCR의 최종 대책서 평가 평균')}${sth('supq','firstPass','1차 승인율','n','1차 제출에서 바로 승인된 비율')}${sth('supq','escN','에스컬레이션','n','보완요청·반려·검증 무효가 기준 횟수 이상인 NCR 수')}${sth('supq','pen','감점','n','기간 내 NCR의 협력사 평가 감점 합계')}${sth('supq','cost','COPQ(원)','n')}${sth('supq','rec','회수(원)','n')}${sth('supq','os','미회수(원)','n','현재 기준 미회수 잔액')}</tr></thead><tbody>
@@ -40,7 +40,7 @@ function rcvOverview(){
   const colT=ms.map(m=>sups.reduce((a,s)=>a+v(s.id,m),0));
   let rows=sups.map(s=>{const row=ms.map(m=>v(s.id,m));return {s,row,tot:row.reduce((a,b)=>a+b,0)}});
   if(msState.rcvq.k)rows=msSort(rows,msState.rcvq,{name:x=>x.s.name||'',tot:x=>x.tot,...Object.fromEntries(ms.map((m,i)=>['m'+(i+1),x=>x.row[i]||'']))});
-  return `<details class="card" ${state.rcvOpen?'open':''} ontoggle="state.rcvOpen=this.open"><summary style="cursor:pointer;font-weight:bold;font-size:14px">월별 입고수량 현황 <span class="muted" style="font-weight:normal;font-size:12px">— 업로드 결과 확인용 · 칸을 누르면 그 달 직접 수정</span></summary>
+  return `<details class="card" ${state.rcvOpen?'open':''} ontoggle="state.rcvOpen=this.open"><summary style="cursor:pointer;font-weight:bold;font-size:14px">월별 입고수량 현황 <span class="muted" style="font-weight:normal;font-size:12px">— 가져오기 결과 확인용 · 칸을 누르면 그 달 직접 수정</span></summary>
   <div class="row" style="margin:10px 0"><b>연도</b><select onchange="state.rcvYear=this.value;state.rcvOpen=true;render()">${yrs.map(x=>`<option ${x===y?'selected':''}>${x}</option>`).join('')}</select></div>
   <div class="tw"><table><thead><tr>${sth('rcvq','name','협력사')}${ms.map((m,i)=>sth('rcvq','m'+(i+1),`${+m.slice(5)}월`,'n')).join('')}${sth('rcvq','tot','합계','n')}</tr></thead><tbody>
   ${rows.map(({s,row})=>{return `<tr><td style="white-space:nowrap">${esc(s.name)}</td>${row.map((q,i)=>`<td class="n"><a class="lk" style="color:${q?'inherit':'#c4cad4'}" onclick="editReceipts('${ms[i]}')">${q?q.toLocaleString():'-'}</a></td>`).join('')}<td class="n"><b>${row.reduce((a,b)=>a+b,0).toLocaleString()}</b></td></tr>`}).join('')||'<tr><td class="muted" colspan="14">협력사가 없습니다.</td></tr>'}
@@ -64,7 +64,7 @@ function rlAutoMap(h){const m={},used=new Set(),cell=i=>String(h[i]||'').replace
   RL_T.forEach(([k,t])=>{for(let i=0;i<h.length;i++){if(used.has(i))continue;if(t(cell(i))){m[k]=i;used.add(i);break}}});return m}
 function openRcvLineImport(){
   rl={rows:[],hdr:0,map:{},name:'',addSup:false};
-  openModal('입고 내역 업로드 (MES 거래명세서현황)',`<div class="help">MES <b>거래명세서현황</b>을 엑셀(.xlsx) · CSV로 올리거나, 화면의 표를 복사해 아래 <b>제목행 다음 줄</b>에 붙여넣으세요 (Ctrl+V).<br>
+  openModal('입고 내역 가져오기 (MES 거래명세서현황)',`<div class="help">MES <b>거래명세서현황</b>을 엑셀(.xlsx) · CSV로 올리거나, 화면의 표를 복사해 아래 <b>제목행 다음 줄</b>에 붙여넣으세요 (Ctrl+V).<br>
     줄마다 입고일자 · 품번 · 입고량 · 판정을 저장하고, <b>협력사 · 월별 입고수량(PPM 분모)은 이 내역 합계로 자동 계산</b>합니다. 같은 검사번호(없으면 거래명세서번호 + 순번)는 다시 올려도 한 번만 들어갑니다.</div>
   <div class="row" style="margin-top:10px"><label class="b p" style="cursor:pointer">파일 선택 (.xlsx / .csv)<input type="file" accept=".xlsx,.csv,.txt" style="display:none" onchange="rlFile(this.files[0]);this.value=''"></label><span id="rlSheet"></span>
     <label class="row" style="flex-direction:row;align-items:center;gap:6px;margin-left:8px"><input type="checkbox" onchange="rl.addSup=this.checked;rlRender()"> 기준정보에 없는 협력사는 새로 추가</label></div>
@@ -102,9 +102,9 @@ function rlRender(){
   const noSup=[...new Set(L.filter(o=>!o.supplierId).map(o=>o._sup))],nNew=L.filter(o=>o._st==='신규').length;
   const months=[...new Set(L.map(o=>o.month))].sort(),ng=L.filter(o=>o.verdict==='불합격').length;
   const cols=RL_F.filter(([f])=>rl.map[f]!=null&&!['mgrOk','mgrDate','plant','supCode'].includes(f));
-  $('#rlMap').innerHTML=`<div class="sec">열 연결 확인 <span class="muted" style="font-weight:normal;font-size:12px">${esc(rl.name)} · 제목행 ${rl.hdr+1}번째 줄 · 틀린 열만 바꿔주세요</span></div>
+  $('#rlMap').innerHTML=`<div class="sec">열 연결 확인 <span class="muted" style="font-weight:normal;font-size:12px">${esc(rl.name)} · 제목행 ${rl.hdr+1}번째 줄 · 틀린 열만 바꾸세요</span></div>
   <div class="fg">${RL_F.map(([k,l,req])=>`<label>${l}${req?' *':''}<select onchange="if(this.value==='')delete rl.map.${k};else rl.map.${k}=+this.value;rlRender()"><option value="">(없음)</option>${h.map((c,i)=>`<option value="${i}" ${rl.map[k]===i?'selected':''}>${esc(c||('열 '+(i+1)))}</option>`).join('')}</select></label>`).join('')}</div>
-  <div class="${!need.length&&L.length?'help':'banner'}" style="margin-top:8px">${need.length?`<b>${need.map(f=>f[1]).join(' · ')}</b> 열을 골라주세요.`:L.length?`<b>${L.length}</b>줄 — 신규 <b>${nNew}</b> · 갱신 <b>${L.length-nNew}</b> · 대상 월 ${months.map(esc).join(', ')}${ng?` · <span style="color:var(--bad)">불합격 ${ng}줄</span>`:''}${skip.nodate||skip.noqty?` · 날짜 · 수량 없는 ${skip.nodate+skip.noqty}줄 건너뜀`:''}
+  <div class="${!need.length&&L.length?'help':'banner'}" style="margin-top:8px">${need.length?`<b>${need.map(f=>f[1]).join(' · ')}</b> 열을 고르세요.`:L.length?`<b>${L.length}</b>줄 — 신규 <b>${nNew}</b> · 갱신 <b>${L.length-nNew}</b> · 대상 월 ${months.map(esc).join(', ')}${ng?` · <span style="color:var(--bad)">불합격 ${ng}줄</span>`:''}${skip.nodate||skip.noqty?` · 날짜 · 수량 없는 ${skip.nodate+skip.noqty}줄 건너뜀`:''}
     ${noSup.length?`<br>⚠ 기준정보에서 찾지 못한 협력사 ${noSup.length}곳: ${noSup.slice(0,6).map(esc).join(', ')}${noSup.length>6?' …':''} — ${rl.addSup?'새로 추가해서 등록합니다.':'이 줄들은 건너뜁니다 (위의 ‘새로 추가’를 체크하거나, 협력사 기준정보에 약어 · 코드를 넣으세요).'}`:''}
     <br>등록하면 이 협력사 · 월의 입고수량은 입고 내역 합계로 바뀝니다 (직접 입력한 월 합계 대신).`:'읽은 줄이 없습니다. 열 연결을 확인하세요.'}</div>
   ${L.length?`<div class="tw" style="max-height:240px;margin-top:6px"><table class="sm mip"><thead><tr><th>상태</th>${cols.map(([,l])=>`<th>${esc(l)}</th>`).join('')}</tr></thead><tbody>${L.slice(0,12).map(o=>`<tr><td><span class="bg ${o._st==='신규'?'ok':'inf'}">${o._st}</span></td>${cols.map(([f])=>`<td>${f==='sup'?(o.supplierId?esc(supName(o.supplierId)):`<span style="color:var(--bad)">${esc(o._sup)} ?</span>`):f==='qty'?o.qty.toLocaleString():f==='verdict'?`<span class="bg ${o.verdict==='불합격'?'bad':o.verdict==='합격'?'ok':'mut'}">${esc(o.verdict||'-')}</span>`:esc(o[f])}</td>`).join('')}</tr>`).join('')}</tbody></table></div>${L.length>12?`<div class="muted" style="font-size:12px;margin-top:4px">${L.length}줄 중 12줄 미리보기</div>`:''}`:''}`;
@@ -113,18 +113,18 @@ async function rlApply(){
   const {L}=rlData();if(!L.length){toast('등록할 내역이 없습니다');return}
   const snap=await takeSnap();let a=0,u=0,ns=0,sk=0;
   L.forEach(o=>{
-    if(!o.supplierId){if(!rl.addSup){sk++;return}let sp=db.suppliers.find(x=>x.name===o._sup);if(!sp){sp=touch({id:uid(),code:'',name:o._sup,items:'',contact:'',phone:'',email:'',note:'입고 내역 업로드 때 자동 추가',contacts:[],contactLog:[]});db.suppliers.push(sp);ns++}o.supplierId=sp.id}
+    if(!o.supplierId){if(!rl.addSup){sk++;return}let sp=db.suppliers.find(x=>x.name===o._sup);if(!sp){sp=touch({id:uid(),code:'',name:o._sup,items:'',contact:'',phone:'',email:'',note:'입고 내역 가져오기 때 자동 추가',contacts:[],contactLog:[]});db.suppliers.push(sp);ns++}o.supplierId=sp.id}
     const {_st,_ex,_sup,...rec}=o;
     if(_ex){Object.assign(_ex,rec);touch(_ex);u++}else{db.receipts.push(touch({id:uid(),...rec,src:rl.name}));a++}
   });
   save();closeModal(true);state.rlOpen=true;render();
   toast(`입고 내역 신규 ${a} · 갱신 ${u}${ns?` · 협력사 ${ns}곳 추가`:''}${sk?` · 협력사 미확인 ${sk}줄 제외`:''}`);
-  offerUndo(snap,`입고 내역 업로드: 신규 ${a} · 갱신 ${u}`);
+  offerUndo(snap,`입고 내역 가져오기: 신규 ${a} · 갱신 ${u}`);
 }
 // 협력사 품질 화면: 입고 내역 목록
 function rcvLinesCard(){
   const all=db.receipts.filter(isLine);
-  if(!all.length)return `<div class="card noprint"><h3>입고 내역 (거래명세서 · 수입검사)</h3><div class="muted">아직 입고 내역이 없습니다. 위의 <b>입고 내역 업로드 (MES 거래명세서)</b>로 거래명세서현황을 올리면 줄마다 입고 · 판정이 저장되고, 월별 입고수량과 PPM이 자동으로 계산됩니다. 불량 등록 때 입고 건(검사번호)을 골라 연결할 수도 있습니다.</div></div>`;
+  if(!all.length)return `<div class="card noprint"><h3>입고 내역 (거래명세서 · 수입검사)</h3><div class="muted">아직 입고 내역이 없습니다. 위의 <b>입고 내역 가져오기 (MES 거래명세서)</b>로 거래명세서현황을 올리면 줄마다 입고 · 판정이 저장되고, 월별 입고수량과 PPM이 자동으로 계산됩니다. 불량 등록 때 입고 건(검사번호)을 골라 연결할 수도 있습니다.</div></div>`;
   const f=state.rl||(state.rl={m:'',sup:'',v:'',q:''});
   const months=[...new Set(all.map(r=>r.month))].sort().reverse();if(!f.m||(f.m!=='all'&&!months.includes(f.m)))f.m=months[0];
   const w=String(f.q||'').toLowerCase().split(/\s+/).filter(Boolean);
@@ -178,7 +178,7 @@ function rcvHint(){
   b.innerHTML=`${hid}<div class="bomx"><b>🚚 이 품번의 최근 입고</b> <span class="muted">— ${src==='수입검사'?'검사한 입고 건을 고르면':'관련 입고 건을 고르면'} 납품일자 · 입고수량이 채워지고 거래명세서 · 검사번호가 연결됩니다</span>
     <div class="bomc">${L.map(r=>`<span class="bchip" onclick="rcvPick('${r.id}')">${lab(r)}</span>`).join('')}</div></div>`;
 }
-/* ---- 입고수량 파일 업로드 ---- */
+/* ---- 입고수량 파일 가져오기 ---- */
 const RCV_FIELDS=[
   ['sup','협력사명',['협력사','협력사명','업체','업체명','거래처','거래처명','공급사','공급업체','vendor','supplier']],
   ['code','협력사코드',['협력사코드','업체코드','거래처코드','공급사코드','vendorcode']],
@@ -213,7 +213,7 @@ let ri={rows:[],hdr:0,map:[],year:today().slice(0,4)};
 function openRcvImport(){
   ri={rows:[],hdr:0,map:[],year:today().slice(0,4),name:''};
   const yrs=[...new Set([today().slice(0,4),String(+today().slice(0,4)-1)])];
-  openModal('월별 입고수량 업로드',`<div class="help">ERP에서 받은 입고 실적 엑셀(.xlsx)·CSV를 올리거나 범위를 복사해 붙여넣으세요. 다음 형식을 자동 인식합니다.<br>
+  openModal('월별 입고수량 가져오기',`<div class="help">ERP에서 받은 입고 실적 엑셀(.xlsx)·CSV를 올리거나 범위를 복사해 붙여넣으세요. 다음 형식을 자동 인식합니다.<br>
    ① <b>입고 상세</b> (입고일자 · 협력사 또는 품번 · 수량) → 협력사·월별로 자동 합산 &nbsp; ② <b>월 합계</b> (협력사 · 월 · 수량) &nbsp; ③ <b>가로형</b> (협력사 행 × 1월~12월 열)<br>
    협력사명이 없고 품번만 있으면 부품 기준정보의 협력사로 연결합니다.</div>
   <div class="fg" style="margin-top:10px">
@@ -223,7 +223,7 @@ function openRcvImport(){
     <label class="row" style="flex-direction:row;align-items:center;gap:6px;margin-top:16px"><input type="checkbox" name="addSup" onchange="riPreview()"> 미등록 협력사 자동 추가</label>
   </div>
   <div class="row" style="margin-top:10px"><label class="b p" style="cursor:pointer">파일 선택 (.xlsx / .csv)<input type="file" accept=".xlsx,.csv,.txt" style="display:none" onchange="riFile(this.files[0]);this.value=''"></label>
-    <button type="button" class="b" onclick="downloadCSV('입고수량_업로드_양식.csv',[['협력사','월','입고수량'],['대성정밀','2026-09','12000'],['한일스프링','2026-09','8000']])">양식 다운로드</button><span id="riSheet"></span><span id="riName" class="muted"></span></div>
+    <button type="button" class="b" onclick="downloadCSV('입고수량_가져오기_양식.csv',[['협력사','월','입고수량'],['대성정밀','2026-09','12000'],['한일스프링','2026-09','8000']])">양식 내려받기</button><span id="riSheet"></span><span id="riName" class="muted"></span></div>
   <details style="margin-top:8px"><summary class="muted" style="cursor:pointer">또는 엑셀에서 복사해 붙여넣기</summary><textarea id="riPaste" style="min-height:110px;font-family:Consolas,monospace;font-size:12px;margin-top:6px" placeholder="제목행 포함해서 Ctrl+V"></textarea><button type="button" class="b s" onclick="riSet(parseCSV($('#riPaste').value),'붙여넣기')">붙여넣은 내용 읽기</button></details>
   <div id="riMap"></div><div id="riPrev" style="margin-top:10px"></div>`,[{label:'취소',fn:closeModal},{label:'반영',cls:'p',fn:riCommit}]);
   $('#mfoot .p').disabled=true;
@@ -231,7 +231,7 @@ function openRcvImport(){
 function riFile(f){return sheetFile(f,ri,'#riSheet','riSet','ri')}
 function riSet(rows,name){
   rows=(rows||[]).map(r=>r||[]);
-  if(rows.filter(r=>r.some(c=>String(c).trim()!=='')).length<2){toast('제목행과 데이터가 있는 범위를 넣어주세요');return}
+  if(rows.filter(r=>r.some(c=>String(c).trim()!=='')).length<2){toast('제목행과 데이터가 있는 범위를 넣으세요');return}
   let best=0,bi=0;rows.slice(0,15).forEach((r,i)=>{const c=rcvAutoMap(r).filter(Boolean).length;if(c>best){best=c;bi=i}});
   ri.rows=rows;ri.hdr=bi;ri.name=name;ri.map=rcvAutoMap(rows[bi]);
   $('#riName').textContent=`${name} · 데이터 ${rows.slice(bi+1).filter(r=>r.some(c=>String(c).trim()!=='')).length}행`;
@@ -239,7 +239,7 @@ function riSet(rows,name){
 }
 function riRenderMap(){
   const h=ri.rows[ri.hdr],wide=ri.map.some(k=>k.startsWith('m:'));
-  $('#riMap').innerHTML=`<div class="sec">열 연결 확인 <span class="muted" style="font-weight:normal;font-size:12px">${wide?'가로형(월별 열)으로 인식했습니다':'자동 인식 결과 · 틀린 열만 바꿔주세요'}</span></div>
+  $('#riMap').innerHTML=`<div class="sec">열 연결 확인 <span class="muted" style="font-weight:normal;font-size:12px">${wide?'가로형(월별 열)으로 인식했습니다':'자동 인식 결과 · 틀린 열만 바꾸세요'}</span></div>
   <div class="row">${h.map((c,i)=>String(c).trim()===''&&!ri.map[i]?'':`<label style="display:flex;flex-direction:column;font-size:11px;color:var(--sub);gap:2px">${esc(c)||'(빈 제목)'}<select onchange="ri.map[${i}]=this.value;riPreview()" style="font-size:12px;${ri.map[i]?'':'color:#999'}"><option value="">무시</option>${RCV_FIELDS.map(([k,l])=>`<option value="${k}" ${ri.map[i]===k?'selected':''}>${l}</option>`).join('')}${ri.map[i].startsWith('m:')?`<option value="${ri.map[i]}" selected>${ri.map[i].slice(2)} 수량</option>`:''}</select></label>`).join('')}</div>`;
 }
 function riBuild(){
@@ -282,7 +282,7 @@ async function riCommit(){
   if(mode==='replace'){const chg=todo.filter(o=>o.st==='변경');if(chg.length&&!await askConfirm({title:`${chg.length}개 월 값을 덮어쓸까요?`,items:chg.slice(0,8).map(o=>`${esc(o.label)} ${o.m}: ${db.receipts.filter(r=>r.supplierId===o.sp.id&&r.month===o.m).reduce((a,r)=>a+num(r.qty),0).toLocaleString()} → ${o.after.toLocaleString()}`).concat(chg.length>8?[`외 ${chg.length-8}건`]:[]),ok:'덮어쓰기',danger:false}))return}
   const snap=await takeSnap();let nSup=0;
   todo.forEach(o=>{
-    let sp=o.sp;if(!sp){sp=db.suppliers.find(x=>x.name===o.label);if(!sp){sp=touch({id:uid(),code:'',name:o.label,items:'',contact:'',phone:'',email:'',note:'입고수량 업로드 시 자동 추가',contacts:[],contactLog:[]});db.suppliers.push(sp);nSup++}}
+    let sp=o.sp;if(!sp){sp=db.suppliers.find(x=>x.name===o.label);if(!sp){sp=touch({id:uid(),code:'',name:o.label,items:'',contact:'',phone:'',email:'',note:'입고수량 가져오기 시 자동 추가',contacts:[],contactLog:[]});db.suppliers.push(sp);nSup++}}
     if(rcvHasLines(sp.id,o.m))return;  // 입고 내역이 있는 달은 내역 합계를 씀
     const ex=db.receipts.filter(r=>!isLine(r)&&r.supplierId===sp.id&&r.month===o.m);
     const base=mode==='add'?ex.reduce((a,r)=>a+num(r.qty),0):0;

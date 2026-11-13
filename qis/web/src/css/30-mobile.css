@@ -1,4 +1,4 @@
-/* ================= 모바일 화면 ================= */
+/* ================= 휴대폰 화면 ================= */
 #mswitch{display:none;text-align:center;padding:14px 0 22px;font-size:13px}
 #mswitch a{display:none}
 body.mob #mswitch,body.pcnarrow #mswitch{display:block}

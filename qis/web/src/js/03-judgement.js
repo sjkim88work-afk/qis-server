@@ -30,7 +30,7 @@ function routeOf(d){
     S.push({t:'비용 분담 비율 확정',why:'귀책 조사 화면의 협력사 부담 비율 (%)',done:iv.share!==''&&iv.share!=null,doneT:`협력사 ${iv.share}%`,btn:go('invWrap','inv_share'),bl:'입력',rec:true});
   }else if(d.resp==='고객')S.push({t:'고객 귀책 — 고객 협의 내용을 실행 기록으로 남기기',why:'NCR · RCA 대상 아님',done:false,btn:'',rec:false});
   else{const ii=invInfo(d);
-    S.push({t:'원인(추정) 부품 지정',why:'완성품 불량이면 의심 부품을 원인 부품번호에 넣습니다 (FAR 대상 협력사)',done:!!d.partNo,doneT:`${d.partNo} ${d.partName||''} · ${supName(d.supplierId)||'협력사 미지정'}`,btn:`editDefect('${d.id}')`,bl:'지정',rec:!d.partNo});
+    S.push({t:'원인(추정) 부품 지정',why:'완성품 불량이면 의심 부품을 원인 품번에 넣습니다 (FAR 대상 협력사)',done:!!d.partNo,doneT:`${d.partNo} ${d.partName||''} · ${supName(d.supplierId)||'협력사 미지정'}`,btn:`editDefect('${d.id}')`,bl:'지정',rec:!d.partNo});
     S.push({t:'FAR 요청 — 협력사에 원인 분석 요청',why:'귀책 인정 요구가 아닌 분석 요청',done:!!iv.farReq,doneT:ii.label,btn:go('invWrap','inv_farReq'),bl:iv.farReq?'FAR 보기':'FAR 요청',rec:!iv.farReq&&!!d.supplierId});
     S.push({t:'사내 RCA 요청 — 사내 공정 · 취급 원인 분석',why:'재현시험 · 측정 · 분해 분석 → 사내 원인이면 공정 개선 · 내부 8D (간단한 건은 귀책 조사 화면의 사내 분석 메모에 기록해도 됩니다)',done:!!(iv.rca||'').trim()||!!c,doneT:c?`RCA ${c.CaseNo} · ${c.Stage}`:'귀책 조사에 사내 분석 기록됨',btn:c?`czOpenCase('${c.id}','cause')`:`czFromDefect('${d.id}')`,bl:c?'RCA 열기':'RCA 요청',rec:g!=='C'});
     S.push({t:'귀책 판정 → 협력사: NCR · 사내: 사내 대책 · 공동: 분담',why:`판정·근거가 실패비용 정산 기준 · 기한 ${ntfDue(d)} 지나면 원인 불명 검토`,done:!!iv.verdict,doneT:iv.verdict,btn:go('invWrap','inv_verdict'),bl:'귀책 판정',rec:!!iv.farRecv||!!(iv.rca||'').trim()});}
@@ -214,7 +214,7 @@ function ncrMini(n){const r=ncrSteps(n);return `<div class="qsteps${r.closed?' d
 const NCR_BASIS=['불량','공정 감사','PPM 초과','기타'];
 const AUDIT_TYPES=['정기 공정 감사','특별 감사','제품 감사','시스템 감사'];
 const isSysBasis=n=>n&&(n.basis==='공정 감사'||n.basis==='PPM 초과');
-/* 입고: db.receipts에 두 종류 — 월 합계(직접 입력 · 월별 업로드)와 입고 내역 줄(kind:'line', MES 거래명세서현황).
+/* 입고: db.receipts에 두 종류 — 월 합계(직접 입력 · 월별 가져오기)와 입고 내역 줄(kind:'line', MES 거래명세서현황).
    같은 협력사 · 같은 달에 내역 줄이 있으면 그 합계를 쓰고 월 합계 값은 무시 (이중 집계 방지) */
 const isLine=r=>r&&r.kind==='line';
 function rcvSum(sid,m){const L=db.receipts.filter(r=>r.supplierId===sid&&r.month===m),has=L.some(isLine);return L.filter(r=>has?isLine(r):!isLine(r)).reduce((a,r)=>a+num(r.qty),0)}

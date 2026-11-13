@@ -77,8 +77,8 @@ const IMP_FIELDS=[
   ['fgNo','완성품 품번',['완성품품번','완성품번호','완성품코드','assy품번','assy','발견품번','상위품번','모품번']],
   ['fgName','완성품명',['완성품명','완성품품명','assy명','assy품명','발견품명','상위품명']],
   ['fgQty','완성품 수량',['완성품수량','assy수량','영향수량']],
-  ['partNo','원인 부품번호',['부품번호','품번','원인부품','원인부품번호','partno','p/no','pno','품목코드','자재코드']],
-  ['partName','부품명',['부품명','품명','품목명','자재명']],
+  ['partNo','원인 품번',['부품번호','품번','원인부품','원인부품번호','partno','p/no','pno','품목코드','자재코드']],
+  ['partName','품명',['부품명','품명','품목명','자재명']],
   ['model','차종',['차종','차종코드','차형']],
   ['supplier','협력사',['협력사','협력사명','업체','업체명','공급사','납품업체']],
   ['type','불량유형',['불량유형','유형','불량명','불량구분','불량항목']],
@@ -121,7 +121,7 @@ let imp=null;
 function openImport(){
   imp={sheets:null,sheet:'',rows:[],hdr:0,map:[]};
   const S=db.settings,defSrc=S.sources.find(x=>x.includes('공정'))||S.sources[0];
-  openModal('불량 엑셀 일괄 등록',`<div class="help">엑셀(.xlsx) 또는 CSV 파일을 선택하거나, 엑셀에서 범위를 복사해 붙여넣으세요. 첫 줄(제목행)의 열 이름을 자동으로 인식합니다 — <b>발생일, 부품번호(또는 부품명), 불량수량</b>은 필수입니다. 부품번호가 기준정보에 있으면 부품명·차종·협력사가 자동으로 채워집니다.</div>
+  openModal('불량 엑셀 일괄 등록',`<div class="help">엑셀(.xlsx) 또는 CSV 파일을 선택하거나, 엑셀에서 범위를 복사해 붙여넣으세요. 첫 줄(제목행)의 열 이름을 자동으로 인식합니다 — <b>발생일, 품번(또는 품명), 불량수량</b>은 필수입니다. 품번이 기준정보에 있으면 품명·차종·협력사가 자동으로 채워집니다.</div>
   <div class="fg" style="margin-top:10px">
     <label>기본 발생처 (파일에 없을 때)<select name="defSource">${opts(S.sources,defSrc)}</select></label>
     <label>기본 귀책<select name="defResp">${opts(RESP_OPTS,'협력사')}</select></label>
@@ -130,13 +130,13 @@ function openImport(){
   </div>
   <div class="row" style="margin-top:10px">
     <label class="b p" style="cursor:pointer">파일 선택 (.xlsx / .csv)<input type="file" accept=".xlsx,.csv,.txt" style="display:none" onchange="impFile(this.files[0]);this.value=''"></label>
-    <button type="button" class="b" onclick="impTemplate()">등록 양식 다운로드</button>
+    <button type="button" class="b" onclick="impTemplate()">등록 양식 내려받기</button>
     <span id="impSheet"></span><span id="impName" class="muted"></span>
   </div>
   <details style="margin-top:8px"><summary class="muted" style="cursor:pointer">또는 엑셀에서 복사해 붙여넣기</summary>
     <textarea id="impPaste" style="min-height:120px;font-family:Consolas,monospace;font-size:12px;margin-top:6px" placeholder="제목행 포함해서 Ctrl+V"></textarea>
     <button type="button" class="b s" onclick="impSetRows(parseCSV($('#impPaste').value),'붙여넣기')">붙여넣은 내용 읽기</button></details>
-  <div class="row" style="margin-top:10px"><label class="row" style="gap:4px"><input type="checkbox" name="skipDup" checked onchange="impPreview()"> 이미 등록된 중복 건 제외 (발생일+부품번호+LOT+유형+수량 동일)</label>
+  <div class="row" style="margin-top:10px"><label class="row" style="gap:4px"><input type="checkbox" name="skipDup" checked onchange="impPreview()"> 이미 등록된 중복 건 제외 (발생일+품번+LOT+유형+수량 동일)</label>
     <label class="row" style="gap:4px"><input type="checkbox" name="autoCost" checked> 작업시간·폐기 비용 자동계산</label></div>
   <div id="impMap"></div><div id="impPrev" style="margin-top:10px"></div>`,
   [{label:'취소',fn:closeModal},{label:'등록',cls:'p',fn:impCommit}]);
@@ -161,14 +161,14 @@ async function impFile(f){
 }
 function impSetRows(rows,name){
   rows=(rows||[]).map(r=>r||[]);
-  if(rows.filter(r=>r.some(c=>String(c).trim()!=='')).length<2){toast('제목행과 데이터가 있는 범위를 넣어주세요');return}
+  if(rows.filter(r=>r.some(c=>String(c).trim()!=='')).length<2){toast('제목행과 데이터가 있는 범위를 넣으세요');return}
   imp.hdr=findHeader(rows);imp.rows=rows;imp.map=autoMap(rows[imp.hdr]);
   $('#impName').textContent=`${name} · 데이터 ${rows.slice(imp.hdr+1).filter(r=>r.some(c=>String(c).trim()!=='')).length}행`;
   impRenderMap();impPreview();
 }
 function impRenderMap(){
   const h=imp.rows[imp.hdr];
-  $('#impMap').innerHTML=`<div class="sec">열 연결 확인 <span class="muted" style="font-weight:normal;font-size:12px">자동 인식 결과입니다. 틀린 열만 바꿔주세요. ‘무시’는 등록하지 않습니다.</span></div>
+  $('#impMap').innerHTML=`<div class="sec">열 연결 확인 <span class="muted" style="font-weight:normal;font-size:12px">자동 인식 결과입니다. 틀린 열만 바꾸세요. ‘무시’는 등록하지 않습니다.</span></div>
   <div class="row">${h.map((c,i)=>String(c).trim()===''&&!imp.map[i]?'':`<label style="display:flex;flex-direction:column;font-size:11px;color:var(--sub);gap:2px">${esc(c)||'(빈 제목)'}<select onchange="imp.map[${i}]=this.value;impPreview()" style="font-size:12px;${imp.map[i]?'':'color:#999'}"><option value="">무시</option>${IMP_FIELDS.map(([k,l])=>`<option value="${k}" ${imp.map[i]===k?'selected':''}>${l}</option>`).join('')}</select></label>`).join('')}</div>`;
 }
 function impBuild(){
@@ -183,7 +183,7 @@ function impBuild(){
     if(partNo&&!part)warn.push('기준정보에 없는 부품');
     const partName=String(o.partName??'').trim()||part?.name||'';
     const fgNo=String(o.fgNo??'').trim(),fgName=String(o.fgName??'').trim();
-    if(!partNo&&!partName&&!fgNo&&!fgName)err.push('부품번호/부품명 없음');else if(!partNo&&!partName)warn.push('원인 부품 미지정 (조사 중)');
+    if(!partNo&&!partName&&!fgNo&&!fgName)err.push('품번/품명 없음');else if(!partNo&&!partName)warn.push('원인 부품 미지정 (조사 중)');
     const qty=numC(o.qty);if(!(qty>0))err.push('불량수량 없음');
     const sn=String(o.supplier??'').trim();let sup=sn?db.suppliers.find(s=>s.name===sn)||db.suppliers.find(s=>s.name.replace(/\s|\(주\)|㈜|주식회사/g,'')===sn.replace(/\s|\(주\)|㈜|주식회사/g,'')):null;
     let newSup='';if(sn&&!sup)newSup=sn;if(!sup&&part&&part.supplierId)sup=supById(part.supplierId);
@@ -204,9 +204,9 @@ function impPreview(){
   const ok=rs.filter(r=>!r.err.length&&!(skip&&r.dup));
   const nErr=rs.filter(r=>r.err.length).length,nDup=rs.filter(r=>r.dup).length,newSups=[...new Set(rs.filter(r=>!r.err.length&&r.newSup).map(r=>r.newSup))];
   if(!imp.map.includes('date')||!imp.map.includes('qty')||!(imp.map.includes('partNo')||imp.map.includes('partName')))
-    $('#impPrev').innerHTML='<div class="banner">필수 열(발생일, 불량수량, 부품번호 또는 부품명)이 연결되지 않았습니다. 위에서 열을 지정하세요.</div>';
+    $('#impPrev').innerHTML='<div class="banner">필수 열(발생일, 불량수량, 품번 또는 품명)이 연결되지 않았습니다. 위에서 열을 지정하세요.</div>';
   else $('#impPrev').innerHTML=`<div class="row" style="margin-bottom:6px"><span class="bg ok">등록 ${ok.length}건</span>${nErr?`<span class="bg bad">오류 ${nErr}건 (제외)</span>`:''}${nDup?`<span class="bg warn">중복 ${nDup}건${skip?' (제외)':''}</span>`:''}${newSups.length?`<span class="bg inf">새 협력사 ${newSups.length}곳 자동 추가: ${esc(newSups.join(', '))}</span>`:''}</div>
-  <div class="tw" style="max-height:42vh"><table><thead><tr><th>행</th><th>판정</th><th>발생일</th><th>발생처</th><th>부품번호</th><th>부품명</th><th>협력사</th><th>유형</th><th class="n">수량</th><th>처리</th><th>납품일자</th><th>귀책</th></tr></thead><tbody>
+  <div class="tw" style="max-height:42vh"><table><thead><tr><th>행</th><th>판정</th><th>발생일</th><th>발생처</th><th>품번</th><th>품명</th><th>협력사</th><th>유형</th><th class="n">수량</th><th>처리</th><th>납품일자</th><th>귀책</th></tr></thead><tbody>
   ${rs.slice(0,300).map(r=>`<tr style="${r.err.length||(skip&&r.dup)?'opacity:.55':''}"><td>${r.line}</td><td>${r.err.length?`<span class="bg bad" title="${esc(r.err.join(', '))}">${esc(r.err[0])}</span>`:r.dup?`<span class="bg warn">${esc(r.warn[r.warn.length-1])}</span>`:r.warn.length?`<span class="bg warn" title="${esc(r.warn.join(', '))}">확인</span>`:'<span class="bg ok">OK</span>'}</td>
   <td>${esc(r.d.date)}</td><td>${esc(r.d.source)}</td><td>${esc(r.d.partNo)}</td><td>${esc(r.d.partName)}</td><td>${r.newSup?`${esc(r.newSup)} <span class="bg inf">신규</span>`:esc(supName(r.d.supplierId))||'<span class="muted">-</span>'}</td><td>${esc(r.d.type)}</td><td class="n">${r.d.qty||''}</td><td>${esc(r.d.disposition)}</td><td>${esc(r.d.delivDate||r.d.lot)}</td><td>${esc(r.d.resp)}</td></tr>`).join('')}
   ${rs.length>300?`<tr><td colspan="12" class="muted">… 외 ${rs.length-300}행 (미리보기 생략, 등록은 전체 처리)</td></tr>`:''}</tbody></table></div>`;

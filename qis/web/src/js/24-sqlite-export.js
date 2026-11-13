@@ -4,7 +4,7 @@
    · 표마다 원래 항목 + 앱이 계산한 값(x_ 로 시작: 협력사명 · 심각도 등급 · 진행 상태 · 비용 합계 등)
    · SQLite 엔진(sql.js)은 앱과 같은 곳의 lib/ 에서, 없으면(파일로 연 경우) 인터넷(cdnjs)에서 처음 한 번 받음 */
 const SQLJS_VER='1.10.3';let _SQL=null;
-function loadScriptOnce(src){return new Promise((res,rej)=>{if(window.initSqlJs)return res();const s=document.createElement('script');s.src=src;s.onload=()=>res();s.onerror=()=>{s.remove();rej(new Error('불러오기 실패: '+src))};document.head.appendChild(s)})}
+function loadScriptOnce(src){return new Promise((res,rej)=>{if(window.initSqlJs)return res();const s=document.createElement('script');s.src=src;s.onload=()=>res();s.onerror=()=>{s.remove();rej(new Error('가져오기 실패: '+src))};document.head.appendChild(s)})}
 async function loadSql(){
   if(_SQL)return _SQL;
   const bases=[...(/^https?:$/.test(location.protocol)?['lib/']:[]),`https://cdnjs.cloudflare.com/ajax/libs/sql.js/${SQLJS_VER}/`];let last;
@@ -73,7 +73,7 @@ async function exportSqlite(quiet){
     if(backupDir||(!quiet&&lazyH.backupDir&&await ensureDir('backupDir'))){
       if(!await permOK(backupDir,false))throw new Error('백업 폴더 사용이 허용되지 않았습니다');
       const fh=await backupDir.getFileHandle('QIS.sqlite',{create:true}),w=await fh.createWritable();await w.write(blob);await w.close();where=`‘${backupDir.name}’ 폴더의 QIS.sqlite`;
-    }else if(!quiet){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='QIS.sqlite';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),5000);where='다운로드한 QIS.sqlite'}
+    }else if(!quiet){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='QIS.sqlite';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),5000);where='내려받기한 QIS.sqlite'}
     else return;
     db.meta.lastSqlite=now();db.meta.lastSqliteN=n;if(!quiet)save();
     if(!quiet)toast(`${where} — 불량 ${n.defects} · NCR ${n.ncrs} · 부품 ${n.parts} · 입고 ${n.receipts} (${(bytes.length/1048576).toFixed(1)}MB)`);
@@ -99,7 +99,7 @@ const phMeta=({data,thumb,pending,...m})=>({...m,file:m.file||phName(m.id)});
 const PH_DELQ='personalQMS_phDelQ';
 function phDelQ(){try{return new Set(JSON.parse(localStorage.getItem(PH_DELQ)||'[]'))}catch(e){return new Set()}}
 function phDelQSet(s){try{localStorage.setItem(PH_DELQ,JSON.stringify([...s]))}catch(e){}}
-/* 사진 파일 이름: <NCR번호>_<YYYYMMDD>_<연번>.jpg  (NCR 발행 전: 미발행_<부품번호>_…, 날짜 = 사진 첨부일)
+/* 사진 파일 이름: <NCR번호>_<YYYYMMDD>_<연번>.jpg  (NCR 발행 전: 미발행_<품번>_…, 날짜 = 사진 첨부일)
    NCR이 발행되거나 번호가 바뀌면 다음 동기화 때 새 이름으로 바꾼다 */
 function phOwners(){
   const m={},put=(ids,no,part)=>(ids||[]).forEach(i=>{if(!m[i])m[i]={no,part}});
@@ -155,7 +155,7 @@ async function syncPhotoFiles(relist){
     const dq=phDelQ();
     for(const n of [...dq]){if(!live.has(n)&&files.has(n)){try{await photoDir.removeEntry(n);files.delete(n);removed++}catch(e){continue}}dq.delete(n)}
     phDelQSet(dq);
-    // 3) 다른 PC에서 올린 사진 ← 파일에서 불러오기
+    // 3) 다른 PC에서 올린 사진 ← 파일에서 가져오기
     for(const id of [...pend]){
       if(!keys.has(id)){pend.delete(id);continue}
       const r=await photoGet(id);if(!phIsPending(r)){pend.delete(id);continue}
@@ -189,7 +189,7 @@ function initPhotoBox(ids){
   if(ids.length){
     box.insertAdjacentHTML('afterbegin','<div class="muted" id="phLoading">사진 불러오는 중…</div>');
     photoGetMany(ids).then(rs=>{curPhotos=[...rs.map(r=>({...r,isNew:false})),...curPhotos.filter(p=>p.isNew)];renderPhotoBox()})
-      .catch(e=>{toast('사진 불러오기 실패: '+e.message);renderPhotoBox()});
+      .catch(e=>{toast('사진 가져오기 실패: '+e.message);renderPhotoBox()});
   }
 }
 function renderPhotoBox(){
@@ -223,7 +223,7 @@ async function addPhotoFiles(files){
 async function viewDefectPhotos(id){
   const d=db.defects.find(x=>x.id===id);if(!d)return;
   try{const rs=await photoGetMany(d.photos);if(!rs.length){toast('저장된 사진을 찾을 수 없습니다');return}lbOpen(rs.map(r=>({...r,caption:`${d.date} ${d.partName||d.partNo} · ${r.caption||''}`})),0)}
-  catch(e){toast('사진 불러오기 실패: '+e.message)}
+  catch(e){toast('사진 가져오기 실패: '+e.message)}
 }
 let lbList=[],lbIdx=0;
 function lbOpen(list,i){lbList=list;lbIdx=i;lbShow();$('#lb').classList.add('on')}

@@ -170,7 +170,7 @@ function auditCsv(){
 /* ---- 백업 · 데이터 ---- */
 async function renderBackup(){
   const b=await api('/api/admin/backup');const l=b.last;
-  return `<div class="card"><h2>서버 자동 백업</h2><p class="help">매일 ${b.hour}시 이후 한 번, DB 전체 사본 · 기록 JSON · 첨부 사본을 백업 폴더에 저장합니다. 날짜별 DB 사본은 ${b.keep}개까지 보관합니다. 백업 폴더를 다른 PC나 네트워크 드라이브로 지정하면 서버 PC 고장에도 복구할 수 있습니다 (data/qis.json 의 backup_dir).</p>
+  return `<div class="card"><h2>서버 자동 백업</h2><p class="help">매일 ${b.hour}시 이후 한 번, DB 전체 사본 · 기록 JSON · 첨부 사본을 백업 폴더에 저장합니다. 날짜별 DB 사본은 ${b.keep}개까지 보관합니다. 백업 폴더를 다른 PC나 네트워크 드라이브로 지정하면 서버 PC 고장에도 복원할 수 있습니다 (data/qis.json 의 backup_dir).</p>
     <div class="kv"><div>백업 폴더</div><div><code>${esc(b.dir)}</code></div>
     <div>마지막 백업</div><div>${l?`${fmt(l.at)} <span class="muted">(${l.reason==='manual'?'수동':'자동'} · ${esc(l.db)} · 첨부 ${l.files_copied}개 복사 · ${l.seconds}초)</span>`:'<span class="bg warn">아직 없음</span>'}</div>
     ${b.error?`<div>마지막 오류</div><div><span class="bg bad">${esc(fmt(b.error.at))}</span> ${esc(b.error.error)}</div>`:''}

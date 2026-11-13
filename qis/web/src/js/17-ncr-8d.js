@@ -4,7 +4,7 @@ async function ncrFromDefect(id,extra=[]){
   const d=db.defects.find(x=>x.id===id);if(!d)return;
   const grp=[d,...extra.map(i=>db.defects.find(x=>x.id===i)).filter(x=>x&&x.id!==id&&!x.ncrId)],worst=grp.map(x=>sevOf(x).grade).sort()[0];
   if(invOpen(d)&&!await askConfirm({title:'귀책 조사 중인 건입니다',msg:'FAR · 사내 RCA로 귀책을 판정하기 전입니다. 그래도 NCR을 발행할까요?<br>(판정 후 발행하려면 취소하고 불량 기록의 ‘귀책 판정’을 먼저 입력하세요)',ok:'NCR 발행',danger:false}))return;
-  if(!d.partNo&&!await askConfirm({title:'원인 부품이 비어 있습니다',msg:'NCR은 원인 부품 기준으로 협력사에 통보합니다. 원인 부품번호 없이 발행할까요?',ok:'그대로 발행',danger:false}))return;
+  if(!d.partNo&&!await askConfirm({title:'원인 부품이 비어 있습니다',msg:'NCR은 원인 부품 기준으로 협력사에 통보합니다. 원인 품번 없이 발행할까요?',ok:'그대로 발행',danger:false}))return;
   const fg=d.fgNo||d.fgName?`완성품 ${[d.fgNo,d.fgName].filter(Boolean).join(' ')} 에서 발견${d.fgQty?` (${num(d.fgQty).toLocaleString()}대)`:''}`:'';
   const iv=d.inv||{},invTxt=[iv.farResult&&'[FAR] '+iv.farResult,iv.rca&&'[사내 RCA] '+iv.rca].filter(Boolean).join('\n');
   editNcr(null,{supplierId:d.supplierId,partNo:d.partNo,partName:d.partName,title:`${d.type||''} - ${d.partName||d.partNo||''}`,
@@ -125,8 +125,8 @@ function editNcr(id,preset,mode){
     <label>발행일 *<input type="date" name="issueDate" value="${esc(n.issueDate)}" data-prev="${esc(n.issueDate)}" oninput="ncrAutoDates('issue')"></label>
     <label>협력사<select name="supplierId" onchange="refreshLinks()">${supOpts(n.supplierId)}</select></label>
     <label>담당자<input name="owner" list="dlOwners" value="${esc(n.owner)}"></label>
-    <label>부품번호<input name="partNo" data-combo="parts" autocomplete="off" placeholder="번호·품명·협력사로 검색" value="${esc(n.partNo)}" oninput="const p=partByNo(this.value.trim());if(p){this.form.partName.value=p.name||'';if(p.supplierId){this.form.supplierId.value=p.supplierId;refreshLinks()}}bomNcr();repHint()"></label>
-    <label>부품명<input name="partName" value="${esc(n.partName)}"></label>
+    <label>품번<input name="partNo" data-combo="parts" autocomplete="off" placeholder="번호·품명·협력사로 검색" value="${esc(n.partNo)}" oninput="const p=partByNo(this.value.trim());if(p){this.form.partName.value=p.name||'';if(p.supplierId){this.form.supplierId.value=p.supplierId;refreshLinks()}}bomNcr();repHint()"></label>
+    <label>품명<input name="partName" value="${esc(n.partName)}"></label>
     <label class="full">제목<input name="title" value="${esc(n.title)}"></label>
     <label>재발 — 이전 NCR 번호<input name="repeatOf" list="dlNcrNos" autocomplete="off" value="${esc(n.repeatOf)}" placeholder="같은 문제가 다시 생긴 경우만" oninput="repHint()"><datalist id="dlNcrNos">${db.ncrs.filter(x=>x.id!==id&&x.no).sort((a,b)=>(b.issueDate||'').localeCompare(a.issueDate||'')).map(x=>`<option value="${esc(x.no)}">${esc(supName(x.supplierId))} · ${esc(x.partNo)} · ${esc(x.issueDate)}</option>`).join('')}</datalist></label>
     <div class="muted" id="repHint" style="font-size:12px;align-self:end;padding-bottom:6px"></div>
@@ -499,7 +499,7 @@ function farHTML(n){const f=n.far||{},on=farOn(n);
     <label>당사 검토<select name="far_review">${opts(FAR_REVIEW,f.review||'',true)}</select></label>
     <label class="full" style="grid-column:span 3">검토 의견 · 비고<input name="far_note" value="${esc(f.note)}" placeholder="예: 경도 측정 성적서 원본 추가 요청"></label>
   </div>
-  <div class="row" style="margin-top:6px;gap:8px"><button type="button" class="b s" onclick="ncrFarPrint()">FAR 요청서 출력</button>${invFarSrc(curLinks)?'<button type="button" class="b s" onclick="farLoadInv()">귀책 조사 FAR 불러오기</button>':''}<span class="muted" style="font-size:12px">분석 보고서 · 시료 발송 증빙은 ‘조사 · 진행 기록’에 첨부하면 기록과 함께 남습니다. 요청일을 비우면 FAR 없음으로 처리됩니다.</span></div></details>`}
+  <div class="row" style="margin-top:6px;gap:8px"><button type="button" class="b s" onclick="ncrFarPrint()">FAR 요청서 출력</button>${invFarSrc(curLinks)?'<button type="button" class="b s" onclick="farLoadInv()">귀책 조사 FAR 가져오기</button>':''}<span class="muted" style="font-size:12px">분석 보고서 · 시료 발송 증빙은 ‘조사 · 진행 기록’에 첨부하면 기록과 함께 남습니다. 요청일을 비우면 FAR 없음으로 처리됩니다.</span></div></details>`}
 function farFromInv(d){const iv=d.inv||{};
   return{reqDate:iv.farReq,due:iv.farDue||'',purpose:'귀책 판정',items:[],sampleQty:iv.sample||'',shipDate:'',shipRef:'',replyDate:iv.farRecv||'',
     verdict:iv.verdict==='협력사'?'협력사 귀책 인정':iv.verdict==='공동'?'추가 분석 필요':iv.verdict==='사내'?'귀책 불인정':iv.verdict==='원인 불명'?'원인 불명·재현 안 됨':'',
@@ -715,7 +715,7 @@ async function print8D(id){
   const html=reportFrame(`<!doctype html><html><head><meta charset="utf-8"><title>${esc(n.no)} 8D</title><style>body{font-family:'Malgun Gothic',sans-serif;font-size:12px;margin:24px;color:#111}table{width:100%;border-collapse:collapse;margin-bottom:12px}td,th{border:1px solid #555;padding:6px;vertical-align:top}th{background:#eef1f5;width:17%;text-align:left}h1{font-size:18px;margin:0 0 12px}.sm td,.sm th{font-size:11px;width:auto}.pg{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.pg figure{margin:0;border:1px solid #999;padding:4px;break-inside:avoid}.pg img{width:100%;max-height:220px;object-fit:contain}.pg figcaption{font-size:11px;text-align:center;margin-top:3px}</style></head><body>
   ${logoHead()}<h1>8D Report — ${esc(n.no)}</h1>
   <table><tr><th>협력사</th><td>${esc(supName(n.supplierId))}</td><th>발행일</th><td>${esc(n.issueDate)}</td></tr>
-  <tr><th>부품번호</th><td>${esc(n.partNo)}</td><th>부품명</th><td>${esc(n.partName)}</td></tr>
+  <tr><th>품번</th><td>${esc(n.partNo)}</td><th>품명</th><td>${esc(n.partName)}</td></tr>
   <tr><th>제목</th><td colspan="3">${esc(n.title)}</td></tr>${n.basis==='공정 감사'?`<tr><th>발행 근거</th><td colspan="3">공정 감사 — ${esc(n.auditDate)} ${esc(n.auditType)} ${esc(n.auditRef)}${n.finding?'<br>'+esc(n.finding):''}</td></tr>`:''}${n.basis==='PPM 초과'?`<tr><th>발행 근거</th><td colspan="3">PPM 초과 — ${esc(n.ppmFrom)}~${esc(n.ppmTo)} 실적 ${esc(n.ppmVal)} PPM / 목표 ${esc(n.ppmTarget)} PPM</td></tr>`:''}${n.basis==='기타'?`<tr><th>발행 근거</th><td colspan="3">기타</td></tr>`:''}
   <tr><th>대책 요청일</th><td>${esc(n.requestDate)}</td><th>회신 기한 / 회신일</th><td>${esc(n.dueDate)} / ${esc(n.replyDate)}</td></tr>
   <tr><th>유효성 기한</th><td>${esc(n.verifyDue)}</td><th>검증일 / 결과</th><td>${esc(n.verifyDate)} / ${esc(n.verifyResult)}</td></tr>
@@ -733,7 +733,7 @@ async function print8D(id){
 }
 function exportNcrCSV(){
   const ns=filteredNcrs();
-  downloadCSV(`NCR목록_${today()}.csv`,[['NCR번호','발행일','협력사','부품번호','부품명','제목','상태','통보일','통보방법','통보서파일','대책요청일','회신기한','회신일','대책서파일','타당성','유효성기한','검증일','검증결과','특채','담당',...D8.map(x=>x[1])],
+  downloadCSV(`NCR목록_${today()}.csv`,[['NCR번호','발행일','협력사','품번','품명','제목','상태','통보일','통보방법','통보서파일','대책요청일','회신기한','회신일','대책서파일','타당성','유효성기한','검증일','검증결과','특채','담당',...D8.map(x=>x[1])],
     ...ns.map(n=>[n.no,n.issueDate,supName(n.supplierId),n.partNo,n.partName,n.title,ncrStatus(n),n.notifyDate||'',n.notifyMethod||'',(n.noticeDocs||[]).length||'',n.requestDate,n.dueDate,n.replyDate,(n.replyDocs||[]).length||'',n.validity,n.verifyDue,n.verifyDate,n.verifyResult,n.concession,n.owner,...D8.map(([k])=>n[k])])]);
 }
 

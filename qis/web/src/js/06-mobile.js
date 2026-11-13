@@ -1,7 +1,7 @@
-/* ================= 모바일 화면 (핸드폰) =================
+/* ================= 휴대폰 화면 =================
    현장에서 쓰는 두 가지만: ① 불량 등록(사진 촬영 · 품번 자동 · 심각도 표시) ② 진행 현황(오늘 챙길 일 · 진행 중 NCR · 최근 불량, 보기 전용)
    판정 · 상태 · 기한은 PC 화면과 같은 함수를 그대로 씀 (sevOf · defStage · ncrSteps · 대시보드 '오늘 챙길 일').
-   화면 폭이 좁으면 자동으로 켜지고, 'PC 화면' / '모바일 화면'으로 바꿀 수 있음 (이 기기에 기억). */
+   화면 폭이 좁으면 자동으로 켜지고, 'PC 화면' / '휴대폰 화면'으로 바꿀 수 있음 (이 기기에 기억). */
 const MOB_KEY='qis_view',mobMQ=window.matchMedia?matchMedia('(max-width: 760px)'):null;
 let mobPref=(()=>{try{return localStorage.getItem(MOB_KEY)||'auto'}catch(e){return 'auto'}})();
 const mobView=()=>(mobPref==='mobile'||(mobPref!=='pc'&&!!(mobMQ&&mobMQ.matches)));
@@ -30,7 +30,7 @@ function mobRegHTML(){
   return `${done}<form id="mobForm" class="mform" onsubmit="event.preventDefault();mobSave()" oninput="mobInput(event)" onchange="mobInput(event)">
   <div class="mph" id="mobPh"></div>
   <div class="mphb"><label class="b">📷 촬영<input type="file" accept="image/*" capture="environment" hidden onchange="mobAddPhotos(this)"></label><label class="b">🖼 앨범<input type="file" accept="image/*" multiple hidden onchange="mobAddPhotos(this)"></label></div>
-  <label>부품번호 *<input name="partNo" data-combo="parts" autocomplete="off" autocapitalize="characters" value="${esc(f.partNo)}" placeholder="품번 또는 품명 입력"></label>
+  <label>품번 *<input name="partNo" data-combo="parts" autocomplete="off" autocapitalize="characters" value="${esc(f.partNo)}" placeholder="품번 또는 품명 입력"></label>
   <div class="mhint" id="mobPart">${f.partName?`${esc(f.partName)} · ${esc(supName(f.supplierId)||'협력사 미지정')}`:''}</div>
   <label>협력사<select name="supplierId">${supOpts(f.supplierId,'선택')}</select></label>
   <div class="m2"><label>불량 유형 *<select name="type">${opts(S.defectTypes,f.type)}</select></label>
@@ -64,7 +64,7 @@ async function mobAddPhotos(inp){
 function mobPhotos(){const b=$('#mobPh');if(!b)return;b.innerHTML=mob.photos.length?mob.photos.map((p,i)=>`<div class="mpi"><img src="${p.thumb}" onclick="lbOpen(mob.photos,${i})" alt=""><button type="button" onclick="mob.photos.splice(${i},1);mobPhotos()" aria-label="사진 빼기">×</button></div>`).join(''):'<div class="muted mph0">불량 부위 · 라벨 사진을 찍어 두세요 (선택)</div>'}
 async function mobSave(){
   if(mob.busy||RO)return;const f=mob.form;
-  if(!f.partNo.trim()){toast('부품번호를 입력하세요');return}
+  if(!f.partNo.trim()){toast('품번을 입력하세요');return}
   if(!num(f.qty)){toast('수량을 입력하세요');return}
   if(!f.date){toast('발생일을 입력하세요');return}
   mob.busy=true;const btn=$('#mobSaveBtn');if(btn){btn.disabled=true;btn.textContent='저장 중…'}

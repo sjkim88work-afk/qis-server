@@ -55,7 +55,7 @@ function renderData(){
     sg('비용 · 사진',sv('시간당 인건비','작업시간 × 인건비로 선별비·재작업비를 자동 계산합니다.',sNum('laborRate','원',0))+
       sv('사진 최대 크기','첨부 사진의 긴 변을 이 크기로 줄여서 저장합니다.',sNum('photoMax','px',400,4000))+
       sv('사진 압축 품질','낮을수록 용량이 작아집니다. 70~85 권장.',sNum('photoQ','%',30,95)))+
-    sg('환율 (부품 단가 → 원화)',sv('사용 방법',`해외 부품은 단가를 <b>협력사 통화 그대로</b> 저장하고, 비용 · 구상 · COPQ에서는 아래 환율로 <b>원화로 바꿔</b> 계산합니다. 이미 입력한 비용은 그때 금액 그대로이고, 새로 넣는 비용부터 바뀐 환율이 쓰입니다.${db.settings.fxDate?`<br>환율 기준일: <b>${esc(db.settings.fxDate)}</b>`:'<br><b style="color:var(--warn)">기본값은 예시입니다 — 회사 기준 환율로 바꿔 주세요.</b>'}`,'',1)+
+    sg('환율 (부품 단가 → 원화)',sv('사용 방법',`해외 부품은 단가를 <b>협력사 통화 그대로</b> 저장하고, 비용 · 구상 · COPQ에서는 아래 환율로 <b>원화로 바꿔</b> 계산합니다. 이미 입력한 비용은 그때 금액 그대로이고, 새로 넣는 비용부터 바뀐 환율이 쓰입니다.${db.settings.fxDate?`<br>환율 기준일: <b>${esc(db.settings.fxDate)}</b>`:'<br><b style="color:var(--warn)">기본값은 예시입니다 — 회사 기준 환율로 바꾸세요.</b>'}`,'',1)+
       CURS.filter(c=>c!=='KRW').map(c=>sv(`1 ${c}`,CUR_L[c],`<input type="number" class="snum" min="0" step="any" value="${esc((db.settings.fx||{})[c]??'')}" onchange="setFx('${c}',this.value)"><span class="muted">원</span>`)).join('')+
       sv('환율 기준일','회사 기준 환율을 적용한 날짜 (기록용)',`<input type="date" class="stxt" value="${esc(db.settings.fxDate||'')}" onchange="setS('fxDate',this.value,'str')">`));
   P.sev=()=>sg('판정 기준',
@@ -119,15 +119,15 @@ function renderData(){
         `${folderTxt}<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">${chip(!!photoDir,!!lazyH.photoDir&&!photoDir,'사진·첨부')}${chip(!!backupDir,!!lazyH.backupDir&&!backupDir,'백업')}</div>${times?`<div class="muted" style="font-size:12px;margin-top:6px">${times}</div>`:''}${!anyDir?'<div class="muted" style="font-size:12px;margin-top:4px">권장: OneDrive 안에 <b>QIS</b> 폴더를 만들어 지정</div>':''}`,
         `<span style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end"><button class="b s ${rootH?'':'p'}" onclick="pickRoot()">${rootH?'변경':'폴더 지정'}</button>${rootH?'<button class="b s" onclick="unlinkRoot()">해제</button>':''}</span>`))+
     sg('백업 · 복원',
-      sv(tip('백업','화면 위 ‘백업’ 버튼과 같습니다. 폴더가 있으면 폴더에, 없으면 다운로드로 받습니다.'),`마지막 백업 <b>${db.meta.lastBackup?loc(db.meta.lastBackup):'없음'}</b>${backupDue()?' <span class="bg warn">백업 필요</span>':''}`,
+      sv(tip('백업','화면 위 ‘백업’ 버튼과 같습니다. 폴더가 있으면 폴더에, 없으면 내려받기로 받습니다.'),`마지막 백업 <b>${db.meta.lastBackup?loc(db.meta.lastBackup):'없음'}</b>${backupDue()?' <span class="bg warn">백업 필요</span>':''}`,
         `<span style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">${btn('지금 백업','exportJSON(true)','p')}${btn('백업 폴더에서 복원','restoreFromFolder()')}</span>`))+
     sg('공유 · 내보내기',
       sv(tip('읽기 전용 공유','지금 데이터를 HTML 파일 하나로 만듭니다. 받은 사람은 보기 · 검색 · 출력만 되고 수정 · 저장은 안 됩니다. 파일 안에 데이터가 그대로 들어 있으니 받을 사람을 가려서 보내세요.'),'',
         `<span style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;align-items:center"><label class="row" style="gap:5px;font-size:12.5px" title="협력사 연락처 · 주소 · 단가 · BOM · 기록에 안 쓰인 협력사 · 부품을 빼고, 기록에 쓰인 협력사 · 부품 이름만 남깁니다. 기준정보 탭도 숨깁니다."><input type="checkbox" ${num(db.settings.shareNoMaster)!==0?'checked':''} onchange="db.settings.shareNoMaster=this.checked?1:0;save()"> 기준정보 빼기</label>${btn('사진 포함','makeShareFile(true)')}${btn('사진 제외','makeShareFile(false)')}</span>`)+
       sv(tip('엑셀 통합 파일 (모든 표)','모든 데이터를 엑셀 파일 하나에 시트별로 담습니다 — 불량 · 비용 · NCR · 협력사 · 부품 · 입고 · BOM · RCA · 협력사별 월 PPM 등. 열 이름은 저장 항목 이름 그대로이고 x_ 로 시작하는 열은 앱이 계산한 값입니다. 피벗 · VLOOKUP 등 엑셀 분석용. 각 화면의 ‘엑셀 내보내기’는 그 화면 표(한글 머리글)만 담습니다.'),'',
-        `<button class="b s" onclick="exportAllXlsx(this)">만들기 (다운로드)</button>`)+
+        `<button class="b s" onclick="exportAllXlsx(this)">만들기 (내려받기)</button>`)+
       sv(tip('SQL로 조회 (QIS.sqlite)','SQLite DB 파일로 만듭니다 — DB Browser for SQLite로 열거나 Excel · Power BI에서 SQLite ODBC로 연결합니다. 표: suppliers · parts · defects · defect_costs · ncrs · receipts · bom_rows · supplier_month(월 PPM) 등, 조회: v_defects · v_ncr_open · v_monthly, x_ 열은 앱이 계산한 값. 읽기용 사본입니다.'),'',
-        btn(backupDir||lazyH.backupDir?'만들기 (폴더에 저장)':'만들기 (다운로드)','exportSqlite()')))+
+        btn(backupDir||lazyH.backupDir?'만들기 (폴더에 저장)':'만들기 (내려받기)','exportSqlite()')))+
     `<details class="sadv" ${advOpen?'open':''} ontoggle="if(state.setAdv!==this.open){state.setAdv=this.open;if(this.open){const y=window.scrollY;render();window.scrollTo(0,y)}}"><summary>고급 설정</summary>`+
     sg('폴더 따로 지정',
       sv('사진 · 첨부 폴더',dirSt('photoDir'),dirBtns('photoDir',`<button class="b s" onclick="photoDirNow()">지금 저장</button>`))+
@@ -177,12 +177,12 @@ async function makeShareFile(withPhotos){
 async function exportJSON(withPhotos=true){
   if(withPhotos===true&&(backupDir||lazyH.backupDir)){
     if(await ensureDir('backupDir')){const t=new Date();await autoBackup(true,`${pad(t.getHours())}${pad(t.getMinutes())}`);return}
-    toast('백업 폴더 사용이 허용되지 않아 다운로드로 받습니다');
+    toast('백업 폴더 사용이 허용되지 않아 내려받기로 받습니다');
   }
   db.meta.lastBackup=now();save();
   const txt=await fullJSON(withPhotos);
   download(`QMS_백업_${today()}${withPhotos?'':'_사진제외'}.json`,txt);
-  toast(`백업 파일 ${(txt.length/1048576).toFixed(1)}MB 다운로드`);
+  toast(`백업 파일 ${(txt.length/1048576).toFixed(1)}MB 내려받기`);
   if(state.tab==='dash'||state.tab==='data')render();
 }
 async function applyPhotos(photos,replace){
@@ -237,7 +237,7 @@ async function mergeIn(inc,name){
   inc=migrate(inc);
   const tomb=new Map();[...db.deleted,...inc.deleted].forEach(t=>{if(!tomb.has(t.id)||tomb.get(t.id)<t.at)tomb.set(t.id,t.at)});
   let a=0,u=0,del=0;
-  // 같은 대상(이름·부품번호·월)이 다른 id로 만들어진 경우 로컬 id로 맞춤
+  // 같은 대상(이름·품번·월)이 다른 id로 만들어진 경우 로컬 id로 맞춤
   const norm=x=>String(x||'').replace(/\s+/g,'').replace(/\(주\)|㈜|주식회사/g,'').toLowerCase();
   const supRemap={};
   inc.suppliers.forEach(r=>{if(db.suppliers.some(x=>x.id===r.id))return;const m=db.suppliers.find(x=>norm(x.name)&&norm(x.name)===norm(r.name));if(m){supRemap[r.id]=m.id;r.id=m.id}});
@@ -255,7 +255,7 @@ async function mergeIn(inc,name){
     del+=before-db[c].length;
   });
   db.deleted=[...tomb].map(([id,at])=>({id,at}));
-  if(inc.bom&&(inc.bom.updatedAt||'')>(db.bom.updatedAt||''))db.bom=inc.bom;  // BOM은 통째로: 더 최근 업로드가 이김
+  if(inc.bom&&(inc.bom.updatedAt||'')>(db.bom.updatedAt||''))db.bom=inc.bom;  // BOM은 통째로: 더 최근 가져오기가 이김
   relinkNcr();
   db.defects.forEach(d=>{if(Array.isArray(d.photos))d.photos=d.photos.filter(i=>!tomb.has(i))});
   let pn=0;
@@ -411,7 +411,7 @@ async function autoBackup(force,tag){
   finally{autoBackup._busy=false}
 }
 async function resetAll(){
-  if(!await askConfirm({title:'모든 데이터를 초기화할까요?',msg:'아래 데이터가 <b>모두 영구 삭제</b>되며 되돌릴 수 없습니다. 먼저 백업 다운로드를 권장합니다.',
+  if(!await askConfirm({title:'모든 데이터를 초기화할까요?',msg:'아래 데이터가 <b>모두 영구 삭제</b>되며 되돌릴 수 없습니다. 먼저 백업 내려받기를 권장합니다.',
     items:[`협력사 ${db.suppliers.length} · 부품 ${db.parts.length}`,`불량 ${db.defects.length}건 · NCR ${db.ncrs.length}건 · 입고 ${db.receipts.length}건`,`사진 ${db.defects.reduce((a,d)=>a+(d.photos||[]).length,0)}장`],typeWord:'초기화',ok:'전체 삭제'}))return;
   if(backupDir){try{await autoBackup(true,'초기화전')}catch(e){}}
   db=defaultDB();photoClear().catch(()=>{});photoStr=null;phPendSet(new Set());save();render();toast('초기화되었습니다');

@@ -198,7 +198,9 @@ jobs:
           if ($p.ExitCode -ne 0) { throw "차단 표시가 있는 상태에서 selftest 실패 (exit $($p.ExitCode))" }
           $left = Get-ChildItem motw\QIS -Recurse -Filter *.dll | Where-Object { Get-Item $_.FullName -Stream Zone.Identifier -ErrorAction SilentlyContinue }
           if ($left) { throw "차단 표시가 남은 DLL: $($left.Count)개" }
+      # 릴리스로 낼 때만 보관 — PR · main 빌드마다 올리면(회당 약 70MB × 14일) 저장 한도가 차서 빌드가 실패함
       - uses: actions/upload-artifact@v4
+        if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'release' || github.event_name == 'workflow_dispatch'
         with:
           name: QIS-${{ matrix.name }}
           path: |
@@ -206,7 +208,7 @@ jobs:
             QIS-Setup.exe
             QIS-mac.dmg
           if-no-files-found: ignore
-          retention-days: 14
+          retention-days: 1
 
   release:
     needs: build

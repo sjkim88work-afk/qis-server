@@ -46,9 +46,9 @@ def setup_page(*, current: str = "", solo_name: str = "", solo_login: bool = Fal
 <div class=muted>QIS 품질정보시스템 {html.escape(version)} · 나중에 메뉴 ‘설정 › 사용 방식 바꾸기’에서 바꿀 수 있습니다. 데이터는 그대로 유지됩니다.</div>
 <div class=cards>
   <div class=card id=c_solo onclick="pick('solo')"><h2>🖥 이 PC 혼자 쓰기</h2>
-    <ul><li>바로 시작 (원하면 비밀번호 잠금)</li><li>이 PC 안에서만 열림 (다른 PC · 핸드폰 접속 차단)</li><li>개인 업무 · 시험용</li></ul></div>
+    <ul><li>바로 시작 (원하면 비밀번호 잠금)</li><li>이 PC 안에서만 열림 (다른 PC · 휴대폰 접속 차단)</li><li>개인 업무 · 시험용</li></ul></div>
   <div class=card id=c_lan onclick="pick('lan')"><h2>🏢 사내 서버로 쓰기</h2>
-    <ul><li>같은 사내망의 다른 PC · 핸드폰에서 접속</li><li>사람마다 아이디 · 비밀번호로 로그인, 권한(조회 · 작성 · 관리자)</li><li>이 PC가 켜져 있고 QIS가 열려 있어야 함</li></ul></div>
+    <ul><li>같은 사내망의 다른 PC · 휴대폰에서 접속</li><li>사람마다 아이디 · 비밀번호로 로그인, 권한(조회 · 작성 · 관리자)</li><li>이 PC가 켜져 있고 QIS가 열려 있어야 함</li></ul></div>
 </div>
 <div class=box id=f_solo>
   <label for=sn>내 이름 <span class=muted>(담당자 · 변경 이력에 남는 이름)</span></label>
@@ -70,9 +70,9 @@ def setup_page(*, current: str = "", solo_name: str = "", solo_login: bool = Fal
   <label for=pt>포트 <span class=muted>(접속 주소의 번호, 보통 8080)</span></label><input id=pt value="{int(port)}" style="max-width:160px">
   <label style="margin-top:14px">접속 허용 범위</label>
   <label style="display:flex;gap:8px;align-items:center;cursor:pointer;font-weight:400"><input type=radio name=sc value=lan{' checked' if lan_scope != 'tailscale' else ''} style="width:auto;margin:0">
-    사내망 전체 <span class=muted>— 같은 사내망 · Wi-Fi 의 PC · 핸드폰</span></label>
+    사내망 전체 <span class=muted>— 같은 사내망 · Wi-Fi 의 PC · 휴대폰</span></label>
   <label style="display:flex;gap:8px;align-items:center;cursor:pointer;font-weight:400;margin-top:6px"><input type=radio name=sc value=tailscale{' checked' if lan_scope == 'tailscale' else ''} style="width:auto;margin:0">
-    Tailscale 만 <span class=muted>— 이 PC 와, 내 Tailscale 에 등록한 기기(핸드폰)만. 사내망의 다른 PC 에서는 열리지 않습니다</span></label>
+    Tailscale 만 <span class=muted>— 이 PC 와, 내 Tailscale 에 등록한 기기(휴대폰)만. 사내망의 다른 PC 에서는 열리지 않습니다</span></label>
 </div>
 <div class=err id=err>{html.escape(error)}</div>
 <div style="display:flex;gap:10px"><button class=p id=go onclick="go()">시작</button>
@@ -107,7 +107,7 @@ def _tailscale_info_page(addresses: list[str], port: int, windows: bool) -> str:
     """접속 범위 = Tailscale 만: 이 PC(127.0.0.1)와 Tailscale 주소에만 열림."""
     if addresses:
         rows = "".join(f"<li><code>{html.escape(a)}</code></li>" for a in addresses)
-        head = "<h2>핸드폰 접속 주소 (Tailscale 을 켠 내 기기에서만)</h2>"
+        head = "<h2>휴대폰 접속 주소 (Tailscale 을 켠 내 기기에서만)</h2>"
         miss = ""
     else:
         rows = "<li>지금은 이 PC 에서만 열려 있습니다</li>"
@@ -115,7 +115,7 @@ def _tailscale_info_page(addresses: list[str], port: int, windows: bool) -> str:
         miss = ("<div class=box style='border-color:#f59e0b;background:#fffbeb'><b>⚠ 이 PC 의 Tailscale 이 꺼져 있거나 설치되어 있지 않습니다</b>"
                 "<p class=muted style='margin:6px 0 0'>Tailscale 을 켜고 로그인한 뒤 QIS 를 다시 여세요. 그때까지는 다른 기기에서 접속할 수 없습니다 "
                 "(사내망으로도 열리지 않습니다).</p></div>")
-    fw = (f"<p class=muted>핸드폰에서 안 열리면 Windows 방화벽 규칙이 필요합니다 — Tailscale 대역에서 오는 연결만 허용합니다. 관리자 권한 명령 창에서<br>"
+    fw = (f"<p class=muted>휴대폰에서 안 열리면 Windows 방화벽 규칙이 필요합니다 — Tailscale 대역에서 오는 연결만 허용합니다. 관리자 권한 명령 창에서<br>"
           f"<code>netsh advfirewall firewall add rule name=\"QIS (Tailscale)\" dir=in action=allow protocol=TCP localport={port} remoteip=100.64.0.0/10</code></p>"
           if windows else "<p class=muted>맥에서 ‘들어오는 네트워크 연결을 허용할까요?’ 창이 뜨면 ‘허용’을 누르세요.</p>")
     body = f"""
@@ -129,7 +129,7 @@ Tailscale 주소가 바뀌거나 Tailscale 을 나중에 켰다면 QIS 를 다�
 
 
 def busy_page(msg: str) -> str:
-    return _page("QIS", f'<div class=spin></div><h2>{html.escape(msg)}</h2><div class=muted>잠시 기다려 주세요. 창을 닫지 마세요.</div>')
+    return _page("QIS", f'<div class=spin></div><h2>{html.escape(msg)}</h2><div class=muted>잠시 기다리세요. 창을 닫지 마세요.</div>')
 
 
 def message_page(title: str, msg: str) -> str:
@@ -172,7 +172,7 @@ def lan_info_page(addresses: list[str], port: int, windows: bool, https: bool = 
         "프로그램을 다시 열면 https로 바뀝니다 (사용 안내서 ‘사내 서버 모드 HTTPS’).</p></div>")
     body = f"""
 <h1>🏢 사내 서버로 켜졌습니다</h1>{warn}
-<div class=box><h2>다른 PC · 핸드폰 접속 주소 (같은 사내망 · Wi-Fi)</h2><ul>{rows}</ul>{fw}
+<div class=box><h2>다른 PC · 휴대폰 접속 주소 (같은 사내망 · Wi-Fi)</h2><ul>{rows}</ul>{fw}
 <p class=muted>이 PC가 켜져 있고 QIS 창이 열려 있는 동안만 접속됩니다. 메뉴 ‘설정 › 접속 주소 보기’에서 다시 볼 수 있습니다.</p></div>
 <button class=p onclick="ready(function(){{api().go_app()}})">QIS 열기 (로그인)</button>
 """

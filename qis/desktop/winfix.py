@@ -4,7 +4,7 @@
 Mark-of-the-Web)가 붙는다. .NET Framework 는 이 표시가 붙은 DLL(Python.Runtime.dll 등)을 불러오지 않아서
 pywebview(winforms)가 시작하지 못한다:
     Failed to resolve Python.Runtime.Loader.Initialize from ...\\_internal\\pythonnet\\runtime\\Python.Runtime.dll
-그래서 창 라이브러리를 불러오기 전에 이 프로그램 폴더 안 파일들의 표시를 지운다
+그래서 창 라이브러리를 가져오기 전에 이 프로그램 폴더 안 파일들의 표시를 지운다
 (파일 탐색기의 속성 › '차단 해제'와 같은 일 — 사용자 권한으로 자기 파일에만).
 """
 from __future__ import annotations

@@ -520,7 +520,7 @@ details>summary.sec:hover{color:var(--pri-d,#163d5a)}
 .bomdd summary{cursor:pointer;list-style:revert}.bomdd[open] .ddh{display:none}.bomdd tr.on td{background:#e8f1fb;font-weight:600}.bomdd tr.bpick{cursor:pointer}.bomdd tr.bpick:hover td{background:#f0f5fb}
 .sadv{margin-top:6px}.sadv>summary{cursor:pointer;font-size:15px;font-weight:bold;margin:8px 4px 12px;color:var(--sub)}.sadv[open]>summary{color:inherit}
 .roBar{background:#eef4fb;border-bottom:1px solid #c9dbef;color:#1d3b5c;padding:8px 22px;font-size:13px}
-/* ================= 모바일 화면 ================= */
+/* ================= 휴대폰 화면 ================= */
 #mswitch{display:none;text-align:center;padding:14px 0 22px;font-size:13px}
 #mswitch a{display:none}
 body.mob #mswitch,body.pcnarrow #mswitch{display:block}
@@ -603,7 +603,7 @@ fieldset.murg label{position:relative}
 <div id="recon" class="recon noprint" style="display:none"></div>
 <main><div class="print-only phead" id="printHead"></div><div id="view"></div></main>
 <div id="mcard" class="mcard" onclick="mobCardClose()"></div>
-<div id="mswitch" class="noprint"><a class="lk mon" onclick="mobSet('pc')">PC 화면으로 보기</a><a class="lk moff" onclick="mobSet('mobile')">📱 모바일 화면</a></div>
+<div id="mswitch" class="noprint"><a class="lk mon" onclick="mobSet('pc')">PC 화면으로 보기</a><a class="lk moff" onclick="mobSet('mobile')">📱 휴대폰 화면</a></div>
 
 <div class="modal-bg" id="modal">
   <div class="modal">
@@ -738,7 +738,7 @@ function migrate(d){
   d.ncrs.forEach(n=>{if(n.reqType==='통보만 (회신 불요)')n.reqType='단순 통보';if(!('notifyDate' in n))n.notifyDate=n.requestDate||n.issueDate||'';
     if(n.reqType!=='단순 통보'&&!n.requestDate&&n.issueDate&&!n.replyDate&&!n.verifyDate){n.requestDate=n.issueDate;if(!n.dueDate)n.dueDate=addDays(n.issueDate,typeDays(n.reqType,d.settings))}});
   d.defects.forEach(x=>{if(!x.delivDate&&x.lot&&/^(\d{4}[.\-\/]\d{1,2}[.\-\/]\d{1,2}|20\d{6})$/.test(String(x.lot).trim())){const p=parseDateAny(String(x.lot).trim());if(p)x.delivDate=p}if(!Array.isArray(x.photos))x.photos=[];migrateCosts(x)});
-  // 이전 통합본(원인 부품 칸 · 불량 FAR · 귀책 확정 기록) → 발견 품목 + 원인 부품번호 · 귀책 조사 구조로
+  // 이전 통합본(원인 부품 칸 · 불량 FAR · 귀책 확정 기록) → 발견 품목 + 원인 품번 · 귀책 조사 구조로
   d.defects.forEach(x=>{
     if(x.causePartNo){if(!x.fgNo&&!x.fgName){x.fgNo=x.partNo||'';x.fgName=x.partName||''}x.partNo=x.causePartNo;x.partName=x.causePartName||'';x.supplierId=x.causeSupplierId||x.supplierId||''}
     delete x.causePartNo;delete x.causePartName;delete x.causeSupplierId;
@@ -750,7 +750,7 @@ function migrate(d){
 }
 /* ---- 협력사 연락처 ---- */
 const ROLES=['품질 담당','품질 팀장','영업 담당','SCM · 물류','생산/공장장','개발 담당','대표','기타'];
-// 부서명으로 역할 추정 (업로드용)
+// 부서명으로 역할 추정 (가져오기용)
 const roleOfDept=d=>{d=String(d||'').toLowerCase();if(!d)return '품질 담당';if(/품질|quality|^qa|^qc|sqe/.test(d))return /팀장|manager|head/.test(d)?'품질 팀장':'품질 담당';if(/영업|sales|account/.test(d))return '영업 담당';if(/scm|구매|purchas|logistic|물류|supply|planner/.test(d))return 'SCM · 물류';if(/개발|r&d|engineer|설계/.test(d))return '개발 담당';if(/생산|공장|plant|production/.test(d))return '생산/공장장';if(/대표|ceo|사장/.test(d))return '대표';return '기타'};
 function ensureContacts(s){
   if(!Array.isArray(s.contacts)){
@@ -934,7 +934,7 @@ function srvPanel(){
     sg('공유 · 내보내기',
       sv('읽기 전용 공유','지금 데이터를 HTML 파일 하나로 만듭니다. 서버 밖으로 나가는 사본이니 받을 사람을 가려서 보내세요. 기준정보는 빼고 만듭니다.',
         `<span style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">${btn('사진 제외','makeShareFile(false)')}</span>`)+
-      sv('SQL로 조회 (QIS.sqlite)','SQLite DB 파일로 내려받습니다 — DB Browser · Excel · Power BI(ODBC)에서 조회',btn('만들기 (다운로드)','exportSqlite()')));
+      sv('SQL로 조회 (QIS.sqlite)','SQLite DB 파일로 내려받습니다 — DB Browser · Excel · Power BI(ODBC)에서 조회',btn('만들기 (내려받기)','exportSqlite()')));
 }
 
 async function bootData(){
@@ -1003,7 +1003,7 @@ let backupDir=null,photoDir=null;  // 사진 · 첨부 폴더, 백업 폴더 (�
 
 function save(){
   if(RO)return;  // 읽기 전용 사본은 저장하지 않음
-  if(!dataReady){console.warn('데이터를 불러오기 전 저장 요청 — 무시');return}
+  if(!dataReady){console.warn('데이터를 가져오기 전 저장 요청 — 무시');return}
   if(!undoBusy&&undoSnap&&!save._keep)hideUndo();
   if(loadFailed){renderAlert();toast('데이터를 읽지 못해 저장을 멈췄습니다 — 위 빨간 안내를 확인하세요');return}
   if(tabLocked){renderAlert();toast('다른 창에서 QIS가 열려 있어 이 창은 보기 전용입니다 — 그 창에서 입력하세요');return}
@@ -1028,7 +1028,7 @@ function renderAlert(){
   }
   if(storageBlocked){b.style.display='flex';b.style.background='#fff7e0';b.style.borderBottomColor='#f0d49b';b.style.color='#5c4210';b.innerHTML=`<span>💡 <b>미리보기 화면에서는 데이터가 저장되지 않습니다.</b> 이 창은 보안상 브라우저 저장소가 막혀 있어, 여기서 입력한 내용은 창을 닫으면 사라집니다. 실제로 쓰려면 파일을 내려받아 <b>Edge 또는 Chrome에서 직접</b> 여세요.</span>`;return}
   if(loadFailed){b.style.display='flex';b.innerHTML=`<span>⛔ <b>저장된 데이터를 읽지 못했습니다</b> (${esc(loadFailed)}). 원본은 보존해 두었고, 덮어쓰지 않도록 <b>저장을 멈췄습니다.</b> 백업 파일로 복원하거나 원본을 내려받아 확인하세요.</span><span style="flex:1"></span><button class="b s" onclick="downloadBroken()">원본 내려받기</button><button class="b s p" onclick="pickImport('replace')">백업으로 복원</button>`;return}
-  if(saveFailed){b.style.display='flex';b.innerHTML=`<span>⛔ <b>브라우저 저장 실패</b> — 마지막 변경이 저장되지 않았습니다 (${esc(saveFailed)}). ${dataStore==='idb'?'PC 디스크 공간이 부족하거나 브라우저가 저장을 막았을 수 있습니다. 지금 <b>백업 다운로드</b>를 하고, 디스크 여유 공간을 확인하세요.':'저장 공간이 가득 찼을 수 있습니다. 지금 <b>백업 다운로드</b>를 하고, 설정 › 데이터 · 백업 › 고급 설정에서 저장 공간을 확인하세요.'}</span><span style="flex:1"></span><button class="b s p" onclick="exportJSON(true)">백업 다운로드</button>`;return}
+  if(saveFailed){b.style.display='flex';b.innerHTML=`<span>⛔ <b>브라우저 저장 실패</b> — 마지막 변경이 저장되지 않았습니다 (${esc(saveFailed)}). ${dataStore==='idb'?'PC 디스크 공간이 부족하거나 브라우저가 저장을 막았을 수 있습니다. 지금 <b>백업 내려받기</b>를 하고, 디스크 여유 공간을 확인하세요.':'저장 공간이 가득 찼을 수 있습니다. 지금 <b>백업 내려받기</b>를 하고, 설정 › 데이터 · 백업 › 고급 설정에서 저장 공간을 확인하세요.'}</span><span style="flex:1"></span><button class="b s p" onclick="exportJSON(true)">백업 내려받기</button>`;return}
   b.style.display='none';
 }
 function downloadBroken(){let r=brokenRaw||'';if(!r)try{r=localStorage.getItem(KEY+'_broken')||localStorage.getItem(KEY)||''}catch(e){}const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([r],{type:'application/json'}));a.download='QMS_원본데이터.json';a.click()}
@@ -1036,7 +1036,7 @@ const backupDays=()=>Math.max(1,num(db.settings.backupDays)||7);
 const backupDue=()=>!db.meta.lastBackup||diffDays(loc(db.meta.lastBackup,10),today())>=backupDays();
 function updateSaveInfo(){
   {const bk=$('#hdrBk');if(bk&&!RO&&!SRV){const due=!loadFailed&&!storageBlocked&&COLLS.some(c=>(db[c]||[]).length)&&backupDue();bk.textContent=due?'백업 필요':'백업';bk.classList.toggle('due',due);
-    bk.title=(due?`마지막 백업: ${db.meta.lastBackup?loc(db.meta.lastBackup,10):'없음'} — 눌러서 지금 백업. `:'')+(backupDir||lazyH.backupDir?'백업 폴더에 저장합니다':'백업 파일을 다운로드합니다 (설정에서 백업 폴더를 지정하면 하루 한 번 자동 백업)')}}
+    bk.title=(due?`마지막 백업: ${db.meta.lastBackup?loc(db.meta.lastBackup,10):'없음'} — 눌러서 지금 백업. `:'')+(backupDir||lazyH.backupDir?'백업 폴더에 저장합니다':'백업 파일을 내려받기합니다 (설정에서 백업 폴더를 지정하면 하루 한 번 자동 백업)')}}
   if(SRV){const e=$('#saveInfo'),st=srvState,t=st.at;if(e)e.textContent=loadFailed?'⚠ 서버 연결 실패':st.expired?'⚠ 로그인 만료':st.ok===false?'⚠ 서버 연결 끊김':RO?'조회 권한 · 읽기 전용':(srvTimer||srvBusy)&&st.pend?'서버에 저장 중…':t?`서버 저장 ${pad(t.getHours())}:${pad(t.getMinutes())}:${pad(t.getSeconds())}`:'';const l=$('#linkInfo');if(l)l.textContent='';return}
   if(RO){const e=$('#saveInfo');if(e)e.textContent='읽기 전용 사본';const l=$('#linkInfo');if(l)l.textContent='';return}
   const s=db.meta.saved?new Date(db.meta.saved):null;
@@ -1098,7 +1098,7 @@ function routeOf(d){
     S.push({t:'비용 분담 비율 확정',why:'귀책 조사 화면의 협력사 부담 비율 (%)',done:iv.share!==''&&iv.share!=null,doneT:`협력사 ${iv.share}%`,btn:go('invWrap','inv_share'),bl:'입력',rec:true});
   }else if(d.resp==='고객')S.push({t:'고객 귀책 — 고객 협의 내용을 실행 기록으로 남기기',why:'NCR · RCA 대상 아님',done:false,btn:'',rec:false});
   else{const ii=invInfo(d);
-    S.push({t:'원인(추정) 부품 지정',why:'완성품 불량이면 의심 부품을 원인 부품번호에 넣습니다 (FAR 대상 협력사)',done:!!d.partNo,doneT:`${d.partNo} ${d.partName||''} · ${supName(d.supplierId)||'협력사 미지정'}`,btn:`editDefect('${d.id}')`,bl:'지정',rec:!d.partNo});
+    S.push({t:'원인(추정) 부품 지정',why:'완성품 불량이면 의심 부품을 원인 품번에 넣습니다 (FAR 대상 협력사)',done:!!d.partNo,doneT:`${d.partNo} ${d.partName||''} · ${supName(d.supplierId)||'협력사 미지정'}`,btn:`editDefect('${d.id}')`,bl:'지정',rec:!d.partNo});
     S.push({t:'FAR 요청 — 협력사에 원인 분석 요청',why:'귀책 인정 요구가 아닌 분석 요청',done:!!iv.farReq,doneT:ii.label,btn:go('invWrap','inv_farReq'),bl:iv.farReq?'FAR 보기':'FAR 요청',rec:!iv.farReq&&!!d.supplierId});
     S.push({t:'사내 RCA 요청 — 사내 공정 · 취급 원인 분석',why:'재현시험 · 측정 · 분해 분석 → 사내 원인이면 공정 개선 · 내부 8D (간단한 건은 귀책 조사 화면의 사내 분석 메모에 기록해도 됩니다)',done:!!(iv.rca||'').trim()||!!c,doneT:c?`RCA ${c.CaseNo} · ${c.Stage}`:'귀책 조사에 사내 분석 기록됨',btn:c?`czOpenCase('${c.id}','cause')`:`czFromDefect('${d.id}')`,bl:c?'RCA 열기':'RCA 요청',rec:g!=='C'});
     S.push({t:'귀책 판정 → 협력사: NCR · 사내: 사내 대책 · 공동: 분담',why:`판정·근거가 실패비용 정산 기준 · 기한 ${ntfDue(d)} 지나면 원인 불명 검토`,done:!!iv.verdict,doneT:iv.verdict,btn:go('invWrap','inv_verdict'),bl:'귀책 판정',rec:!!iv.farRecv||!!(iv.rca||'').trim()});}
@@ -1282,7 +1282,7 @@ function ncrMini(n){const r=ncrSteps(n);return `<div class="qsteps${r.closed?' d
 const NCR_BASIS=['불량','공정 감사','PPM 초과','기타'];
 const AUDIT_TYPES=['정기 공정 감사','특별 감사','제품 감사','시스템 감사'];
 const isSysBasis=n=>n&&(n.basis==='공정 감사'||n.basis==='PPM 초과');
-/* 입고: db.receipts에 두 종류 — 월 합계(직접 입력 · 월별 업로드)와 입고 내역 줄(kind:'line', MES 거래명세서현황).
+/* 입고: db.receipts에 두 종류 — 월 합계(직접 입력 · 월별 가져오기)와 입고 내역 줄(kind:'line', MES 거래명세서현황).
    같은 협력사 · 같은 달에 내역 줄이 있으면 그 합계를 쓰고 월 합계 값은 무시 (이중 집계 방지) */
 const isLine=r=>r&&r.kind==='line';
 function rcvSum(sid,m){const L=db.receipts.filter(r=>r.supplierId===sid&&r.month===m),has=L.some(isLine);return L.filter(r=>has?isLine(r):!isLine(r)).reduce((a,r)=>a+num(r.qty),0)}
@@ -1478,10 +1478,10 @@ const state={setTab:'general',tab:'dash',dashMonth:today().slice(0,7),
 // 읽기 전용 공유본에서 보이는 화면 (협력사 품질 · 기준정보 · 설정 · 백업은 숨김)
 const RO_TABS=SHARE?['dash','issue','defect','inv','ncr','case','copq']:SRV&&!srvCanAdmin()?['dash','issue','defect','inv','ncr','case','sup','copq','master']:TABS.map(t=>t[0]);
 function go(t){if((RO||SRV)&&!RO_TABS.includes(t)&&t!=='prog')t='dash';if(t==='prog'){t='case';if(typeof czUi!=='undefined')czUi.view='prog'}state.tab=t;render();window.scrollTo(0,0)}
-/* ================= 모바일 화면 (핸드폰) =================
+/* ================= 휴대폰 화면 =================
    현장에서 쓰는 두 가지만: ① 불량 등록(사진 촬영 · 품번 자동 · 심각도 표시) ② 진행 현황(오늘 챙길 일 · 진행 중 NCR · 최근 불량, 보기 전용)
    판정 · 상태 · 기한은 PC 화면과 같은 함수를 그대로 씀 (sevOf · defStage · ncrSteps · 대시보드 '오늘 챙길 일').
-   화면 폭이 좁으면 자동으로 켜지고, 'PC 화면' / '모바일 화면'으로 바꿀 수 있음 (이 기기에 기억). */
+   화면 폭이 좁으면 자동으로 켜지고, 'PC 화면' / '휴대폰 화면'으로 바꿀 수 있음 (이 기기에 기억). */
 const MOB_KEY='qis_view',mobMQ=window.matchMedia?matchMedia('(max-width: 760px)'):null;
 let mobPref=(()=>{try{return localStorage.getItem(MOB_KEY)||'auto'}catch(e){return 'auto'}})();
 const mobView=()=>(mobPref==='mobile'||(mobPref!=='pc'&&!!(mobMQ&&mobMQ.matches)));
@@ -1510,7 +1510,7 @@ function mobRegHTML(){
   return `${done}<form id="mobForm" class="mform" onsubmit="event.preventDefault();mobSave()" oninput="mobInput(event)" onchange="mobInput(event)">
   <div class="mph" id="mobPh"></div>
   <div class="mphb"><label class="b">📷 촬영<input type="file" accept="image/*" capture="environment" hidden onchange="mobAddPhotos(this)"></label><label class="b">🖼 앨범<input type="file" accept="image/*" multiple hidden onchange="mobAddPhotos(this)"></label></div>
-  <label>부품번호 *<input name="partNo" data-combo="parts" autocomplete="off" autocapitalize="characters" value="${esc(f.partNo)}" placeholder="품번 또는 품명 입력"></label>
+  <label>품번 *<input name="partNo" data-combo="parts" autocomplete="off" autocapitalize="characters" value="${esc(f.partNo)}" placeholder="품번 또는 품명 입력"></label>
   <div class="mhint" id="mobPart">${f.partName?`${esc(f.partName)} · ${esc(supName(f.supplierId)||'협력사 미지정')}`:''}</div>
   <label>협력사<select name="supplierId">${supOpts(f.supplierId,'선택')}</select></label>
   <div class="m2"><label>불량 유형 *<select name="type">${opts(S.defectTypes,f.type)}</select></label>
@@ -1544,7 +1544,7 @@ async function mobAddPhotos(inp){
 function mobPhotos(){const b=$('#mobPh');if(!b)return;b.innerHTML=mob.photos.length?mob.photos.map((p,i)=>`<div class="mpi"><img src="${p.thumb}" onclick="lbOpen(mob.photos,${i})" alt=""><button type="button" onclick="mob.photos.splice(${i},1);mobPhotos()" aria-label="사진 빼기">×</button></div>`).join(''):'<div class="muted mph0">불량 부위 · 라벨 사진을 찍어 두세요 (선택)</div>'}
 async function mobSave(){
   if(mob.busy||RO)return;const f=mob.form;
-  if(!f.partNo.trim()){toast('부품번호를 입력하세요');return}
+  if(!f.partNo.trim()){toast('품번을 입력하세요');return}
   if(!num(f.qty)){toast('수량을 입력하세요');return}
   if(!f.date){toast('발생일을 입력하세요');return}
   mob.busy=true;const btn=$('#mobSaveBtn');if(btn){btn.disabled=true;btn.textContent='저장 중…'}
@@ -2465,8 +2465,8 @@ function editDefect(id,copy,preset){
     <label>영향 완성품 수량<input type="number" min="0" name="fgQty" value="${esc(d.fgQty)}" placeholder="영향받은 완성품 수"></label>
   </div></div>
   <div class="fgrp fgpart"><div class="gh"><span id="grpPartH">원인 · 의심 부품</span> <span class="muted" id="grpPartS"></span></div><div class="fg fg4">
-    <label><span class="lt" id="lbPn">원인·의심 부품번호</span><input name="partNo" data-combo="dparts" value="${esc(d.partNo)}" oninput="onPartNo(this.value)" autocomplete="off" placeholder="번호·품명·협력사로 검색"></label>
-    <label><span class="lt" id="lbPm">원인·의심 부품명</span><input name="partName" value="${esc(d.partName)}"></label>
+    <label><span class="lt" id="lbPn">원인·의심 품번</span><input name="partNo" data-combo="dparts" value="${esc(d.partNo)}" oninput="onPartNo(this.value)" autocomplete="off" placeholder="번호·품명·협력사로 검색"></label>
+    <label><span class="lt" id="lbPm">원인·의심 품명</span><input name="partName" value="${esc(d.partName)}"></label>
     <label>협력사<span class="row" style="flex-wrap:nowrap"><select name="supplierId" style="flex:1">${supOpts(d.supplierId)}</select><button type="button" class="b s" onclick="quickSup()" title="협력사 빠른 추가">+</button></span></label>
     <label><span class="lt" id="lbDv">납품일자</span><input type="date" name="delivDate" value="${esc(d.delivDate)}">${d.lot&&!d.delivDate?`<input type="hidden" name="lot" value="${esc(d.lot)}"><span style="font-size:11px">기존 LOT: ${esc(d.lot)}</span>`:''}</label>
   </div></div>
@@ -2654,7 +2654,7 @@ function invVerdictI(){
   if(v&&!f.inv_verdictDate.value)f.inv_verdictDate.value=today();
   const sl=$('#shareL');if(sl)sl.style.display=v==='공동'?'':'none';
   const d=db.defects.find(x=>x.id===invCurId);
-  if(v==='협력사'&&d&&!d.partNo)toast('협력사 귀책 — 불량에 원인 부품번호를 지정해야 NCR을 발행할 수 있습니다');
+  if(v==='협력사'&&d&&!d.partNo)toast('협력사 귀책 — 불량에 원인 품번을 지정해야 NCR을 발행할 수 있습니다');
 }
 function saveInv(id,keep){
   const d=db.defects.find(x=>x.id===id);if(!d)return false;
@@ -2833,7 +2833,7 @@ function invAuto(){const f=$('#mf');if(f.inv_farReq.value)f.inv_farDue.value=add
 function invVerdict(){
   const f=$('#mf'),v=f.inv_verdict.value;
   if(v){f.resp.value=VERDICT_RESP[v];if(!f.inv_verdictDate.value)f.inv_verdictDate.value=today()}
-  if(v==='협력사'&&!f.partNo.value.trim())toast('협력사 귀책 — 원인 부품번호를 지정해야 NCR을 발행할 수 있습니다');
+  if(v==='협력사'&&!f.partNo.value.trim())toast('협력사 귀책 — 원인 품번을 지정해야 NCR을 발행할 수 있습니다');
   respChanged();renderSev();
 }
 let curSev={};
@@ -3136,7 +3136,7 @@ function srcLayout(){
   $('#grpFg').style.display=inc&&!hasFg?'none':'';
   set('grpPartH',inc?'입고 부품 (불량 부품)':'원인 · 의심 부품');
   $('#grpPartS').textContent=inc?'수입검사 — 검사한 부품이 곧 불량 부품입니다':'확인 전이면 의심 부품을 넣거나 비워 두면 ‘조사 중’';
-  set('lbPn',inc?'부품번호':'원인·의심 부품번호');set('lbPm',inc?'부품명':'원인·의심 부품명');
+  set('lbPn',inc?'품번':'원인·의심 품번');set('lbPm',inc?'품명':'원인·의심 품명');
   set('lbDv',inc?'입고(납품)일자':'원인 부품 납품일자');set('lbQty',inc?'불량수량':'불량수량 (원인 부품 기준)');lbInsp();
   f.partNo.placeholder=inc?'번호·품명·협력사로 검색':'번호·품명·협력사로 검색 (모르면 비움 → 조사 중)';
 }
@@ -3166,7 +3166,7 @@ async function saveDefect(id){
     Object.keys(o).forEach(k=>{if(k.startsWith('inv_')){iv[k.slice(4)]=o[k];delete o[k]}else if(k.startsWith('ica_std_')){c.std[k.slice(8)]=true;delete o[k]}else if(k.startsWith('ica_')){c[k.slice(4)]=o[k];delete o[k]}});
     iv.costNotice=!!iv.costNotice;if(iv.share!==''&&iv.share!=null)iv.share=Math.max(0,Math.min(100,num(iv.share)));
     if(iv.verdict){if(inForm)o.resp=VERDICT_RESP[iv.verdict]||o.resp;if(!iv.verdictDate)iv.verdictDate=today()}else iv.verdictDate='';
-    if(inForm&&iv.verdict==='협력사'&&!o.partNo)toast('협력사 귀책으로 판정했지만 원인 부품번호가 비어 있습니다');
+    if(inForm&&iv.verdict==='협력사'&&!o.partNo)toast('협력사 귀책으로 판정했지만 원인 품번이 비어 있습니다');
     const hasInv=['farReq','farDue','farRecv','farResult','rca','verdict','sample','basis','share'].some(k=>iv[k]!==''&&iv[k]!=null)||iv.costNotice;
     if(hasInv||o.resp==='미정')o.inv=iv;else o.inv=undefined;
     if(o.resp==='공동'&&!hasInv)o.inv=iv;
@@ -3284,7 +3284,7 @@ async function delDefect(id){
 }
 function exportDefectsCSV(){
   const ds=filteredDefects();
-  const head=['발생일','발생처','심각도','심각도점수','대응수준','완성품 품번','완성품명','완성품 수량','원인 부품번호','원인 부품명','차종','협력사','불량유형','불량수량','입고(로트)수량','납품일자','도면 규격','실측','불량내용','임시조치','처리','귀책',...COST_CATS.map(c=>c+'비'),'비용합계','구상상태','청구액','회수액','미회수','NCR번호','담당자','진행단계','유효성검증','처리완료일','수동종결사유','FAR요청일','FAR회신기한','FAR회신일','FAR결과','사내RCA','귀책판정','판정일','협력사부담%','사내대책수준','사내대책완료일','표준화반영','진행기록'];
+  const head=['발생일','발생처','심각도','심각도점수','대응수준','완성품 품번','완성품명','완성품 수량','원인 품번','원인 품명','차종','협력사','불량유형','불량수량','입고(로트)수량','납품일자','도면 규격','실측','불량내용','임시조치','처리','귀책',...COST_CATS.map(c=>c+'비'),'비용합계','구상상태','청구액','회수액','미회수','NCR번호','담당자','진행단계','유효성검증','처리완료일','수동종결사유','FAR요청일','FAR회신기한','FAR회신일','FAR결과','사내RCA','귀책판정','판정일','협력사부담%','사내대책수준','사내대책완료일','표준화반영','진행기록'];
   downloadCSV(`불량목록_${today()}.csv`,[head,...ds.map(d=>{const v=sevOf(d);return [d.date,d.source,v.grade,v.score,v.resp,d.fgNo||'',d.fgName||'',d.fgQty??'',d.partNo,d.partName,d.model,supName(d.supplierId),d.type,d.qty,d.inspQty,d.delivDate||d.lot,d.spec||'',d.actual||'',d.desc,d.containment,d.disposition,d.resp,...COST_CATS.map(c=>(d.costs||[]).filter(x=>x.cat===c).reduce((a,x)=>a+num(x.amt),0)),costTotal(d),claimStatus(d),d.claim?.reqAmt??'',d.claim?.recvAmt??'',outstanding(d),db.ncrs.find(n=>n.id===d.ncrId)?.no||'',d.owner,defStage(d).label,(()=>{const n=d.ncrId&&db.ncrs.find(x=>x.id===d.ncrId);return n&&isDone(d)?verifyInfo(n).label:(icaVerify(d)?.label||'')})(),d.doneDate||'',d.closed?.reason||'',
       d.inv?.farReq||'',d.inv?.farDue||'',d.inv?.farRecv||'',d.inv?.farResult||'',d.inv?.rca||'',d.inv?.verdict||'',d.inv?.verdictDate||'',d.inv?.share??'',d.resp==='사내'?icaLevel(d):'',d.ica?.doneDate||'',ICA_STD.filter(([k])=>d.ica?.std?.[k]).map(x=>x[1]).join(', '),(d.logs||[]).slice().sort((a,b)=>(a.date||'').localeCompare(b.date||'')).map(l=>`[${l.date} ${l.kind}] ${l.text}`).join('\n')]})]);
 }
@@ -3369,8 +3369,8 @@ const IMP_FIELDS=[
   ['fgNo','완성품 품번',['완성품품번','완성품번호','완성품코드','assy품번','assy','발견품번','상위품번','모품번']],
   ['fgName','완성품명',['완성품명','완성품품명','assy명','assy품명','발견품명','상위품명']],
   ['fgQty','완성품 수량',['완성품수량','assy수량','영향수량']],
-  ['partNo','원인 부품번호',['부품번호','품번','원인부품','원인부품번호','partno','p/no','pno','품목코드','자재코드']],
-  ['partName','부품명',['부품명','품명','품목명','자재명']],
+  ['partNo','원인 품번',['부품번호','품번','원인부품','원인부품번호','partno','p/no','pno','품목코드','자재코드']],
+  ['partName','품명',['부품명','품명','품목명','자재명']],
   ['model','차종',['차종','차종코드','차형']],
   ['supplier','협력사',['협력사','협력사명','업체','업체명','공급사','납품업체']],
   ['type','불량유형',['불량유형','유형','불량명','불량구분','불량항목']],
@@ -3413,7 +3413,7 @@ let imp=null;
 function openImport(){
   imp={sheets:null,sheet:'',rows:[],hdr:0,map:[]};
   const S=db.settings,defSrc=S.sources.find(x=>x.includes('공정'))||S.sources[0];
-  openModal('불량 엑셀 일괄 등록',`<div class="help">엑셀(.xlsx) 또는 CSV 파일을 선택하거나, 엑셀에서 범위를 복사해 붙여넣으세요. 첫 줄(제목행)의 열 이름을 자동으로 인식합니다 — <b>발생일, 부품번호(또는 부품명), 불량수량</b>은 필수입니다. 부품번호가 기준정보에 있으면 부품명·차종·협력사가 자동으로 채워집니다.</div>
+  openModal('불량 엑셀 일괄 등록',`<div class="help">엑셀(.xlsx) 또는 CSV 파일을 선택하거나, 엑셀에서 범위를 복사해 붙여넣으세요. 첫 줄(제목행)의 열 이름을 자동으로 인식합니다 — <b>발생일, 품번(또는 품명), 불량수량</b>은 필수입니다. 품번이 기준정보에 있으면 품명·차종·협력사가 자동으로 채워집니다.</div>
   <div class="fg" style="margin-top:10px">
     <label>기본 발생처 (파일에 없을 때)<select name="defSource">${opts(S.sources,defSrc)}</select></label>
     <label>기본 귀책<select name="defResp">${opts(RESP_OPTS,'협력사')}</select></label>
@@ -3422,13 +3422,13 @@ function openImport(){
   </div>
   <div class="row" style="margin-top:10px">
     <label class="b p" style="cursor:pointer">파일 선택 (.xlsx / .csv)<input type="file" accept=".xlsx,.csv,.txt" style="display:none" onchange="impFile(this.files[0]);this.value=''"></label>
-    <button type="button" class="b" onclick="impTemplate()">등록 양식 다운로드</button>
+    <button type="button" class="b" onclick="impTemplate()">등록 양식 내려받기</button>
     <span id="impSheet"></span><span id="impName" class="muted"></span>
   </div>
   <details style="margin-top:8px"><summary class="muted" style="cursor:pointer">또는 엑셀에서 복사해 붙여넣기</summary>
     <textarea id="impPaste" style="min-height:120px;font-family:Consolas,monospace;font-size:12px;margin-top:6px" placeholder="제목행 포함해서 Ctrl+V"></textarea>
     <button type="button" class="b s" onclick="impSetRows(parseCSV($('#impPaste').value),'붙여넣기')">붙여넣은 내용 읽기</button></details>
-  <div class="row" style="margin-top:10px"><label class="row" style="gap:4px"><input type="checkbox" name="skipDup" checked onchange="impPreview()"> 이미 등록된 중복 건 제외 (발생일+부품번호+LOT+유형+수량 동일)</label>
+  <div class="row" style="margin-top:10px"><label class="row" style="gap:4px"><input type="checkbox" name="skipDup" checked onchange="impPreview()"> 이미 등록된 중복 건 제외 (발생일+품번+LOT+유형+수량 동일)</label>
     <label class="row" style="gap:4px"><input type="checkbox" name="autoCost" checked> 작업시간·폐기 비용 자동계산</label></div>
   <div id="impMap"></div><div id="impPrev" style="margin-top:10px"></div>`,
   [{label:'취소',fn:closeModal},{label:'등록',cls:'p',fn:impCommit}]);
@@ -3453,14 +3453,14 @@ async function impFile(f){
 }
 function impSetRows(rows,name){
   rows=(rows||[]).map(r=>r||[]);
-  if(rows.filter(r=>r.some(c=>String(c).trim()!=='')).length<2){toast('제목행과 데이터가 있는 범위를 넣어주세요');return}
+  if(rows.filter(r=>r.some(c=>String(c).trim()!=='')).length<2){toast('제목행과 데이터가 있는 범위를 넣으세요');return}
   imp.hdr=findHeader(rows);imp.rows=rows;imp.map=autoMap(rows[imp.hdr]);
   $('#impName').textContent=`${name} · 데이터 ${rows.slice(imp.hdr+1).filter(r=>r.some(c=>String(c).trim()!=='')).length}행`;
   impRenderMap();impPreview();
 }
 function impRenderMap(){
   const h=imp.rows[imp.hdr];
-  $('#impMap').innerHTML=`<div class="sec">열 연결 확인 <span class="muted" style="font-weight:normal;font-size:12px">자동 인식 결과입니다. 틀린 열만 바꿔주세요. ‘무시’는 등록하지 않습니다.</span></div>
+  $('#impMap').innerHTML=`<div class="sec">열 연결 확인 <span class="muted" style="font-weight:normal;font-size:12px">자동 인식 결과입니다. 틀린 열만 바꾸세요. ‘무시’는 등록하지 않습니다.</span></div>
   <div class="row">${h.map((c,i)=>String(c).trim()===''&&!imp.map[i]?'':`<label style="display:flex;flex-direction:column;font-size:11px;color:var(--sub);gap:2px">${esc(c)||'(빈 제목)'}<select onchange="imp.map[${i}]=this.value;impPreview()" style="font-size:12px;${imp.map[i]?'':'color:#999'}"><option value="">무시</option>${IMP_FIELDS.map(([k,l])=>`<option value="${k}" ${imp.map[i]===k?'selected':''}>${l}</option>`).join('')}</select></label>`).join('')}</div>`;
 }
 function impBuild(){
@@ -3475,7 +3475,7 @@ function impBuild(){
     if(partNo&&!part)warn.push('기준정보에 없는 부품');
     const partName=String(o.partName??'').trim()||part?.name||'';
     const fgNo=String(o.fgNo??'').trim(),fgName=String(o.fgName??'').trim();
-    if(!partNo&&!partName&&!fgNo&&!fgName)err.push('부품번호/부품명 없음');else if(!partNo&&!partName)warn.push('원인 부품 미지정 (조사 중)');
+    if(!partNo&&!partName&&!fgNo&&!fgName)err.push('품번/품명 없음');else if(!partNo&&!partName)warn.push('원인 부품 미지정 (조사 중)');
     const qty=numC(o.qty);if(!(qty>0))err.push('불량수량 없음');
     const sn=String(o.supplier??'').trim();let sup=sn?db.suppliers.find(s=>s.name===sn)||db.suppliers.find(s=>s.name.replace(/\s|\(주\)|㈜|주식회사/g,'')===sn.replace(/\s|\(주\)|㈜|주식회사/g,'')):null;
     let newSup='';if(sn&&!sup)newSup=sn;if(!sup&&part&&part.supplierId)sup=supById(part.supplierId);
@@ -3496,9 +3496,9 @@ function impPreview(){
   const ok=rs.filter(r=>!r.err.length&&!(skip&&r.dup));
   const nErr=rs.filter(r=>r.err.length).length,nDup=rs.filter(r=>r.dup).length,newSups=[...new Set(rs.filter(r=>!r.err.length&&r.newSup).map(r=>r.newSup))];
   if(!imp.map.includes('date')||!imp.map.includes('qty')||!(imp.map.includes('partNo')||imp.map.includes('partName')))
-    $('#impPrev').innerHTML='<div class="banner">필수 열(발생일, 불량수량, 부품번호 또는 부품명)이 연결되지 않았습니다. 위에서 열을 지정하세요.</div>';
+    $('#impPrev').innerHTML='<div class="banner">필수 열(발생일, 불량수량, 품번 또는 품명)이 연결되지 않았습니다. 위에서 열을 지정하세요.</div>';
   else $('#impPrev').innerHTML=`<div class="row" style="margin-bottom:6px"><span class="bg ok">등록 ${ok.length}건</span>${nErr?`<span class="bg bad">오류 ${nErr}건 (제외)</span>`:''}${nDup?`<span class="bg warn">중복 ${nDup}건${skip?' (제외)':''}</span>`:''}${newSups.length?`<span class="bg inf">새 협력사 ${newSups.length}곳 자동 추가: ${esc(newSups.join(', '))}</span>`:''}</div>
-  <div class="tw" style="max-height:42vh"><table><thead><tr><th>행</th><th>판정</th><th>발생일</th><th>발생처</th><th>부품번호</th><th>부품명</th><th>협력사</th><th>유형</th><th class="n">수량</th><th>처리</th><th>납품일자</th><th>귀책</th></tr></thead><tbody>
+  <div class="tw" style="max-height:42vh"><table><thead><tr><th>행</th><th>판정</th><th>발생일</th><th>발생처</th><th>품번</th><th>품명</th><th>협력사</th><th>유형</th><th class="n">수량</th><th>처리</th><th>납품일자</th><th>귀책</th></tr></thead><tbody>
   ${rs.slice(0,300).map(r=>`<tr style="${r.err.length||(skip&&r.dup)?'opacity:.55':''}"><td>${r.line}</td><td>${r.err.length?`<span class="bg bad" title="${esc(r.err.join(', '))}">${esc(r.err[0])}</span>`:r.dup?`<span class="bg warn">${esc(r.warn[r.warn.length-1])}</span>`:r.warn.length?`<span class="bg warn" title="${esc(r.warn.join(', '))}">확인</span>`:'<span class="bg ok">OK</span>'}</td>
   <td>${esc(r.d.date)}</td><td>${esc(r.d.source)}</td><td>${esc(r.d.partNo)}</td><td>${esc(r.d.partName)}</td><td>${r.newSup?`${esc(r.newSup)} <span class="bg inf">신규</span>`:esc(supName(r.d.supplierId))||'<span class="muted">-</span>'}</td><td>${esc(r.d.type)}</td><td class="n">${r.d.qty||''}</td><td>${esc(r.d.disposition)}</td><td>${esc(r.d.delivDate||r.d.lot)}</td><td>${esc(r.d.resp)}</td></tr>`).join('')}
   ${rs.length>300?`<tr><td colspan="12" class="muted">… 외 ${rs.length-300}행 (미리보기 생략, 등록은 전체 처리)</td></tr>`:''}</tbody></table></div>`;
@@ -3532,7 +3532,7 @@ async function ncrFromDefect(id,extra=[]){
   const d=db.defects.find(x=>x.id===id);if(!d)return;
   const grp=[d,...extra.map(i=>db.defects.find(x=>x.id===i)).filter(x=>x&&x.id!==id&&!x.ncrId)],worst=grp.map(x=>sevOf(x).grade).sort()[0];
   if(invOpen(d)&&!await askConfirm({title:'귀책 조사 중인 건입니다',msg:'FAR · 사내 RCA로 귀책을 판정하기 전입니다. 그래도 NCR을 발행할까요?<br>(판정 후 발행하려면 취소하고 불량 기록의 ‘귀책 판정’을 먼저 입력하세요)',ok:'NCR 발행',danger:false}))return;
-  if(!d.partNo&&!await askConfirm({title:'원인 부품이 비어 있습니다',msg:'NCR은 원인 부품 기준으로 협력사에 통보합니다. 원인 부품번호 없이 발행할까요?',ok:'그대로 발행',danger:false}))return;
+  if(!d.partNo&&!await askConfirm({title:'원인 부품이 비어 있습니다',msg:'NCR은 원인 부품 기준으로 협력사에 통보합니다. 원인 품번 없이 발행할까요?',ok:'그대로 발행',danger:false}))return;
   const fg=d.fgNo||d.fgName?`완성품 ${[d.fgNo,d.fgName].filter(Boolean).join(' ')} 에서 발견${d.fgQty?` (${num(d.fgQty).toLocaleString()}대)`:''}`:'';
   const iv=d.inv||{},invTxt=[iv.farResult&&'[FAR] '+iv.farResult,iv.rca&&'[사내 RCA] '+iv.rca].filter(Boolean).join('\n');
   editNcr(null,{supplierId:d.supplierId,partNo:d.partNo,partName:d.partName,title:`${d.type||''} - ${d.partName||d.partNo||''}`,
@@ -3653,8 +3653,8 @@ function editNcr(id,preset,mode){
     <label>발행일 *<input type="date" name="issueDate" value="${esc(n.issueDate)}" data-prev="${esc(n.issueDate)}" oninput="ncrAutoDates('issue')"></label>
     <label>협력사<select name="supplierId" onchange="refreshLinks()">${supOpts(n.supplierId)}</select></label>
     <label>담당자<input name="owner" list="dlOwners" value="${esc(n.owner)}"></label>
-    <label>부품번호<input name="partNo" data-combo="parts" autocomplete="off" placeholder="번호·품명·협력사로 검색" value="${esc(n.partNo)}" oninput="const p=partByNo(this.value.trim());if(p){this.form.partName.value=p.name||'';if(p.supplierId){this.form.supplierId.value=p.supplierId;refreshLinks()}}bomNcr();repHint()"></label>
-    <label>부품명<input name="partName" value="${esc(n.partName)}"></label>
+    <label>품번<input name="partNo" data-combo="parts" autocomplete="off" placeholder="번호·품명·협력사로 검색" value="${esc(n.partNo)}" oninput="const p=partByNo(this.value.trim());if(p){this.form.partName.value=p.name||'';if(p.supplierId){this.form.supplierId.value=p.supplierId;refreshLinks()}}bomNcr();repHint()"></label>
+    <label>품명<input name="partName" value="${esc(n.partName)}"></label>
     <label class="full">제목<input name="title" value="${esc(n.title)}"></label>
     <label>재발 — 이전 NCR 번호<input name="repeatOf" list="dlNcrNos" autocomplete="off" value="${esc(n.repeatOf)}" placeholder="같은 문제가 다시 생긴 경우만" oninput="repHint()"><datalist id="dlNcrNos">${db.ncrs.filter(x=>x.id!==id&&x.no).sort((a,b)=>(b.issueDate||'').localeCompare(a.issueDate||'')).map(x=>`<option value="${esc(x.no)}">${esc(supName(x.supplierId))} · ${esc(x.partNo)} · ${esc(x.issueDate)}</option>`).join('')}</datalist></label>
     <div class="muted" id="repHint" style="font-size:12px;align-self:end;padding-bottom:6px"></div>
@@ -4027,7 +4027,7 @@ function farHTML(n){const f=n.far||{},on=farOn(n);
     <label>당사 검토<select name="far_review">${opts(FAR_REVIEW,f.review||'',true)}</select></label>
     <label class="full" style="grid-column:span 3">검토 의견 · 비고<input name="far_note" value="${esc(f.note)}" placeholder="예: 경도 측정 성적서 원본 추가 요청"></label>
   </div>
-  <div class="row" style="margin-top:6px;gap:8px"><button type="button" class="b s" onclick="ncrFarPrint()">FAR 요청서 출력</button>${invFarSrc(curLinks)?'<button type="button" class="b s" onclick="farLoadInv()">귀책 조사 FAR 불러오기</button>':''}<span class="muted" style="font-size:12px">분석 보고서 · 시료 발송 증빙은 ‘조사 · 진행 기록’에 첨부하면 기록과 함께 남습니다. 요청일을 비우면 FAR 없음으로 처리됩니다.</span></div></details>`}
+  <div class="row" style="margin-top:6px;gap:8px"><button type="button" class="b s" onclick="ncrFarPrint()">FAR 요청서 출력</button>${invFarSrc(curLinks)?'<button type="button" class="b s" onclick="farLoadInv()">귀책 조사 FAR 가져오기</button>':''}<span class="muted" style="font-size:12px">분석 보고서 · 시료 발송 증빙은 ‘조사 · 진행 기록’에 첨부하면 기록과 함께 남습니다. 요청일을 비우면 FAR 없음으로 처리됩니다.</span></div></details>`}
 function farFromInv(d){const iv=d.inv||{};
   return{reqDate:iv.farReq,due:iv.farDue||'',purpose:'귀책 판정',items:[],sampleQty:iv.sample||'',shipDate:'',shipRef:'',replyDate:iv.farRecv||'',
     verdict:iv.verdict==='협력사'?'협력사 귀책 인정':iv.verdict==='공동'?'추가 분석 필요':iv.verdict==='사내'?'귀책 불인정':iv.verdict==='원인 불명'?'원인 불명·재현 안 됨':'',
@@ -4243,7 +4243,7 @@ async function print8D(id){
   const html=reportFrame(`<!doctype html><html><head><meta charset="utf-8"><title>${esc(n.no)} 8D</title><style>body{font-family:'Malgun Gothic',sans-serif;font-size:12px;margin:24px;color:#111}table{width:100%;border-collapse:collapse;margin-bottom:12px}td,th{border:1px solid #555;padding:6px;vertical-align:top}th{background:#eef1f5;width:17%;text-align:left}h1{font-size:18px;margin:0 0 12px}.sm td,.sm th{font-size:11px;width:auto}.pg{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.pg figure{margin:0;border:1px solid #999;padding:4px;break-inside:avoid}.pg img{width:100%;max-height:220px;object-fit:contain}.pg figcaption{font-size:11px;text-align:center;margin-top:3px}</style></head><body>
   ${logoHead()}<h1>8D Report — ${esc(n.no)}</h1>
   <table><tr><th>협력사</th><td>${esc(supName(n.supplierId))}</td><th>발행일</th><td>${esc(n.issueDate)}</td></tr>
-  <tr><th>부품번호</th><td>${esc(n.partNo)}</td><th>부품명</th><td>${esc(n.partName)}</td></tr>
+  <tr><th>품번</th><td>${esc(n.partNo)}</td><th>품명</th><td>${esc(n.partName)}</td></tr>
   <tr><th>제목</th><td colspan="3">${esc(n.title)}</td></tr>${n.basis==='공정 감사'?`<tr><th>발행 근거</th><td colspan="3">공정 감사 — ${esc(n.auditDate)} ${esc(n.auditType)} ${esc(n.auditRef)}${n.finding?'<br>'+esc(n.finding):''}</td></tr>`:''}${n.basis==='PPM 초과'?`<tr><th>발행 근거</th><td colspan="3">PPM 초과 — ${esc(n.ppmFrom)}~${esc(n.ppmTo)} 실적 ${esc(n.ppmVal)} PPM / 목표 ${esc(n.ppmTarget)} PPM</td></tr>`:''}${n.basis==='기타'?`<tr><th>발행 근거</th><td colspan="3">기타</td></tr>`:''}
   <tr><th>대책 요청일</th><td>${esc(n.requestDate)}</td><th>회신 기한 / 회신일</th><td>${esc(n.dueDate)} / ${esc(n.replyDate)}</td></tr>
   <tr><th>유효성 기한</th><td>${esc(n.verifyDue)}</td><th>검증일 / 결과</th><td>${esc(n.verifyDate)} / ${esc(n.verifyResult)}</td></tr>
@@ -4261,7 +4261,7 @@ async function print8D(id){
 }
 function exportNcrCSV(){
   const ns=filteredNcrs();
-  downloadCSV(`NCR목록_${today()}.csv`,[['NCR번호','발행일','협력사','부품번호','부품명','제목','상태','통보일','통보방법','통보서파일','대책요청일','회신기한','회신일','대책서파일','타당성','유효성기한','검증일','검증결과','특채','담당',...D8.map(x=>x[1])],
+  downloadCSV(`NCR목록_${today()}.csv`,[['NCR번호','발행일','협력사','품번','품명','제목','상태','통보일','통보방법','통보서파일','대책요청일','회신기한','회신일','대책서파일','타당성','유효성기한','검증일','검증결과','특채','담당',...D8.map(x=>x[1])],
     ...ns.map(n=>[n.no,n.issueDate,supName(n.supplierId),n.partNo,n.partName,n.title,ncrStatus(n),n.notifyDate||'',n.notifyMethod||'',(n.noticeDocs||[]).length||'',n.requestDate,n.dueDate,n.replyDate,(n.replyDocs||[]).length||'',n.validity,n.verifyDue,n.verifyDate,n.verifyResult,n.concession,n.owner,...D8.map(([k])=>n[k])])]);
 }
 
@@ -4290,7 +4290,7 @@ function renderSup(){
   const gc={A:'ok',B:'inf',C:'warn',D:'bad','-':'mut'};
   return `<div class="card noprint"><div class="row">
     <span class="muted">기간</span><input type="date" value="${state.supFrom}" onchange="state.supFrom=this.value;render()"> ~ <input type="date" value="${state.supTo}" onchange="state.supTo=this.value;render()">
-    <button class="b p" onclick="openRcvLineImport()">입고 내역 업로드 (MES 거래명세서)</button><button class="b" onclick="openRcvImport()">월별 입고수량 업로드</button><button class="b" onclick="editReceipts()">직접 입력·수정</button><button class="b" onclick="editSup()">+ 협력사</button>
+    <button class="b p" onclick="openRcvLineImport()">입고 내역 가져오기 (MES 거래명세서)</button><button class="b" onclick="openRcvImport()">월별 입고수량 가져오기</button><button class="b" onclick="editReceipts()">직접 입력·수정</button><button class="b" onclick="editSup()">+ 협력사</button>
     <span style="flex:1"></span><button class="b" onclick="exportSupCSV()">엑셀 내보내기</button></div>
     <div class="help" style="margin-top:8px">불량건수·A등급·PPM은 협력사 귀책·공동 귀책분만 집계합니다 (사내·고객 귀책과 귀책 조사 중·원인 불명 건은 제외). PPM = 불량수량 ÷ 기간 입고수량 × 1,000,000. 등급: A ≤ ${S.gradeA} / B ≤ ${S.gradeB} / C ≤ ${S.gradeC} / D 초과 (설정에서 변경). 입고수량이 없으면 PPM·등급은 '-'로 표시됩니다.</div></div>
   <div class="card"><div class="tw"><table><thead><tr>${sth('supq','name','협력사')}${sth('supq','items','주요 품목')}${sth('supq','cnt','불량건수','n')}${sth('supq','nA','A등급','n')}${sth('supq','qty','불량수량','n')}${sth('supq','rcv','입고수량','n')}${sth('supq','ppm','PPM','n')}${sth('supq','grade','등급')}${sth('supq','ncr','NCR','n')}${sth('supq','open','미종결','n')}${sth('supq','late','회신지연','n')}${sth('supq','avgReply','평균 회신(일)','n')}${sth('supq','avgEval','대책서 평균','n','기간 내 NCR의 최종 대책서 평가 평균')}${sth('supq','firstPass','1차 승인율','n','1차 제출에서 바로 승인된 비율')}${sth('supq','escN','에스컬레이션','n','보완요청·반려·검증 무효가 기준 횟수 이상인 NCR 수')}${sth('supq','pen','감점','n','기간 내 NCR의 협력사 평가 감점 합계')}${sth('supq','cost','COPQ(원)','n')}${sth('supq','rec','회수(원)','n')}${sth('supq','os','미회수(원)','n','현재 기준 미회수 잔액')}</tr></thead><tbody>
@@ -4307,7 +4307,7 @@ function rcvOverview(){
   const colT=ms.map(m=>sups.reduce((a,s)=>a+v(s.id,m),0));
   let rows=sups.map(s=>{const row=ms.map(m=>v(s.id,m));return {s,row,tot:row.reduce((a,b)=>a+b,0)}});
   if(msState.rcvq.k)rows=msSort(rows,msState.rcvq,{name:x=>x.s.name||'',tot:x=>x.tot,...Object.fromEntries(ms.map((m,i)=>['m'+(i+1),x=>x.row[i]||'']))});
-  return `<details class="card" ${state.rcvOpen?'open':''} ontoggle="state.rcvOpen=this.open"><summary style="cursor:pointer;font-weight:bold;font-size:14px">월별 입고수량 현황 <span class="muted" style="font-weight:normal;font-size:12px">— 업로드 결과 확인용 · 칸을 누르면 그 달 직접 수정</span></summary>
+  return `<details class="card" ${state.rcvOpen?'open':''} ontoggle="state.rcvOpen=this.open"><summary style="cursor:pointer;font-weight:bold;font-size:14px">월별 입고수량 현황 <span class="muted" style="font-weight:normal;font-size:12px">— 가져오기 결과 확인용 · 칸을 누르면 그 달 직접 수정</span></summary>
   <div class="row" style="margin:10px 0"><b>연도</b><select onchange="state.rcvYear=this.value;state.rcvOpen=true;render()">${yrs.map(x=>`<option ${x===y?'selected':''}>${x}</option>`).join('')}</select></div>
   <div class="tw"><table><thead><tr>${sth('rcvq','name','협력사')}${ms.map((m,i)=>sth('rcvq','m'+(i+1),`${+m.slice(5)}월`,'n')).join('')}${sth('rcvq','tot','합계','n')}</tr></thead><tbody>
   ${rows.map(({s,row})=>{return `<tr><td style="white-space:nowrap">${esc(s.name)}</td>${row.map((q,i)=>`<td class="n"><a class="lk" style="color:${q?'inherit':'#c4cad4'}" onclick="editReceipts('${ms[i]}')">${q?q.toLocaleString():'-'}</a></td>`).join('')}<td class="n"><b>${row.reduce((a,b)=>a+b,0).toLocaleString()}</b></td></tr>`}).join('')||'<tr><td class="muted" colspan="14">협력사가 없습니다.</td></tr>'}
@@ -4331,7 +4331,7 @@ function rlAutoMap(h){const m={},used=new Set(),cell=i=>String(h[i]||'').replace
   RL_T.forEach(([k,t])=>{for(let i=0;i<h.length;i++){if(used.has(i))continue;if(t(cell(i))){m[k]=i;used.add(i);break}}});return m}
 function openRcvLineImport(){
   rl={rows:[],hdr:0,map:{},name:'',addSup:false};
-  openModal('입고 내역 업로드 (MES 거래명세서현황)',`<div class="help">MES <b>거래명세서현황</b>을 엑셀(.xlsx) · CSV로 올리거나, 화면의 표를 복사해 아래 <b>제목행 다음 줄</b>에 붙여넣으세요 (Ctrl+V).<br>
+  openModal('입고 내역 가져오기 (MES 거래명세서현황)',`<div class="help">MES <b>거래명세서현황</b>을 엑셀(.xlsx) · CSV로 올리거나, 화면의 표를 복사해 아래 <b>제목행 다음 줄</b>에 붙여넣으세요 (Ctrl+V).<br>
     줄마다 입고일자 · 품번 · 입고량 · 판정을 저장하고, <b>협력사 · 월별 입고수량(PPM 분모)은 이 내역 합계로 자동 계산</b>합니다. 같은 검사번호(없으면 거래명세서번호 + 순번)는 다시 올려도 한 번만 들어갑니다.</div>
   <div class="row" style="margin-top:10px"><label class="b p" style="cursor:pointer">파일 선택 (.xlsx / .csv)<input type="file" accept=".xlsx,.csv,.txt" style="display:none" onchange="rlFile(this.files[0]);this.value=''"></label><span id="rlSheet"></span>
     <label class="row" style="flex-direction:row;align-items:center;gap:6px;margin-left:8px"><input type="checkbox" onchange="rl.addSup=this.checked;rlRender()"> 기준정보에 없는 협력사는 새로 추가</label></div>
@@ -4369,9 +4369,9 @@ function rlRender(){
   const noSup=[...new Set(L.filter(o=>!o.supplierId).map(o=>o._sup))],nNew=L.filter(o=>o._st==='신규').length;
   const months=[...new Set(L.map(o=>o.month))].sort(),ng=L.filter(o=>o.verdict==='불합격').length;
   const cols=RL_F.filter(([f])=>rl.map[f]!=null&&!['mgrOk','mgrDate','plant','supCode'].includes(f));
-  $('#rlMap').innerHTML=`<div class="sec">열 연결 확인 <span class="muted" style="font-weight:normal;font-size:12px">${esc(rl.name)} · 제목행 ${rl.hdr+1}번째 줄 · 틀린 열만 바꿔주세요</span></div>
+  $('#rlMap').innerHTML=`<div class="sec">열 연결 확인 <span class="muted" style="font-weight:normal;font-size:12px">${esc(rl.name)} · 제목행 ${rl.hdr+1}번째 줄 · 틀린 열만 바꾸세요</span></div>
   <div class="fg">${RL_F.map(([k,l,req])=>`<label>${l}${req?' *':''}<select onchange="if(this.value==='')delete rl.map.${k};else rl.map.${k}=+this.value;rlRender()"><option value="">(없음)</option>${h.map((c,i)=>`<option value="${i}" ${rl.map[k]===i?'selected':''}>${esc(c||('열 '+(i+1)))}</option>`).join('')}</select></label>`).join('')}</div>
-  <div class="${!need.length&&L.length?'help':'banner'}" style="margin-top:8px">${need.length?`<b>${need.map(f=>f[1]).join(' · ')}</b> 열을 골라주세요.`:L.length?`<b>${L.length}</b>줄 — 신규 <b>${nNew}</b> · 갱신 <b>${L.length-nNew}</b> · 대상 월 ${months.map(esc).join(', ')}${ng?` · <span style="color:var(--bad)">불합격 ${ng}줄</span>`:''}${skip.nodate||skip.noqty?` · 날짜 · 수량 없는 ${skip.nodate+skip.noqty}줄 건너뜀`:''}
+  <div class="${!need.length&&L.length?'help':'banner'}" style="margin-top:8px">${need.length?`<b>${need.map(f=>f[1]).join(' · ')}</b> 열을 고르세요.`:L.length?`<b>${L.length}</b>줄 — 신규 <b>${nNew}</b> · 갱신 <b>${L.length-nNew}</b> · 대상 월 ${months.map(esc).join(', ')}${ng?` · <span style="color:var(--bad)">불합격 ${ng}줄</span>`:''}${skip.nodate||skip.noqty?` · 날짜 · 수량 없는 ${skip.nodate+skip.noqty}줄 건너뜀`:''}
     ${noSup.length?`<br>⚠ 기준정보에서 찾지 못한 협력사 ${noSup.length}곳: ${noSup.slice(0,6).map(esc).join(', ')}${noSup.length>6?' …':''} — ${rl.addSup?'새로 추가해서 등록합니다.':'이 줄들은 건너뜁니다 (위의 ‘새로 추가’를 체크하거나, 협력사 기준정보에 약어 · 코드를 넣으세요).'}`:''}
     <br>등록하면 이 협력사 · 월의 입고수량은 입고 내역 합계로 바뀝니다 (직접 입력한 월 합계 대신).`:'읽은 줄이 없습니다. 열 연결을 확인하세요.'}</div>
   ${L.length?`<div class="tw" style="max-height:240px;margin-top:6px"><table class="sm mip"><thead><tr><th>상태</th>${cols.map(([,l])=>`<th>${esc(l)}</th>`).join('')}</tr></thead><tbody>${L.slice(0,12).map(o=>`<tr><td><span class="bg ${o._st==='신규'?'ok':'inf'}">${o._st}</span></td>${cols.map(([f])=>`<td>${f==='sup'?(o.supplierId?esc(supName(o.supplierId)):`<span style="color:var(--bad)">${esc(o._sup)} ?</span>`):f==='qty'?o.qty.toLocaleString():f==='verdict'?`<span class="bg ${o.verdict==='불합격'?'bad':o.verdict==='합격'?'ok':'mut'}">${esc(o.verdict||'-')}</span>`:esc(o[f])}</td>`).join('')}</tr>`).join('')}</tbody></table></div>${L.length>12?`<div class="muted" style="font-size:12px;margin-top:4px">${L.length}줄 중 12줄 미리보기</div>`:''}`:''}`;
@@ -4380,18 +4380,18 @@ async function rlApply(){
   const {L}=rlData();if(!L.length){toast('등록할 내역이 없습니다');return}
   const snap=await takeSnap();let a=0,u=0,ns=0,sk=0;
   L.forEach(o=>{
-    if(!o.supplierId){if(!rl.addSup){sk++;return}let sp=db.suppliers.find(x=>x.name===o._sup);if(!sp){sp=touch({id:uid(),code:'',name:o._sup,items:'',contact:'',phone:'',email:'',note:'입고 내역 업로드 때 자동 추가',contacts:[],contactLog:[]});db.suppliers.push(sp);ns++}o.supplierId=sp.id}
+    if(!o.supplierId){if(!rl.addSup){sk++;return}let sp=db.suppliers.find(x=>x.name===o._sup);if(!sp){sp=touch({id:uid(),code:'',name:o._sup,items:'',contact:'',phone:'',email:'',note:'입고 내역 가져오기 때 자동 추가',contacts:[],contactLog:[]});db.suppliers.push(sp);ns++}o.supplierId=sp.id}
     const {_st,_ex,_sup,...rec}=o;
     if(_ex){Object.assign(_ex,rec);touch(_ex);u++}else{db.receipts.push(touch({id:uid(),...rec,src:rl.name}));a++}
   });
   save();closeModal(true);state.rlOpen=true;render();
   toast(`입고 내역 신규 ${a} · 갱신 ${u}${ns?` · 협력사 ${ns}곳 추가`:''}${sk?` · 협력사 미확인 ${sk}줄 제외`:''}`);
-  offerUndo(snap,`입고 내역 업로드: 신규 ${a} · 갱신 ${u}`);
+  offerUndo(snap,`입고 내역 가져오기: 신규 ${a} · 갱신 ${u}`);
 }
 // 협력사 품질 화면: 입고 내역 목록
 function rcvLinesCard(){
   const all=db.receipts.filter(isLine);
-  if(!all.length)return `<div class="card noprint"><h3>입고 내역 (거래명세서 · 수입검사)</h3><div class="muted">아직 입고 내역이 없습니다. 위의 <b>입고 내역 업로드 (MES 거래명세서)</b>로 거래명세서현황을 올리면 줄마다 입고 · 판정이 저장되고, 월별 입고수량과 PPM이 자동으로 계산됩니다. 불량 등록 때 입고 건(검사번호)을 골라 연결할 수도 있습니다.</div></div>`;
+  if(!all.length)return `<div class="card noprint"><h3>입고 내역 (거래명세서 · 수입검사)</h3><div class="muted">아직 입고 내역이 없습니다. 위의 <b>입고 내역 가져오기 (MES 거래명세서)</b>로 거래명세서현황을 올리면 줄마다 입고 · 판정이 저장되고, 월별 입고수량과 PPM이 자동으로 계산됩니다. 불량 등록 때 입고 건(검사번호)을 골라 연결할 수도 있습니다.</div></div>`;
   const f=state.rl||(state.rl={m:'',sup:'',v:'',q:''});
   const months=[...new Set(all.map(r=>r.month))].sort().reverse();if(!f.m||(f.m!=='all'&&!months.includes(f.m)))f.m=months[0];
   const w=String(f.q||'').toLowerCase().split(/\s+/).filter(Boolean);
@@ -4445,7 +4445,7 @@ function rcvHint(){
   b.innerHTML=`${hid}<div class="bomx"><b>🚚 이 품번의 최근 입고</b> <span class="muted">— ${src==='수입검사'?'검사한 입고 건을 고르면':'관련 입고 건을 고르면'} 납품일자 · 입고수량이 채워지고 거래명세서 · 검사번호가 연결됩니다</span>
     <div class="bomc">${L.map(r=>`<span class="bchip" onclick="rcvPick('${r.id}')">${lab(r)}</span>`).join('')}</div></div>`;
 }
-/* ---- 입고수량 파일 업로드 ---- */
+/* ---- 입고수량 파일 가져오기 ---- */
 const RCV_FIELDS=[
   ['sup','협력사명',['협력사','협력사명','업체','업체명','거래처','거래처명','공급사','공급업체','vendor','supplier']],
   ['code','협력사코드',['협력사코드','업체코드','거래처코드','공급사코드','vendorcode']],
@@ -4480,7 +4480,7 @@ let ri={rows:[],hdr:0,map:[],year:today().slice(0,4)};
 function openRcvImport(){
   ri={rows:[],hdr:0,map:[],year:today().slice(0,4),name:''};
   const yrs=[...new Set([today().slice(0,4),String(+today().slice(0,4)-1)])];
-  openModal('월별 입고수량 업로드',`<div class="help">ERP에서 받은 입고 실적 엑셀(.xlsx)·CSV를 올리거나 범위를 복사해 붙여넣으세요. 다음 형식을 자동 인식합니다.<br>
+  openModal('월별 입고수량 가져오기',`<div class="help">ERP에서 받은 입고 실적 엑셀(.xlsx)·CSV를 올리거나 범위를 복사해 붙여넣으세요. 다음 형식을 자동 인식합니다.<br>
    ① <b>입고 상세</b> (입고일자 · 협력사 또는 품번 · 수량) → 협력사·월별로 자동 합산 &nbsp; ② <b>월 합계</b> (협력사 · 월 · 수량) &nbsp; ③ <b>가로형</b> (협력사 행 × 1월~12월 열)<br>
    협력사명이 없고 품번만 있으면 부품 기준정보의 협력사로 연결합니다.</div>
   <div class="fg" style="margin-top:10px">
@@ -4490,7 +4490,7 @@ function openRcvImport(){
     <label class="row" style="flex-direction:row;align-items:center;gap:6px;margin-top:16px"><input type="checkbox" name="addSup" onchange="riPreview()"> 미등록 협력사 자동 추가</label>
   </div>
   <div class="row" style="margin-top:10px"><label class="b p" style="cursor:pointer">파일 선택 (.xlsx / .csv)<input type="file" accept=".xlsx,.csv,.txt" style="display:none" onchange="riFile(this.files[0]);this.value=''"></label>
-    <button type="button" class="b" onclick="downloadCSV('입고수량_업로드_양식.csv',[['협력사','월','입고수량'],['대성정밀','2026-09','12000'],['한일스프링','2026-09','8000']])">양식 다운로드</button><span id="riSheet"></span><span id="riName" class="muted"></span></div>
+    <button type="button" class="b" onclick="downloadCSV('입고수량_가져오기_양식.csv',[['협력사','월','입고수량'],['대성정밀','2026-09','12000'],['한일스프링','2026-09','8000']])">양식 내려받기</button><span id="riSheet"></span><span id="riName" class="muted"></span></div>
   <details style="margin-top:8px"><summary class="muted" style="cursor:pointer">또는 엑셀에서 복사해 붙여넣기</summary><textarea id="riPaste" style="min-height:110px;font-family:Consolas,monospace;font-size:12px;margin-top:6px" placeholder="제목행 포함해서 Ctrl+V"></textarea><button type="button" class="b s" onclick="riSet(parseCSV($('#riPaste').value),'붙여넣기')">붙여넣은 내용 읽기</button></details>
   <div id="riMap"></div><div id="riPrev" style="margin-top:10px"></div>`,[{label:'취소',fn:closeModal},{label:'반영',cls:'p',fn:riCommit}]);
   $('#mfoot .p').disabled=true;
@@ -4498,7 +4498,7 @@ function openRcvImport(){
 function riFile(f){return sheetFile(f,ri,'#riSheet','riSet','ri')}
 function riSet(rows,name){
   rows=(rows||[]).map(r=>r||[]);
-  if(rows.filter(r=>r.some(c=>String(c).trim()!=='')).length<2){toast('제목행과 데이터가 있는 범위를 넣어주세요');return}
+  if(rows.filter(r=>r.some(c=>String(c).trim()!=='')).length<2){toast('제목행과 데이터가 있는 범위를 넣으세요');return}
   let best=0,bi=0;rows.slice(0,15).forEach((r,i)=>{const c=rcvAutoMap(r).filter(Boolean).length;if(c>best){best=c;bi=i}});
   ri.rows=rows;ri.hdr=bi;ri.name=name;ri.map=rcvAutoMap(rows[bi]);
   $('#riName').textContent=`${name} · 데이터 ${rows.slice(bi+1).filter(r=>r.some(c=>String(c).trim()!=='')).length}행`;
@@ -4506,7 +4506,7 @@ function riSet(rows,name){
 }
 function riRenderMap(){
   const h=ri.rows[ri.hdr],wide=ri.map.some(k=>k.startsWith('m:'));
-  $('#riMap').innerHTML=`<div class="sec">열 연결 확인 <span class="muted" style="font-weight:normal;font-size:12px">${wide?'가로형(월별 열)으로 인식했습니다':'자동 인식 결과 · 틀린 열만 바꿔주세요'}</span></div>
+  $('#riMap').innerHTML=`<div class="sec">열 연결 확인 <span class="muted" style="font-weight:normal;font-size:12px">${wide?'가로형(월별 열)으로 인식했습니다':'자동 인식 결과 · 틀린 열만 바꾸세요'}</span></div>
   <div class="row">${h.map((c,i)=>String(c).trim()===''&&!ri.map[i]?'':`<label style="display:flex;flex-direction:column;font-size:11px;color:var(--sub);gap:2px">${esc(c)||'(빈 제목)'}<select onchange="ri.map[${i}]=this.value;riPreview()" style="font-size:12px;${ri.map[i]?'':'color:#999'}"><option value="">무시</option>${RCV_FIELDS.map(([k,l])=>`<option value="${k}" ${ri.map[i]===k?'selected':''}>${l}</option>`).join('')}${ri.map[i].startsWith('m:')?`<option value="${ri.map[i]}" selected>${ri.map[i].slice(2)} 수량</option>`:''}</select></label>`).join('')}</div>`;
 }
 function riBuild(){
@@ -4549,7 +4549,7 @@ async function riCommit(){
   if(mode==='replace'){const chg=todo.filter(o=>o.st==='변경');if(chg.length&&!await askConfirm({title:`${chg.length}개 월 값을 덮어쓸까요?`,items:chg.slice(0,8).map(o=>`${esc(o.label)} ${o.m}: ${db.receipts.filter(r=>r.supplierId===o.sp.id&&r.month===o.m).reduce((a,r)=>a+num(r.qty),0).toLocaleString()} → ${o.after.toLocaleString()}`).concat(chg.length>8?[`외 ${chg.length-8}건`]:[]),ok:'덮어쓰기',danger:false}))return}
   const snap=await takeSnap();let nSup=0;
   todo.forEach(o=>{
-    let sp=o.sp;if(!sp){sp=db.suppliers.find(x=>x.name===o.label);if(!sp){sp=touch({id:uid(),code:'',name:o.label,items:'',contact:'',phone:'',email:'',note:'입고수량 업로드 시 자동 추가',contacts:[],contactLog:[]});db.suppliers.push(sp);nSup++}}
+    let sp=o.sp;if(!sp){sp=db.suppliers.find(x=>x.name===o.label);if(!sp){sp=touch({id:uid(),code:'',name:o.label,items:'',contact:'',phone:'',email:'',note:'입고수량 가져오기 시 자동 추가',contacts:[],contactLog:[]});db.suppliers.push(sp);nSup++}}
     if(rcvHasLines(sp.id,o.m))return;  // 입고 내역이 있는 달은 내역 합계를 씀
     const ex=db.receipts.filter(r=>!isLine(r)&&r.supplierId===sp.id&&r.month===o.m);
     const base=mode==='add'?ex.reduce((a,r)=>a+num(r.qty),0):0;
@@ -4666,11 +4666,11 @@ function exportCopqCSV(){
   const y=state.copqYear,rows=[];
   db.defects.forEach(d=>(d.costs||[]).forEach(c=>{if((c.date||d.date||'').startsWith(y))rows.push([c.date||d.date,isExt(d)||c.cat==='고객클레임'?'외부실패':'내부실패',c.cat,c.qty??'',c.price??'',num(c.amt),c.basis||'',c.memo||'',d.date,d.source,supName(d.supplierId),d.partNo,d.partName,d.type,d.qty,d.resp])}));
   rows.sort((a,b)=>String(a[0]).localeCompare(String(b[0])));
-  downloadCSV(`COPQ_비용내역_${y}.csv`,[['비용발생일','구분','항목','수량','단가','금액','산출근거','메모','불량발생일','발생처','협력사','부품번호','부품명','불량유형','수량','귀책'],...rows]);
+  downloadCSV(`COPQ_비용내역_${y}.csv`,[['비용발생일','구분','항목','수량','단가','금액','산출근거','메모','불량발생일','발생처','협력사','품번','품명','불량유형','수량','귀책'],...rows]);
 }
 function exportClaimCSV(){
   const L=db.defects.filter(d=>claimStatus(d)).sort((a,b)=>(a.claim.reqDate||'').localeCompare(b.claim.reqDate||''));
-  downloadCSV(`구상관리_${today()}.csv`,[['협력사','불량발생일','부품번호','부품명','불량유형','비용합계','청구일','청구액','합의일','합의액','회수일','회수액','회수방법','미회수','상태','이의사유','포기사유','메모'],
+  downloadCSV(`구상관리_${today()}.csv`,[['협력사','불량발생일','품번','품명','불량유형','비용합계','청구일','청구액','합의일','합의액','회수일','회수액','회수방법','미회수','상태','이의사유','포기사유','메모'],
     ...L.map(d=>{const c=d.claim;return [supName(d.supplierId),d.date,d.partNo,d.partName,d.type,costTotal(d),c.reqDate,c.reqAmt,c.agreeDate,c.agreeAmt,c.recvDate,c.recvAmt,c.method,outstanding(d),claimStatus(d),c.disputeReason,c.waiveReason,c.memo]})]);
 }
 
@@ -4704,7 +4704,7 @@ function msPartTable(){
   const hasBom=!!db.bom.rows.length;
   let L=db.parts.filter(p=>(!msState.psup||p.supplierId===msState.psup)&&(!msState.pmodel||p.model===msState.pmodel)&&(!hasBom||!msState.pbom||(msState.pbom==='y')===(bomUseN(p)>0))&&(!words.length||words.every(w=>[p.partNo,p.name,p.model,supName(p.supplierId),supById(p.supplierId)?.code||'',supById(p.supplierId)?.short||''].join(' ').toLowerCase().includes(w))));
   L=msSort(L,msState.part,PART_G);
-  return `<div class="muted" style="font-size:12px;margin-bottom:6px">${L.length}/${db.parts.length}개</div><div class="tw"><table class="mst"><colgroup><col style="width:150px"><col><col style="width:120px"><col style="width:96px"><col style="width:220px"><col style="width:120px">${hasBom?'<col style="width:104px">':''}<col style="width:106px"></colgroup><thead><tr>${sth('part','partNo','부품번호')}${sth('part','name','부품명')}${sth('part','model','차종')}${sth('part','supCode','협력사 코드')}${sth('part','sup','협력사명')}${sth('part','price','단가','n','원화 환산 기준으로 정렬')}${hasBom?sth('part','bom','BOM','','BOM에 들어가는 제품 수 — 누르면 BOM 구성현황에서 그 제품들을 보여줌'):''}<th></th></tr></thead><tbody>
+  return `<div class="muted" style="font-size:12px;margin-bottom:6px">${L.length}/${db.parts.length}개</div><div class="tw"><table class="mst"><colgroup><col style="width:150px"><col><col style="width:120px"><col style="width:96px"><col style="width:220px"><col style="width:120px">${hasBom?'<col style="width:104px">':''}<col style="width:106px"></colgroup><thead><tr>${sth('part','partNo','품번')}${sth('part','name','품명')}${sth('part','model','차종')}${sth('part','supCode','협력사 코드')}${sth('part','sup','협력사명')}${sth('part','price','단가','n','원화 환산 기준으로 정렬')}${hasBom?sth('part','bom','BOM','','BOM에 들어가는 제품 수 — 누르면 BOM 구성현황에서 그 제품들을 보여줌'):''}<th></th></tr></thead><tbody>
   ${L.map(p=>`<tr><td style="white-space:nowrap"><b>${esc(p.partNo)}</b></td><td>${esc(p.name)}${p.safety&&p.safety!=='해당없음'?` <span class="bg bad">${esc(p.safety)}</span>`:''}</td><td>${esc(p.model)}</td><td class="nw">${esc(supById(p.supplierId)?.code||'')}</td><td>${esc(supName(p.supplierId))}${supById(p.supplierId)?.short&&supById(p.supplierId).short!==supName(p.supplierId)?` <span class="muted">${esc(supById(p.supplierId).short)}</span>`:''}</td><td class="n">${fmtPrice(p)}${p.price&&curOf(p)!=='KRW'?`<br><span class="muted" style="font-size:11.5px">${fxRate(curOf(p))?'≈ '+won(partKRW(p))+'원':'환율 미설정'}</span>`:''}</td>${hasBom?`<td class="nw">${bomCell(p)}</td>`:''}<td style="white-space:nowrap"><button class="b s" onclick="editPart('${p.id}')">수정</button> <button class="b s d" onclick="delPart('${p.id}')">삭제</button></td></tr>`).join('')||`<tr><td colspan="${hasBom?8:7}" class="muted" style="text-align:center;padding:24px">${db.parts.length?'조건에 맞는 부품이 없습니다.':'등록된 부품이 없습니다.'}</td></tr>`}
   </tbody></table></div>`;
 }
@@ -4717,17 +4717,17 @@ function renderMaster(){
   const models=[...new Set(db.parts.map(p=>p.model).filter(Boolean))].sort(kcmp);
   if(msState.psup&&!supById(msState.psup))msState.psup='';
   return `<div>
-  <div class="card"><h3>협력사 (${db.suppliers.length})<span class="sp"></span><button class="b s" onclick="exportContactsCSV()">연락망 엑셀</button><button class="b s" onclick="openMasterImport('sup')">엑셀 업로드</button><button class="b s p" onclick="editSup()">+ 추가</button></h3>
+  <div class="card"><h3>협력사 (${db.suppliers.length})<span class="sp"></span><button class="b s" onclick="exportContactsCSV()">연락망 엑셀</button><button class="b s" onclick="openMasterImport('sup')">엑셀 가져오기</button><button class="b s p" onclick="editSup()">+ 추가</button></h3>
   <div class="row" style="margin-bottom:8px"><input placeholder="검색 (코드·협력사명·약어·국가·품목·담당자)" value="${esc(msState.sq)}" oninput="msState.sq=this.value;msRefreshSup()" style="flex:1;min-width:180px"></div>
   <div id="msSup">${msSupTable()}</div></div>
-  <div class="card"><h3>부품 (${db.parts.length})<span class="sp"></span><button class="b s" onclick="openMasterImport('part')">엑셀 업로드</button><button class="b s p" onclick="editPart()">+ 추가</button></h3>
+  <div class="card"><h3>부품 (${db.parts.length})<span class="sp"></span><button class="b s" onclick="openMasterImport('part')">엑셀 가져오기</button><button class="b s p" onclick="editPart()">+ 추가</button></h3>
   <div class="row" style="margin-bottom:8px"><input placeholder="검색 (번호·품명·차종·협력사)" value="${esc(msState.pq)}" oninput="msState.pq=this.value;msRefreshPart()" style="flex:1;min-width:160px">
     <select onchange="msState.psup=this.value;msRefreshPart()">${supOpts(msState.psup,'전체 협력사')}</select>
     <select onchange="msState.pmodel=this.value;msRefreshPart()"><option value="">전체 차종</option>${models.map(m=>`<option ${m===msState.pmodel?'selected':''}>${esc(m)}</option>`).join('')}</select>
     ${db.bom.rows.length?`<select onchange="msState.pbom=this.value;msRefreshPart()"><option value="">BOM 전체</option><option value="y" ${msState.pbom==='y'?'selected':''}>BOM에 있음</option><option value="n" ${msState.pbom==='n'?'selected':''}>BOM에 없음</option></select>`:''}
     ${msState.psup||msState.pmodel||msState.pq||msState.pbom?`<button class="b s" onclick="msState.psup='';msState.pmodel='';msState.pq='';msState.pbom='';msRefreshPart(true)">필터 해제</button>`:''}</div>
   <div id="msPart">${msPartTable()}</div></div></div>
-  <div class="card"><h3>BOM 구성현황 <span class="muted" style="font-weight:normal;font-size:12px">왼쪽 제품을 고르면 오른쪽에 구성 트리 (레벨 · U/S)</span><span class="sp"></span>${bomIx().byFg.size?`<button class="b s" onclick="exportBomCSV()">엑셀</button><button class="b s" onclick="bomClear()">전체 삭제</button>`:''}<button class="b s p" onclick="openBomImport()">BOM 업로드</button></h3>
+  <div class="card"><h3>BOM 구성현황 <span class="muted" style="font-weight:normal;font-size:12px">왼쪽 제품을 고르면 오른쪽에 구성 트리 (레벨 · U/S)</span><span class="sp"></span>${bomIx().byFg.size?`<button class="b s" onclick="exportBomCSV()">엑셀</button><button class="b s" onclick="bomClear()">전체 삭제</button>`:''}<button class="b s p" onclick="openBomImport()">BOM 가져오기</button></h3>
   ${bomIx().byFg.size?`<div class="row" style="margin-bottom:8px"><input placeholder="검색 (제품 · 구성 품번 · 품명 · 차종) — 구성 품번으로 찾으면 그 품번이 들어간 제품만 남고 트리에 표시" value="${esc(msState.bq||'')}" oninput="msState.bq=this.value;deb(()=>{$('#msBom').innerHTML=bomTable()})" style="flex:1;min-width:200px"></div>`:''}
   <div id="msBom">${bomTable()}</div></div>`;
 }
@@ -4860,20 +4860,20 @@ function partFxHint(){const f=$('#mf'),e=$('#partFx');if(!f||!e)return;const c=f
 function editPart(id){
   const p=id?db.parts.find(x=>x.id===id):{};
   openModal(id?'부품 수정':'부품 추가',`<div class="fg">
-    <label>부품번호 *<input name="partNo" value="${esc(p.partNo)}"></label><label>부품명<input name="name" value="${esc(p.name)}"></label>
+    <label>품번 *<input name="partNo" value="${esc(p.partNo)}"></label><label>품명<input name="name" value="${esc(p.name)}"></label>
     <label>차종<input name="model" value="${esc(p.model)}"></label><label>협력사<select name="supplierId">${supOpts(p.supplierId)}</select></label>
     <label>단가<span style="display:flex;gap:6px"><input type="number" min="0" step="any" name="price" value="${esc(p.price)}" style="flex:1" oninput="partFxHint()"><select name="currency" style="width:auto" onchange="partFxHint()">${CURS.map(c=>`<option value="${c}" ${curOf(p)===c?'selected':''}>${c}</option>`).join('')}</select></span><span id="partFx" class="muted" style="font-size:11.5px;font-weight:normal"></span></label>
     <label>안전특성 (RCA 화면에 표시)<select name="safety">${czOptHTML(CZ_OPT.SafetyChar,p.safety||'해당없음')}</select></label></div>`,
-  [{label:'취소',fn:closeModal},{label:'저장',cls:'p',fn:()=>{const o=gather();if(!o.partNo){toast('부품번호를 입력하세요');return}
+  [{label:'취소',fn:closeModal},{label:'저장',cls:'p',fn:()=>{const o=gather();if(!o.partNo){toast('품번을 입력하세요');return}
     if(o.currency!=='KRW'&&o.price!==''&&!fxRate(o.currency))setTimeout(()=>toast(`${o.currency} 환율이 설정에 없습니다 — 설정 → 불량 관리 → 환율에서 넣으면 비용이 원화로 계산됩니다`),900);
-    if(db.parts.some(x=>x.partNo===o.partNo&&x.id!==id)){toast('같은 부품번호가 이미 있습니다');return}
+    if(db.parts.some(x=>x.partNo===o.partNo&&x.id!==id)){toast('같은 품번이 이미 있습니다');return}
     o.price=o.price===''?'':num(o.price);if(o.currency==='KRW')delete o.currency;let r;if(id){r=db.parts.find(x=>x.id===id);delete r.currency;Object.assign(r,o)}else{r={id:uid(),...o};db.parts.push(r)}touch(r);save();closeModal(true);render()}}]);
   partFxHint();
 }
 async function delPart(id){
   const p=db.parts.find(x=>x.id===id);if(!p)return;
   const nd=db.defects.filter(d=>d.partNo===p.partNo).length;
-  if(!await askConfirm({title:'부품을 삭제할까요?',items:[`${qi(p.partNo)} ${esc(p.name)}`,`${esc(p.model)} · ${esc(supName(p.supplierId))}${p.price?` · ${fmtPrice(p)}`:''}`],note:nd?`이 부품번호의 불량 기록 ${nd}건은 그대로 유지됩니다. 삭제 후 10초 안에 되돌릴 수 있습니다.`:'삭제 후 10초 안에 되돌릴 수 있습니다.'}))return;
+  if(!await askConfirm({title:'부품을 삭제할까요?',items:[`${qi(p.partNo)} ${esc(p.name)}`,`${esc(p.model)} · ${esc(supName(p.supplierId))}${p.price?` · ${fmtPrice(p)}`:''}`],note:nd?`이 품번의 불량 기록 ${nd}건은 그대로 유지됩니다. 삭제 후 10초 안에 되돌릴 수 있습니다.`:'삭제 후 10초 안에 되돌릴 수 있습니다.'}))return;
   const snap=await takeSnap();removeRec('parts',id);save();render();offerUndo(snap,`부품 ${p.partNo}을(를) 삭제했습니다`);
 }
 function importContact(s,name,phone,email,dept){
@@ -4894,20 +4894,20 @@ function importContact(s,name,phone,email,dept){
   s.contacts.forEach(c=>c.primary=false);s.contacts.push(nc);
 }
 function parseRows(t){return parseCSV(String(t||'')).map(r=>r.map(c=>String(c??'').trim())).filter(r=>r.some(c=>c))}
-/* ---- 협력사 · 부품 업로드 (BOM 업로드와 같은 방식: xlsx · csv · 붙여넣기 → 열 자동 연결 → 미리보기 → 등록) ---- */
+/* ---- 협력사 · 부품 가져오기 (BOM 가져오기와 같은 방식: xlsx · csv · 붙여넣기 → 열 자동 연결 → 미리보기 → 등록) ---- */
 const MIMP={
-  sup:{title:'협력사 업로드',key:'name',F:[['code','협력사 코드'],['name','협력사명 (거래처명)',1],['short','약어'],['country','국가'],['region','국내 · 국외'],['address','주소'],['items','주요 품목'],['dept','담당자 부서'],['contact','담당자'],['phone','담당자 전화'],['email','이메일']],
+  sup:{title:'협력사 가져오기',key:'name',F:[['code','협력사 코드'],['name','협력사명 (거래처명)',1],['short','약어'],['country','국가'],['region','국내 · 국외'],['address','주소'],['items','주요 품목'],['dept','담당자 부서'],['contact','담당자'],['phone','담당자 전화'],['email','이메일']],
     tests:[['email',c=>/메일|mail/.test(c)],['phone',c=>/연락처|전화|휴대|핸드폰|phone|tel|mobile/.test(c)],
       ['country',c=>/국가|country|nation/.test(c)],['region',c=>/국내외|내외자|domestic|overseas|^국내$|^구분$/.test(c)],['short',c=>/약어|약칭|abbr|short|alias/.test(c)],
       ['address',c=>/주소|address|소재지/.test(c)],['dept',c=>/부서|dept|department|소속/.test(c)],
       ['code',c=>/코드|code|업체번호|거래처번호|vendorno|사업자/.test(c)],['contact',c=>/담당|성명|이름|contact|^name$/.test(c)],
       ['name',c=>/협력사|업체|거래처|공급사|vendor|supplier|회사|상호/.test(c)],['items',c=>/품목|item|취급|주요/.test(c)]],
     help:'필수 열: <b>협력사명(거래처명)</b> / 선택 열: 코드 · 약어 · 국가 · 국내외 · 주소 · 주요 품목 · 담당자 부서 · 담당자 · 전화 · 이메일. ERP 거래처 목록을 그대로 올리면 됩니다. <b>같은 코드</b>(코드가 없으면 같은 이름)가 있으면 그 협력사를 갱신하고, 담당자가 바뀌면 연락처 이력에 남깁니다.'},
-  part:{title:'부품 업로드',key:'partNo',F:[['partNo','부품번호',1],['name','부품명'],['model','차종'],['supCode','협력사 코드'],['sup','협력사명'],['price','단가'],['cur','통화 (KRW · USD · EUR …)'],['safety','안전특성 (S · R · C)'],['proc','조달구분 (구매 · 생산)']],
+  part:{title:'부품 가져오기',key:'partNo',F:[['partNo','품번',1],['name','품명'],['model','차종'],['supCode','협력사 코드'],['sup','협력사명'],['price','단가'],['cur','통화 (KRW · USD · EUR …)'],['safety','안전특성 (S · R · C)'],['proc','조달구분 (구매 · 생산)']],
     tests:[['proc',c=>/조달|구매구분|procure|makebuy|자작/.test(c)],['cur',c=>/통화|화폐|currency|^curr?$|^cur\.?$/.test(c)],['price',c=>/단가|price|cost|가격/.test(c)],['safety',c=>/특별특성|안전특성|특성|safety|cc\/sc|중요/.test(c)],
       ['model',c=>/차종|model|vehicle|car|프로젝트|project/.test(c)],['supCode',c=>/(협력사|업체|거래처|공급사|vendor|supplier|maker).*(코드|code|번호|no)/.test(c)],['sup',c=>/협력사|업체|거래처|공급사|vendor|supplier|maker|제조사/.test(c)],
       ['name',c=>/품명|부품명|품목명|자재명|description|partname|itemname|^name$/.test(c)],['partNo',c=>/품번|부품번호|품목코드|자재코드|partno|itemcode|^code$|^part$/.test(c)]],
-    help:'필수 열: <b>부품번호</b> / 선택 열: 부품명 · 차종 · 협력사 코드 · 협력사명 · 단가 · 통화 · 안전특성 · 조달구분. 통화 열이 없어도 단가에 <b>USD 12.5</b> · <b>$12.5</b> · <b>€8</b> · <b>35元</b>처럼 적혀 있으면 통화를 알아봅니다 (없으면 원화). 같은 부품번호가 있으면 갱신합니다. 협력사가 기준정보에 없으면 새로 만듭니다. MES · ERP의 품목 목록이나 BOM 엑셀을 그대로 올려도 됩니다.'}};
+    help:'필수 열: <b>품번</b> / 선택 열: 품명 · 차종 · 협력사 코드 · 협력사명 · 단가 · 통화 · 안전특성 · 조달구분. 통화 열이 없어도 단가에 <b>USD 12.5</b> · <b>$12.5</b> · <b>€8</b> · <b>35元</b>처럼 적혀 있으면 통화를 알아봅니다 (없으면 원화). 같은 품번이 있으면 갱신합니다. 협력사가 기준정보에 없으면 새로 만듭니다. MES · ERP의 품목 목록이나 BOM 엑셀을 그대로 올려도 됩니다.'}};
 let mi={kind:'sup',rows:[],hdr:0,map:{},name:'',buyOnly:true};
 function miAutoMap(kind,h){
   const m={},used=new Set(),cell=i=>String(h[i]||'').replace(/\s+/g,'').toLowerCase();
@@ -4923,11 +4923,11 @@ function openMasterImport(kind){
   <div id="miMap" style="margin-top:10px"></div>`,
   [{label:'취소',fn:closeModal},{label:'등록',cls:'p',fn:miApply}]);
 }
-function miTemplate(){const C=MIMP[mi.kind];downloadCSV(`${mi.kind==='sup'?'협력사':'부품'}_업로드양식.csv`,[C.F.map(f=>f[1].replace(/ \(.*\)/,''))])}
+function miTemplate(){const C=MIMP[mi.kind];downloadCSV(`${mi.kind==='sup'?'협력사':'부품'}_가져오기양식.csv`,[C.F.map(f=>f[1].replace(/ \(.*\)/,''))])}
 function miFile(f){return sheetFile(f,mi,'#miSheet','miSet','mi')}
 function miSet(rows,name){
   rows=(rows||[]).map(r=>(r||[]).map(c=>String(c??'').trim()));
-  if(rows.filter(r=>r.some(c=>c)).length<2){$('#miMap').innerHTML='<div class="muted">제목행과 데이터가 있는 범위를 넣어주세요.</div>';return}
+  if(rows.filter(r=>r.some(c=>c)).length<2){$('#miMap').innerHTML='<div class="muted">제목행과 데이터가 있는 범위를 넣으세요.</div>';return}
   let best=-1,bh=0;rows.slice(0,15).forEach((r,i)=>{const c=Object.keys(miAutoMap(mi.kind,r)).length;if(c>best){best=c;bh=i}});
   mi.rows=rows;mi.hdr=bh;mi.map=miAutoMap(mi.kind,rows[bh]);mi.name=name;miRender();
 }
@@ -4949,10 +4949,10 @@ const miRegion=v=>{v=String(v||'').trim().toUpperCase();if(!v)return '';if(/국�
 // 같은 번호 판단: 대소문자 · 공백 · 하이픈 · 밑줄 · 점 차이는 같은 것으로 봄 (81842-BE110 = 81842 be110)
 const mkey=v=>String(v??'').normalize('NFKC').toUpperCase().replace(/[\s\-_.·‐-―]/g,'');
 const mname=v=>String(v??'').normalize('NFKC').toUpperCase().replace(/\s+/g,' ').trim();
-// 부품번호가 비슷한지: 길이가 같고 앞 5자리가 같으며 다른 글자가 2개 이하 (BE100 ↔ BE110)
+// 품번이 비슷한지: 길이가 같고 앞 5자리가 같으며 다른 글자가 2개 이하 (BE100 ↔ BE110)
 const mnear=(a,b)=>{a=mkey(a);b=mkey(b);if(!a||!b||a===b||a.length!==b.length||a.slice(0,5)!==b.slice(0,5))return false;let d=0;for(let i=0;i<a.length;i++)if(a[i]!==b[i]&&++d>2)return false;return true};
 const MI_LBL={sup:{code:'코드',name:'협력사명',short:'약어',country:'국가',region:'국내 · 국외',address:'주소',items:'주요 품목',contact:'담당자',phone:'전화',email:'이메일'},
-  part:{name:'부품명',model:'차종',sup:'협력사',price:'단가',safety:'안전특성'}};
+  part:{name:'품명',model:'차종',sup:'협력사',price:'단가',safety:'안전특성'}};
 function miDiff(kind,o,ex){
   // 올린 값이 있고 기존 값과 다른 칸만 (빈 칸은 기존 값 유지라 변경 아님)
   const D=[],add=(f,ov,nv)=>{if(nv!==''&&nv!=null&&String(ov??'').trim()!==String(nv).trim())D.push({f,o:ov??'',n:nv})};
@@ -4987,7 +4987,7 @@ function miData(){
       if(!o.partNo){skip.nokey++;return}
       if(mi.buyOnly&&m.proc!=null&&o.proc&&!/구매|외주|buy|purchase|^p$/i.test(o.proc)){skip.make++;return}
       const key=mkey(o.partNo),ex=mi._pix.get(key)||null,prev=out.get(key);
-      // BOM처럼 같은 부품번호가 여러 줄이면 빈 칸을 다른 줄 값으로 채움
+      // BOM처럼 같은 품번이 여러 줄이면 빈 칸을 다른 줄 값으로 채움
       if(prev){MIMP.part.F.forEach(([f])=>{if(!prev[f]&&o[f])prev[f]=o[f]});return}
       out.set(key,{...o,key,ex});
     }
@@ -5011,10 +5011,10 @@ function miRender(){
   const cols=C.F.filter(([f])=>mi.map[f]!=null);
   const noFx=mi.kind==='part'?[...new Set(L.map(x=>miPrice(x.price,x.cur)).filter(x=>!x.bad&&x.v!==''&&x.c!=='KRW'&&!fxRate(x.c)).map(x=>x.c))]:[];
   const badCur=mi.kind==='part'?[...new Set(L.map(x=>miPrice(x.price,x.cur).bad).filter(Boolean))]:[];
-  $('#miMap').innerHTML=`<div class="sec">열 연결 확인 <span class="muted" style="font-weight:normal;font-size:12px">${esc(mi.name)} · 제목행 ${mi.hdr+1}번째 줄 · 틀린 열만 바꿔주세요</span></div>
+  $('#miMap').innerHTML=`<div class="sec">열 연결 확인 <span class="muted" style="font-weight:normal;font-size:12px">${esc(mi.name)} · 제목행 ${mi.hdr+1}번째 줄 · 틀린 열만 바꾸세요</span></div>
   <div class="fg">${C.F.map(([f,l,req])=>`<label>${l}${req?' *':''}<select onchange="if(this.value==='')delete mi.map.${f};else mi.map.${f}=+this.value;miRender()"><option value="">(없음)</option>${h.map((c,i)=>`<option value="${i}" ${mi.map[f]===i?'selected':''}>${esc(c||('열 '+(i+1)))}</option>`).join('')}</select></label>`).join('')}
    ${mi.kind==='part'&&mi.map.proc!=null?`<label class="full row" style="flex-direction:row;align-items:center;gap:6px"><input type="checkbox" ${mi.buyOnly?'checked':''} onchange="mi.buyOnly=this.checked;miRender()"> 조달구분이 <b>구매</b>인 품목만 등록 (생산 · 반제품 · 완제품은 건너뜀)</label>`:''}</div>
-  <div class="${okMap&&L.length?'help':'banner'}" style="margin-top:8px">${!okMap?`<b>${C.F.find(f=>f[0]===C.key)[1]}</b> 열을 골라주세요.`:L.length?`<b>${L.length}</b>건을 읽었습니다 — 신규 <b>${n}</b> · 갱신(바뀌는 칸 있음) <b>${u}</b> · 같음(바뀌는 것 없음) <b>${same}</b>${sim?` · <b style="color:var(--warn)">⚠ 비슷한 항목이 이미 있는 신규 ${sim}건 — 아래에서 확인 후 필요 없으면 체크를 빼세요</b>`:''}${skip.dup?` · 같은 ${C.key==='partNo'?'부품번호':'협력사'} 중복 ${skip.dup}줄 합침`:''}${skip.make?` · 생산품 ${skip.make}줄 건너뜀`:''}${skip.nokey?` · ${C.F.find(f=>f[0]===C.key)[1]} 없는 ${skip.nokey}줄 건너뜀`:''}. 빈 칸은 기존 값을 그대로 둡니다.${newSup.length?`<br>기준정보에 없는 협력사 ${newSup.length}곳(${newSup.slice(0,5).map(esc).join(', ')}${newSup.length>5?' …':''})은 새로 등록합니다.`:''}${badCur.length?`<br>⚠ 쓸 수 없는 통화 ${badCur.map(esc).join(', ')} — 이 줄들은 단가를 넣지 않습니다 (쓸 수 있는 통화: ${CURS.join(' · ')}).`:''}${noFx.length?`<br>⚠ ${noFx.join(', ')} 환율이 설정에 없습니다 — 단가는 그대로 저장되고, 설정 → 불량 관리 → 환율을 넣으면 비용이 원화로 계산됩니다.`:''}`:'읽은 줄이 없습니다. 열 연결을 확인하세요.'}</div>
+  <div class="${okMap&&L.length?'help':'banner'}" style="margin-top:8px">${!okMap?`<b>${C.F.find(f=>f[0]===C.key)[1]}</b> 열을 고르세요.`:L.length?`<b>${L.length}</b>건을 읽었습니다 — 신규 <b>${n}</b> · 갱신(바뀌는 칸 있음) <b>${u}</b> · 같음(바뀌는 것 없음) <b>${same}</b>${sim?` · <b style="color:var(--warn)">⚠ 비슷한 항목이 이미 있는 신규 ${sim}건 — 아래에서 확인 후 필요 없으면 체크를 빼세요</b>`:''}${skip.dup?` · 같은 ${C.key==='partNo'?'품번':'협력사'} 중복 ${skip.dup}줄 합침`:''}${skip.make?` · 생산품 ${skip.make}줄 건너뜀`:''}${skip.nokey?` · ${C.F.find(f=>f[0]===C.key)[1]} 없는 ${skip.nokey}줄 건너뜀`:''}. 빈 칸은 기존 값을 그대로 둡니다.${newSup.length?`<br>기준정보에 없는 협력사 ${newSup.length}곳(${newSup.slice(0,5).map(esc).join(', ')}${newSup.length>5?' …':''})은 새로 등록합니다.`:''}${badCur.length?`<br>⚠ 쓸 수 없는 통화 ${badCur.map(esc).join(', ')} — 이 줄들은 단가를 넣지 않습니다 (쓸 수 있는 통화: ${CURS.join(' · ')}).`:''}${noFx.length?`<br>⚠ ${noFx.join(', ')} 환율이 설정에 없습니다 — 단가는 그대로 저장되고, 설정 → 불량 관리 → 환율을 넣으면 비용이 원화로 계산됩니다.`:''}`:'읽은 줄이 없습니다. 열 연결을 확인하세요.'}</div>
   ${L.length?miTable(L,cols,{n:cnt('신규'),u,same,sim}):''}`;
 }
 function miCell(f,x){return esc(f==='country'?(miCountry(x[f])||x[f]):f==='region'?(miRegion(x[f])||x[f]):f==='safety'?(miSafety(x[f])||x[f]):f==='price'?(x.price?(miPrice(x.price,x.cur).bad?x.price+' (통화 확인)':fmtAmt(miPrice(x.price,x.cur).v,miPrice(x.price,x.cur).c)):''):f==='cur'?(miCur(x.cur)||x.cur):x[f])}
@@ -5123,7 +5123,7 @@ function bomHit(fg,w){const m=bomFg(fg);if(!w.length)return true;const rs=bomIx(
   const h=[fg,m.name,m.model,...rs.flatMap(r=>[r.partNo,r.partName,r.pmodel])].join(' ').toLowerCase();return w.every(x=>h.includes(x))}
 function bomTable(){
   const ix=bomIx();
-  if(!ix.byFg.size)return `<div class="muted" style="padding:6px 2px">아직 BOM이 없습니다. <b>BOM 업로드</b>로 MES · ERP의 BOM 구성현황(레벨 · 품번 · 품명 · U/S)을 올리면 제품별 구성 트리가 보이고, 불량 등록 때 완성품의 구성 부품을 고르거나 부품이 들어가는 제품 · 차종(영향 범위)을 볼 수 있습니다.</div>`;
+  if(!ix.byFg.size)return `<div class="muted" style="padding:6px 2px">아직 BOM이 없습니다. <b>BOM 가져오기</b>로 MES · ERP의 BOM 구성현황(레벨 · 품번 · 품명 · U/S)을 올리면 제품별 구성 트리가 보이고, 불량 등록 때 완성품의 구성 부품을 고르거나 부품이 들어가는 제품 · 차종(영향 범위)을 볼 수 있습니다.</div>`;
   const w=String(msState.bq||'').trim().toLowerCase().split(/\s+/).filter(Boolean);
   const fgs=[...ix.byFg.keys()].filter(f=>bomHit(f,w)).map(f=>({f,...bomFg(f),n:ix.byFg.get(f).length}))
     .sort((a,b)=>kcmp(a.model||'~',b.model||'~')||kcmp(a.f,b.f));
@@ -5134,7 +5134,7 @@ function bomTable(){
     <thead><tr><th>차종</th><th>품번</th><th>품명</th><th>적용일자</th><th class="n">건수</th></tr></thead><tbody>
     ${groups.map(g=>g.L.map((x,i)=>`<tr class="bsel${x.f===msState.bomSel?' on':''}" data-fg="${esc(x.f)}" onclick="bomSelect(this.dataset.fg)">${i?'':`<td rowspan="${g.L.length}" class="bgrp">${esc(g.m)}</td>`}<td class="nw">${esc(x.f)}</td><td class="nw" title="${esc(x.name)}">${esc(x.name)}</td><td class="nw">${esc(x.date)}</td><td class="n">${x.n}</td></tr>`).join('')).join('')||'<tr><td colspan="5" class="muted" style="text-align:center;padding:16px">검색 결과가 없습니다.</td></tr>'}
     </tbody></table></div>`;
-  return `<div class="help" style="margin-bottom:6px">제품 <b>${ix.byFg.size}</b>개 · 구성 <b>${db.bom.rows.length}</b>줄 · 부품 <b>${ix.byPart.size}</b>종${miss?` · <span style="color:var(--warn)">기준정보에 없는 품번 ${miss}종</span> (생산품 · 반제품은 정상)`:''} · 업로드 ${esc(loc(db.bom.updatedAt)||'-')}</div>
+  return `<div class="help" style="margin-bottom:6px">제품 <b>${ix.byFg.size}</b>개 · 구성 <b>${db.bom.rows.length}</b>줄 · 부품 <b>${ix.byPart.size}</b>종${miss?` · <span style="color:var(--warn)">기준정보에 없는 품번 ${miss}종</span> (생산품 · 반제품은 정상)`:''} · 가져오기 ${esc(loc(db.bom.updatedAt)||'-')}</div>
   <div class="bomw">${left}<div id="bomR">${bomTreeHTML(msState.bomSel,w)}</div></div>`;
 }
 function bomSelect(fg){msState.bomSel=fg;document.querySelectorAll('.bomL tr.bsel').forEach(tr=>tr.classList.toggle('on',tr.dataset.fg===fg));
@@ -5167,7 +5167,7 @@ async function bomClear(){
   if(!await askConfirm({title:'BOM을 모두 지울까요?',msg:`제품 ${bomIx().byFg.size}개 · ${db.bom.rows.length}줄이 삭제됩니다. 불량·NCR 기록은 그대로입니다.`,ok:'전체 삭제'}))return;
   const snap={db:JSON.stringify(db),ph:[]};db.bom={updatedAt:now(),rows:[],fg:{}};save();render();offerUndo(snap,'BOM 전체 삭제');
 }
-/* ---- BOM 업로드 (xlsx · csv · 붙여넣기) — 레벨 열이 있으면 다단계, 없으면 1단계(모품번 – 자품번) ---- */
+/* ---- BOM 가져오기 (xlsx · csv · 붙여넣기) — 레벨 열이 있으면 다단계, 없으면 1단계(모품번 – 자품번) ---- */
 const BOM_F=[['level','레벨'],['fgNo','제품(모품) 품번'],['fgName','제품명'],['partNo','품번 (투입품번)',1],['partName','품명'],['type','품목유형'],['proc','조달구분'],['model','차종'],['unit','소요단위'],['qty','U/S (소요량)'],['date','적용일자']];
 let bi={rows:[],hdr:0,map:{},name:'',mode:'fg'};
 const BOM_HEAD='레벨\t선택\t품목유형\t조달구분\t차종\t품번\t\t품명\t\t소요단위\tU/S';  // MES 'BOM 구성현황' 복사 형식
@@ -5190,7 +5190,7 @@ function bomAutoMap(h){
 }
 function openBomImport(){
   bi={rows:[],hdr:0,map:{},name:'',mode:'fg'};
-  openModal('BOM 업로드',`<div class="help">MES · ERP의 BOM을 엑셀(.xlsx) · CSV로 올리거나, 화면의 표를 복사해 붙여넣으세요. 제목행과 열은 자동으로 찾습니다.<br>
+  openModal('BOM 가져오기',`<div class="help">MES · ERP의 BOM을 엑셀(.xlsx) · CSV로 올리거나, 화면의 표를 복사해 붙여넣으세요. 제목행과 열은 자동으로 찾습니다.<br>
    <b>다단계 (MES ‘BOM 구성현황’)</b>: 레벨 · 품번 · 품명 · 품목유형 · 조달구분 · 차종 · 소요단위 · U/S — <b>레벨 0 줄이 제품</b>이고, 그 아래 레벨 1 · 2 …를 상위 품번에 붙입니다. 여러 제품을 이어 붙여도 레벨 0마다 새 제품으로 나눕니다.<br>
    <b>1단계 (ERP 정전개)</b>: 모품번(제품) · 자품번 · 소요량 열이 있으면 그대로 읽습니다.</div>
   <div class="row" style="margin-top:10px"><label class="b p" style="cursor:pointer">파일 선택 (.xlsx / .csv)<input type="file" accept=".xlsx,.csv,.txt" style="display:none" onchange="bomFile(this.files[0]);this.value=''"></label><span id="bomSheet"></span><span id="bomName" class="muted"></span></div>
@@ -5204,7 +5204,7 @@ function openBomImport(){
 function bomFile(f){return sheetFile(f,bi,'#bomSheet','bomSet','bi')}
 function bomSet(rows,name){
   rows=(rows||[]).map(r=>(r||[]).map(c=>String(c??'').trim()));
-  if(rows.filter(r=>r.some(c=>c)).length<2){$('#bomMap').innerHTML='<div class="muted">제목행과 데이터가 있는 범위를 넣어주세요.</div>';return}
+  if(rows.filter(r=>r.some(c=>c)).length<2){$('#bomMap').innerHTML='<div class="muted">제목행과 데이터가 있는 범위를 넣으세요.</div>';return}
   let best=-1,bh=0;rows.slice(0,15).forEach((r,i)=>{const c=Object.keys(bomAutoMap(r)).length;if(c>best){best=c;bh=i}});
   bi.rows=rows;bi.hdr=bh;bi.map=bomAutoMap(rows[bh]);bi.name=name;bomRenderMap();
 }
@@ -5248,10 +5248,10 @@ function bomData(){
 function bomRenderMap(){
   const h=bi.rows[bi.hdr]||[],D=bomData(),fgs=Object.keys(D.fg),tree=bi.map.level!=null;
   const okMap=bi.map.partNo!=null;
-  $('#bomMap').innerHTML=`<div class="sec">열 연결 확인 <span class="muted" style="font-weight:normal;font-size:12px">${esc(bi.name)} · 제목행 ${bi.hdr+1}번째 줄 · ${D.metaOnly?'<b>제품 목록</b> (차종 · 품번 · 품명 · 적용일자 — 구성은 그대로)':tree?'<b>다단계</b> (레벨 열 기준)':'1단계 (모품번 – 자품번)'} · 틀린 열만 바꿔주세요</span></div>
+  $('#bomMap').innerHTML=`<div class="sec">열 연결 확인 <span class="muted" style="font-weight:normal;font-size:12px">${esc(bi.name)} · 제목행 ${bi.hdr+1}번째 줄 · ${D.metaOnly?'<b>제품 목록</b> (차종 · 품번 · 품명 · 적용일자 — 구성은 그대로)':tree?'<b>다단계</b> (레벨 열 기준)':'1단계 (모품번 – 자품번)'} · 틀린 열만 바꾸세요</span></div>
   <div class="fg">${BOM_F.map(([k,l,req])=>`<label>${l}${req?' *':''}<select onchange="if(this.value==='')delete bi.map.${k};else bi.map.${k}=+this.value;bomRenderMap()"><option value="">(없음)</option>${h.map((c,i)=>`<option value="${i}" ${bi.map[k]===i?'selected':''}>${esc(c||('열 '+(i+1)))}</option>`).join('')}</select></label>`).join('')}
    <label class="full">등록 방식<select onchange="bi.mode=this.value"><option value="fg" ${bi.mode==='fg'?'selected':''}>올린 제품만 새 내용으로 교체 — 나머지 제품의 BOM은 그대로 (권장)</option><option value="all" ${bi.mode==='all'?'selected':''}>전체 교체 — 기존 BOM을 모두 지우고 이 파일로 바꿈</option></select></label></div>
-  <div class="${okMap&&fgs.length?'help':'banner'}" style="margin-top:8px">${!okMap?'<b>품번</b> 열과 <b>레벨</b>(또는 제품 품번) 열을 골라주세요.':fgs.length?D.metaOnly?`제품 <b>${fgs.length}</b>개의 차종 · 품명 · 적용일자를 등록합니다. 구성(트리)은 바뀌지 않습니다 — 구성은 레벨이 있는 BOM 구성현황 표로 올리세요.`:`제품 <b>${fgs.length}</b>개 (${fgs.slice(0,4).map(esc).join(', ')}${fgs.length>4?' …':''}) · 구성 <b>${D.rows.length}</b>줄을 읽었습니다.${D.noRoot?`<br>⚠ 레벨 0(제품) 줄 없이 시작한 ${D.noRoot}줄은 어느 제품인지 몰라 건너뜁니다 — 표를 복사할 때 레벨 0 줄까지 포함하세요.`:''}`:'읽은 제품이 없습니다. 레벨 0(제품) 줄이 포함됐는지, 열 연결이 맞는지 확인하세요.'}</div>
+  <div class="${okMap&&fgs.length?'help':'banner'}" style="margin-top:8px">${!okMap?'<b>품번</b> 열과 <b>레벨</b>(또는 제품 품번) 열을 고르세요.':fgs.length?D.metaOnly?`제품 <b>${fgs.length}</b>개의 차종 · 품명 · 적용일자를 등록합니다. 구성(트리)은 바뀌지 않습니다 — 구성은 레벨이 있는 BOM 구성현황 표로 올리세요.`:`제품 <b>${fgs.length}</b>개 (${fgs.slice(0,4).map(esc).join(', ')}${fgs.length>4?' …':''}) · 구성 <b>${D.rows.length}</b>줄을 읽었습니다.${D.noRoot?`<br>⚠ 레벨 0(제품) 줄 없이 시작한 ${D.noRoot}줄은 어느 제품인지 몰라 건너뜁니다 — 표를 복사할 때 레벨 0 줄까지 포함하세요.`:''}`:'읽은 제품이 없습니다. 레벨 0(제품) 줄이 포함됐는지, 열 연결이 맞는지 확인하세요.'}</div>
   ${D.rows.length?`<div class="tw" style="max-height:220px;margin-top:6px"><table class="sm mip"><thead><tr><th>제품</th><th>레벨</th><th>상위 품번</th><th>품번</th><th>품명</th><th>유형</th><th>조달</th><th class="n">U/S</th></tr></thead><tbody>${D.rows.slice(0,10).map(r=>`<tr><td>${esc(r.fgNo)}</td><td style="padding-left:${6+r.level*10}px">${r.level}</td><td>${esc(r.parentNo)}</td><td>${esc(r.partNo)}</td><td>${esc(r.partName)}</td><td>${esc(r.type)}</td><td>${esc(r.proc)}</td><td class="n">${bomQ(r.qty)}</td></tr>`).join('')}</tbody></table></div>${D.rows.length>10?`<div class="muted" style="font-size:12px;margin-top:4px">${D.rows.length}줄 중 10줄 미리보기</div>`:''}`:''}`;
 }
 function bomApply(){
@@ -5268,7 +5268,7 @@ function bomApply(){
   msState.bomSel=[...fgs][0];
   save();closeModal(true);render();
   toast(`BOM 등록: 제품 ${fgs.size}개 · ${D.rows.length}줄${keep.length?` (기존 제품 ${new Set(keep.map(r=>r.fgNo)).size}개 유지)`:''}`);
-  offerUndo(snap,`BOM 업로드: 제품 ${fgs.size}개`);
+  offerUndo(snap,`BOM 가져오기: 제품 ${fgs.size}개`);
 }
 
 /* ================= 설정 · 백업 ================= */
@@ -5328,7 +5328,7 @@ function renderData(){
     sg('비용 · 사진',sv('시간당 인건비','작업시간 × 인건비로 선별비·재작업비를 자동 계산합니다.',sNum('laborRate','원',0))+
       sv('사진 최대 크기','첨부 사진의 긴 변을 이 크기로 줄여서 저장합니다.',sNum('photoMax','px',400,4000))+
       sv('사진 압축 품질','낮을수록 용량이 작아집니다. 70~85 권장.',sNum('photoQ','%',30,95)))+
-    sg('환율 (부품 단가 → 원화)',sv('사용 방법',`해외 부품은 단가를 <b>협력사 통화 그대로</b> 저장하고, 비용 · 구상 · COPQ에서는 아래 환율로 <b>원화로 바꿔</b> 계산합니다. 이미 입력한 비용은 그때 금액 그대로이고, 새로 넣는 비용부터 바뀐 환율이 쓰입니다.${db.settings.fxDate?`<br>환율 기준일: <b>${esc(db.settings.fxDate)}</b>`:'<br><b style="color:var(--warn)">기본값은 예시입니다 — 회사 기준 환율로 바꿔 주세요.</b>'}`,'',1)+
+    sg('환율 (부품 단가 → 원화)',sv('사용 방법',`해외 부품은 단가를 <b>협력사 통화 그대로</b> 저장하고, 비용 · 구상 · COPQ에서는 아래 환율로 <b>원화로 바꿔</b> 계산합니다. 이미 입력한 비용은 그때 금액 그대로이고, 새로 넣는 비용부터 바뀐 환율이 쓰입니다.${db.settings.fxDate?`<br>환율 기준일: <b>${esc(db.settings.fxDate)}</b>`:'<br><b style="color:var(--warn)">기본값은 예시입니다 — 회사 기준 환율로 바꾸세요.</b>'}`,'',1)+
       CURS.filter(c=>c!=='KRW').map(c=>sv(`1 ${c}`,CUR_L[c],`<input type="number" class="snum" min="0" step="any" value="${esc((db.settings.fx||{})[c]??'')}" onchange="setFx('${c}',this.value)"><span class="muted">원</span>`)).join('')+
       sv('환율 기준일','회사 기준 환율을 적용한 날짜 (기록용)',`<input type="date" class="stxt" value="${esc(db.settings.fxDate||'')}" onchange="setS('fxDate',this.value,'str')">`));
   P.sev=()=>sg('판정 기준',
@@ -5392,15 +5392,15 @@ function renderData(){
         `${folderTxt}<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">${chip(!!photoDir,!!lazyH.photoDir&&!photoDir,'사진·첨부')}${chip(!!backupDir,!!lazyH.backupDir&&!backupDir,'백업')}</div>${times?`<div class="muted" style="font-size:12px;margin-top:6px">${times}</div>`:''}${!anyDir?'<div class="muted" style="font-size:12px;margin-top:4px">권장: OneDrive 안에 <b>QIS</b> 폴더를 만들어 지정</div>':''}`,
         `<span style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end"><button class="b s ${rootH?'':'p'}" onclick="pickRoot()">${rootH?'변경':'폴더 지정'}</button>${rootH?'<button class="b s" onclick="unlinkRoot()">해제</button>':''}</span>`))+
     sg('백업 · 복원',
-      sv(tip('백업','화면 위 ‘백업’ 버튼과 같습니다. 폴더가 있으면 폴더에, 없으면 다운로드로 받습니다.'),`마지막 백업 <b>${db.meta.lastBackup?loc(db.meta.lastBackup):'없음'}</b>${backupDue()?' <span class="bg warn">백업 필요</span>':''}`,
+      sv(tip('백업','화면 위 ‘백업’ 버튼과 같습니다. 폴더가 있으면 폴더에, 없으면 내려받기로 받습니다.'),`마지막 백업 <b>${db.meta.lastBackup?loc(db.meta.lastBackup):'없음'}</b>${backupDue()?' <span class="bg warn">백업 필요</span>':''}`,
         `<span style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">${btn('지금 백업','exportJSON(true)','p')}${btn('백업 폴더에서 복원','restoreFromFolder()')}</span>`))+
     sg('공유 · 내보내기',
       sv(tip('읽기 전용 공유','지금 데이터를 HTML 파일 하나로 만듭니다. 받은 사람은 보기 · 검색 · 출력만 되고 수정 · 저장은 안 됩니다. 파일 안에 데이터가 그대로 들어 있으니 받을 사람을 가려서 보내세요.'),'',
         `<span style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;align-items:center"><label class="row" style="gap:5px;font-size:12.5px" title="협력사 연락처 · 주소 · 단가 · BOM · 기록에 안 쓰인 협력사 · 부품을 빼고, 기록에 쓰인 협력사 · 부품 이름만 남깁니다. 기준정보 탭도 숨깁니다."><input type="checkbox" ${num(db.settings.shareNoMaster)!==0?'checked':''} onchange="db.settings.shareNoMaster=this.checked?1:0;save()"> 기준정보 빼기</label>${btn('사진 포함','makeShareFile(true)')}${btn('사진 제외','makeShareFile(false)')}</span>`)+
       sv(tip('엑셀 통합 파일 (모든 표)','모든 데이터를 엑셀 파일 하나에 시트별로 담습니다 — 불량 · 비용 · NCR · 협력사 · 부품 · 입고 · BOM · RCA · 협력사별 월 PPM 등. 열 이름은 저장 항목 이름 그대로이고 x_ 로 시작하는 열은 앱이 계산한 값입니다. 피벗 · VLOOKUP 등 엑셀 분석용. 각 화면의 ‘엑셀 내보내기’는 그 화면 표(한글 머리글)만 담습니다.'),'',
-        `<button class="b s" onclick="exportAllXlsx(this)">만들기 (다운로드)</button>`)+
+        `<button class="b s" onclick="exportAllXlsx(this)">만들기 (내려받기)</button>`)+
       sv(tip('SQL로 조회 (QIS.sqlite)','SQLite DB 파일로 만듭니다 — DB Browser for SQLite로 열거나 Excel · Power BI에서 SQLite ODBC로 연결합니다. 표: suppliers · parts · defects · defect_costs · ncrs · receipts · bom_rows · supplier_month(월 PPM) 등, 조회: v_defects · v_ncr_open · v_monthly, x_ 열은 앱이 계산한 값. 읽기용 사본입니다.'),'',
-        btn(backupDir||lazyH.backupDir?'만들기 (폴더에 저장)':'만들기 (다운로드)','exportSqlite()')))+
+        btn(backupDir||lazyH.backupDir?'만들기 (폴더에 저장)':'만들기 (내려받기)','exportSqlite()')))+
     `<details class="sadv" ${advOpen?'open':''} ontoggle="if(state.setAdv!==this.open){state.setAdv=this.open;if(this.open){const y=window.scrollY;render();window.scrollTo(0,y)}}"><summary>고급 설정</summary>`+
     sg('폴더 따로 지정',
       sv('사진 · 첨부 폴더',dirSt('photoDir'),dirBtns('photoDir',`<button class="b s" onclick="photoDirNow()">지금 저장</button>`))+
@@ -5450,12 +5450,12 @@ async function makeShareFile(withPhotos){
 async function exportJSON(withPhotos=true){
   if(withPhotos===true&&(backupDir||lazyH.backupDir)){
     if(await ensureDir('backupDir')){const t=new Date();await autoBackup(true,`${pad(t.getHours())}${pad(t.getMinutes())}`);return}
-    toast('백업 폴더 사용이 허용되지 않아 다운로드로 받습니다');
+    toast('백업 폴더 사용이 허용되지 않아 내려받기로 받습니다');
   }
   db.meta.lastBackup=now();save();
   const txt=await fullJSON(withPhotos);
   download(`QMS_백업_${today()}${withPhotos?'':'_사진제외'}.json`,txt);
-  toast(`백업 파일 ${(txt.length/1048576).toFixed(1)}MB 다운로드`);
+  toast(`백업 파일 ${(txt.length/1048576).toFixed(1)}MB 내려받기`);
   if(state.tab==='dash'||state.tab==='data')render();
 }
 async function applyPhotos(photos,replace){
@@ -5510,7 +5510,7 @@ async function mergeIn(inc,name){
   inc=migrate(inc);
   const tomb=new Map();[...db.deleted,...inc.deleted].forEach(t=>{if(!tomb.has(t.id)||tomb.get(t.id)<t.at)tomb.set(t.id,t.at)});
   let a=0,u=0,del=0;
-  // 같은 대상(이름·부품번호·월)이 다른 id로 만들어진 경우 로컬 id로 맞춤
+  // 같은 대상(이름·품번·월)이 다른 id로 만들어진 경우 로컬 id로 맞춤
   const norm=x=>String(x||'').replace(/\s+/g,'').replace(/\(주\)|㈜|주식회사/g,'').toLowerCase();
   const supRemap={};
   inc.suppliers.forEach(r=>{if(db.suppliers.some(x=>x.id===r.id))return;const m=db.suppliers.find(x=>norm(x.name)&&norm(x.name)===norm(r.name));if(m){supRemap[r.id]=m.id;r.id=m.id}});
@@ -5528,7 +5528,7 @@ async function mergeIn(inc,name){
     del+=before-db[c].length;
   });
   db.deleted=[...tomb].map(([id,at])=>({id,at}));
-  if(inc.bom&&(inc.bom.updatedAt||'')>(db.bom.updatedAt||''))db.bom=inc.bom;  // BOM은 통째로: 더 최근 업로드가 이김
+  if(inc.bom&&(inc.bom.updatedAt||'')>(db.bom.updatedAt||''))db.bom=inc.bom;  // BOM은 통째로: 더 최근 가져오기가 이김
   relinkNcr();
   db.defects.forEach(d=>{if(Array.isArray(d.photos))d.photos=d.photos.filter(i=>!tomb.has(i))});
   let pn=0;
@@ -5684,7 +5684,7 @@ async function autoBackup(force,tag){
   finally{autoBackup._busy=false}
 }
 async function resetAll(){
-  if(!await askConfirm({title:'모든 데이터를 초기화할까요?',msg:'아래 데이터가 <b>모두 영구 삭제</b>되며 되돌릴 수 없습니다. 먼저 백업 다운로드를 권장합니다.',
+  if(!await askConfirm({title:'모든 데이터를 초기화할까요?',msg:'아래 데이터가 <b>모두 영구 삭제</b>되며 되돌릴 수 없습니다. 먼저 백업 내려받기를 권장합니다.',
     items:[`협력사 ${db.suppliers.length} · 부품 ${db.parts.length}`,`불량 ${db.defects.length}건 · NCR ${db.ncrs.length}건 · 입고 ${db.receipts.length}건`,`사진 ${db.defects.reduce((a,d)=>a+(d.photos||[]).length,0)}장`],typeWord:'초기화',ok:'전체 삭제'}))return;
   if(backupDir){try{await autoBackup(true,'초기화전')}catch(e){}}
   db=defaultDB();photoClear().catch(()=>{});photoStr=null;phPendSet(new Set());save();render();toast('초기화되었습니다');
@@ -5719,7 +5719,7 @@ const photoGetMany=ids=>SRV?srvPhotoGetMany(ids):Promise.all((ids||[]).map(photo
 const photoPut=recs=>{if(SRV)return srvPhotoPut(recs);if(recs.some(r=>r&&!r.file&&!phIsPending(r)))phDirtySet(true);return pTx('readwrite',s=>{recs.forEach(r=>s.put(r))})};
 const photoDel=async ids=>{
   if(SRV)return srvPhotoDel(ids);
-  // 사진 폴더의 파일은 이름이 바뀌므로, 지우기 전에 파일 이름을 삭제 대기열에 남겨 둔다
+  // 사진 폴더의 파일은 이름이 바뀌므로, 삭제하기 전에 파일 이름을 삭제 대기열에 남겨 둔다
   try{const q=phDelQ();(await photoGetMany(ids)).forEach(r=>q.add(r.file||phName(r.id)));phDelQSet(q)}catch(e){}
   return pTx('readwrite',s=>{ids.forEach(i=>s.delete(i))});
 };
@@ -5734,7 +5734,7 @@ async function photosJSON(metaOnly){const a=await photoList();return JSON.string
    · 표마다 원래 항목 + 앱이 계산한 값(x_ 로 시작: 협력사명 · 심각도 등급 · 진행 상태 · 비용 합계 등)
    · SQLite 엔진(sql.js)은 앱과 같은 곳의 lib/ 에서, 없으면(파일로 연 경우) 인터넷(cdnjs)에서 처음 한 번 받음 */
 const SQLJS_VER='1.10.3';let _SQL=null;
-function loadScriptOnce(src){return new Promise((res,rej)=>{if(window.initSqlJs)return res();const s=document.createElement('script');s.src=src;s.onload=()=>res();s.onerror=()=>{s.remove();rej(new Error('불러오기 실패: '+src))};document.head.appendChild(s)})}
+function loadScriptOnce(src){return new Promise((res,rej)=>{if(window.initSqlJs)return res();const s=document.createElement('script');s.src=src;s.onload=()=>res();s.onerror=()=>{s.remove();rej(new Error('가져오기 실패: '+src))};document.head.appendChild(s)})}
 async function loadSql(){
   if(_SQL)return _SQL;
   const bases=[...(/^https?:$/.test(location.protocol)?['lib/']:[]),`https://cdnjs.cloudflare.com/ajax/libs/sql.js/${SQLJS_VER}/`];let last;
@@ -5803,7 +5803,7 @@ async function exportSqlite(quiet){
     if(backupDir||(!quiet&&lazyH.backupDir&&await ensureDir('backupDir'))){
       if(!await permOK(backupDir,false))throw new Error('백업 폴더 사용이 허용되지 않았습니다');
       const fh=await backupDir.getFileHandle('QIS.sqlite',{create:true}),w=await fh.createWritable();await w.write(blob);await w.close();where=`‘${backupDir.name}’ 폴더의 QIS.sqlite`;
-    }else if(!quiet){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='QIS.sqlite';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),5000);where='다운로드한 QIS.sqlite'}
+    }else if(!quiet){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='QIS.sqlite';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),5000);where='내려받기한 QIS.sqlite'}
     else return;
     db.meta.lastSqlite=now();db.meta.lastSqliteN=n;if(!quiet)save();
     if(!quiet)toast(`${where} — 불량 ${n.defects} · NCR ${n.ncrs} · 부품 ${n.parts} · 입고 ${n.receipts} (${(bytes.length/1048576).toFixed(1)}MB)`);
@@ -5829,7 +5829,7 @@ const phMeta=({data,thumb,pending,...m})=>({...m,file:m.file||phName(m.id)});
 const PH_DELQ='personalQMS_phDelQ';
 function phDelQ(){try{return new Set(JSON.parse(localStorage.getItem(PH_DELQ)||'[]'))}catch(e){return new Set()}}
 function phDelQSet(s){try{localStorage.setItem(PH_DELQ,JSON.stringify([...s]))}catch(e){}}
-/* 사진 파일 이름: <NCR번호>_<YYYYMMDD>_<연번>.jpg  (NCR 발행 전: 미발행_<부품번호>_…, 날짜 = 사진 첨부일)
+/* 사진 파일 이름: <NCR번호>_<YYYYMMDD>_<연번>.jpg  (NCR 발행 전: 미발행_<품번>_…, 날짜 = 사진 첨부일)
    NCR이 발행되거나 번호가 바뀌면 다음 동기화 때 새 이름으로 바꾼다 */
 function phOwners(){
   const m={},put=(ids,no,part)=>(ids||[]).forEach(i=>{if(!m[i])m[i]={no,part}});
@@ -5885,7 +5885,7 @@ async function syncPhotoFiles(relist){
     const dq=phDelQ();
     for(const n of [...dq]){if(!live.has(n)&&files.has(n)){try{await photoDir.removeEntry(n);files.delete(n);removed++}catch(e){continue}}dq.delete(n)}
     phDelQSet(dq);
-    // 3) 다른 PC에서 올린 사진 ← 파일에서 불러오기
+    // 3) 다른 PC에서 올린 사진 ← 파일에서 가져오기
     for(const id of [...pend]){
       if(!keys.has(id)){pend.delete(id);continue}
       const r=await photoGet(id);if(!phIsPending(r)){pend.delete(id);continue}
@@ -5919,7 +5919,7 @@ function initPhotoBox(ids){
   if(ids.length){
     box.insertAdjacentHTML('afterbegin','<div class="muted" id="phLoading">사진 불러오는 중…</div>');
     photoGetMany(ids).then(rs=>{curPhotos=[...rs.map(r=>({...r,isNew:false})),...curPhotos.filter(p=>p.isNew)];renderPhotoBox()})
-      .catch(e=>{toast('사진 불러오기 실패: '+e.message);renderPhotoBox()});
+      .catch(e=>{toast('사진 가져오기 실패: '+e.message);renderPhotoBox()});
   }
 }
 function renderPhotoBox(){
@@ -5953,7 +5953,7 @@ async function addPhotoFiles(files){
 async function viewDefectPhotos(id){
   const d=db.defects.find(x=>x.id===id);if(!d)return;
   try{const rs=await photoGetMany(d.photos);if(!rs.length){toast('저장된 사진을 찾을 수 없습니다');return}lbOpen(rs.map(r=>({...r,caption:`${d.date} ${d.partName||d.partNo} · ${r.caption||''}`})),0)}
-  catch(e){toast('사진 불러오기 실패: '+e.message)}
+  catch(e){toast('사진 가져오기 실패: '+e.message)}
 }
 let lbList=[],lbIdx=0;
 function lbOpen(list,i){lbList=list;lbIdx=i;lbShow();$('#lb').classList.add('on')}
@@ -6080,7 +6080,7 @@ function hideUndo(){$('#undo').classList.remove('on');undoSnap=null;clearTimeout
 async function doUndo(){
   if(!undoSnap)return;const s=undoSnap;hideUndo();undoBusy=true;
   db=migrate(JSON.parse(s.db));
-  try{if(s.ph.length){await photoPut(s.ph);photoStr=null}}catch(e){toast('사진 복구 실패: '+e.message)}
+  try{if(s.ph.length){await photoPut(s.ph);photoStr=null}}catch(e){toast('사진 복원 실패: '+e.message)}
   save();undoBusy=false;render();toast('되돌렸습니다');
 }
 function openModal(title,body,btns){
@@ -6229,7 +6229,7 @@ const CZ_TABS=[
     F('TierReason','TIER 조정사유','textarea',null,{w:4,showIf:c=>has(c.Tier)&&has(czTierAuto(c))&&c.Tier!==czTierAuto(c)}),
     F('Response','대응방향','select','Response'),F('ParentCaseId','연계 RCA (재발)','case'),F('LegacyNo','기존 문서번호','text'),F('Created','등록일','date'),
     F('TargetClose','목표 종결일','date',null,{hint:c=>`비워 두면 등록일 + ${c.Tier||'TIER'} 기준 ${czDays(c)}일 = ${czTargetAuto(c)||'-'}`})]},
-  {id:'contain',label:'격리·처분',note:'IATF 8.7.1 — 부적합품은 식별·격리·기록 후 처분합니다. 격리 수량은 없으면 0을 입력하십시오.',fields:[
+  {id:'contain',label:'격리·처분',note:'IATF 8.7.1 — 부적합품은 식별·격리·기록 후 처분합니다. 격리 수량은 없으면 0을 입력하세요.',fields:[
     F('QtyStock','격리 · 사내 재고','number'),F('QtyWIP','격리 · 재공','number'),F('QtyTransit','격리 · 이송중','number'),F('QtyCustomer','격리 · 고객처','number'),
     F('ContainDate','격리 완료일','date'),F('ContainMethod','식별 방법','select','ContainMethod'),F('ContainScope','소급 범위 (로트/기간)','text',null,{w:2}),
     F('Disposition','처분','select','Disposition'),F('DispositionDate','처분 완료일','date'),F('DeviationNo','특채번호','text'),F('DeviationScope','특채 유효범위 (수량/기한)','text'),
@@ -6278,7 +6278,7 @@ function blankAna(key){
     '5why':{problem:'',occ:r5(),esc:r5(),evidence:''},
     isnot:{rows:{},cands:[{cause:'',basis:'',method:'',result:''}]},
     timeline:{period:'',rows:[{t:'',ev:'',who:'',st:'정상',note:''}],changes:[{t:'',what:'',m4:'',impact:'',cause:''}]},
-    change:{items:[['사람','작업자'],['사람','숙련도 · 교대'],['설비','설비 · 금형 · 치구'],['설비','공정 파라미터'],['자재','원자재 Lot'],['자재','공급업체 · 2차 협력사'],['방법','작업 방법 · 순서'],['방법','검사 기준 · 방법'],['환경','온도 · 습도']].map(([cat,item])=>({cat,item,before:'',after:'',impact:'',check:''}))},
+    change:{items:[['사람','작업자'],['사람','숙련도 · 교대'],['설비','설비 · 금형 · 치구'],['설비','공정 파라미터'],['자재','원자재 Lot'],['자재','원자재 협력사 · 2차 협력사'],['방법','작업 방법 · 순서'],['방법','검사 기준 · 방법'],['환경','온도 · 습도']].map(([cat,item])=>({cat,item,before:'',after:'',impact:'',check:''}))},
     fishbone:{effect:'',rows:[]},
     fta:{top:'',gate:'OR',nodes:[],nid:0},
     logic:{problem:'',basis:'4M+1E',nodes:[],nid:0,mece1:false,mece2:false},
@@ -6351,9 +6351,9 @@ const WS={
     return `<div class="grid" style="margin-bottom:12px"><div class="fld w2"><label>최상위 사건 (Top event)</label>${IN(a,'top',a.top)}</div>
       <div class="fld"><label>Top 바로 아래 결합</label>${SE(a,'gate',[['OR','OR — 하나만 있어도 발생'],['AND','AND — 모두 있어야 발생']],a.gate)}</div>
       <div class="fld"><label>최상위 발생 확률 (계산)</label><div class="calc"><span class="calcv">${fmtP(p)}</span>${p===null?' <span class="muted">기본원인 확률을 모두 넣으면 계산</span>':''}</div></div></div>
-      <div>${treeHTML(a,true)||'<div class="muted" style="margin-bottom:8px">아래 버튼으로 첫 원인을 추가하십시오.</div>'}</div>${RB(a,'node','+ Top 아래 원인 추가','data-parent="TOP"')}`},
+      <div>${treeHTML(a,true)||'<div class="muted" style="margin-bottom:8px">아래 버튼으로 첫 원인을 추가하세요.</div>'}</div>${RB(a,'node','+ Top 아래 원인 추가','data-parent="TOP"')}`},
   logic:a=>`<div class="grid" style="margin-bottom:12px"><div class="fld w2"><label>문제</label>${IN(a,'problem',a.problem)}</div><div class="fld w2"><label>분해 기준</label>${SE(a,'basis',['4M+1E','공정 단계','제품 구성요소','기타'],a.basis)}</div></div>
-    <div>${treeHTML(a,false)||'<div class="muted" style="margin-bottom:8px">아래 버튼으로 1차 가지를 추가하십시오.</div>'}</div>${RB(a,'node','+ 1차 가지 추가','data-parent="TOP"')}
+    <div>${treeHTML(a,false)||'<div class="muted" style="margin-bottom:8px">아래 버튼으로 1차 가지를 추가하세요.</div>'}</div>${RB(a,'node','+ 1차 가지 추가','data-parent="TOP"')}
     <div class="checks" style="margin-top:12px"><label><input type="checkbox" data-scope="ana" data-aid="${a.id}" data-path="mece1" ${a.mece1?'checked':''}>같은 수준의 가지끼리 겹치지 않는다 (ME)</label><label><input type="checkbox" data-scope="ana" data-aid="${a.id}" data-path="mece2" ${a.mece2?'checked':''}>가지를 합치면 빠짐이 없다 (CE)</label></div>`,
   cem:a=>{
     const tot=x=>a.ys.reduce((s,y,j)=>s+num(x.s[j])*num(y.w),0);
@@ -6441,7 +6441,7 @@ async function anaClick(act,el){
   else if(act==='anaApply'){
     const src=el.dataset.src,to=el.dataset.to;
     let txt=src==='concl'?a.concl:[...(a[src]||[])].reverse().find(v=>has(v));
-    if(!has(txt)){toast('옮길 내용이 없습니다. 먼저 워크시트를 작성하십시오.');return}
+    if(!has(txt)){toast('옮길 내용이 없습니다. 먼저 워크시트를 작성하세요.');return}
     txt=String(txt).trim();const cur=c[to]||'';
     if(cur.includes(txt)){toast('이미 반영된 내용입니다.');return}
     c[to]=(cur?cur+'\n':'')+`[${toolOf(a.tool).name}] `+txt;toast('원인 결론에 반영했습니다.');
@@ -6515,7 +6515,7 @@ function czViewToday(){
   const actItem=a=>{const c=czById('cases',a.CaseId);return `<div class="list-item"><div class="grow"><div class="t" data-act="open" data-id="${a.CaseId}" data-tab="actions">${esc(a.Title||'(내용 없음)')}</div>
     <div class="d">${esc(a.Category)} · ${c?esc(c.CaseNo):''} · ${esc(a.Assignee||a.ExternalOwner||'담당 미지정')}</div></div>
     <span style="min-width:84px;text-align:right">${czDate(a.DueDate)}</span><button class="btn sm" data-act="actDone" data-id="${a.id}">완료</button></div>`};
-  return `<h1>오늘 할 일</h1><p class="sub">${t} · RCA · NCR · 불량의 오늘 챙길 일을 한 곳에 모았습니다. 기한이 지난 건부터 처리하십시오.</p>
+  return `<h1>오늘 할 일</h1><p class="sub">${t} · RCA · NCR · 불량의 오늘 챙길 일을 한 곳에 모았습니다. 기한이 지난 건부터 처리하세요.</p>
     <div class="kpis">
       <div class="kpi" data-act="czNav" data-v="cases"><div class="l">진행 중 RCA</div><div class="v">${k.open}</div></div>
       <div class="kpi ${k.mine?'bad':'ok'}"><div class="l">오늘 내가 볼 RCA</div><div class="v">${k.mine}</div></div>
@@ -6655,13 +6655,13 @@ async function czApplyVerdict(cid,v){
   czLog(c,'귀책 판정',`${v}${v==='공동'?` (협력사 ${share}%)`:''} — 불량 ${ds.length}건`);touch(c);
   save();render();
   const noPart=v!=='사내'&&v!=='원인 불명'&&ds.some(d=>!d.partNo);
-  toast(`불량 ${ds.length}건 귀책 판정: ${v}${noPart?' — 원인 부품번호가 없는 불량은 지정 후 NCR을 발행하세요':''}`);
+  toast(`불량 ${ds.length}건 귀책 판정: ${v}${noPart?' — 원인 품번이 없는 불량은 지정 후 NCR을 발행하세요':''}`);
   setTimeout(()=>offerNcrAfterVerdict(ds.map(d=>d.id),v),350);
 }
 function czNcrNote(c,where){
   const n=czNcr(c);if(!n)return '';const st=ncrStatus(n),ok=czNcrOk(c),open=`<a class="lk" style="cursor:pointer" onclick="editNcr('${n.id}')">${esc(n.no)}</a>`;
   const M={cause:(ok?`협력사 대책서가 승인되어 ${open}의 D4 원인을 발생 원인에 옮겼습니다.`:`협력사 원인분석은 ${open}에서 받습니다 (현재: ${esc(st)}).`)+(czNeedEsc(c)?' <b>유출 원인(왜 못 걸렀나)은 협력사 대책서와 별개로 사내에서 분석해야 합니다.</b>':ok?' 사내 분석 대상이 없으면 워크시트 없이 넘어갑니다.':' 사내 분석 대상이 ‘없음’이면 대책서 승인 후 원인분석 단계가 충족됩니다.'),
-    actions:ok?`협력사 대책은 ${open} 대책서(D5·D6)로 승인되었습니다. 여기에는 사내에서 할 일(수입검사 강화, 기준서 개정, 수평전개 등)만 등록하십시오.${czNeedEsc(c)?' 유출 분석 대상이므로 유출대책 조치는 꼭 1건 이상 필요합니다.':''}`:`협력사 대책은 ${open}에서 회신·평가합니다. 대책서가 승인되면 발생·유출대책 조치 요건이 충족됩니다. 여기에는 사내 할 일만 등록하십시오.`,
+    actions:ok?`협력사 대책은 ${open} 대책서(D5·D6)로 승인되었습니다. 여기에는 사내에서 할 일(수입검사 강화, 기준서 개정, 수평전개 등)만 등록하세요.${czNeedEsc(c)?' 유출 분석 대상이므로 유출대책 조치는 꼭 1건 이상 필요합니다.':''}`:`협력사 대책은 ${open}에서 회신·평가합니다. 대책서가 승인되면 발생·유출대책 조치 요건이 충족됩니다. 여기에는 사내 할 일만 등록하세요.`,
     verify:czNcrDone(c)?`${open} 유효성 검증이 ‘유효’로 끝나 효과검증 판정을 합격으로 반영했습니다.`:`효과검증은 ${open}의 유효성 검증(기한 ${esc(n.verifyDue||'-')})이 ‘유효’로 끝나면 자동으로 충족됩니다.`};
   return `<div class="note">${M[where]}</div>`;
 }
@@ -6735,7 +6735,7 @@ function czSetField(c,k,v){
   if(k==='PartId'){
     if(!String(v).trim()){c.PartId='';return}
     const p=db.parts.find(x=>x.partNo===String(v).trim());
-    if(!p){toast('기준정보에 없는 부품번호입니다. 기준정보 탭에서 먼저 등록하십시오.');c.PartId='';return}
+    if(!p){toast('기준정보에 없는 품번입니다. 기준정보 탭에서 먼저 등록하세요.');c.PartId='';return}
     c.PartId=p.id;if(p.supplierId)c.SupplierId=p.supplierId;return;
   }
   if(k==='Status'&&c.Status==='종결'&&v!=='종결'){setTimeout(()=>czReopen(c,v),0);return false}   // 다시 열기는 사유를 받음
@@ -6756,7 +6756,7 @@ function czStageNext(){
   const from=c.Stage;c.Stage=ns;czUi.showGate=false;czLog(c,ns==='종결'?'종결':'단계',`${from} → ${ns}${czStageDate(c,from)?` (${from} ${Math.max(0,diffDays(czStageDate(c,from),today()))}일)`:''}`,{from,to:ns});
   if(ns==='종결'){c.Status='종결';c.CloseDate=today();c.Ball='나';c.NextAction='종결 완료'}else{c.NextAction=CZ_NEXT_HINT[ns];c.RecheckDate=addDays(today(),3)}
   czUi.tab=({'격리':'contain','처분':'contain','원인분석':'cause','대책':'actions','효과검증':'verify','표준화':'close','종결':'close'})[ns]||czUi.tab;
-  touch(c);save();render();toast(ns==='종결'?'RCA를 종결했습니다.':`${ns} 단계로 넘어갔습니다. 다음 행동을 확인하십시오.`);
+  touch(c);save();render();toast(ns==='종결'?'RCA를 종결했습니다.':`${ns} 단계로 넘어갔습니다. 다음 행동을 확인하세요.`);
 }
 async function czReopen(c,toStatus){
   if(!c)return;const ps=czPrev(c)||c.Stage;
@@ -6771,7 +6771,7 @@ function czNewCaseModal(){
   openModal('새 RCA',`<div class="fg">
     <label class="full">제목 *<input name="Title" placeholder="예: 도어래치 스프링 파단"></label>
     <label>발생원천<select name="Origin">${czOptHTML(CZ_OPT.Origin,'수입검사')}</select></label>
-    <label>부품번호<input name="part" data-combo="parts" autocomplete="off" placeholder="번호·품명·협력사로 검색"></label>
+    <label>품번<input name="part" data-combo="parts" autocomplete="off" placeholder="번호·품명·협력사로 검색"></label>
     <label>불량유형<select name="DefectType">${czOptHTML(CZ_OPT.DefectType,'')}</select></label>
     <label>불량수량 (EA)<input type="number" name="DefectQty"></label>
     <label class="full">불량내용<textarea name="Description"></textarea></label>
@@ -6780,11 +6780,11 @@ function czNewCaseModal(){
     <label>대응방향<select name="Response">${czOptHTML(CZ_OPT.Response,'')}</select></label></div>
     <div class="help" style="margin-top:8px">TIER는 S×I로 자동 판정되며 상세 화면에서 바꿀 수 있습니다. 대응방향에 따라 번호 접두어(NCR/FAR/8D)가 정해집니다.<br>불량 관리에 이미 등록된 건이면 그 불량의 ‘진행 보기’에서 <b>RCA 요청</b>를 쓰는 편이 빠릅니다.</div>`,
   [{label:'취소',fn:closeModal},{label:'등록',cls:'p',fn:async()=>{
-    const o=gather();if(!o.Title){toast('제목을 입력하십시오.');return}
-    let pid='';if(o.part){const p=partByNo(o.part);if(!p){if(!await askConfirm({title:'기준정보에 없는 부품번호입니다',msg:'부품 없이 등록할까요? 나중에 기본 탭에서 부품을 고를 수 있습니다.',ok:'부품 없이 등록',danger:false}))return}else pid=p.id}
+    const o=gather();if(!o.Title){toast('제목을 입력하세요.');return}
+    let pid='';if(o.part){const p=partByNo(o.part);if(!p){if(!await askConfirm({title:'기준정보에 없는 품번입니다',msg:'부품 없이 등록할까요? 나중에 기본 탭에서 부품을 고를 수 있습니다.',ok:'부품 없이 등록',danger:false}))return}else pid=p.id}
     const c=czCreateCase({Title:o.Title,Origin:o.Origin,PartId:pid,DefectType:o.DefectType,DefectQty:o.DefectQty,Description:o.Description,SevS:o.SevS,ImpI:o.ImpI,Response:o.Response});
     if(['고객사','필드'].includes(c.Origin))c.CustNotify='필요';
-    save();closeModal(true);czOpenCase(c.id);toast(`${c.CaseNo} 등록했습니다.${c.Response?'':' 대응방향을 정하십시오.'}`);
+    save();closeModal(true);czOpenCase(c.id);toast(`${c.CaseNo} 등록했습니다.${c.Response?'':' 대응방향을 정하세요.'}`);
   }}]);
 }
 
@@ -6833,7 +6833,7 @@ async function czFromNcr(id){
   const ds=(n.defectIds||[]).map(i=>db.defects.find(x=>x.id===i)).filter(Boolean);
   const exist=ds.map(d=>d.caseId&&czById('cases',d.caseId)).find(Boolean);
   if(exist){exist.NcrId=n.id;n.caseId=exist.id;touch(n);touch(exist);save();return czOpenCase(exist.id)}
-  if(!ds.length){toast('연결된 불량이 없는 NCR입니다. NCR에 불량을 먼저 연결하거나 RCA를 직접 등록하십시오.');return}
+  if(!ds.length){toast('연결된 불량이 없는 NCR입니다. NCR에 불량을 먼저 연결하거나 RCA를 직접 등록하세요.');return}
   const {o,g}=czBuildFrom(ds,n);
   if(!await askConfirm({title:`${n.no}을(를) RCA를 요청할까요?`,msg:'NCR과 연결 불량으로 새 RCA를 만듭니다.',items:[`불량 ${ds.length}건 · ${sum(ds,'qty').toLocaleString()}개`,`심각도 ${g}등급 → S ${o.SevS} × I ${o.ImpI} · <b>${o.Tier}</b> · 대응 ${o.Response} (요구 회신: ${esc(n.reqType||'8D 보고서')})`].concat(o.TierReason?[esc(o.TierReason)]:[]),ok:'RCA 요청',danger:false}))return;
   const c=czCreateCase(o);czAttach(c,ds,n);save();czOpenCase(c.id);toast(`${c.CaseNo} RCA를 요청했습니다.`);

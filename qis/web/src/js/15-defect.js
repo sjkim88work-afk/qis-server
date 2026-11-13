@@ -77,8 +77,8 @@ function editDefect(id,copy,preset){
     <label>영향 완성품 수량<input type="number" min="0" name="fgQty" value="${esc(d.fgQty)}" placeholder="영향받은 완성품 수"></label>
   </div></div>
   <div class="fgrp fgpart"><div class="gh"><span id="grpPartH">원인 · 의심 부품</span> <span class="muted" id="grpPartS"></span></div><div class="fg fg4">
-    <label><span class="lt" id="lbPn">원인·의심 부품번호</span><input name="partNo" data-combo="dparts" value="${esc(d.partNo)}" oninput="onPartNo(this.value)" autocomplete="off" placeholder="번호·품명·협력사로 검색"></label>
-    <label><span class="lt" id="lbPm">원인·의심 부품명</span><input name="partName" value="${esc(d.partName)}"></label>
+    <label><span class="lt" id="lbPn">원인·의심 품번</span><input name="partNo" data-combo="dparts" value="${esc(d.partNo)}" oninput="onPartNo(this.value)" autocomplete="off" placeholder="번호·품명·협력사로 검색"></label>
+    <label><span class="lt" id="lbPm">원인·의심 품명</span><input name="partName" value="${esc(d.partName)}"></label>
     <label>협력사<span class="row" style="flex-wrap:nowrap"><select name="supplierId" style="flex:1">${supOpts(d.supplierId)}</select><button type="button" class="b s" onclick="quickSup()" title="협력사 빠른 추가">+</button></span></label>
     <label><span class="lt" id="lbDv">납품일자</span><input type="date" name="delivDate" value="${esc(d.delivDate)}">${d.lot&&!d.delivDate?`<input type="hidden" name="lot" value="${esc(d.lot)}"><span style="font-size:11px">기존 LOT: ${esc(d.lot)}</span>`:''}</label>
   </div></div>
@@ -266,7 +266,7 @@ function invVerdictI(){
   if(v&&!f.inv_verdictDate.value)f.inv_verdictDate.value=today();
   const sl=$('#shareL');if(sl)sl.style.display=v==='공동'?'':'none';
   const d=db.defects.find(x=>x.id===invCurId);
-  if(v==='협력사'&&d&&!d.partNo)toast('협력사 귀책 — 불량에 원인 부품번호를 지정해야 NCR을 발행할 수 있습니다');
+  if(v==='협력사'&&d&&!d.partNo)toast('협력사 귀책 — 불량에 원인 품번을 지정해야 NCR을 발행할 수 있습니다');
 }
 function saveInv(id,keep){
   const d=db.defects.find(x=>x.id===id);if(!d)return false;
@@ -445,7 +445,7 @@ function invAuto(){const f=$('#mf');if(f.inv_farReq.value)f.inv_farDue.value=add
 function invVerdict(){
   const f=$('#mf'),v=f.inv_verdict.value;
   if(v){f.resp.value=VERDICT_RESP[v];if(!f.inv_verdictDate.value)f.inv_verdictDate.value=today()}
-  if(v==='협력사'&&!f.partNo.value.trim())toast('협력사 귀책 — 원인 부품번호를 지정해야 NCR을 발행할 수 있습니다');
+  if(v==='협력사'&&!f.partNo.value.trim())toast('협력사 귀책 — 원인 품번을 지정해야 NCR을 발행할 수 있습니다');
   respChanged();renderSev();
 }
 let curSev={};
@@ -748,7 +748,7 @@ function srcLayout(){
   $('#grpFg').style.display=inc&&!hasFg?'none':'';
   set('grpPartH',inc?'입고 부품 (불량 부품)':'원인 · 의심 부품');
   $('#grpPartS').textContent=inc?'수입검사 — 검사한 부품이 곧 불량 부품입니다':'확인 전이면 의심 부품을 넣거나 비워 두면 ‘조사 중’';
-  set('lbPn',inc?'부품번호':'원인·의심 부품번호');set('lbPm',inc?'부품명':'원인·의심 부품명');
+  set('lbPn',inc?'품번':'원인·의심 품번');set('lbPm',inc?'품명':'원인·의심 품명');
   set('lbDv',inc?'입고(납품)일자':'원인 부품 납품일자');set('lbQty',inc?'불량수량':'불량수량 (원인 부품 기준)');lbInsp();
   f.partNo.placeholder=inc?'번호·품명·협력사로 검색':'번호·품명·협력사로 검색 (모르면 비움 → 조사 중)';
 }
@@ -778,7 +778,7 @@ async function saveDefect(id){
     Object.keys(o).forEach(k=>{if(k.startsWith('inv_')){iv[k.slice(4)]=o[k];delete o[k]}else if(k.startsWith('ica_std_')){c.std[k.slice(8)]=true;delete o[k]}else if(k.startsWith('ica_')){c[k.slice(4)]=o[k];delete o[k]}});
     iv.costNotice=!!iv.costNotice;if(iv.share!==''&&iv.share!=null)iv.share=Math.max(0,Math.min(100,num(iv.share)));
     if(iv.verdict){if(inForm)o.resp=VERDICT_RESP[iv.verdict]||o.resp;if(!iv.verdictDate)iv.verdictDate=today()}else iv.verdictDate='';
-    if(inForm&&iv.verdict==='협력사'&&!o.partNo)toast('협력사 귀책으로 판정했지만 원인 부품번호가 비어 있습니다');
+    if(inForm&&iv.verdict==='협력사'&&!o.partNo)toast('협력사 귀책으로 판정했지만 원인 품번이 비어 있습니다');
     const hasInv=['farReq','farDue','farRecv','farResult','rca','verdict','sample','basis','share'].some(k=>iv[k]!==''&&iv[k]!=null)||iv.costNotice;
     if(hasInv||o.resp==='미정')o.inv=iv;else o.inv=undefined;
     if(o.resp==='공동'&&!hasInv)o.inv=iv;
@@ -896,7 +896,7 @@ async function delDefect(id){
 }
 function exportDefectsCSV(){
   const ds=filteredDefects();
-  const head=['발생일','발생처','심각도','심각도점수','대응수준','완성품 품번','완성품명','완성품 수량','원인 부품번호','원인 부품명','차종','협력사','불량유형','불량수량','입고(로트)수량','납품일자','도면 규격','실측','불량내용','임시조치','처리','귀책',...COST_CATS.map(c=>c+'비'),'비용합계','구상상태','청구액','회수액','미회수','NCR번호','담당자','진행단계','유효성검증','처리완료일','수동종결사유','FAR요청일','FAR회신기한','FAR회신일','FAR결과','사내RCA','귀책판정','판정일','협력사부담%','사내대책수준','사내대책완료일','표준화반영','진행기록'];
+  const head=['발생일','발생처','심각도','심각도점수','대응수준','완성품 품번','완성품명','완성품 수량','원인 품번','원인 품명','차종','협력사','불량유형','불량수량','입고(로트)수량','납품일자','도면 규격','실측','불량내용','임시조치','처리','귀책',...COST_CATS.map(c=>c+'비'),'비용합계','구상상태','청구액','회수액','미회수','NCR번호','담당자','진행단계','유효성검증','처리완료일','수동종결사유','FAR요청일','FAR회신기한','FAR회신일','FAR결과','사내RCA','귀책판정','판정일','협력사부담%','사내대책수준','사내대책완료일','표준화반영','진행기록'];
   downloadCSV(`불량목록_${today()}.csv`,[head,...ds.map(d=>{const v=sevOf(d);return [d.date,d.source,v.grade,v.score,v.resp,d.fgNo||'',d.fgName||'',d.fgQty??'',d.partNo,d.partName,d.model,supName(d.supplierId),d.type,d.qty,d.inspQty,d.delivDate||d.lot,d.spec||'',d.actual||'',d.desc,d.containment,d.disposition,d.resp,...COST_CATS.map(c=>(d.costs||[]).filter(x=>x.cat===c).reduce((a,x)=>a+num(x.amt),0)),costTotal(d),claimStatus(d),d.claim?.reqAmt??'',d.claim?.recvAmt??'',outstanding(d),db.ncrs.find(n=>n.id===d.ncrId)?.no||'',d.owner,defStage(d).label,(()=>{const n=d.ncrId&&db.ncrs.find(x=>x.id===d.ncrId);return n&&isDone(d)?verifyInfo(n).label:(icaVerify(d)?.label||'')})(),d.doneDate||'',d.closed?.reason||'',
       d.inv?.farReq||'',d.inv?.farDue||'',d.inv?.farRecv||'',d.inv?.farResult||'',d.inv?.rca||'',d.inv?.verdict||'',d.inv?.verdictDate||'',d.inv?.share??'',d.resp==='사내'?icaLevel(d):'',d.ica?.doneDate||'',ICA_STD.filter(([k])=>d.ica?.std?.[k]).map(x=>x[1]).join(', '),(d.logs||[]).slice().sort((a,b)=>(a.date||'').localeCompare(b.date||'')).map(l=>`[${l.date} ${l.kind}] ${l.text}`).join('\n')]})]);
 }
