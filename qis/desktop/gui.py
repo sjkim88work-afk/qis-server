@@ -393,7 +393,7 @@ class Controller:
             who = f"지금 다른 사용자 {n}명이 접속해 있습니다.\n" if n else ""
             if not self.window.create_confirmation_dialog(
                     "QIS — 사내 서버 끄기",
-                    f"{who}창을 닫으면 사내 서버도 꺼져 다른 PC · 핸드폰에서 QIS에 접속할 수 없게 됩니다.\n"
+                    f"{who}창을 닫으면 사내 서버도 꺼져 다른 PC · 휴대폰에서 QIS에 접속할 수 없게 됩니다.\n"
                     "(다른 사용자가 작성 중이던 내용은 저장되지 않을 수 있습니다)\n\n그래도 닫을까요?"):
                 return
         if self.flush_screen() == 1 and not self.window.create_confirmation_dialog(
@@ -403,7 +403,7 @@ class Controller:
         self.window.destroy()
 
     def _lan_others(self, minutes: int = 15) -> int:
-        """사내 서버 모드: 최근 minutes분 안에 다른 PC · 핸드폰에서 QIS를 쓴 사용자 수.
+        """사내 서버 모드: 최근 minutes분 안에 다른 PC · 휴대폰에서 QIS를 쓴 사용자 수.
         이 PC의 프로그램 창은 127.0.0.1 로 접속하므로 세지 않음."""
         try:
             db = self.runner.app.state.db

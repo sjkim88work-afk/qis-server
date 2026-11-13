@@ -123,7 +123,7 @@ const CZ_TABS=[
     F('TierReason','TIER 조정사유','textarea',null,{w:4,showIf:c=>has(c.Tier)&&has(czTierAuto(c))&&c.Tier!==czTierAuto(c)}),
     F('Response','대응방향','select','Response'),F('ParentCaseId','연계 RCA (재발)','case'),F('LegacyNo','기존 문서번호','text'),F('Created','등록일','date'),
     F('TargetClose','목표 종결일','date',null,{hint:c=>`비워 두면 등록일 + ${c.Tier||'TIER'} 기준 ${czDays(c)}일 = ${czTargetAuto(c)||'-'}`})]},
-  {id:'contain',label:'격리·처분',note:'IATF 8.7.1 — 부적합품은 식별·격리·기록 후 처분합니다. 격리 수량은 없으면 0을 입력하십시오.',fields:[
+  {id:'contain',label:'격리·처분',note:'IATF 8.7.1 — 부적합품은 식별·격리·기록 후 처분합니다. 격리 수량은 없으면 0을 입력하세요.',fields:[
     F('QtyStock','격리 · 사내 재고','number'),F('QtyWIP','격리 · 재공','number'),F('QtyTransit','격리 · 이송중','number'),F('QtyCustomer','격리 · 고객처','number'),
     F('ContainDate','격리 완료일','date'),F('ContainMethod','식별 방법','select','ContainMethod'),F('ContainScope','소급 범위 (로트/기간)','text',null,{w:2}),
     F('Disposition','처분','select','Disposition'),F('DispositionDate','처분 완료일','date'),F('DeviationNo','특채번호','text'),F('DeviationScope','특채 유효범위 (수량/기한)','text'),
@@ -172,7 +172,7 @@ function blankAna(key){
     '5why':{problem:'',occ:r5(),esc:r5(),evidence:''},
     isnot:{rows:{},cands:[{cause:'',basis:'',method:'',result:''}]},
     timeline:{period:'',rows:[{t:'',ev:'',who:'',st:'정상',note:''}],changes:[{t:'',what:'',m4:'',impact:'',cause:''}]},
-    change:{items:[['사람','작업자'],['사람','숙련도 · 교대'],['설비','설비 · 금형 · 치구'],['설비','공정 파라미터'],['자재','원자재 Lot'],['자재','공급업체 · 2차 협력사'],['방법','작업 방법 · 순서'],['방법','검사 기준 · 방법'],['환경','온도 · 습도']].map(([cat,item])=>({cat,item,before:'',after:'',impact:'',check:''}))},
+    change:{items:[['사람','작업자'],['사람','숙련도 · 교대'],['설비','설비 · 금형 · 치구'],['설비','공정 파라미터'],['자재','원자재 Lot'],['자재','원자재 협력사 · 2차 협력사'],['방법','작업 방법 · 순서'],['방법','검사 기준 · 방법'],['환경','온도 · 습도']].map(([cat,item])=>({cat,item,before:'',after:'',impact:'',check:''}))},
     fishbone:{effect:'',rows:[]},
     fta:{top:'',gate:'OR',nodes:[],nid:0},
     logic:{problem:'',basis:'4M+1E',nodes:[],nid:0,mece1:false,mece2:false},
@@ -245,9 +245,9 @@ const WS={
     return `<div class="grid" style="margin-bottom:12px"><div class="fld w2"><label>최상위 사건 (Top event)</label>${IN(a,'top',a.top)}</div>
       <div class="fld"><label>Top 바로 아래 결합</label>${SE(a,'gate',[['OR','OR — 하나만 있어도 발생'],['AND','AND — 모두 있어야 발생']],a.gate)}</div>
       <div class="fld"><label>최상위 발생 확률 (계산)</label><div class="calc"><span class="calcv">${fmtP(p)}</span>${p===null?' <span class="muted">기본원인 확률을 모두 넣으면 계산</span>':''}</div></div></div>
-      <div>${treeHTML(a,true)||'<div class="muted" style="margin-bottom:8px">아래 버튼으로 첫 원인을 추가하십시오.</div>'}</div>${RB(a,'node','+ Top 아래 원인 추가','data-parent="TOP"')}`},
+      <div>${treeHTML(a,true)||'<div class="muted" style="margin-bottom:8px">아래 버튼으로 첫 원인을 추가하세요.</div>'}</div>${RB(a,'node','+ Top 아래 원인 추가','data-parent="TOP"')}`},
   logic:a=>`<div class="grid" style="margin-bottom:12px"><div class="fld w2"><label>문제</label>${IN(a,'problem',a.problem)}</div><div class="fld w2"><label>분해 기준</label>${SE(a,'basis',['4M+1E','공정 단계','제품 구성요소','기타'],a.basis)}</div></div>
-    <div>${treeHTML(a,false)||'<div class="muted" style="margin-bottom:8px">아래 버튼으로 1차 가지를 추가하십시오.</div>'}</div>${RB(a,'node','+ 1차 가지 추가','data-parent="TOP"')}
+    <div>${treeHTML(a,false)||'<div class="muted" style="margin-bottom:8px">아래 버튼으로 1차 가지를 추가하세요.</div>'}</div>${RB(a,'node','+ 1차 가지 추가','data-parent="TOP"')}
     <div class="checks" style="margin-top:12px"><label><input type="checkbox" data-scope="ana" data-aid="${a.id}" data-path="mece1" ${a.mece1?'checked':''}>같은 수준의 가지끼리 겹치지 않는다 (ME)</label><label><input type="checkbox" data-scope="ana" data-aid="${a.id}" data-path="mece2" ${a.mece2?'checked':''}>가지를 합치면 빠짐이 없다 (CE)</label></div>`,
   cem:a=>{
     const tot=x=>a.ys.reduce((s,y,j)=>s+num(x.s[j])*num(y.w),0);
@@ -335,7 +335,7 @@ async function anaClick(act,el){
   else if(act==='anaApply'){
     const src=el.dataset.src,to=el.dataset.to;
     let txt=src==='concl'?a.concl:[...(a[src]||[])].reverse().find(v=>has(v));
-    if(!has(txt)){toast('옮길 내용이 없습니다. 먼저 워크시트를 작성하십시오.');return}
+    if(!has(txt)){toast('옮길 내용이 없습니다. 먼저 워크시트를 작성하세요.');return}
     txt=String(txt).trim();const cur=c[to]||'';
     if(cur.includes(txt)){toast('이미 반영된 내용입니다.');return}
     c[to]=(cur?cur+'\n':'')+`[${toolOf(a.tool).name}] `+txt;toast('원인 결론에 반영했습니다.');
@@ -409,7 +409,7 @@ function czViewToday(){
   const actItem=a=>{const c=czById('cases',a.CaseId);return `<div class="list-item"><div class="grow"><div class="t" data-act="open" data-id="${a.CaseId}" data-tab="actions">${esc(a.Title||'(내용 없음)')}</div>
     <div class="d">${esc(a.Category)} · ${c?esc(c.CaseNo):''} · ${esc(a.Assignee||a.ExternalOwner||'담당 미지정')}</div></div>
     <span style="min-width:84px;text-align:right">${czDate(a.DueDate)}</span><button class="btn sm" data-act="actDone" data-id="${a.id}">완료</button></div>`};
-  return `<h1>오늘 할 일</h1><p class="sub">${t} · RCA · NCR · 불량의 오늘 챙길 일을 한 곳에 모았습니다. 기한이 지난 건부터 처리하십시오.</p>
+  return `<h1>오늘 할 일</h1><p class="sub">${t} · RCA · NCR · 불량의 오늘 챙길 일을 한 곳에 모았습니다. 기한이 지난 건부터 처리하세요.</p>
     <div class="kpis">
       <div class="kpi" data-act="czNav" data-v="cases"><div class="l">진행 중 RCA</div><div class="v">${k.open}</div></div>
       <div class="kpi ${k.mine?'bad':'ok'}"><div class="l">오늘 내가 볼 RCA</div><div class="v">${k.mine}</div></div>
@@ -549,13 +549,13 @@ async function czApplyVerdict(cid,v){
   czLog(c,'귀책 판정',`${v}${v==='공동'?` (협력사 ${share}%)`:''} — 불량 ${ds.length}건`);touch(c);
   save();render();
   const noPart=v!=='사내'&&v!=='원인 불명'&&ds.some(d=>!d.partNo);
-  toast(`불량 ${ds.length}건 귀책 판정: ${v}${noPart?' — 원인 부품번호가 없는 불량은 지정 후 NCR을 발행하세요':''}`);
+  toast(`불량 ${ds.length}건 귀책 판정: ${v}${noPart?' — 원인 품번이 없는 불량은 지정 후 NCR을 발행하세요':''}`);
   setTimeout(()=>offerNcrAfterVerdict(ds.map(d=>d.id),v),350);
 }
 function czNcrNote(c,where){
   const n=czNcr(c);if(!n)return '';const st=ncrStatus(n),ok=czNcrOk(c),open=`<a class="lk" style="cursor:pointer" onclick="editNcr('${n.id}')">${esc(n.no)}</a>`;
   const M={cause:(ok?`협력사 대책서가 승인되어 ${open}의 D4 원인을 발생 원인에 옮겼습니다.`:`협력사 원인분석은 ${open}에서 받습니다 (현재: ${esc(st)}).`)+(czNeedEsc(c)?' <b>유출 원인(왜 못 걸렀나)은 협력사 대책서와 별개로 사내에서 분석해야 합니다.</b>':ok?' 사내 분석 대상이 없으면 워크시트 없이 넘어갑니다.':' 사내 분석 대상이 ‘없음’이면 대책서 승인 후 원인분석 단계가 충족됩니다.'),
-    actions:ok?`협력사 대책은 ${open} 대책서(D5·D6)로 승인되었습니다. 여기에는 사내에서 할 일(수입검사 강화, 기준서 개정, 수평전개 등)만 등록하십시오.${czNeedEsc(c)?' 유출 분석 대상이므로 유출대책 조치는 꼭 1건 이상 필요합니다.':''}`:`협력사 대책은 ${open}에서 회신·평가합니다. 대책서가 승인되면 발생·유출대책 조치 요건이 충족됩니다. 여기에는 사내 할 일만 등록하십시오.`,
+    actions:ok?`협력사 대책은 ${open} 대책서(D5·D6)로 승인되었습니다. 여기에는 사내에서 할 일(수입검사 강화, 기준서 개정, 수평전개 등)만 등록하세요.${czNeedEsc(c)?' 유출 분석 대상이므로 유출대책 조치는 꼭 1건 이상 필요합니다.':''}`:`협력사 대책은 ${open}에서 회신·평가합니다. 대책서가 승인되면 발생·유출대책 조치 요건이 충족됩니다. 여기에는 사내 할 일만 등록하세요.`,
     verify:czNcrDone(c)?`${open} 유효성 검증이 ‘유효’로 끝나 효과검증 판정을 합격으로 반영했습니다.`:`효과검증은 ${open}의 유효성 검증(기한 ${esc(n.verifyDue||'-')})이 ‘유효’로 끝나면 자동으로 충족됩니다.`};
   return `<div class="note">${M[where]}</div>`;
 }
@@ -629,7 +629,7 @@ function czSetField(c,k,v){
   if(k==='PartId'){
     if(!String(v).trim()){c.PartId='';return}
     const p=db.parts.find(x=>x.partNo===String(v).trim());
-    if(!p){toast('기준정보에 없는 부품번호입니다. 기준정보 탭에서 먼저 등록하십시오.');c.PartId='';return}
+    if(!p){toast('기준정보에 없는 품번입니다. 기준정보 탭에서 먼저 등록하세요.');c.PartId='';return}
     c.PartId=p.id;if(p.supplierId)c.SupplierId=p.supplierId;return;
   }
   if(k==='Status'&&c.Status==='종결'&&v!=='종결'){setTimeout(()=>czReopen(c,v),0);return false}   // 다시 열기는 사유를 받음
@@ -650,7 +650,7 @@ function czStageNext(){
   const from=c.Stage;c.Stage=ns;czUi.showGate=false;czLog(c,ns==='종결'?'종결':'단계',`${from} → ${ns}${czStageDate(c,from)?` (${from} ${Math.max(0,diffDays(czStageDate(c,from),today()))}일)`:''}`,{from,to:ns});
   if(ns==='종결'){c.Status='종결';c.CloseDate=today();c.Ball='나';c.NextAction='종결 완료'}else{c.NextAction=CZ_NEXT_HINT[ns];c.RecheckDate=addDays(today(),3)}
   czUi.tab=({'격리':'contain','처분':'contain','원인분석':'cause','대책':'actions','효과검증':'verify','표준화':'close','종결':'close'})[ns]||czUi.tab;
-  touch(c);save();render();toast(ns==='종결'?'RCA를 종결했습니다.':`${ns} 단계로 넘어갔습니다. 다음 행동을 확인하십시오.`);
+  touch(c);save();render();toast(ns==='종결'?'RCA를 종결했습니다.':`${ns} 단계로 넘어갔습니다. 다음 행동을 확인하세요.`);
 }
 async function czReopen(c,toStatus){
   if(!c)return;const ps=czPrev(c)||c.Stage;
@@ -665,7 +665,7 @@ function czNewCaseModal(){
   openModal('새 RCA',`<div class="fg">
     <label class="full">제목 *<input name="Title" placeholder="예: 도어래치 스프링 파단"></label>
     <label>발생원천<select name="Origin">${czOptHTML(CZ_OPT.Origin,'수입검사')}</select></label>
-    <label>부품번호<input name="part" data-combo="parts" autocomplete="off" placeholder="번호·품명·협력사로 검색"></label>
+    <label>품번<input name="part" data-combo="parts" autocomplete="off" placeholder="번호·품명·협력사로 검색"></label>
     <label>불량유형<select name="DefectType">${czOptHTML(CZ_OPT.DefectType,'')}</select></label>
     <label>불량수량 (EA)<input type="number" name="DefectQty"></label>
     <label class="full">불량내용<textarea name="Description"></textarea></label>
@@ -674,11 +674,11 @@ function czNewCaseModal(){
     <label>대응방향<select name="Response">${czOptHTML(CZ_OPT.Response,'')}</select></label></div>
     <div class="help" style="margin-top:8px">TIER는 S×I로 자동 판정되며 상세 화면에서 바꿀 수 있습니다. 대응방향에 따라 번호 접두어(NCR/FAR/8D)가 정해집니다.<br>불량 관리에 이미 등록된 건이면 그 불량의 ‘진행 보기’에서 <b>RCA 요청</b>를 쓰는 편이 빠릅니다.</div>`,
   [{label:'취소',fn:closeModal},{label:'등록',cls:'p',fn:async()=>{
-    const o=gather();if(!o.Title){toast('제목을 입력하십시오.');return}
-    let pid='';if(o.part){const p=partByNo(o.part);if(!p){if(!await askConfirm({title:'기준정보에 없는 부품번호입니다',msg:'부품 없이 등록할까요? 나중에 기본 탭에서 부품을 고를 수 있습니다.',ok:'부품 없이 등록',danger:false}))return}else pid=p.id}
+    const o=gather();if(!o.Title){toast('제목을 입력하세요.');return}
+    let pid='';if(o.part){const p=partByNo(o.part);if(!p){if(!await askConfirm({title:'기준정보에 없는 품번입니다',msg:'부품 없이 등록할까요? 나중에 기본 탭에서 부품을 고를 수 있습니다.',ok:'부품 없이 등록',danger:false}))return}else pid=p.id}
     const c=czCreateCase({Title:o.Title,Origin:o.Origin,PartId:pid,DefectType:o.DefectType,DefectQty:o.DefectQty,Description:o.Description,SevS:o.SevS,ImpI:o.ImpI,Response:o.Response});
     if(['고객사','필드'].includes(c.Origin))c.CustNotify='필요';
-    save();closeModal(true);czOpenCase(c.id);toast(`${c.CaseNo} 등록했습니다.${c.Response?'':' 대응방향을 정하십시오.'}`);
+    save();closeModal(true);czOpenCase(c.id);toast(`${c.CaseNo} 등록했습니다.${c.Response?'':' 대응방향을 정하세요.'}`);
   }}]);
 }
 
@@ -727,7 +727,7 @@ async function czFromNcr(id){
   const ds=(n.defectIds||[]).map(i=>db.defects.find(x=>x.id===i)).filter(Boolean);
   const exist=ds.map(d=>d.caseId&&czById('cases',d.caseId)).find(Boolean);
   if(exist){exist.NcrId=n.id;n.caseId=exist.id;touch(n);touch(exist);save();return czOpenCase(exist.id)}
-  if(!ds.length){toast('연결된 불량이 없는 NCR입니다. NCR에 불량을 먼저 연결하거나 RCA를 직접 등록하십시오.');return}
+  if(!ds.length){toast('연결된 불량이 없는 NCR입니다. NCR에 불량을 먼저 연결하거나 RCA를 직접 등록하세요.');return}
   const {o,g}=czBuildFrom(ds,n);
   if(!await askConfirm({title:`${n.no}을(를) RCA를 요청할까요?`,msg:'NCR과 연결 불량으로 새 RCA를 만듭니다.',items:[`불량 ${ds.length}건 · ${sum(ds,'qty').toLocaleString()}개`,`심각도 ${g}등급 → S ${o.SevS} × I ${o.ImpI} · <b>${o.Tier}</b> · 대응 ${o.Response} (요구 회신: ${esc(n.reqType||'8D 보고서')})`].concat(o.TierReason?[esc(o.TierReason)]:[]),ok:'RCA 요청',danger:false}))return;
   const c=czCreateCase(o);czAttach(c,ds,n);save();czOpenCase(c.id);toast(`${c.CaseNo} RCA를 요청했습니다.`);

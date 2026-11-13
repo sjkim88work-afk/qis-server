@@ -50,11 +50,11 @@ function exportCopqCSV(){
   const y=state.copqYear,rows=[];
   db.defects.forEach(d=>(d.costs||[]).forEach(c=>{if((c.date||d.date||'').startsWith(y))rows.push([c.date||d.date,isExt(d)||c.cat==='고객클레임'?'외부실패':'내부실패',c.cat,c.qty??'',c.price??'',num(c.amt),c.basis||'',c.memo||'',d.date,d.source,supName(d.supplierId),d.partNo,d.partName,d.type,d.qty,d.resp])}));
   rows.sort((a,b)=>String(a[0]).localeCompare(String(b[0])));
-  downloadCSV(`COPQ_비용내역_${y}.csv`,[['비용발생일','구분','항목','수량','단가','금액','산출근거','메모','불량발생일','발생처','협력사','부품번호','부품명','불량유형','수량','귀책'],...rows]);
+  downloadCSV(`COPQ_비용내역_${y}.csv`,[['비용발생일','구분','항목','수량','단가','금액','산출근거','메모','불량발생일','발생처','협력사','품번','품명','불량유형','수량','귀책'],...rows]);
 }
 function exportClaimCSV(){
   const L=db.defects.filter(d=>claimStatus(d)).sort((a,b)=>(a.claim.reqDate||'').localeCompare(b.claim.reqDate||''));
-  downloadCSV(`구상관리_${today()}.csv`,[['협력사','불량발생일','부품번호','부품명','불량유형','비용합계','청구일','청구액','합의일','합의액','회수일','회수액','회수방법','미회수','상태','이의사유','포기사유','메모'],
+  downloadCSV(`구상관리_${today()}.csv`,[['협력사','불량발생일','품번','품명','불량유형','비용합계','청구일','청구액','합의일','합의액','회수일','회수액','회수방법','미회수','상태','이의사유','포기사유','메모'],
     ...L.map(d=>{const c=d.claim;return [supName(d.supplierId),d.date,d.partNo,d.partName,d.type,costTotal(d),c.reqDate,c.reqAmt,c.agreeDate,c.agreeAmt,c.recvDate,c.recvAmt,c.method,outstanding(d),claimStatus(d),c.disputeReason,c.waiveReason,c.memo]})]);
 }
 

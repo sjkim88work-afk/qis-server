@@ -2,7 +2,7 @@
 
   1. 처음이면 설치(init) — 관리자 아이디 · 이름 · 비밀번호를 물어봄
   2. 이미 켜져 있으면 브라우저만 열고 끝냄
-  3. 서버를 켜고, 준비되면 브라우저를 엶. 핸드폰 · 다른 PC 접속 주소도 보여 줌
+  3. 서버를 켜고, 준비되면 브라우저를 엶. 휴대폰 · 다른 PC 접속 주소도 보여 줌
 창을 닫거나 Ctrl+C 를 누르면 서버가 멈춘다.
 """
 from __future__ import annotations
@@ -105,7 +105,7 @@ def main() -> int:
     print("\n접속 주소")
     print(f"  이 PC        {_url(cfg)}")
     for u in _lan_addresses(cfg):
-        print(f"  다른 PC·핸드폰 {u}   (같은 사내망 · Wi-Fi)")
+        print(f"  다른 PC·휴대폰 {u}   (같은 사내망 · Wi-Fi)")
     if sys.platform.startswith("win"):
         print("  다른 PC에서 안 열리면 방화벽을 엽니다 (관리자 권한 명령 창):")
         print(f'    netsh advfirewall firewall add rule name="QIS" dir=in action=allow protocol=TCP localport={cfg.port}')

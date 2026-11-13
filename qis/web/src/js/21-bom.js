@@ -57,7 +57,7 @@ function bomHit(fg,w){const m=bomFg(fg);if(!w.length)return true;const rs=bomIx(
   const h=[fg,m.name,m.model,...rs.flatMap(r=>[r.partNo,r.partName,r.pmodel])].join(' ').toLowerCase();return w.every(x=>h.includes(x))}
 function bomTable(){
   const ix=bomIx();
-  if(!ix.byFg.size)return `<div class="muted" style="padding:6px 2px">아직 BOM이 없습니다. <b>BOM 업로드</b>로 MES · ERP의 BOM 구성현황(레벨 · 품번 · 품명 · U/S)을 올리면 제품별 구성 트리가 보이고, 불량 등록 때 완성품의 구성 부품을 고르거나 부품이 들어가는 제품 · 차종(영향 범위)을 볼 수 있습니다.</div>`;
+  if(!ix.byFg.size)return `<div class="muted" style="padding:6px 2px">아직 BOM이 없습니다. <b>BOM 가져오기</b>로 MES · ERP의 BOM 구성현황(레벨 · 품번 · 품명 · U/S)을 올리면 제품별 구성 트리가 보이고, 불량 등록 때 완성품의 구성 부품을 고르거나 부품이 들어가는 제품 · 차종(영향 범위)을 볼 수 있습니다.</div>`;
   const w=String(msState.bq||'').trim().toLowerCase().split(/\s+/).filter(Boolean);
   const fgs=[...ix.byFg.keys()].filter(f=>bomHit(f,w)).map(f=>({f,...bomFg(f),n:ix.byFg.get(f).length}))
     .sort((a,b)=>kcmp(a.model||'~',b.model||'~')||kcmp(a.f,b.f));
@@ -68,7 +68,7 @@ function bomTable(){
     <thead><tr><th>차종</th><th>품번</th><th>품명</th><th>적용일자</th><th class="n">건수</th></tr></thead><tbody>
     ${groups.map(g=>g.L.map((x,i)=>`<tr class="bsel${x.f===msState.bomSel?' on':''}" data-fg="${esc(x.f)}" onclick="bomSelect(this.dataset.fg)">${i?'':`<td rowspan="${g.L.length}" class="bgrp">${esc(g.m)}</td>`}<td class="nw">${esc(x.f)}</td><td class="nw" title="${esc(x.name)}">${esc(x.name)}</td><td class="nw">${esc(x.date)}</td><td class="n">${x.n}</td></tr>`).join('')).join('')||'<tr><td colspan="5" class="muted" style="text-align:center;padding:16px">검색 결과가 없습니다.</td></tr>'}
     </tbody></table></div>`;
-  return `<div class="help" style="margin-bottom:6px">제품 <b>${ix.byFg.size}</b>개 · 구성 <b>${db.bom.rows.length}</b>줄 · 부품 <b>${ix.byPart.size}</b>종${miss?` · <span style="color:var(--warn)">기준정보에 없는 품번 ${miss}종</span> (생산품 · 반제품은 정상)`:''} · 업로드 ${esc(loc(db.bom.updatedAt)||'-')}</div>
+  return `<div class="help" style="margin-bottom:6px">제품 <b>${ix.byFg.size}</b>개 · 구성 <b>${db.bom.rows.length}</b>줄 · 부품 <b>${ix.byPart.size}</b>종${miss?` · <span style="color:var(--warn)">기준정보에 없는 품번 ${miss}종</span> (생산품 · 반제품은 정상)`:''} · 가져오기 ${esc(loc(db.bom.updatedAt)||'-')}</div>
   <div class="bomw">${left}<div id="bomR">${bomTreeHTML(msState.bomSel,w)}</div></div>`;
 }
 function bomSelect(fg){msState.bomSel=fg;document.querySelectorAll('.bomL tr.bsel').forEach(tr=>tr.classList.toggle('on',tr.dataset.fg===fg));
@@ -101,7 +101,7 @@ async function bomClear(){
   if(!await askConfirm({title:'BOM을 모두 지울까요?',msg:`제품 ${bomIx().byFg.size}개 · ${db.bom.rows.length}줄이 삭제됩니다. 불량·NCR 기록은 그대로입니다.`,ok:'전체 삭제'}))return;
   const snap={db:JSON.stringify(db),ph:[]};db.bom={updatedAt:now(),rows:[],fg:{}};save();render();offerUndo(snap,'BOM 전체 삭제');
 }
-/* ---- BOM 업로드 (xlsx · csv · 붙여넣기) — 레벨 열이 있으면 다단계, 없으면 1단계(모품번 – 자품번) ---- */
+/* ---- BOM 가져오기 (xlsx · csv · 붙여넣기) — 레벨 열이 있으면 다단계, 없으면 1단계(모품번 – 자품번) ---- */
 const BOM_F=[['level','레벨'],['fgNo','제품(모품) 품번'],['fgName','제품명'],['partNo','품번 (투입품번)',1],['partName','품명'],['type','품목유형'],['proc','조달구분'],['model','차종'],['unit','소요단위'],['qty','U/S (소요량)'],['date','적용일자']];
 let bi={rows:[],hdr:0,map:{},name:'',mode:'fg'};
 const BOM_HEAD='레벨\t선택\t품목유형\t조달구분\t차종\t품번\t\t품명\t\t소요단위\tU/S';  // MES 'BOM 구성현황' 복사 형식
@@ -124,7 +124,7 @@ function bomAutoMap(h){
 }
 function openBomImport(){
   bi={rows:[],hdr:0,map:{},name:'',mode:'fg'};
-  openModal('BOM 업로드',`<div class="help">MES · ERP의 BOM을 엑셀(.xlsx) · CSV로 올리거나, 화면의 표를 복사해 붙여넣으세요. 제목행과 열은 자동으로 찾습니다.<br>
+  openModal('BOM 가져오기',`<div class="help">MES · ERP의 BOM을 엑셀(.xlsx) · CSV로 올리거나, 화면의 표를 복사해 붙여넣으세요. 제목행과 열은 자동으로 찾습니다.<br>
    <b>다단계 (MES ‘BOM 구성현황’)</b>: 레벨 · 품번 · 품명 · 품목유형 · 조달구분 · 차종 · 소요단위 · U/S — <b>레벨 0 줄이 제품</b>이고, 그 아래 레벨 1 · 2 …를 상위 품번에 붙입니다. 여러 제품을 이어 붙여도 레벨 0마다 새 제품으로 나눕니다.<br>
    <b>1단계 (ERP 정전개)</b>: 모품번(제품) · 자품번 · 소요량 열이 있으면 그대로 읽습니다.</div>
   <div class="row" style="margin-top:10px"><label class="b p" style="cursor:pointer">파일 선택 (.xlsx / .csv)<input type="file" accept=".xlsx,.csv,.txt" style="display:none" onchange="bomFile(this.files[0]);this.value=''"></label><span id="bomSheet"></span><span id="bomName" class="muted"></span></div>
@@ -138,7 +138,7 @@ function openBomImport(){
 function bomFile(f){return sheetFile(f,bi,'#bomSheet','bomSet','bi')}
 function bomSet(rows,name){
   rows=(rows||[]).map(r=>(r||[]).map(c=>String(c??'').trim()));
-  if(rows.filter(r=>r.some(c=>c)).length<2){$('#bomMap').innerHTML='<div class="muted">제목행과 데이터가 있는 범위를 넣어주세요.</div>';return}
+  if(rows.filter(r=>r.some(c=>c)).length<2){$('#bomMap').innerHTML='<div class="muted">제목행과 데이터가 있는 범위를 넣으세요.</div>';return}
   let best=-1,bh=0;rows.slice(0,15).forEach((r,i)=>{const c=Object.keys(bomAutoMap(r)).length;if(c>best){best=c;bh=i}});
   bi.rows=rows;bi.hdr=bh;bi.map=bomAutoMap(rows[bh]);bi.name=name;bomRenderMap();
 }
@@ -182,10 +182,10 @@ function bomData(){
 function bomRenderMap(){
   const h=bi.rows[bi.hdr]||[],D=bomData(),fgs=Object.keys(D.fg),tree=bi.map.level!=null;
   const okMap=bi.map.partNo!=null;
-  $('#bomMap').innerHTML=`<div class="sec">열 연결 확인 <span class="muted" style="font-weight:normal;font-size:12px">${esc(bi.name)} · 제목행 ${bi.hdr+1}번째 줄 · ${D.metaOnly?'<b>제품 목록</b> (차종 · 품번 · 품명 · 적용일자 — 구성은 그대로)':tree?'<b>다단계</b> (레벨 열 기준)':'1단계 (모품번 – 자품번)'} · 틀린 열만 바꿔주세요</span></div>
+  $('#bomMap').innerHTML=`<div class="sec">열 연결 확인 <span class="muted" style="font-weight:normal;font-size:12px">${esc(bi.name)} · 제목행 ${bi.hdr+1}번째 줄 · ${D.metaOnly?'<b>제품 목록</b> (차종 · 품번 · 품명 · 적용일자 — 구성은 그대로)':tree?'<b>다단계</b> (레벨 열 기준)':'1단계 (모품번 – 자품번)'} · 틀린 열만 바꾸세요</span></div>
   <div class="fg">${BOM_F.map(([k,l,req])=>`<label>${l}${req?' *':''}<select onchange="if(this.value==='')delete bi.map.${k};else bi.map.${k}=+this.value;bomRenderMap()"><option value="">(없음)</option>${h.map((c,i)=>`<option value="${i}" ${bi.map[k]===i?'selected':''}>${esc(c||('열 '+(i+1)))}</option>`).join('')}</select></label>`).join('')}
    <label class="full">등록 방식<select onchange="bi.mode=this.value"><option value="fg" ${bi.mode==='fg'?'selected':''}>올린 제품만 새 내용으로 교체 — 나머지 제품의 BOM은 그대로 (권장)</option><option value="all" ${bi.mode==='all'?'selected':''}>전체 교체 — 기존 BOM을 모두 지우고 이 파일로 바꿈</option></select></label></div>
-  <div class="${okMap&&fgs.length?'help':'banner'}" style="margin-top:8px">${!okMap?'<b>품번</b> 열과 <b>레벨</b>(또는 제품 품번) 열을 골라주세요.':fgs.length?D.metaOnly?`제품 <b>${fgs.length}</b>개의 차종 · 품명 · 적용일자를 등록합니다. 구성(트리)은 바뀌지 않습니다 — 구성은 레벨이 있는 BOM 구성현황 표로 올리세요.`:`제품 <b>${fgs.length}</b>개 (${fgs.slice(0,4).map(esc).join(', ')}${fgs.length>4?' …':''}) · 구성 <b>${D.rows.length}</b>줄을 읽었습니다.${D.noRoot?`<br>⚠ 레벨 0(제품) 줄 없이 시작한 ${D.noRoot}줄은 어느 제품인지 몰라 건너뜁니다 — 표를 복사할 때 레벨 0 줄까지 포함하세요.`:''}`:'읽은 제품이 없습니다. 레벨 0(제품) 줄이 포함됐는지, 열 연결이 맞는지 확인하세요.'}</div>
+  <div class="${okMap&&fgs.length?'help':'banner'}" style="margin-top:8px">${!okMap?'<b>품번</b> 열과 <b>레벨</b>(또는 제품 품번) 열을 고르세요.':fgs.length?D.metaOnly?`제품 <b>${fgs.length}</b>개의 차종 · 품명 · 적용일자를 등록합니다. 구성(트리)은 바뀌지 않습니다 — 구성은 레벨이 있는 BOM 구성현황 표로 올리세요.`:`제품 <b>${fgs.length}</b>개 (${fgs.slice(0,4).map(esc).join(', ')}${fgs.length>4?' …':''}) · 구성 <b>${D.rows.length}</b>줄을 읽었습니다.${D.noRoot?`<br>⚠ 레벨 0(제품) 줄 없이 시작한 ${D.noRoot}줄은 어느 제품인지 몰라 건너뜁니다 — 표를 복사할 때 레벨 0 줄까지 포함하세요.`:''}`:'읽은 제품이 없습니다. 레벨 0(제품) 줄이 포함됐는지, 열 연결이 맞는지 확인하세요.'}</div>
   ${D.rows.length?`<div class="tw" style="max-height:220px;margin-top:6px"><table class="sm mip"><thead><tr><th>제품</th><th>레벨</th><th>상위 품번</th><th>품번</th><th>품명</th><th>유형</th><th>조달</th><th class="n">U/S</th></tr></thead><tbody>${D.rows.slice(0,10).map(r=>`<tr><td>${esc(r.fgNo)}</td><td style="padding-left:${6+r.level*10}px">${r.level}</td><td>${esc(r.parentNo)}</td><td>${esc(r.partNo)}</td><td>${esc(r.partName)}</td><td>${esc(r.type)}</td><td>${esc(r.proc)}</td><td class="n">${bomQ(r.qty)}</td></tr>`).join('')}</tbody></table></div>${D.rows.length>10?`<div class="muted" style="font-size:12px;margin-top:4px">${D.rows.length}줄 중 10줄 미리보기</div>`:''}`:''}`;
 }
 function bomApply(){
@@ -202,6 +202,6 @@ function bomApply(){
   msState.bomSel=[...fgs][0];
   save();closeModal(true);render();
   toast(`BOM 등록: 제품 ${fgs.size}개 · ${D.rows.length}줄${keep.length?` (기존 제품 ${new Set(keep.map(r=>r.fgNo)).size}개 유지)`:''}`);
-  offerUndo(snap,`BOM 업로드: 제품 ${fgs.size}개`);
+  offerUndo(snap,`BOM 가져오기: 제품 ${fgs.size}개`);
 }
 

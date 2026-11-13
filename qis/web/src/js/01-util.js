@@ -98,7 +98,7 @@ function migrate(d){
   d.ncrs.forEach(n=>{if(n.reqType==='통보만 (회신 불요)')n.reqType='단순 통보';if(!('notifyDate' in n))n.notifyDate=n.requestDate||n.issueDate||'';
     if(n.reqType!=='단순 통보'&&!n.requestDate&&n.issueDate&&!n.replyDate&&!n.verifyDate){n.requestDate=n.issueDate;if(!n.dueDate)n.dueDate=addDays(n.issueDate,typeDays(n.reqType,d.settings))}});
   d.defects.forEach(x=>{if(!x.delivDate&&x.lot&&/^(\d{4}[.\-\/]\d{1,2}[.\-\/]\d{1,2}|20\d{6})$/.test(String(x.lot).trim())){const p=parseDateAny(String(x.lot).trim());if(p)x.delivDate=p}if(!Array.isArray(x.photos))x.photos=[];migrateCosts(x)});
-  // 이전 통합본(원인 부품 칸 · 불량 FAR · 귀책 확정 기록) → 발견 품목 + 원인 부품번호 · 귀책 조사 구조로
+  // 이전 통합본(원인 부품 칸 · 불량 FAR · 귀책 확정 기록) → 발견 품목 + 원인 품번 · 귀책 조사 구조로
   d.defects.forEach(x=>{
     if(x.causePartNo){if(!x.fgNo&&!x.fgName){x.fgNo=x.partNo||'';x.fgName=x.partName||''}x.partNo=x.causePartNo;x.partName=x.causePartName||'';x.supplierId=x.causeSupplierId||x.supplierId||''}
     delete x.causePartNo;delete x.causePartName;delete x.causeSupplierId;
@@ -110,7 +110,7 @@ function migrate(d){
 }
 /* ---- 협력사 연락처 ---- */
 const ROLES=['품질 담당','품질 팀장','영업 담당','SCM · 물류','생산/공장장','개발 담당','대표','기타'];
-// 부서명으로 역할 추정 (업로드용)
+// 부서명으로 역할 추정 (가져오기용)
 const roleOfDept=d=>{d=String(d||'').toLowerCase();if(!d)return '품질 담당';if(/품질|quality|^qa|^qc|sqe/.test(d))return /팀장|manager|head/.test(d)?'품질 팀장':'품질 담당';if(/영업|sales|account/.test(d))return '영업 담당';if(/scm|구매|purchas|logistic|물류|supply|planner/.test(d))return 'SCM · 물류';if(/개발|r&d|engineer|설계/.test(d))return '개발 담당';if(/생산|공장|plant|production/.test(d))return '생산/공장장';if(/대표|ceo|사장/.test(d))return '대표';return '기타'};
 function ensureContacts(s){
   if(!Array.isArray(s.contacts)){

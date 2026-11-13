@@ -26,7 +26,7 @@ const photoGetMany=ids=>SRV?srvPhotoGetMany(ids):Promise.all((ids||[]).map(photo
 const photoPut=recs=>{if(SRV)return srvPhotoPut(recs);if(recs.some(r=>r&&!r.file&&!phIsPending(r)))phDirtySet(true);return pTx('readwrite',s=>{recs.forEach(r=>s.put(r))})};
 const photoDel=async ids=>{
   if(SRV)return srvPhotoDel(ids);
-  // 사진 폴더의 파일은 이름이 바뀌므로, 지우기 전에 파일 이름을 삭제 대기열에 남겨 둔다
+  // 사진 폴더의 파일은 이름이 바뀌므로, 삭제하기 전에 파일 이름을 삭제 대기열에 남겨 둔다
   try{const q=phDelQ();(await photoGetMany(ids)).forEach(r=>q.add(r.file||phName(r.id)));phDelQSet(q)}catch(e){}
   return pTx('readwrite',s=>{ids.forEach(i=>s.delete(i))});
 };

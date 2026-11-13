@@ -182,7 +182,7 @@ class MenuActions:
         if not c.runner:
             return
         if c.runner.mode == "solo":
-            self._tell("지금은 ‘이 PC 혼자 쓰기’ 모드입니다 — 다른 PC · 핸드폰에서는 접속할 수 없습니다.\n"
+            self._tell("지금은 ‘이 PC 혼자 쓰기’ 모드입니다 — 다른 PC · 휴대폰에서는 접속할 수 없습니다.\n"
                        "사내에서 같이 쓰려면 ‘설정 › 사용 방식 바꾸기’에서 ‘사내 서버로 쓰기’를 고르세요.")
             return
         c.state = "app"

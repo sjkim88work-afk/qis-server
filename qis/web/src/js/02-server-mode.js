@@ -141,7 +141,7 @@ function srvPanel(){
     sg('공유 · 내보내기',
       sv('읽기 전용 공유','지금 데이터를 HTML 파일 하나로 만듭니다. 서버 밖으로 나가는 사본이니 받을 사람을 가려서 보내세요. 기준정보는 빼고 만듭니다.',
         `<span style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">${btn('사진 제외','makeShareFile(false)')}</span>`)+
-      sv('SQL로 조회 (QIS.sqlite)','SQLite DB 파일로 내려받습니다 — DB Browser · Excel · Power BI(ODBC)에서 조회',btn('만들기 (다운로드)','exportSqlite()')));
+      sv('SQL로 조회 (QIS.sqlite)','SQLite DB 파일로 내려받습니다 — DB Browser · Excel · Power BI(ODBC)에서 조회',btn('만들기 (내려받기)','exportSqlite()')));
 }
 
 async function bootData(){
@@ -210,7 +210,7 @@ let backupDir=null,photoDir=null;  // 사진 · 첨부 폴더, 백업 폴더 (�
 
 function save(){
   if(RO)return;  // 읽기 전용 사본은 저장하지 않음
-  if(!dataReady){console.warn('데이터를 불러오기 전 저장 요청 — 무시');return}
+  if(!dataReady){console.warn('데이터를 가져오기 전 저장 요청 — 무시');return}
   if(!undoBusy&&undoSnap&&!save._keep)hideUndo();
   if(loadFailed){renderAlert();toast('데이터를 읽지 못해 저장을 멈췄습니다 — 위 빨간 안내를 확인하세요');return}
   if(tabLocked){renderAlert();toast('다른 창에서 QIS가 열려 있어 이 창은 보기 전용입니다 — 그 창에서 입력하세요');return}
@@ -235,7 +235,7 @@ function renderAlert(){
   }
   if(storageBlocked){b.style.display='flex';b.style.background='#fff7e0';b.style.borderBottomColor='#f0d49b';b.style.color='#5c4210';b.innerHTML=`<span>💡 <b>미리보기 화면에서는 데이터가 저장되지 않습니다.</b> 이 창은 보안상 브라우저 저장소가 막혀 있어, 여기서 입력한 내용은 창을 닫으면 사라집니다. 실제로 쓰려면 파일을 내려받아 <b>Edge 또는 Chrome에서 직접</b> 여세요.</span>`;return}
   if(loadFailed){b.style.display='flex';b.innerHTML=`<span>⛔ <b>저장된 데이터를 읽지 못했습니다</b> (${esc(loadFailed)}). 원본은 보존해 두었고, 덮어쓰지 않도록 <b>저장을 멈췄습니다.</b> 백업 파일로 복원하거나 원본을 내려받아 확인하세요.</span><span style="flex:1"></span><button class="b s" onclick="downloadBroken()">원본 내려받기</button><button class="b s p" onclick="pickImport('replace')">백업으로 복원</button>`;return}
-  if(saveFailed){b.style.display='flex';b.innerHTML=`<span>⛔ <b>브라우저 저장 실패</b> — 마지막 변경이 저장되지 않았습니다 (${esc(saveFailed)}). ${dataStore==='idb'?'PC 디스크 공간이 부족하거나 브라우저가 저장을 막았을 수 있습니다. 지금 <b>백업 다운로드</b>를 하고, 디스크 여유 공간을 확인하세요.':'저장 공간이 가득 찼을 수 있습니다. 지금 <b>백업 다운로드</b>를 하고, 설정 › 데이터 · 백업 › 고급 설정에서 저장 공간을 확인하세요.'}</span><span style="flex:1"></span><button class="b s p" onclick="exportJSON(true)">백업 다운로드</button>`;return}
+  if(saveFailed){b.style.display='flex';b.innerHTML=`<span>⛔ <b>브라우저 저장 실패</b> — 마지막 변경이 저장되지 않았습니다 (${esc(saveFailed)}). ${dataStore==='idb'?'PC 디스크 공간이 부족하거나 브라우저가 저장을 막았을 수 있습니다. 지금 <b>백업 내려받기</b>를 하고, 디스크 여유 공간을 확인하세요.':'저장 공간이 가득 찼을 수 있습니다. 지금 <b>백업 내려받기</b>를 하고, 설정 › 데이터 · 백업 › 고급 설정에서 저장 공간을 확인하세요.'}</span><span style="flex:1"></span><button class="b s p" onclick="exportJSON(true)">백업 내려받기</button>`;return}
   b.style.display='none';
 }
 function downloadBroken(){let r=brokenRaw||'';if(!r)try{r=localStorage.getItem(KEY+'_broken')||localStorage.getItem(KEY)||''}catch(e){}const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([r],{type:'application/json'}));a.download='QMS_원본데이터.json';a.click()}
@@ -243,7 +243,7 @@ const backupDays=()=>Math.max(1,num(db.settings.backupDays)||7);
 const backupDue=()=>!db.meta.lastBackup||diffDays(loc(db.meta.lastBackup,10),today())>=backupDays();
 function updateSaveInfo(){
   {const bk=$('#hdrBk');if(bk&&!RO&&!SRV){const due=!loadFailed&&!storageBlocked&&COLLS.some(c=>(db[c]||[]).length)&&backupDue();bk.textContent=due?'백업 필요':'백업';bk.classList.toggle('due',due);
-    bk.title=(due?`마지막 백업: ${db.meta.lastBackup?loc(db.meta.lastBackup,10):'없음'} — 눌러서 지금 백업. `:'')+(backupDir||lazyH.backupDir?'백업 폴더에 저장합니다':'백업 파일을 다운로드합니다 (설정에서 백업 폴더를 지정하면 하루 한 번 자동 백업)')}}
+    bk.title=(due?`마지막 백업: ${db.meta.lastBackup?loc(db.meta.lastBackup,10):'없음'} — 눌러서 지금 백업. `:'')+(backupDir||lazyH.backupDir?'백업 폴더에 저장합니다':'백업 파일을 내려받기합니다 (설정에서 백업 폴더를 지정하면 하루 한 번 자동 백업)')}}
   if(SRV){const e=$('#saveInfo'),st=srvState,t=st.at;if(e)e.textContent=loadFailed?'⚠ 서버 연결 실패':st.expired?'⚠ 로그인 만료':st.ok===false?'⚠ 서버 연결 끊김':RO?'조회 권한 · 읽기 전용':(srvTimer||srvBusy)&&st.pend?'서버에 저장 중…':t?`서버 저장 ${pad(t.getHours())}:${pad(t.getMinutes())}:${pad(t.getSeconds())}`:'';const l=$('#linkInfo');if(l)l.textContent='';return}
   if(RO){const e=$('#saveInfo');if(e)e.textContent='읽기 전용 사본';const l=$('#linkInfo');if(l)l.textContent='';return}
   const s=db.meta.saved?new Date(db.meta.saved):null;

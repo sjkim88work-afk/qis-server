@@ -30,7 +30,7 @@ function hideUndo(){$('#undo').classList.remove('on');undoSnap=null;clearTimeout
 async function doUndo(){
   if(!undoSnap)return;const s=undoSnap;hideUndo();undoBusy=true;
   db=migrate(JSON.parse(s.db));
-  try{if(s.ph.length){await photoPut(s.ph);photoStr=null}}catch(e){toast('사진 복구 실패: '+e.message)}
+  try{if(s.ph.length){await photoPut(s.ph);photoStr=null}}catch(e){toast('사진 복원 실패: '+e.message)}
   save();undoBusy=false;render();toast('되돌렸습니다');
 }
 function openModal(title,body,btns){
