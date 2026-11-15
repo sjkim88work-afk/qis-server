@@ -32,6 +32,8 @@ jobs:
             name: windows
     runs-on: ${{ matrix.os }}
     timeout-minutes: 40
+    permissions:
+      contents: write        # 릴리스로 낼 때 빌드한 파일을 릴리스에 바로 올림
     env:
       # 윈도우 설치 프로그램(QIS-Setup.exe)은 코드 서명 인증서가 있을 때만 만든다.
       # 서명 없는 설치 프로그램은 백신(V3 등)이 평판 기반으로 막아 zip 보다 불리함 — 인증서 시크릿을 넣으면 자동으로 다시 나옴.
@@ -198,17 +200,25 @@ jobs:
           if ($p.ExitCode -ne 0) { throw "차단 표시가 있는 상태에서 selftest 실패 (exit $($p.ExitCode))" }
           $left = Get-ChildItem motw\QIS -Recurse -Filter *.dll | Where-Object { Get-Item $_.FullName -Stream Zone.Identifier -ErrorAction SilentlyContinue }
           if ($left) { throw "차단 표시가 남은 DLL: $($left.Count)개" }
-      # 릴리스로 낼 때만 보관 — PR · main 빌드마다 올리면(회당 약 70MB × 14일) 저장 한도가 차서 빌드가 실패함
-      - uses: actions/upload-artifact@v4
-        if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'release' || github.event_name == 'workflow_dispatch'
-        with:
-          name: QIS-${{ matrix.name }}
-          path: |
-            QIS-${{ matrix.name }}.zip
-            QIS-Setup.exe
-            QIS-mac.dmg
-          if-no-files-found: ignore
-          retention-days: 1
+      # 릴리스 파일은 빌드한 러너에서 바로 릴리스에 올린다. (예전에는 Actions 보관물(artifact)로 넘겼는데,
+      # 계정의 보관물 저장 한도가 차면 릴리스가 통째로 실패했음 — 2026-11-13 · 11-15)
+      - name: 릴리스에 올리기
+        if: startsWith(github.ref, 'refs/tags/') || (github.event_name == 'workflow_dispatch' && inputs.tag != '')
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag || github.ref_name }}
+        run: |
+          # 맥 · 윈도우 작업이 동시에 만들 수 있으므로, 만들기에 실패하면 이미 있는지 다시 확인
+          if ! gh release view "$TAG" -R "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release create "$TAG" -R "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "QIS $TAG" --notes \
+              "QIS 데스크톱 프로그램 $TAG — 윈도우: QIS-windows.zip(압축을 풀고 QIS.exe 실행) · 맥(Apple Silicon): QIS-mac.dmg 또는 QIS-mac.zip. 설치 방법: docs/데스크톱_프로그램.md" \
+              || { sleep 5; gh release view "$TAG" -R "$GITHUB_REPOSITORY" >/dev/null; }
+          fi
+          FILES="QIS-${{ matrix.name }}.zip"
+          [ -f QIS-Setup.exe ] && FILES="$FILES QIS-Setup.exe"      # 서명 인증서가 있을 때만 생김
+          [ -f QIS-mac.dmg ] && FILES="$FILES QIS-mac.dmg"
+          gh release upload "$TAG" $FILES --clobber -R "$GITHUB_REPOSITORY"
 
   release:
     needs: build
@@ -220,24 +230,17 @@ jobs:
       # if: 에서는 secrets 를 직접 쓸 수 없어(워크플로 문법 오류) env 로 옮겨 판정
       HAS_RELEASES_TOKEN: ${{ secrets.RELEASES_TOKEN != '' }}
     steps:
-      - uses: actions/download-artifact@v4
-        with:
-          path: out
-          merge-multiple: true
-      - name: 릴리스 만들기 · 자산 올리기
+      - name: 체크섬 만들기 (SHA256SUMS.txt)
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ inputs.tag || github.ref_name }}
         run: |
+          mkdir -p out
+          gh release download "$TAG" -R "$GITHUB_REPOSITORY" -D out -p 'QIS-*.zip' -p 'QIS-*.dmg' -p 'QIS-Setup.exe'
           ls -la out
-          if ! gh release view "$TAG" -R "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            gh release create "$TAG" -R "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "QIS $TAG" --notes \
-              "QIS 데스크톱 프로그램 $TAG — 윈도우: QIS-windows.zip(압축을 풀고 QIS.exe 실행) · 맥(Apple Silicon): QIS-mac.dmg 또는 QIS-mac.zip. 설치 방법: docs/데스크톱_프로그램.md"
-          fi
-          FILES="out/QIS-mac.zip out/QIS-windows.zip out/QIS-mac.dmg"
-          [ -f out/QIS-Setup.exe ] && FILES="$FILES out/QIS-Setup.exe"      # 서명 인증서가 있을 때만 생김
+          for f in QIS-mac.zip QIS-windows.zip QIS-mac.dmg; do [ -f "out/$f" ] || { echo "missing $f"; exit 1; }; done
           (cd out && sha256sum QIS-*.zip QIS-*.dmg $( [ -f QIS-Setup.exe ] && echo QIS-Setup.exe ) > SHA256SUMS.txt && cat SHA256SUMS.txt)
-          gh release upload "$TAG" $FILES out/SHA256SUMS.txt --clobber -R "$GITHUB_REPOSITORY"
+          gh release upload "$TAG" out/SHA256SUMS.txt --clobber -R "$GITHUB_REPOSITORY"
       # ---- 공개 배포 저장소(qis-releases)에도 올림: 고객 · 프로그램의 업데이트 확인(latest.json)이 여기를 봄.
       #      RELEASES_TOKEN(공개 저장소 contents:write 권한의 PAT) 시크릿이 있을 때만. 없으면 이 단계는 건너뜀.
       - name: 공개 배포 저장소에 올리기 (qis-releases)
