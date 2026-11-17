@@ -33,8 +33,7 @@ function issOpenFollow(i){const L=issLinks(i);return [...L.ds.filter(d=>!isDone(
 function issLog(i,kind,text,x){(i.logs=i.logs||[]).push(Object.assign({id:uid(),at:nowMin(),kind,who:'',text:String(text||''),by:czMe(),rec:now()},x||{}))}
 
 function renderIssue(){
-  if(state.issId&&issById(state.issId))return issDetailHTML(issById(state.issId));
-  state.issId=null;
+  setTimeout(issSync,0);   // 이슈 상세 창이 열려 있으면 새 내용으로 다시 그림
   const f=state.isf=state.isf||{status:'open',src:'',hot:false,q:''},all=db.issues||[];
   let L=all.slice();
   if(f.status==='open')L=L.filter(i=>!i.closedAt);else if(f.status==='wait')L=L.filter(issWait);else if(f.status==='closed')L=L.filter(i=>i.closedAt);
@@ -66,7 +65,22 @@ function renderIssue(){
     <td class="n">${(i.logs||[]).filter(l=>!l.void).length}</td><td>${out(i)}</td><td>${esc(i.owner)}</td><td class="mono">${age}</td></tr>`}).join('')||'<tr><td colspan="9" class="muted" style="text-align:center;padding:28px">조건에 맞는 이슈가 없습니다.</td></tr>'}
   </tbody></table></div></div>`;
 }
-function issOpen(id){state.tab='issue';state.issId=id;state.issRoute=state.issRoute||'defect';render();window.scrollTo(0,0)}
+// 이슈 상세 — 불량 · NCR 처럼 창(팝업)으로 엶. 목록은 뒤에 그대로 있음
+function issOpen(id){if(!issById(id))return;state.tab='issue';state.issId=id;state.issRoute=state.issRoute||'defect';render();issShow(id)}
+function issShow(id,keep){
+  const i=issById(id),m=$('#modal');if(!i)return;
+  // 다시 그릴 때: 쓰던 기록 입력 · 스크롤 위치 유지
+  const old=keep&&m.dataset.iss===id?{v:['isK','isAt','isWho','isTx'].map(k=>$('#'+k)?$('#'+k).value:null),top:m.scrollTop}:null;
+  openModal(`${i.no} 이슈`,issDetailHTML(i),[...(RO?[]:[{label:'삭제',cls:'d',fn:()=>delIssue(id)},...(i.closedAt?[{label:'다시 열기',fn:()=>issReopen(id)}]:[]),{label:'수정',fn:()=>editIssue(id)}]),{label:'닫기',fn:closeModal}]);
+  m.dataset.iss=id;
+  if(old){['isK','isAt','isWho','isTx'].forEach((k,n)=>{if($('#'+k)&&old.v[n]!=null)$('#'+k).value=old.v[n]});m.scrollTop=old.top;mfDirty=!!(old.v[3]||'').trim()}
+}
+// 화면을 다시 그린 뒤: 상세 창이 떠 있으면 갱신, 아무 창도 없으면 '보고 있던 이슈' 표시를 지움
+function issSync(){
+  const m=$('#modal'),on=m.classList.contains('on');
+  if(m.dataset.iss){if(!on){delete m.dataset.iss;return}if(!issById(m.dataset.iss)){closeModal(true);return}issShow(m.dataset.iss,true)}
+  else if(!on)state.issId=null;
+}
 
 function editIssue(id){
   const S=db.settings,i=id?{...issById(id)}:{at:nowMin(),source:S.sources.find(x=>/공정/.test(x))||S.sources[0],urg:'높음',owner:czMe(),special:false,contain:false};
@@ -121,11 +135,9 @@ function issDetailHTML(i){
     ...L.ns.map(n=>`<a class="isf" onclick="editNcr('${n.id}')"><span class="bg inf">NCR</span><span style="flex:1">${esc(n.no)} · ${esc(n.reqType||'8D 보고서')}</span>${stB(ncrStatus(n))}${n.dueDate&&!n.replyDate&&n.reqType!=='단순 통보'?` <span class="bg ${ncrFlags(n).replyLate?'bad':'warn'}">회신 기한 ${esc(n.dueDate.slice(5))}</span>`:''}</a>`),
     ...L.cs.map(c=>`<a class="isf" onclick="czOpenCase('${c.id}')"><span class="bg warn">RCA</span><span style="flex:1">${esc(c.CaseNo)} · ${esc(c.Title||'')}</span><span class="bg inf">${esc(c.Stage)}</span></a>`)].join('');
   const of=issOpenFollow(i);
-  return `<div class="row noprint" style="margin-bottom:10px"><a class="lk" onclick="state.issId=null;render()">← 이슈 목록</a></div>
-  <div class="card">
+  return `<div class="card">
     <div class="row" style="gap:8px;align-items:center"><span class="mono muted">${esc(i.no)}</span><span class="bg ${ISS_UCLS[i.urg]||'mut'}">${esc(i.urg||'보통')}</span>${i.special?'<span class="bg svA">CC/SC 특별특성</span>':''}<span class="bg ${ISS_SCLS[st]}">${st}</span>
-      <h2 style="margin:0;font-size:20px">${esc(i.title)}</h2><span style="flex:1"></span>
-      ${RO?'':`${i.closedAt?`<button class="b" onclick="issReopen('${i.id}')">다시 열기</button>`:''}<button class="b" onclick="editIssue('${i.id}')">수정</button><button class="b d" onclick="delIssue('${i.id}')">삭제</button>`}</div>
+      <h2 style="margin:0;font-size:18px">${esc(i.title)}</h2></div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-top:14px;font-size:13px">
       ${kv('발견',esc(issAt(i.at)),esc([i.source,i.loc].filter(Boolean).join(' · ')))}
       ${kv('품목 (추정)',esc(i.partNo||'미정'),p?esc(`${p.name} · ${supName(p.supplierId)||'협력사 미지정'}`):'')}
