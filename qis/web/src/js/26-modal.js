@@ -34,6 +34,7 @@ async function doUndo(){
   save();undoBusy=false;render();toast('되돌렸습니다');
 }
 function openModal(title,body,btns){
+  delete $('#modal').dataset.iss;   // 이슈 상세 창 표시 (11-issue.js issShow 가 다시 붙임)
   $('#mt').textContent=title;
   $('#mbody').innerHTML=`<form id="mf" onsubmit="return false">${body}</form>`;
   const f=$('#mfoot');f.innerHTML='';
@@ -46,6 +47,10 @@ async function closeModal(force){
     if(!await askConfirm({title:'작성 중인 내용이 있습니다',msg:'저장하지 않고 닫으면 입력한 내용이 사라집니다.',ok:'저장 안 하고 닫기'}))return;
   }
   mfDirty=false;$('#modal').classList.remove('on');cbClose();
+  // 이슈 상세 창을 닫음 → 보고 있던 이슈 없음. 상세에서 연 다른 창(수정 · 불량 등록 …)을 닫음 → 상세로 돌아감
+  const m=$('#modal');
+  if(m.dataset.iss){delete m.dataset.iss;state.issId=null}
+  else if(state.issId&&state.tab==='issue'&&issById(state.issId))issShow(state.issId);
 }
 document.addEventListener('keydown',e=>{
   if($('#lb').classList.contains('on')){if(e.key==='Escape')closeLb();if(e.key==='ArrowLeft')lbMove(-1);if(e.key==='ArrowRight')lbMove(1);return}
