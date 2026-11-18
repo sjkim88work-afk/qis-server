@@ -70,10 +70,10 @@ function issOpen(id){if(!issById(id))return;state.tab='issue';state.issId=id;sta
 function issShow(id,keep){
   const i=issById(id),m=$('#modal');if(!i)return;
   // 다시 그릴 때: 쓰던 기록 입력 · 스크롤 위치 유지
-  const old=keep&&m.dataset.iss===id?{v:['isK','isAt','isWho','isTx'].map(k=>$('#'+k)?$('#'+k).value:null),top:m.scrollTop}:null;
+  const old=keep&&m.dataset.iss===id?{v:['isK','isAt','isWho','isTx'].map(k=>$('#'+k)?$('#'+k).value:null),top:$('#mbody').scrollTop}:null;
   openModal(`${i.no} 이슈`,issDetailHTML(i),[...(RO?[]:[{label:'삭제',cls:'d',fn:()=>delIssue(id)},...(i.closedAt?[{label:'다시 열기',fn:()=>issReopen(id)}]:[]),{label:'수정',fn:()=>editIssue(id)}]),{label:'닫기',fn:closeModal}]);
   m.dataset.iss=id;
-  if(old){['isK','isAt','isWho','isTx'].forEach((k,n)=>{if($('#'+k)&&old.v[n]!=null)$('#'+k).value=old.v[n]});m.scrollTop=old.top;mfDirty=!!(old.v[3]||'').trim()}
+  if(old){['isK','isAt','isWho','isTx'].forEach((k,n)=>{if($('#'+k)&&old.v[n]!=null)$('#'+k).value=old.v[n]});$('#mbody').scrollTop=old.top;mfDirty=!!(old.v[3]||'').trim()}
 }
 // 화면을 다시 그린 뒤: 상세 창이 떠 있으면 갱신, 아무 창도 없으면 '보고 있던 이슈' 표시를 지움
 function issSync(){
