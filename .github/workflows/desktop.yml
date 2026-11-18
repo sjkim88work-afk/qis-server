@@ -204,7 +204,12 @@ jobs:
           fi
           FILES="QIS-${{ matrix.name }}.zip"
           [ -f QIS-Setup.exe ] && FILES="$FILES QIS-Setup.exe"      # 서명 인증서가 있을 때만 생김
-          gh release upload "$TAG" $FILES --clobber -R "$GITHUB_REPOSITORY"
+          # 릴리스를 방금 만들었으면 잠깐 "release not found" 가 날 수 있음(v1.4.7 맥 빌드) → 몇 번 다시 시도
+          for i in 1 2 3 4 5; do
+            if gh release upload "$TAG" $FILES --clobber -R "$GITHUB_REPOSITORY"; then break; fi
+            [ "$i" = 5 ] && exit 1
+            echo "upload failed (try $i) - retrying"; sleep $((i*5))
+          done
 
   release:
     needs: build
