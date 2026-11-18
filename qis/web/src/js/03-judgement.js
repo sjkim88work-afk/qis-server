@@ -105,7 +105,8 @@ function ncrReasons(d){
   const v=sevOf(d);if(v.grade==='C')return [];
   return [`심각도 ${v.grade} (${v.score}점${v.forced.length?' · '+v.forced.join(', '):''}) → ${v.resp}`];
 }
-// 단순 통보는 회신이 필요 없으므로, 통보하면 ‘통보 완료’ — 이후 유효성 검증(재발 확인)만 남음
+// 단순 통보는 회신 · 유효성 검증이 필요 없으므로, 협력사에 통보하면 바로 ‘종결’
+// (재발하면 검증 결과에 ‘무효(재발)’을 넣어 ‘검증 무효’로 되돌릴 수 있음)
 // 협력사 통보 여부 — 통보일이 있거나, 이미 회신·처리가 진행됐으면 통보한 것으로 봄
 const ncrNotified=n=>!!(n.notifyDate||n.replyDate||n.d3Date||n.validity==='적정'||n.verifyDate);
 const NOTIFY_GRACE=1; // 발행 후 이 일수가 지나도 통보 안 하면 ‘통보 지연’
@@ -115,12 +116,14 @@ function ncrStatus(n){
   if(n.verifyDate&&n.verifyResult==='유효')return '종결';
   if(n.verifyDate&&String(n.verifyResult||'').startsWith('무효'))return '검증 무효';
   if(!ncrNotified(n))return '미통보';
-  if(n.reqType==='단순 통보')return '통보 완료(검증대기)';
+  if(n.reqType==='단순 통보')return '종결';
   if(n.validity==='적정')return '승인(검증대기)';
   if(n.replyDate)return n.validity==='보완요청'?'보완요청':'대책서 검토';
   if(n.requestDate)return '대책요청';
   return '발행';
 }
+// 종결일 — 유효성 검증일, 단순 통보(검증 없음)는 협력사 통보일
+const ncrCloseDate=n=>ncrStatus(n)!=='종결'?'':n.verifyDate||(n.reqType==='단순 통보'?n.notifyDate||n.issueDate||'':'');
 /* ---- 불량 단계 (자동) · 유효성 검증 (별도) ---- */
 function defStage(d){
   if(d.closed)return{done:true,label:'완료(수동)',cls:'ok'};
@@ -128,7 +131,7 @@ function defStage(d){
   if(n){
     const st=ncrStatus(n);
     if(st==='검증 무효')return{label:'재발 — 재대책 필요',cls:'bad'};
-    if(n.reqType==='단순 통보')return ncrNotified(n)&&(d.disposition||st==='종결')?{done:true,label:'완료(통보)',cls:'ok'}:{label:ncrNotified(n)?'처리 대기':'NCR 통보 전',cls:'warn'};
+    if(n.reqType==='단순 통보')return ncrNotified(n)&&(d.disposition||n.verifyDate)?{done:true,label:'완료(통보)',cls:'ok'}:{label:ncrNotified(n)?'처리 대기':'NCR 통보 전',cls:'warn'};
     if(n.validity==='적정')return{done:true,label:'완료(대책 승인)',cls:'ok'};
     if(st==='종결')return{done:true,label:'완료(검증 종결)',cls:'ok'};
     return{label:{'미통보':'NCR 통보 전','발행':'대책 요청 전','대책요청':'대책서 대기','대책서 검토':'대책서 검토','보완요청':'대책서 보완'}[st]||st,cls:st==='보완요청'?'warn':'inf'};
@@ -182,6 +185,7 @@ const icaNeed=d=>!d.ncrId&&!d.closed&&d.resp==='사내'&&icaLevel(d)!==ICA_NONE&
 const isDone=d=>defStage(d).done;
 function verifyInfo(n){
   if(!n)return null;
+  if(n.reqType==='단순 통보'&&!n.verifyDate)return null; // 단순 통보는 유효성 검증 대상이 아님
   if(n.verifyDate&&n.verifyResult==='유효')return{k:'ok',label:'검증 완료',cls:'ok'};
   if(n.verifyDate&&String(n.verifyResult||'').startsWith('무효'))return{k:'ng',label:'재발(검증 무효)',cls:'bad'};
   const due=n.verifyDue;if(!due)return{k:'wait',label:'검증 대기',cls:'mut'};
@@ -194,14 +198,13 @@ function stageBadges(d){
 function ncrSteps(n){
   const t=today(),info=n.reqType==='단순 통보',st=ncrStatus(n),closed=st==='종결';
   const S=[{l:'발행',d:n.issueDate,done:true},{l:'협력사 통보',d:n.notifyDate||(ncrNotified(n)?'':addDays(n.issueDate||today(),NOTIFY_GRACE)),done:ncrNotified(n)||closed,due:!ncrNotified(n)&&n.issueDate?addDays(n.issueDate,NOTIFY_GRACE):''}];
-  if(info){S.push({l:'처분 확인',d:n.verifyDate,done:!!n.verifyDate||closed});}
-  else{
+  if(!info){
     S.push({l:'D3 봉쇄',d:n.d3Date||n.d3Due,done:!!n.d3Date||!!n.replyDate,due:!n.d3Date&&n.d3Due,skip:!n.d3Date&&!n.d3Due});
     S.push({l:'대책서 회신',d:n.replyDate||n.dueDate,done:!!n.replyDate,due:!n.replyDate&&n.dueDate});
     {const ad=n.replyDate&&!n.validity?addDays(n.replyDate,num(db.settings.approveDays)||3):'';S.push({l:'대책 승인',d:n.approvedDate||ad,done:n.validity==='적정',due:n.validity==='적정'?'':ad})}
     S.push({l:'유효성 검증',d:n.verifyDate||n.verifyDue,done:!!(n.verifyDate&&n.verifyResult==='유효'),due:!n.verifyDate&&n.verifyDue});
   }
-  S.push({l:'종결',d:closed?n.verifyDate:'',done:closed});
+  S.push({l:'종결',d:ncrCloseDate(n),done:closed});
   let cur=S.findIndex(x=>!x.done&&!x.skip);if(cur<0)cur=S.length;
   S.forEach((x,i)=>{x.state=i<cur||x.done?'past':i===cur?'cur':'';x.late=!x.done&&x.due&&t>x.due});
   return{S,cur,closed,bad:st==='검증 무효'};
@@ -297,13 +300,13 @@ function ncrFlags(n){
     requestLate:notifyLate(n),
     d3Late:!info&&ncrNotified(n)&&!!(n.d3Due&&!n.d3Date&&!n.replyDate&&t>n.d3Due),
     replyLate:!info&&ncrNotified(n)&&!!(n.requestDate&&!n.replyDate&&n.dueDate&&t>n.dueDate),
-    verifyLate:!!((st==='승인(검증대기)'||st==='통보 완료(검증대기)')&&n.verifyDue&&t>n.verifyDue),
-    verifySoon:!!((st==='승인(검증대기)'||st==='통보 완료(검증대기)')&&n.verifyDue&&t<=n.verifyDue&&diffDays(t,n.verifyDue)<=3),
+    verifyLate:!!(st==='승인(검증대기)'&&n.verifyDue&&t>n.verifyDue),
+    verifySoon:!!(st==='승인(검증대기)'&&n.verifyDue&&t<=n.verifyDue&&diffDays(t,n.verifyDue)<=3),
     farLate:farState(n)==='지연',
     rework:st==='검증 무효'
   };
 }
-const ST_CLS={'미통보':'warn','통보 완료(검증대기)':'ok','발행':'mut','대책요청':'inf','보완요청':'warn','대책서 검토':'inf','승인(검증대기)':'ok','검증 무효':'bad','유효성검증':'inf','종결':'ok','진행':'warn','완료':'ok'};
+const ST_CLS={'미통보':'warn','발행':'mut','대책요청':'inf','보완요청':'warn','대책서 검토':'inf','승인(검증대기)':'ok','검증 무효':'bad','유효성검증':'inf','종결':'ok','진행':'warn','완료':'ok'};
 const stB=s=>`<span class="bg ${ST_CLS[s]||'mut'}">${esc(s)}</span>`;
 function dday(due,done){
   if(!due)return '<span class="muted">-</span>';

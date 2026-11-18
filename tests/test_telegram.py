@@ -100,6 +100,22 @@ class FakeTG:
         return {"message_id": 1}
 
 
+def test_notice_only_ncr_closes_without_verify():
+    # 단순 통보 NCR은 유효성 검증 없이 통보하면 종결 (화면의 ncrStatus와 같아야 함)
+    from qis.telegram import ncr_late
+    n = {"reqType": "단순 통보", "issueDate": d(-40)}
+    assert ncr_status(n) == "미통보"
+    n["notifyDate"] = d(-39)
+    n["verifyDue"] = d(-10)                              # 예전에 자동으로 들어간 기한이 남아 있어도
+    assert ncr_status(n) == "종결"
+    assert ncr_late(n, T) == []                          # 유효성 검증 지연으로 세지 않음
+    n.update(verifyDate=d(-1), verifyResult="무효(재발)")
+    assert ncr_status(n) == "검증 무효"                    # 재발은 계속 기록할 수 있음
+    m = {"reqType": "8D 보고서", "issueDate": d(-40), "notifyDate": d(-39), "requestDate": d(-39), "replyDate": d(-30), "validity": "적정", "verifyDue": d(-10)}
+    assert ncr_status(m) == "승인(검증대기)"
+    assert [x["l"] for x in ncr_late(m, T)] == ["유효성 검증"]
+
+
 def test_admin_api_and_token_hidden(env):
     app, cfg = env
     fake = FakeTG()

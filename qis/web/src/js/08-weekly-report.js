@@ -2,7 +2,7 @@
 function weekReport(){
   const w=reportWin(),S=db.settings,to=today(),from=addDays(to,-6),nx7=addDays(to,7),inR=d=>!!d&&d>=from&&d<=to;
   const ds=db.defects.filter(d=>inR(d.date)).sort((a,b)=>(a.date||'').localeCompare(b.date||''));
-  const nNew=db.ncrs.filter(n=>inR(n.issueDate)),nRep=db.ncrs.filter(n=>inR(n.replyDate)),nOk=db.ncrs.filter(n=>inR(n.approvedDate)),nClose=db.ncrs.filter(n=>ncrStatus(n)==='종결'&&inR(n.verifyDate));
+  const nNew=db.ncrs.filter(n=>inR(n.issueDate)),nRep=db.ncrs.filter(n=>inR(n.replyDate)),nOk=db.ncrs.filter(n=>inR(n.approvedDate)),nClose=db.ncrs.filter(n=>inR(ncrCloseDate(n)));
   const cNew=db.cases.filter(c=>inR(c.Created)),cClose=db.cases.filter(c=>c.Status==='종결'&&inR(c.CloseDate));
   const P=progCases(),late=P.filter(c=>c.late.length).sort((a,b)=>b.late[0].n-a.late[0].n),next=P.filter(c=>c.next&&c.next.nextDate>to&&c.next.nextDate<=nx7).sort((a,b)=>a.next.nextDate.localeCompare(b.next.nextDate));
   const nudges=db.ncrs.flatMap(n=>nudgeLogs(n).filter(l=>inR(l.date)).map(l=>({n,l})));
@@ -27,7 +27,7 @@ function weekReport(){
     <div class="${late.length?'r':''}"><span>지연 중인 건 (${to})</span><b>${late.length}</b><span>다음 7일 기한 ${next.length}건</span></div></div>
   <div class="sec"><h2>1. 이번 주 특이사항</h2><div class="scr" style="color:#1f5fbf;margin-bottom:4px">✎ 점선 칸은 인쇄 직전에 바로 쓸 수 있습니다 (저장되지 않음)</div><table class="memo"><tr><th style="width:17%">특이사항</th><td class="ed" contenteditable></td></tr><tr><th>다음 주 계획</th><td class="ed" contenteditable></td></tr></table></div>
   <div class="sec"><h2>2. 신규 불량 (${ds.length}건)</h2>${tb(['발생일','발생처','심각도','협력사','부품','유형','수량','진행'],ds.map(d=>[esc(d.date),esc(d.source),sevOf(d).grade,esc(supName(d.supplierId)),`${esc(d.partNo)} ${esc(d.partName)}`,esc(d.type),num(d.qty).toLocaleString(),esc(defStage(d).label)]),'이번 주 등록된 불량 없음')}</div>
-  <div class="sec"><h2>3. NCR 진행</h2>${tb(['구분','NCR','협력사','부품','일자','상태'],[...nNew.map(n=>['발행',n,n.issueDate]),...nRep.map(n=>['대책서 회신',n,n.replyDate]),...nOk.map(n=>['대책서 승인',n,n.approvedDate]),...nClose.map(n=>['종결',n,n.verifyDate]),...nudges.map(x=>['독촉',x.n,x.l.date])].map(([k,n,d])=>[k,esc(n.no),esc(supName(n.supplierId)),`${esc(n.partNo||'')} ${esc(n.partName||'')}`,esc(d),esc(ncrStatus(n))]),'이번 주 NCR 변동 없음')}</div>
+  <div class="sec"><h2>3. NCR 진행</h2>${tb(['구분','NCR','협력사','부품','일자','상태'],[...nNew.map(n=>['발행',n,n.issueDate]),...nRep.map(n=>['대책서 회신',n,n.replyDate]),...nOk.map(n=>['대책서 승인',n,n.approvedDate]),...nClose.map(n=>['종결',n,ncrCloseDate(n)]),...nudges.map(x=>['독촉',x.n,x.l.date])].map(([k,n,d])=>[k,esc(n.no),esc(supName(n.supplierId)),`${esc(n.partNo||'')} ${esc(n.partName||'')}`,esc(d),esc(ncrStatus(n))]),'이번 주 NCR 변동 없음')}</div>
   <div class="sec"><h2>4. RCA 진행</h2>${tb(['구분','RCA','제목','TIER','일자','단계'],[...cNew.map(c=>['등록',c,c.Created]),...cClose.map(c=>['종결',c,c.CloseDate])].map(([k,c,d])=>[k,esc(c.CaseNo),esc(c.Title),esc(c.Tier||''),esc(d),esc(c.Stage)]),'이번 주 RCA 등록 · 종결 없음')}</div>
   <div class="sec"><h2>5. 지연 중인 건 (${late.length}건)</h2>${tb(['구분','건','협력사','지연 내용','담당'],late.map(c=>[kind(c),esc(c.title),esc(c.sup),esc(lateTxt(c.late)),esc(c.owner)]),'지연 건 없음')}</div>
   <div class="sec"><h2>6. 다음 7일 기한 (${next.length}건)</h2>${tb(['기한','구분','건','협력사','내용'],next.map(c=>[esc(c.next.nextDate),kind(c),esc(c.title),esc(c.sup),esc(c.next.next)]),'다음 7일 안에 돌아오는 기한 없음')}</div>
