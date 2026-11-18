@@ -170,6 +170,15 @@ def main(seed_path):
             # 상세 창에서 기록 추가 → 창이 그대로 열린 채 갱신 · 수정 창을 닫으면 상세로 돌아옴
             A.fill("#isTx", "창에서 쓴 기록"); A.click("#modal button:has-text('기록 추가')"); A.wait_for_timeout(400)
             ok(A.locator("#modal.on").count() == 1 and "창에서 쓴 기록" in A.inner_text("#modal .isl"), "상세 창에서 기록 추가 → 창 유지 · 갱신")
+            # 기록 수정: 사유 없이도 저장 · 사유를 적으면 이력에 남음 · 수정 전 내용 보관
+            A.click("#modal .isl li:has-text('창에서 쓴 기록') button:has-text('수정')"); A.wait_for_timeout(300)
+            A.fill("#ieTx", "창에서 쓴 기록 (고침)"); A.click("#modal button:has-text('수정 저장')"); A.wait_for_timeout(400)
+            ok(A.evaluate("i=>{const l=issById(i).logs.find(x=>x.text==='창에서 쓴 기록 (고침)');return !!l&&l.edits.length===1&&l.edits[0].reason===''&&l.edits[0].prev.text==='창에서 쓴 기록'}", iid), "기록 수정: 사유 없이 저장 · 수정 전 내용 보관")
+            A.click("#modal .isl li:has-text('창에서 쓴 기록 (고침)') button:has-text('수정')"); A.wait_for_timeout(300)
+            A.fill("#ieTx", "창에서 쓴 기록 (두 번 고침)"); A.fill("#ieWhy", "오타 수정"); A.click("#modal button:has-text('수정 저장')"); A.wait_for_timeout(400)
+            ok(A.evaluate("i=>{const l=issById(i).logs.find(x=>x.text==='창에서 쓴 기록 (두 번 고침)');return !!l&&l.edits.length===2&&l.edits[1].reason==='오타 수정'}", iid) and "수정 2회" in A.inner_text("#modal .isl") and "오타 수정" in A.inner_text("#modal .isl"), "기록 수정: 사유가 이력에 남고 화면에 표시")
+            A.click("#modal .isl li:has-text('두 번 고침') button:has-text('수정')"); A.wait_for_timeout(300); A.click("#modal button:has-text('수정 저장')"); A.wait_for_timeout(300)
+            ok(A.evaluate("i=>issById(i).logs.find(x=>x.text==='창에서 쓴 기록 (두 번 고침)').edits.length===2", iid), "바꾼 것 없이 저장 → 이력 늘지 않음")
             A.click("#mfoot button:has-text('수정')"); A.wait_for_timeout(300)
             ok(A.locator("#mt").inner_text().endswith("수정"), "상세 → 수정 창")
             A.evaluate("closeModal(true)"); A.wait_for_timeout(300)
