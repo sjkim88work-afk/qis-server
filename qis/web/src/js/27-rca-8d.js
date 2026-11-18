@@ -134,7 +134,7 @@ const CZ_TABS=[
     F('CauseOccur','발생 원인','textarea',null,{w:2}),F('CauseEscape','유출 원인 (왜 검출되지 않았나)','textarea',null,{w:2}),
     F('CauseSystem','시스템 원인 (왜 시스템이 막지 못했나)','textarea',null,{w:4})]},
   {id:'far',label:'FAR 회신',showTab:c=>czUseFar(c),note:'점수 기준 — 10 요구 충족·근거 완비 / 7 충족하나 근거 미흡 / 4 형식적 회신 / 0 미회신. 총점 24 이상 합격, 15~23 조건부, 15 미만 불합격.',fields:[
-    F('FARIssueDate','FAR 발행일','date'),F('FARDue','D+3 / D+7 / D+14 마감','calc',null,{w:2}),F('FARTotal','FAR 총점 (30점)','calc'),
+    F('FARIssueDate','FAR 발행일','date',null,{hint:c=>typeof invFarSrc==='function'&&invFarSrc(c.DefectIds)?'귀책 조사의 FAR 요청일을 그대로 씁니다 — 수정은 귀책 조사에서':''}),F('FARDue','D+3 / D+7 / D+14 마감','calc',null,{w:2}),F('FARTotal','FAR 총점 (30점)','calc'),
     F('D3Reply','D+3 즉시조치 회신일','date'),F('D3Score','D+3 점수','select','Score'),
     F('D7Reply','D+7 근본원인 회신일','date'),F('D7Score','D+7 점수','select','Score'),
     F('D14Reply','D+14 영구대책 회신일','date'),F('D14Score','D+14 점수','select','Score')]},
@@ -754,6 +754,8 @@ function czSyncCase(c){
     if(dp.length===1&&ds.every(d=>d.disposition)&&CZ_OPT.Disposition.includes(dp[0]))set('Disposition',dp[0]);
   }
   if(!has(c.RcaScope)&&CZ_STAGES.indexOf(c.Stage)>3)set('RcaScope',c.NcrId?'없음':'발생');
+  // FAR 발행일 — 연결 불량의 귀책 조사에 FAR 요청일이 있으면 그 값을 씀 (따로 입력하지 않음)
+  if(czUseFar(c)){const fs=typeof invFarSrc==='function'?invFarSrc(c.DefectIds):null;if(fs)set('FARIssueDate',fs.inv.farReq)}
   // 1) 연결 NCR 상태를 사건 흐름에 반영
   const n=czNcr(c);
   if(n&&czOpen(c)){
@@ -770,7 +772,7 @@ function czSyncCase(c){
   }
   if(ch)touch(c);return ch;
 }
-function czSyncAll(){let n=0;try{(db.cases||[]).forEach(c=>{if(czSyncCase(c))n++})}catch(e){console.error(e)}return n}
+function czSyncAll(){let n=0;try{if(typeof farSyncAll==='function')farSyncAll()}catch(e){console.error(e)}try{(db.cases||[]).forEach(c=>{if(czSyncCase(c))n++})}catch(e){console.error(e)}return n}
 // RCA로 관리 중인 불량 · NCR (대시보드 · 진행 현황에서 중복 표시하지 않음)
 function czOwns(o,kind){
   if(!o||!db.cases)return false;

@@ -110,7 +110,7 @@ function editNcr(id,preset,mode){
   const S=db.settings;
   const n=id?{...db.ncrs.find(x=>x.id===id)}:{issueDate:today(),owner:S.owners[0]||'',...(preset||{})};
   curLinks=[...(n.defectIds||[])];
-  if(!farOn(n)){const src=invFarSrc(curLinks);if(src){n.far=farFromInv(src);n._farInh=defLabel(src)}}
+  {const r=farAlign(n.far,curLinks,false);if(r){n.far=r.far;n._farInh=defLabel(r.src);n._farSrcId=r.src.id}}
   curStock=(n.stock&&n.stock.length?n.stock:STOCK_DEF.map(l=>({loc:l}))).map(r=>({loc:r.loc||'',stocked:r.stocked??r.qty??'',ng:r.ng??''}));
   curExcl=new Set(n.photoExcl||[]);
   curContain=(n.contain&&n.contain.length?n.contain:CONTAIN_DEF.map(l=>({loc:l}))).map(r=>({loc:r.loc||'',target:r.target??'',sorted:r.sorted??'',ng:r.ng??'',done:r.done||''}));
@@ -484,33 +484,49 @@ function farFormVals(){const f=$('#mf');if(!f||!f.far_reqDate)return null;
     sampleQty:f.far_sampleQty.value.trim(),shipDate:f.far_shipDate.value,shipRef:f.far_shipRef.value.trim(),replyDate:f.far_replyDate.value,verdict:f.far_verdict.value,summary:f.far_summary.value.trim(),review:f.far_review.value,note:f.far_note.value.trim()}}
 function farHTML(n){const f=n.far||{},on=farOn(n);
   return `<details id="farWrap" open style="margin-top:14px"><summary class="sec" style="cursor:pointer;list-style:revert">불량 분석 요청 (FAR) <span class="muted" style="font-weight:normal;font-size:12px">— 선택 · 반품 시료의 고장 분석을 협력사에 요청할 때만 씁니다 (8D·간이 대책서와 함께 사용 가능)</span> ${farBadge(n)}</summary>
-  ${n._farInh?`<div class="banner" style="margin:0 0 10px;background:var(--pri2);border-color:transparent;color:var(--ink)">귀책 조사(${esc(n._farInh)})에서 한 FAR 내용을 불러왔습니다. 저장하면 이 NCR에 기록됩니다.</div>`:''}
+  ${n._farInh?`<div class="banner" style="margin:0 0 10px;background:var(--pri2);border-color:transparent;color:var(--ink)">요청일 · 회신 기한 · 회신일 · 시료 수량 · 분석 결과 요약은 <b>귀책 조사</b>(${esc(n._farInh)})에서 관리합니다. 여기서는 읽기만 됩니다. <a class="lk" onclick="farGoInv('${n._farSrcId}')">귀책 조사 열기</a></div>`:''}
   <div class="fg">
-    <label>FAR 요청일<input type="date" name="far_reqDate" value="${esc(f.reqDate)}" onchange="farAutoDue()"></label>
-    <label title="비우면 요청일 + ${num(db.settings.farDays)||5}영업일">분석 회신 기한<input type="date" name="far_due" value="${esc(f.due)}"></label>
+    <label>FAR 요청일<input type="date" name="far_reqDate" value="${esc(f.reqDate)}" onchange="farAutoDue()" ${n._farInh?'readonly style="background:var(--bg2,#f1f3f5);color:var(--sub)" title="귀책 조사에서 수정"':''}></label>
+    <label title="비우면 요청일 + ${num(db.settings.farDays)||5}영업일">분석 회신 기한<input type="date" name="far_due" value="${esc(f.due)}" ${n._farInh?'readonly style="background:var(--bg2,#f1f3f5);color:var(--sub)" title="귀책 조사에서 수정"':''}></label>
     <label>요청 목적<select name="far_purpose">${opts(FAR_PURPOSE,f.purpose||'',true)}</select></label>
-    <label>시료 수량<input name="far_sampleQty" value="${esc(f.sampleQty)}" placeholder="예: 5 EA"></label>
+    <label>시료 수량<input name="far_sampleQty" value="${esc(f.sampleQty)}" placeholder="예: 5 EA" ${n._farInh?'readonly style="background:var(--bg2,#f1f3f5);color:var(--sub)" title="귀책 조사에서 수정"':''}></label>
     <label class="full">요청 분석 항목<span class="checks" style="display:flex;flex-wrap:wrap;gap:4px 14px;padding-top:3px">${FAR_ITEMS.map(x=>`<label style="flex-direction:row;align-items:center;gap:4px;color:var(--ink)"><input type="checkbox" name="far_item" value="${esc(x)}" ${(f.items||[]).includes(x)?'checked':''}>${esc(x)}</label>`).join('')}</span></label>
     <label>시료 발송일<input type="date" name="far_shipDate" value="${esc(f.shipDate)}"></label>
     <label>송장 · 반출증 번호<input name="far_shipRef" value="${esc(f.shipRef)}"></label>
-    <label>분석 결과 회신일<input type="date" name="far_replyDate" value="${esc(f.replyDate)}"></label>
+    <label>분석 결과 회신일<input type="date" name="far_replyDate" value="${esc(f.replyDate)}" ${n._farInh?'readonly style="background:var(--bg2,#f1f3f5);color:var(--sub)" title="귀책 조사에서 수정"':''}></label>
     <label>협력사 분석 판정<select name="far_verdict">${opts(FAR_VERDICT,f.verdict||'',true)}</select></label>
-    <label class="full">분석 결과 요약<textarea name="far_summary" style="min-height:52px" placeholder="예: 파단면 관찰 결과 피로 파괴, 열처리 경도 HRC 38 (규격 42~48) 미달">${esc(f.summary)}</textarea></label>
+    <label class="full">분석 결과 요약<textarea name="far_summary" ${n._farInh?'readonly title="귀책 조사에서 수정"':''} style="min-height:52px${n._farInh?';background:var(--bg2,#f1f3f5);color:var(--sub)':''}" placeholder="예: 파단면 관찰 결과 피로 파괴, 열처리 경도 HRC 38 (규격 42~48) 미달">${esc(f.summary)}</textarea></label>
     <label>당사 검토<select name="far_review">${opts(FAR_REVIEW,f.review||'',true)}</select></label>
     <label class="full" style="grid-column:span 3">검토 의견 · 비고<input name="far_note" value="${esc(f.note)}" placeholder="예: 경도 측정 성적서 원본 추가 요청"></label>
   </div>
-  <div class="row" style="margin-top:6px;gap:8px"><button type="button" class="b s" onclick="ncrFarPrint()">FAR 요청서 출력</button>${invFarSrc(curLinks)?'<button type="button" class="b s" onclick="farLoadInv()">귀책 조사 FAR 가져오기</button>':''}<span class="muted" style="font-size:12px">분석 보고서 · 시료 발송 증빙은 ‘조사 · 진행 기록’에 첨부하면 기록과 함께 남습니다. 요청일을 비우면 FAR 없음으로 처리됩니다.</span></div></details>`}
+  <div class="row" style="margin-top:6px;gap:8px"><button type="button" class="b s" onclick="ncrFarPrint()">FAR 요청서 출력</button><span class="muted" style="font-size:12px">분석 보고서 · 시료 발송 증빙은 ‘조사 · 진행 기록’에 첨부하면 기록과 함께 남습니다. 요청일을 비우면 FAR 없음으로 처리됩니다.</span></div></details>`}
 function farFromInv(d){const iv=d.inv||{};
   return{reqDate:iv.farReq,due:iv.farDue||'',purpose:'귀책 판정',items:[],sampleQty:iv.sample||'',shipDate:'',shipRef:'',replyDate:iv.farRecv||'',
     verdict:iv.verdict==='협력사'?'협력사 귀책 인정':iv.verdict==='공동'?'추가 분석 필요':iv.verdict==='사내'?'귀책 불인정':iv.verdict==='원인 불명'?'원인 불명·재현 안 됨':'',
     summary:iv.farResult||'',review:iv.verdict?'수용':'',note:`불량 귀책 조사에서 이어받음 (${defLabel(d)})`}}
-function invFarSrc(ids){return (ids||[]).map(i=>db.defects.find(d=>d.id===i)).filter(d=>d&&d.inv&&d.inv.farReq).sort((a,b)=>(b.inv.farReq||'').localeCompare(a.inv.farReq||''))[0]||null}
-function farLoadInv(){
-  const f=$('#mf'),d=invFarSrc(curLinks);if(!f||!d){toast('연결된 불량에 귀책 조사 FAR 기록이 없습니다');return}
-  const v=farFromInv(d),set=(k,x)=>{if(f['far_'+k])f['far_'+k].value=x||''};
-  ['reqDate','due','purpose','sampleQty','replyDate','verdict','summary','review','note'].forEach(k=>set(k,v[k]));
-  const w=$('#farWrap');if(w)w.open=true;mfDirty=true;toast('귀책 조사의 FAR 내용을 불러왔습니다 — 저장하면 NCR에 기록됩니다');
+// FAR 은 귀책 조사가 원본 — 요청일 · 회신 기한 · 회신일 · 시료 · 분석 결과 요약은 귀책 조사에만 입력하고 NCR 은 읽어서 보여 줌.
+// NCR 에만 있는 항목(요청 목적 · 분석 항목 · 발송 · 판정 · 당사 검토)은 NCR 에 그대로 둠.
+const FAR_SHARED=[['reqDate','farReq'],['due','farDue'],['replyDate','farRecv'],['sampleQty','sample'],['summary','farResult']];
+// n(NCR)의 FAR 공통 항목을 연결 불량의 귀책 조사 값으로 맞춤. 귀책 조사가 비어 있고 NCR 에만 값이 있으면 귀책 조사로 옮김(옛 기록 보존).
+// 돌려줌: {far, src, chFar, chInv} — src 가 없으면 null
+function farAlign(far,ids,write=true){
+  const src=invFarSrc(ids);if(!src)return null;
+  const iv=src.inv,f=far&&far.reqDate?{...far}:farFromInv(src);let chFar=!(far&&far.reqDate),chInv=false;
+  FAR_SHARED.forEach(([nk,ik])=>{const a=String(iv[ik]??''),b=String(f[nk]??'');
+    if(!a&&b){if(write){iv[ik]=b;chInv=true}}else if(a!==b){f[nk]=a;chFar=true}});
+  return {far:f,src,chFar,chInv};
 }
+// 저장된 모든 NCR 을 귀책 조사에 맞춤 (화면을 그릴 때 · 저장할 때 호출 — 바뀐 것만 고침)
+function farSyncAll(){
+  if(typeof RO!=='undefined'&&RO)return 0;let n=0;
+  (db.ncrs||[]).forEach(x=>{const r=farAlign(x.far,x.defectIds);if(!r)return;
+    if(r.chFar){x.far=r.far;touch(x);n++}if(r.chInv){touch(r.src);n++}});
+  return n;
+}
+function invFarSrc(ids){return (ids||[]).map(i=>db.defects.find(d=>d.id===i)).filter(d=>d&&d.inv&&d.inv.farReq).sort((a,b)=>(b.inv.farReq||'').localeCompare(a.inv.farReq||''))[0]||null}
+// NCR 창에서 귀책 조사로 — 쓰던 내용이 있으면 물어봄
+async function farGoInv(did){if(mfDirty&&!await askConfirm({title:'저장하지 않은 내용이 있습니다',msg:'NCR 창을 닫고 귀책 조사를 엽니다. 쓰던 내용은 사라집니다.',ok:'귀책 조사 열기',danger:false}))return;closeModal(true);state.tab='inv';render();editInv(did)}
+
 function farAutoDue(){const f=$('#mf');if(f.far_reqDate.value&&!f.far_due.value)f.far_due.value=addBiz(f.far_reqDate.value,num(db.settings.farDays)||5);mfDirty=true}
 function ncrFarPrint(){
   const f=farFormVals(),fm=$('#mf');if(!f||!f.reqDate){toast('FAR 요청일을 먼저 입력하세요');return}
@@ -655,6 +671,7 @@ function refreshLinks(){
 }
 function saveNcr(id){
   const o=gather(),S=db.settings,farV=farFormVals();Object.keys(o).forEach(k=>{if(k.startsWith('far_'))delete o[k]});
+  {const r=farV&&farAlign(farV,curLinks);if(r){Object.assign(farV,r.far);if(r.chInv)touch(r.src)}}   // 귀책 조사가 원본
   if(farV){if(farV.reqDate&&!farV.due)farV.due=addBiz(farV.reqDate,num(S.farDays)||5);o.far=farV.reqDate?farV:null;
     if(farV&&!farV.reqDate&&(farV.replyDate||farV.summary||farV.sampleQty)){ncrTab('f');toast('FAR 요청일을 입력하세요 (비우면 FAR 없음으로 처리)');return null}}
   if(!o.issueDate){ncrTab('a');toast('발행일을 입력하세요');return null}

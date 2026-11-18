@@ -280,7 +280,7 @@ function saveInv(id,keep){
   const prev=(d.inv||{}).verdict||'';
   if(iv.verdict){if(!iv.verdictDate)iv.verdictDate=today();d.resp=VERDICT_RESP[iv.verdict]||d.resp}
   else{iv.verdictDate='';if(prev&&d.resp!=='미정')d.resp='미정'}
-  d.inv=iv;touch(d);save();
+  d.inv=iv;touch(d);try{farSyncAll()}catch(e){console.error(e)}save();   // 연결된 NCR 의 FAR 도 같은 값으로
   if(!keep)closeModal(true);render();
   if(!keep&&iv.verdict&&iv.verdict!==prev)setTimeout(()=>offerNcrAfterVerdict([id],iv.verdict),350);
   toast(iv.verdict?`귀책 판정: ${iv.verdict} → ${iv.verdict==='협력사'?'NCR 발행 단계':iv.verdict==='사내'?'사내 대책 단계':iv.verdict==='공동'?'분담·NCR 단계':'완료 처리'}`:'귀책 조사를 저장했습니다');
