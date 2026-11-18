@@ -308,6 +308,24 @@ def main(seed_path):
             A.click("#mfoot button.p:has-text('저장')"); A.wait_for_timeout(900)
             ok(A.evaluate("i=>(db.defects.find(d=>d.id===i).logs||[]).filter(l=>/삭제 시험 기록/.test(l.text)).length", did) == 0, "실행 기록 삭제 → 저장 후 사라짐")
             ok(A.evaluate("i=>(db.defects.find(d=>d.id===i).logs||[]).length", did) == n0, "다른 기록은 그대로")
+            # FAR 단일 원본: 귀책 조사 값이 NCR 의 FAR 로 그대로 반영, NCR 전용 항목은 유지, 귀책 조사가 비어 있으면 NCR 값이 귀책 조사로 옮겨짐
+            r = A.evaluate("""()=>{
+              const d=db.defects.find(x=>!x.deleted&&!x.ncrId)||db.defects[0];
+              d.inv=Object.assign({},d.inv,{farReq:'2026-11-02',farDue:'2026-11-09',farRecv:'',sample:'',farResult:''});touch(d);
+              const n={id:uid(),no:'FAR-TEST',issueDate:today(),supplierId:d.supplierId,defectIds:[d.id],
+                far:{reqDate:'2026-10-01',due:'2026-10-08',purpose:'고장 분석',items:['치수'],sampleQty:'5 EA',shipDate:'2026-11-03',shipRef:'A-1',replyDate:'',verdict:'',summary:'',review:'',note:''}};
+              db.ncrs.push(n);touch(n);farSyncAll();
+              const a={req:n.far.reqDate,due:n.far.due,purpose:n.far.purpose,ship:n.far.shipRef,invSample:d.inv.sample};
+              d.inv.farRecv='2026-11-06';d.inv.farResult='경도 미달';touch(d);farSyncAll();
+              const b={reply:n.far.replyDate,sum:n.far.summary};
+              editNcr(n.id);const ro=document.querySelector('#mf [name=far_reqDate]').readOnly&&document.querySelector('#mf [name=far_summary]').readOnly&&!document.querySelector('#mf [name=far_shipRef]').readOnly;
+              const banner=document.querySelector('#farWrap').innerText.includes('귀책 조사');closeModal(true);
+              db.ncrs=db.ncrs.filter(x=>x!==n);return {a,b,ro,banner};}""")
+            ok(r["a"]["req"] == "2026-11-02" and r["a"]["due"] == "2026-11-09", "FAR: 귀책 조사의 요청일 · 기한이 NCR 에 반영")
+            ok(r["a"]["purpose"] == "고장 분석" and r["a"]["ship"] == "A-1", "FAR: NCR 전용 항목은 그대로")
+            ok(r["a"]["invSample"] == "5 EA", "FAR: 귀책 조사에 없던 시료 수량은 NCR 값이 귀책 조사로 옮겨짐")
+            ok(r["b"]["reply"] == "2026-11-06" and r["b"]["sum"] == "경도 미달", "FAR: 귀책 조사 회신을 고치면 NCR 도 같이 바뀜")
+            ok(r["ro"] and r["banner"], "FAR: NCR 창에서 공통 항목은 읽기 전용 · 귀책 조사 안내")
             # 로그아웃
             A.click("button:has-text('로그아웃')"); A.wait_for_url("**/login")
             ok(True, "로그아웃")
