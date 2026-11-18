@@ -548,7 +548,8 @@ function renderLogsInner(b){
     const tags=[x._new?'<span class="bg warn">저장 전</span>':'',x.void?'<span class="bg bad">취소됨</span>':'',hist.length?`<a class="bg mut" style="cursor:pointer" onclick="lgTogHist('${x.id}')">수정 ${hist.length}회 · 이력</a>`:'',
       lgLate(x)?`<span class="bg warn" title="실행일보다 늦게 작성">사후 기록 · 작성 ${loc(x.at,10).slice(5)}</span>`:''].join(' ');
     const who=[x.party,x.method].filter(Boolean).join(' · ');
-    const acts=own&&!ed&&!vo&&!x.void?`<a class="lk" style="font-size:11px" onclick="lgEdit(${x._i})">수정</a> ${x._new?`<a class="lk" style="font-size:11px;color:var(--bad)" onclick="delLog(${x._i})">삭제</a>`:`<a class="lk" style="font-size:11px;color:var(--bad)" onclick="tl.voiding=${x._i};renderLogs()">취소 처리</a>`}`:x.ro&&!x.auto?'<span class="muted" style="font-size:11px">원본에서 수정</span>':'';
+    const del=`<a class="lk" style="font-size:11px;color:var(--bad)" onclick="delLog(${x._i})">삭제</a>`;
+    const acts=own&&!ed&&!vo&&x.void?del:own&&!ed&&!vo?`<a class="lk" style="font-size:11px" onclick="lgEdit(${x._i})">수정</a> ${x._new?'':`<a class="lk" style="font-size:11px;color:var(--bad)" onclick="tl.voiding=${x._i};renderLogs()">취소 처리</a> `}${del}`:x.ro&&!x.auto?'<span class="muted" style="font-size:11px">원본에서 수정</span>':'';
     if(ed)return `<li class="ed"><div class="lh"><b>기록 수정</b>${saved?' <span class="muted" style="font-size:11.5px">— 원문은 이력으로 보존됩니다</span>':''}</div>
       <div class="cg" style="margin-top:6px"><label>실행일<input type="date" id="leDate" value="${esc(x.date)}" max="${today()}"></label><label>구분<select id="leKind">${opts(LOG_KINDS.includes(x.kind)?LOG_KINDS:[x.kind,...LOG_KINDS],x.kind)}</select></label>
         <label>상대방<input id="leParty" list="lgParties" value="${esc(x.party)}"></label><label>방법<select id="leMethod">${opts(LOG_METHODS,x.method||'',true)}</select></label></div>
@@ -559,7 +560,7 @@ function renderLogsInner(b){
     return `<li class="${x.auto?'au':''} ${x._new?'nw':''} ${x.void?'vd':''}"><div class="lh"><b>${esc(x.date)}</b> <span class="bg ${LOG_CLS[x.kind]||'mut'}">${esc(x.kind)}</span>${x.src?` <span class="bg mut" style="font-weight:normal">${esc(x.src)}</span>`:''}${who?` <span style="font-size:12px">${esc(who)}</span>`:''} <span class="muted" style="font-size:11px">${esc(x.by||'')}</span> ${tags}<span style="flex:1"></span>${acts}</div>
       <div class="lt">${nl(x.text)}</div>${x.result?`<div class="lr"><b>결과</b> ${nl(x.result)}</div>`:''}${lgThumbs(x.photos)}
       ${x.void?`<div class="lv">취소 ${esc(loc(x.void.at))} ${esc(x.void.by||'')} — 사유: ${esc(x.void.reason)}</div>`:''}
-      ${vo?`<div class="lgreason" style="margin-top:6px">취소 사유 *<div class="row" style="gap:6px"><input id="lvReason" placeholder="예: 다른 건 기록을 잘못 입력" style="flex:1"><button type="button" class="b s" onclick="tl.voiding=null;renderLogs(false)">그만두기</button><button type="button" class="b s" style="color:var(--bad);border-color:#f0c4bf" onclick="lgVoid(${x._i})">취소 처리</button></div><span class="muted">기록은 지워지지 않고 취소선과 사유가 남습니다.</span></div>`:''}
+      ${vo?`<div class="lgreason" style="margin-top:6px">취소 사유 *<div class="row" style="gap:6px"><input id="lvReason" placeholder="예: 다른 건 기록을 잘못 입력" style="flex:1"><button type="button" class="b s" onclick="tl.voiding=null;renderLogs(false)">그만두기</button><button type="button" class="b s" style="color:var(--bad);border-color:#f0c4bf" onclick="lgVoid(${x._i})">취소 처리</button></div><span class="muted">취소 처리한 기록은 취소선과 사유가 남습니다. 아예 없애려면 '삭제'를 누르세요.</span></div>`:''}
       ${hist.length&&tl.hist.has(x.id)?`<div class="lhist">${hist.map((h,k)=>`<div><b>${k+1}차 원문</b> <span class="muted">${esc(loc(h.at))} 수정 · ${esc(h.by||'')} · 사유: ${esc(h.reason||'-')}</span><br>${esc(h.date)} · ${esc(h.kind)}${h.party?' · '+esc(h.party):''}${h.method?' · '+esc(h.method):''}<br>${nl(h.text)}${h.result?`<br>결과: ${nl(h.result)}`:''}</div>`).join('')}</div>`:''}</li>`;
   };
   b.innerHTML=plan+comp+warn+head+(L.length?`<ul class="logs">${L.map(item).join('')}</ul>`:'<div class="muted" style="font-size:12px;padding:6px 2px">아직 기록이 없습니다.</div>');
@@ -587,7 +588,11 @@ function saveLog(i){
 }
 function lgVoid(i){const r=($('#lvReason')?.value||'').trim();if(!r){toast('취소 사유를 입력하세요');$('#lvReason')?.focus();return}
   tl.own[i].void={at:now(),by:db.settings.owners[0]||'',reason:r};tl.own[i]._dirty=true;tl.voiding=null;mfDirty=true;renderLogs(false)}
-async function delLog(i){const x=tl.own[i];if(!x._new)return;if(!await askConfirm({title:'저장 전 기록을 지울까요?',items:[`${esc(x.date)} · ${esc(x.kind)}`,esc(x.text.slice(0,60))+(x.text.length>60?'…':'')]}))return;tl.own.splice(i,1);tl.edit=null;renderLogs()}
+// 기록 삭제 — 저장 전 기록은 바로, 저장된 기록(취소된 것 포함)은 확인 뒤 목록에서 없앰. 창을 저장해야 반영됨
+async function delLog(i){const x=tl.own[i];if(!x)return;
+  if(!await askConfirm({title:x._new?'저장 전 기록을 삭제할까요?':'이 기록을 삭제할까요?',items:[`${esc(x.date)} · ${esc(x.kind)}${x.void?' · 취소됨':''}`,esc(x.text.slice(0,60))+(x.text.length>60?'…':'')],
+    note:x._new?'':'삭제하면 실행 기록과 기록 출력에서 사라집니다. 창 아래 [저장]을 눌러야 반영됩니다.',ok:'삭제',danger:true}))return;
+  tl.own.splice(i,1);tl.edit=null;tl.voiding=null;if(!x._new)mfDirty=true;renderLogs(false)}
 // 모달 저장 시 호출: 정리된 기록 · 다음 행동을 돌려주고 새 증빙 사진을 저장소에 넣음
 function tlCommit(){
   const logs=tl.own.map(({_new,_dirty,...x})=>x);
