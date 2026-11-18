@@ -134,7 +134,7 @@ function invSummary(d,id){
   if(r!=='미정'&&!d.inv)return '';
   const st=iv.verdict?`<span class="bg ok">판정: ${esc(iv.verdict)}${iv.verdictDate?' · '+esc(iv.verdictDate):''}</span>${VERDICT_RESP[iv.verdict]!==r?` <span class="bg warn">귀책을 ‘${esc(r)}’(으)로 직접 변경함</span>`:''}`:(()=>{const ii=invInfo(d);return `<span class="bg ${ii.cls}">${esc(ii.label)}</span>`})();
   const facts=[iv.farReq&&`FAR 요청 ${iv.farReq}`,iv.farRecv&&`FAR 회신 ${iv.farRecv}`,cs?`RCA ${cs.CaseNo} · ${cs.Stage}`:(iv.rca||'').trim()&&'사내 분석 메모 있음',iv.share!==''&&iv.share!=null&&iv.verdict==='공동'&&`협력사 부담 ${iv.share}%`].filter(Boolean);
-  return `<div class="sec">귀책 조사 <span class="muted" style="font-weight:normal;font-size:12px">FAR · 사내 분석 · 판정은 ‘귀책 조사’ 탭에서 따로 진행합니다</span></div>
+  return `<div class="sec">귀책 조사 <span class="muted" style="font-weight:normal;font-size:12px">FAR · 사내 분석 · 판정은 ‘FAR’ 탭에서 따로 진행합니다</span></div>
   <div class="route" style="margin-top:0"><div class="ri"><div class="tx">${st}${facts.length?` <span class="muted">${esc(facts.join(' · '))}</span>`:''}${!iv.verdict&&d.date?`<br><span class="muted" style="font-size:12px">원인 불명 검토 기한 ${esc(ntfDue(d))}</span>`:''}</div>
   ${id?`<button type="button" class="b s p" onclick="routeGo(&quot;editInv('${id}')&quot;)">귀책 조사 열기</button>`:'<span class="muted" style="font-size:12px">저장하면 귀책 조사를 시작할 수 있습니다</span>'}</div></div>`;
 }
