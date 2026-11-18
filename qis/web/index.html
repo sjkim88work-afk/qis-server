@@ -2552,7 +2552,7 @@ function editDefect(id,copy,preset){
   <div id="photoBox"></div>
 `;
   const btns=[{label:'취소',fn:closeModal},{label:'저장',cls:'p',fn:()=>saveDefect(id)}];
-  if(id&&!d.ncrId)btns.splice(1,0,{label:'저장 후 NCR 발행',fn:async()=>{const nid=await saveDefect(id);if(nid)ncrFromDefect(nid)}});
+  // NCR 발행은 불량 등록과 별도 — ‘다음 단계’의 NCR 발행 · 불량 목록의 발행 단추 · NCR 탭에서 함
   if(id){btns.unshift({label:'복사해서 새로 등록',fn:async()=>{if(mfDirty&&!await askConfirm({title:'수정한 내용을 저장하지 않고 복사할까요?',msg:'먼저 저장하려면 취소 후 저장을 누르세요.',ok:'복사',danger:false}))return;closeModal(true);editDefect(id,true)}});
     btns.unshift({label:'삭제',cls:'d',fn:()=>delDefect(id)})}
   openModal(id?'불량 상세':'불량 등록',body,btns);
