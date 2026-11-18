@@ -39,8 +39,8 @@ jobs:
       # 서명 없는 설치 프로그램은 백신(V3 등)이 평판 기반으로 막아 zip 보다 불리함 — 인증서 시크릿을 넣으면 자동으로 다시 나옴.
       HAS_WIN_CERT: ${{ secrets.WINDOWS_CERT_PFX_BASE64 != '' }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
       - name: 설치
