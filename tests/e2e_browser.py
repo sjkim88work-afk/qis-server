@@ -326,6 +326,22 @@ def main(seed_path):
             ok(r["a"]["invSample"] == "5 EA", "FAR: 귀책 조사에 없던 시료 수량은 NCR 값이 귀책 조사로 옮겨짐")
             ok(r["b"]["reply"] == "2026-11-06" and r["b"]["sum"] == "경도 미달", "FAR: 귀책 조사 회신을 고치면 NCR 도 같이 바뀜")
             ok(r["ro"] and r["banner"], "FAR: NCR 창에서 공통 항목은 읽기 전용 · 귀책 조사 안내")
+            # 단순 통보 NCR: 유효성 검증 없이 통보하면 종결
+            r = A.evaluate("""() => {
+              const n={id:uid(),no:'N-INFO',issueDate:addDays(today(),-40),reqType:'단순 통보',supplierId:db.suppliers[0].id,defectIds:[]};db.ncrs.push(n);
+              const s0=ncrStatus(n);n.notifyDate=addDays(today(),-39);n.verifyDue=addDays(today(),-10);
+              const s1=ncrStatus(n),fl=ncrFlags(n),steps=ncrSteps(n).S.map(x=>x.l).join('>'),cd=ncrCloseDate(n)===n.notifyDate,vi=verifyInfo(n)===null;
+              editNcr(n.id,null,'verify');const hint=!document.querySelector('#vfInfo').hidden,dueHidden=document.querySelector('#mf [name=verifyDue]').closest('label').style.display==='none';closeModal(true);
+              n.verifyDate=today();n.verifyResult='무효(재발)';const s2=ncrStatus(n);
+              const m={id:uid(),no:'N-8D',issueDate:addDays(today(),-40),reqType:'8D 보고서',notifyDate:addDays(today(),-39),requestDate:addDays(today(),-39),replyDate:addDays(today(),-30),validity:'적정',verifyDue:addDays(today(),-10)};
+              const s3=ncrStatus(m),late3=ncrFlags(m).verifyLate;
+              db.ncrs=db.ncrs.filter(x=>x!==n);return {s0,s1,late:fl.verifyLate||fl.verifySoon,steps,cd,vi,hint,dueHidden,s2,s3,late3};}""")
+            ok(r["s0"] == "미통보" and r["s1"] == "종결", "단순 통보: 통보하면 유효성 검증 없이 종결")
+            ok(not r["late"] and r["vi"] and r["cd"], "단순 통보: 유효성 검증 지연 · 대기로 세지 않고 종결일은 통보일")
+            ok(r["steps"] == "발행>협력사 통보>종결", "단순 통보: 진행 단계에 검증 단계 없음")
+            ok(r["hint"] and r["dueHidden"], "단순 통보: NCR 창에 검증 불필요 안내 · 검증 기한 칸 숨김")
+            ok(r["s2"] == "검증 무효", "단순 통보: 재발은 무효(재발)로 기록할 수 있음")
+            ok(r["s3"] == "승인(검증대기)" and r["late3"], "8D NCR 은 유효성 검증을 그대로 요구")
             # 로그아웃
             A.click("button:has-text('로그아웃')"); A.wait_for_url("**/login")
             ok(True, "로그아웃")

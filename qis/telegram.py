@@ -66,7 +66,7 @@ def ncr_status(n) -> str:
     if not ncr_notified(n):
         return "미통보"
     if n.get("reqType") == "단순 통보":
-        return "통보 완료(검증대기)"
+        return "종결"  # 단순 통보는 유효성 검증 없이 통보로 종결
     if n.get("validity") == "적정":
         return "승인(검증대기)"
     if n.get("replyDate"):
@@ -94,7 +94,7 @@ def ncr_late(n, today: str) -> list[dict]:
         add("D3 봉쇄 회신", n["d3Due"])
     if not info and notified and n.get("requestDate") and not n.get("replyDate") and n.get("dueDate"):
         add("대책서 회신", n["dueDate"])
-    if st in ("승인(검증대기)", "통보 완료(검증대기)") and n.get("verifyDue"):
+    if st == "승인(검증대기)" and n.get("verifyDue"):
         add("유효성 검증", n["verifyDue"])
     far = n.get("far") or {}
     if far.get("reqDate") and not far.get("replyDate") and far.get("due"):

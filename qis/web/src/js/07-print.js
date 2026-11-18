@@ -15,7 +15,7 @@ function dashReport(){
   const ds=db.defects.filter(d=>(d.date||'').startsWith(m)),pds=db.defects.filter(d=>(d.date||'').startsWith(pm));
   const cost=allCostIn(m),pcost=allCostIn(pm),rec=allRecvIn(m),prec=allRecvIn(pm);
   const nNew=db.ncrs.filter(n=>(n.issueDate||'').startsWith(m)).length,pnNew=db.ncrs.filter(n=>(n.issueDate||'').startsWith(pm)).length;
-  const nClose=db.ncrs.filter(n=>ncrStatus(n)==='종결'&&(n.verifyDate||'').startsWith(m)).length,pnClose=db.ncrs.filter(n=>ncrStatus(n)==='종결'&&(n.verifyDate||'').startsWith(pm)).length;
+  const nClose=db.ncrs.filter(n=>ncrCloseDate(n).startsWith(m)).length,pnClose=db.ncrs.filter(n=>ncrCloseDate(n).startsWith(pm)).length;
   const open=db.ncrs.filter(n=>ncrStatus(n)!=='종결'),fl=open.map(n=>({n,f:ncrFlags(n)}));
   const replyLate=fl.filter(x=>x.f.replyLate),verLate=fl.filter(x=>x.f.verifyLate);
   const recs=db.defects.filter(d=>!d.ncrId&&d.date&&diffDays(d.date,today())<=90&&ncrReasons(d).length);

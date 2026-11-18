@@ -60,7 +60,7 @@ const czFar=c=>num(c.D3Score)+num(c.D7Score)+num(c.D14Score);
 const czNcr=c=>c&&c.NcrId?db.ncrs.find(x=>x.id===c.NcrId):null;
 const czNcrSt=c=>{const n=czNcr(c);return n?ncrStatus(n):''};
 const czNcrOk=c=>['승인(검증대기)','종결'].includes(czNcrSt(c));   // 협력사 대책서 승인
-const czNcrDone=c=>czNcrSt(c)==='종결';                          // NCR 유효성 검증 '유효'
+const czNcrDone=c=>czNcrSt(c)==='종결'&&!!(czNcr(c)||{}).verifyDate;                          // NCR 유효성 검증 '유효'
 const czUseFar=c=>c.Response==='FAR'&&!c.NcrId;
 const czNeedOcc=c=>c.RcaScope==='발생'||c.RcaScope==='발생+유출';
 const czNeedEsc=c=>c.RcaScope==='유출'||c.RcaScope==='발생+유출';
@@ -739,9 +739,8 @@ const CZ_NCR_FLOW={
   '대책요청':n=>['협력사','협력사 대책서 회신 확인',n.dueDate||addDays(today(),2)],
   '대책서 검토':n=>['나','협력사 대책서 평가 (NCR '+n.no+')',today()],
   '보완요청':n=>['협력사','대책서 보완 회신 확인',addDays(today(),5)],
-  '통보 완료(검증대기)':n=>['나','재발 여부 확인 · 유효성 검증 (NCR '+n.no+')',n.verifyDue||addDays(today(),14)],
   '승인(검증대기)':n=>['나','대책 효과(유효성) 검증 — NCR '+n.no,n.verifyDue||addDays(today(),14)],
-  '종결':n=>['나','NCR 유효성 검증 완료 — RCA 단계 마무리',today()],
+  '종결':n=>['나',(n.reqType==='단순 통보'&&!n.verifyDate?'NCR 단순 통보 완료':'NCR 유효성 검증 완료')+' — RCA 단계 마무리',today()],
   '검증 무효':n=>['나','유효성 검증 무효 — 재대책 요구 여부 결정',today()]
 };
 function czSyncCase(c){
@@ -767,7 +766,7 @@ function czSyncCase(c){
     if(d4&&['승인(검증대기)','종결','대책서 검토','보완요청'].includes(st)){const tag='[NCR 대책서] ';
       if(!has(c.CauseOccur))set('CauseOccur',tag+d4);else if(String(c.CauseOccur).startsWith(tag)&&c.CauseOccur!==tag+d4)set('CauseOccur',tag+d4)}
     if(farOn(n)&&n.far.replyDate&&n.far.summary&&!has(c.CauseOccur))set('CauseOccur','[FAR 분석] '+n.far.summary);
-    if(st==='종결'){if(!has(c.VerifyResult)||c.VerifyResult==='미검증')set('VerifyResult','합격');if(!has(c.VerifyEnd)&&n.verifyDate)set('VerifyEnd',n.verifyDate);if(!has(c.Recurred))set('Recurred','없음')}
+    if(st==='종결'&&n.verifyDate){if(!has(c.VerifyResult)||c.VerifyResult==='미검증')set('VerifyResult','합격');if(!has(c.VerifyEnd)&&n.verifyDate)set('VerifyEnd',n.verifyDate);if(!has(c.Recurred))set('Recurred','없음')}
     if(st==='검증 무효'&&c.VerifyResult!=='불합격')set('VerifyResult','불합격');
   }
   if(ch)touch(c);return ch;

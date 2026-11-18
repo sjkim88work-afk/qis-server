@@ -55,7 +55,7 @@ async function a3Report(kind,id){
   const vi=n?verifyInfo(n):d?icaVerify(d):null;
   const eff=T(c&&(c.VerifyStart||c.VerifyEnd)?`검증 기간 ${c.VerifyStart||''} ~ ${c.VerifyEnd||''}`:'',c&&has(c.RateBefore)?`불량률 개선 전 ${c.RateBefore} → 후 ${has(c.RateAfter)?c.RateAfter:'-'}`:'',
     c&&c.Recurred?`재발: ${c.Recurred}`:'',c&&c.VerifyResult&&c.VerifyResult!=='미검증'?`판정: ${c.VerifyResult}`:'',
-    n&&n.verifyDate?`NCR 유효성 검증 ${n.verifyDate} — ${n.verifyResult||''}`:n?`NCR 유효성 검증 기한 ${n.verifyDue||'-'}${vi?' · '+vi.label:''}`:'',
+    n&&n.verifyDate?`NCR 유효성 검증 ${n.verifyDate} — ${n.verifyResult||''}`:n&&n.reqType==='단순 통보'?(ncrNotified(n)?`NCR 단순 통보 ${n.notifyDate||''} — 유효성 검증 대상 아님`:''):n?`NCR 유효성 검증 기한 ${n.verifyDue||'-'}${vi?' · '+vi.label:''}`:'',
     !c&&ic.verifyDate?`사내 대책 검증 ${ic.verifyDate} — ${ic.verifyResult||''}`:(!c&&ic.verifyDue?`사내 대책 검증 기한 ${ic.verifyDue}`:''),
     le?`협력사 대책서 평가 ${le.score??evalScore(le)}점 ${le.verdict||evalVerdict(le)}`:'')||'검증 전';
   // 7 표준화 · 후속
