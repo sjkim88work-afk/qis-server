@@ -292,6 +292,22 @@ def main(seed_path):
             B.evaluate("()=>{state.setTab='backup';go('data')}"); B.wait_for_timeout(400)
             ok("사내 서버" in B.inner_text("#view"), "관리자 설정 › 데이터: 서버 안내")
             B.screenshot(path=os.path.join(os.environ.get("SHOT_DIR", tmp), "app_admin_data.png"))
+            # 실행 기록 삭제: 저장된 기록 · 취소 처리된 기록을 목록에서 없앨 수 있음
+            did = A.evaluate("db.defects.find(d=>!d.deleted).id")
+            A.evaluate("i=>{state.tab='defect';render();openLog(i)}", did); A.wait_for_timeout(500)
+            n0 = A.evaluate("tl.own.length")
+            for t in ("삭제 시험 기록 1", "삭제 시험 기록 2"):
+                A.fill("#lgText", t); A.click("#modal button:has-text('기록 추가')"); A.wait_for_timeout(150)
+            A.click("#mfoot button.p:has-text('저장')"); A.wait_for_timeout(900)
+            A.evaluate("i=>openLog(i)", did); A.wait_for_timeout(500)
+            ok(A.evaluate("tl.own.length") == n0 + 2 and A.evaluate("tl.own.every(x=>!x._new)"), "실행 기록 2건 저장됨")
+            A.evaluate("()=>{const k=tl.own.findIndex(x=>x.text==='삭제 시험 기록 1');tl.own[k].void={at:now(),by:'t',reason:'시험'};renderLogs(false)}"); A.wait_for_timeout(150)
+            ok(A.locator("#modal ul.logs li.vd a:has-text('삭제')").count() == 1, "취소 처리된 기록에 삭제 단추")
+            A.click("#modal ul.logs li.vd a:has-text('삭제')"); A.wait_for_timeout(300)   # 확인 창은 이 시험 화면에서 자동 승인(위에서 askConfirm 대체)
+            A.click("#modal ul.logs li:has-text('삭제 시험 기록 2') a:has-text('삭제')"); A.wait_for_timeout(300)
+            A.click("#mfoot button.p:has-text('저장')"); A.wait_for_timeout(900)
+            ok(A.evaluate("i=>(db.defects.find(d=>d.id===i).logs||[]).filter(l=>/삭제 시험 기록/.test(l.text)).length", did) == 0, "실행 기록 삭제 → 저장 후 사라짐")
+            ok(A.evaluate("i=>(db.defects.find(d=>d.id===i).logs||[]).length", did) == n0, "다른 기록은 그대로")
             # 로그아웃
             A.click("button:has-text('로그아웃')"); A.wait_for_url("**/login")
             ok(True, "로그아웃")
