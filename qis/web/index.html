@@ -92,6 +92,8 @@ a.lk{color:var(--pri);cursor:pointer;text-decoration:none}a.lk:hover{text-decora
 .fg>label>.lt>span{font-size:11px!important}
 .fg>label.row{flex-direction:row!important;justify-content:flex-start;align-items:center;align-self:end;margin-top:0!important;min-height:var(--ctl-h,34px)}
 .fg>label>span:first-child:not(.row):not(.dl):not(.il){line-height:1.35}
+/* 한 줄 입력 칸(글자 · 날짜 · 숫자 · 선택)의 높이를 같게 — 브라우저마다 날짜 칸 · 선택 칸 높이가 달라 줄이 어긋남 */
+.fg>label>input:not([type=checkbox]):not([type=radio]):not([type=file]):not([type=range]):not([type=color]),.fg>label>select:not([multiple]):not([size]){height:var(--ctl-h,34px);min-height:var(--ctl-h,34px)}
 .sec{font-weight:bold;margin:16px 0 8px;padding-bottom:4px;border-bottom:1px dashed var(--line);color:var(--pri);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .ct th,.ct td{padding:5px 4px}
 .evt td{vertical-align:middle}.evt tfoot td{background:#f7f8fa}
