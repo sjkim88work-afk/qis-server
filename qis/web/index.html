@@ -1105,7 +1105,7 @@ function routeOf(d){
     else{icaStep(!big);rcaStep('큰 건은 RCA로 관리 (RCA 워크시트 · 조치 · 단계 게이트)',big?'A등급 · 고객 유출 — RCA 권장':'필요할 때만',big,'');}
   }else if(d.resp==='공동'){
     ncrStep('협력사 몫의 원인 · 대책 회신 요구');if(!c)icaStep(true);else rcaStep('사내 몫 — RCA로 관리','',true,'');
-    S.push({t:'비용 분담 비율 확정',why:'귀책 조사 화면의 협력사 부담 비율 (%)',done:iv.share!==''&&iv.share!=null,doneT:`협력사 ${iv.share}%`,btn:go('invWrap','inv_share'),bl:'입력',rec:true});
+    S.push({t:'비용 분담 비율 확정',why:'FAR 화면의 협력사 부담 비율 (%)',done:iv.share!==''&&iv.share!=null,doneT:`협력사 ${iv.share}%`,btn:go('invWrap','inv_share'),bl:'입력',rec:true});
   }else if(d.resp==='고객')S.push({t:'고객 귀책 — 고객 협의 내용을 실행 기록으로 남기기',why:'NCR · RCA 대상 아님',done:false,btn:'',rec:false});
   else{const ii=invInfo(d);
     S.push({t:'원인(추정) 부품 지정',why:'완성품 불량이면 의심 부품을 원인 품번에 넣습니다 (FAR 대상 협력사)',done:!!d.partNo,doneT:`${d.partNo} ${d.partName||''} · ${supName(d.supplierId)||'협력사 미지정'}`,btn:`editDefect('${d.id}')`,bl:'지정',rec:!d.partNo});
@@ -1482,7 +1482,7 @@ function fitCharts(root){
 window.addEventListener('resize',()=>{clearTimeout(fitCharts._t);fitCharts._t=setTimeout(()=>fitCharts(document),150)});
 
 /* ================= 화면 라우팅 ================= */
-const TABS=[['dash','대시보드'],['issue','이슈'],['defect','불량 관리'],['inv','귀책 조사'],['ncr','NCR / 8D'],['case','RCA'],['sup','협력사 품질'],['copq','COPQ'],['master','기준정보'],['data','설정 · 백업']];
+const TABS=[['dash','대시보드'],['issue','이슈'],['defect','불량 관리'],['inv','FAR'],['ncr','NCR / 8D'],['case','RCA'],['sup','협력사 품질'],['copq','COPQ'],['master','기준정보'],['data','설정 · 백업']];
 const state={setTab:'general',tab:'dash',dashMonth:today().slice(0,7),
   df:{from:today().slice(0,4)+'-01-01',to:'',sup:'',status:'',type:'',q:''},
   nf:{status:'open',q:'',sup:'',type:'',from:'',to:''},
@@ -2574,7 +2574,7 @@ function invSummary(d,id){
   if(r!=='미정'&&!d.inv)return '';
   const st=iv.verdict?`<span class="bg ok">판정: ${esc(iv.verdict)}${iv.verdictDate?' · '+esc(iv.verdictDate):''}</span>${VERDICT_RESP[iv.verdict]!==r?` <span class="bg warn">귀책을 ‘${esc(r)}’(으)로 직접 변경함</span>`:''}`:(()=>{const ii=invInfo(d);return `<span class="bg ${ii.cls}">${esc(ii.label)}</span>`})();
   const facts=[iv.farReq&&`FAR 요청 ${iv.farReq}`,iv.farRecv&&`FAR 회신 ${iv.farRecv}`,cs?`RCA ${cs.CaseNo} · ${cs.Stage}`:(iv.rca||'').trim()&&'사내 분석 메모 있음',iv.share!==''&&iv.share!=null&&iv.verdict==='공동'&&`협력사 부담 ${iv.share}%`].filter(Boolean);
-  return `<div class="sec">귀책 조사 <span class="muted" style="font-weight:normal;font-size:12px">FAR · 사내 분석 · 판정은 ‘귀책 조사’ 탭에서 따로 진행합니다</span></div>
+  return `<div class="sec">귀책 조사 <span class="muted" style="font-weight:normal;font-size:12px">FAR · 사내 분석 · 판정은 ‘FAR’ 탭에서 따로 진행합니다</span></div>
   <div class="route" style="margin-top:0"><div class="ri"><div class="tx">${st}${facts.length?` <span class="muted">${esc(facts.join(' · '))}</span>`:''}${!iv.verdict&&d.date?`<br><span class="muted" style="font-size:12px">원인 불명 검토 기한 ${esc(ntfDue(d))}</span>`:''}</div>
   ${id?`<button type="button" class="b s p" onclick="routeGo(&quot;editInv('${id}')&quot;)">귀책 조사 열기</button>`:'<span class="muted" style="font-size:12px">저장하면 귀책 조사를 시작할 수 있습니다</span>'}</div></div>`;
 }

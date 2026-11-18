@@ -27,7 +27,7 @@ function routeOf(d){
     else{icaStep(!big);rcaStep('큰 건은 RCA로 관리 (RCA 워크시트 · 조치 · 단계 게이트)',big?'A등급 · 고객 유출 — RCA 권장':'필요할 때만',big,'');}
   }else if(d.resp==='공동'){
     ncrStep('협력사 몫의 원인 · 대책 회신 요구');if(!c)icaStep(true);else rcaStep('사내 몫 — RCA로 관리','',true,'');
-    S.push({t:'비용 분담 비율 확정',why:'귀책 조사 화면의 협력사 부담 비율 (%)',done:iv.share!==''&&iv.share!=null,doneT:`협력사 ${iv.share}%`,btn:go('invWrap','inv_share'),bl:'입력',rec:true});
+    S.push({t:'비용 분담 비율 확정',why:'FAR 화면의 협력사 부담 비율 (%)',done:iv.share!==''&&iv.share!=null,doneT:`협력사 ${iv.share}%`,btn:go('invWrap','inv_share'),bl:'입력',rec:true});
   }else if(d.resp==='고객')S.push({t:'고객 귀책 — 고객 협의 내용을 실행 기록으로 남기기',why:'NCR · RCA 대상 아님',done:false,btn:'',rec:false});
   else{const ii=invInfo(d);
     S.push({t:'원인(추정) 부품 지정',why:'완성품 불량이면 의심 부품을 원인 품번에 넣습니다 (FAR 대상 협력사)',done:!!d.partNo,doneT:`${d.partNo} ${d.partName||''} · ${supName(d.supplierId)||'협력사 미지정'}`,btn:`editDefect('${d.id}')`,bl:'지정',rec:!d.partNo});

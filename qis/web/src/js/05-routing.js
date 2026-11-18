@@ -1,5 +1,5 @@
 /* ================= 화면 라우팅 ================= */
-const TABS=[['dash','대시보드'],['issue','이슈'],['defect','불량 관리'],['inv','귀책 조사'],['ncr','NCR / 8D'],['case','RCA'],['sup','협력사 품질'],['copq','COPQ'],['master','기준정보'],['data','설정 · 백업']];
+const TABS=[['dash','대시보드'],['issue','이슈'],['defect','불량 관리'],['inv','FAR'],['ncr','NCR / 8D'],['case','RCA'],['sup','협력사 품질'],['copq','COPQ'],['master','기준정보'],['data','설정 · 백업']];
 const state={setTab:'general',tab:'dash',dashMonth:today().slice(0,7),
   df:{from:today().slice(0,4)+'-01-01',to:'',sup:'',status:'',type:'',q:''},
   nf:{status:'open',q:'',sup:'',type:'',from:'',to:''},
