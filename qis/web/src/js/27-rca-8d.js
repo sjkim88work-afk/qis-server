@@ -393,7 +393,7 @@ function czRender(){
 }
 function czStartCard(){return `<div class="card start"><h2>RCA · 사내 8D</h2>
     <p class="sub" style="margin:0">사내 문제의 원인분석(RCA)과 공정 개선 · 내부 8D를 관리합니다. 공 · 다음 행동 · 재확인일과 IATF 단계 게이트로 끝까지 추적합니다.<br>
-    <b>불량 관리</b>의 진행 보기나 <b>NCR / 8D</b> 목록에서 ‘RCA 요청’을 누르면 불량 정보·심각도가 그대로 채워집니다.</p>
+    <b>불량 관리</b>의 진행 보기에서 ‘RCA 요청’을 누르면 불량 정보·심각도가 그대로 채워집니다.</p>
     <div class="btns"><button class="btn pri" data-act="newCase">RCA 바로 등록</button><button class="btn" onclick="go('defect')">불량 관리로 가기</button><button class="btn" onclick="state.setTab='backup';go('data')">QMS 백업 가져오기</button></div></div>`;}
 function czViewToday(){
   const t=today(),k=czCounts(),open=db.cases.filter(c=>c.Status==='진행중'||c.Status==='보류');

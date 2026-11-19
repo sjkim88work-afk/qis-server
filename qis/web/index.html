@@ -3980,8 +3980,8 @@ function ncrFoot(m){
   const id=ncrCurId,f=$('#mfoot');if(!f)return;const n=id&&db.ncrs.find(x=>x.id===id);
   const B=[];
   if(id&&m==='issue')B.push({label:'삭제',cls:'d',left:1,fn:async()=>{await delNcr(id);if(!db.ncrs.find(x=>x.id===id))closeModal(true)}});
-  if(id&&m!=='issue')B.push({label:'8D 출력',fn:()=>{const nid=mfDirty?saveNcr(id):id;if(nid)print8D(nid)}});
-  if(id&&m==='reply')B.push({label:n&&n.caseId&&czById('cases',n.caseId)?'RCA 열기':'RCA 요청',fn:async()=>{if(mfDirty&&!await askConfirm({title:'저장하지 않고 이동할까요?',msg:'먼저 저장하려면 취소 후 저장을 누르세요.',ok:'이동',danger:false}))return;mfDirty=false;closeModal(true);czFromNcr(id)}});
+  // 협력사 회신 단계는 입력만(취소 · 저장). 8D 출력은 검증 · 종결 단계에서, RCA 요청은 연결 불량의 진행 창에서 함
+  if(id&&m==='verify')B.push({label:'8D 출력',fn:()=>{const nid=mfDirty?saveNcr(id):id;if(nid)print8D(nid)}});
   if(id&&m!=='reply')B.push({label:'A3 보고서',fn:()=>a3Report('ncr',id)});
   B.push({label:'취소',fn:closeModal});
   if(id&&m==='issue'&&RO)B.push({label:'통보서 출력',fn:()=>printNotice(id)});   // 조회 권한: 저장 없이 출력만
@@ -6609,7 +6609,7 @@ function czRender(){
 }
 function czStartCard(){return `<div class="card start"><h2>RCA · 사내 8D</h2>
     <p class="sub" style="margin:0">사내 문제의 원인분석(RCA)과 공정 개선 · 내부 8D를 관리합니다. 공 · 다음 행동 · 재확인일과 IATF 단계 게이트로 끝까지 추적합니다.<br>
-    <b>불량 관리</b>의 진행 보기나 <b>NCR / 8D</b> 목록에서 ‘RCA 요청’을 누르면 불량 정보·심각도가 그대로 채워집니다.</p>
+    <b>불량 관리</b>의 진행 보기에서 ‘RCA 요청’을 누르면 불량 정보·심각도가 그대로 채워집니다.</p>
     <div class="btns"><button class="btn pri" data-act="newCase">RCA 바로 등록</button><button class="btn" onclick="go('defect')">불량 관리로 가기</button><button class="btn" onclick="state.setTab='backup';go('data')">QMS 백업 가져오기</button></div></div>`;}
 function czViewToday(){
   const t=today(),k=czCounts(),open=db.cases.filter(c=>c.Status==='진행중'||c.Status==='보류');
