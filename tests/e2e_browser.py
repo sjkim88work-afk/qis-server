@@ -441,6 +441,22 @@ def main(seed_path):
             ok(not r["cancel"], "취소 → 아무 것도 열지 않음")
             ok(r["alt"]["newNcr"] and r["alt"]["in"], "새 NCR 발행 → 이 불량만 연결된 새 NCR 창")
             ok(r["other"]["asked"] == 0 and r["other"]["newNcr"], "이슈가 다른 불량은 묻지 않고 새 NCR 창")
+            # 새 NCR: 불량 내용 서술에 작성 양식이 기본으로 들어감
+            r = A.evaluate("""async () => {
+              mfDirty=false;closeModal(true);const wait=ms=>new Promise(r=>setTimeout(r,ms)),o0=window.askConfirm;window.askConfirm=async()=>'alt';const o={};
+              const src=db.defects.find(x=>x.partNo&&x.resp!=='미정'&&!x.inv)||db.defects[0],d={...src,id:uid(),ncrId:'',caseId:'',issueId:'',resp:'협력사',inv:undefined,fgNo:'81841-BE100',fgName:'CNTR BAL ASSY',fgQty:2,type:'치수',desc:'구멍 지름 큼',containment:'전수 선별',qty:3,inspQty:2160,logs:[],photos:[],costs:[]};db.defects.push(d);
+              await ncrFromDefect(d.id);await wait(250);const v=document.querySelector('#mf [name=defectDesc]').value;o.fromDefect=v;o.dirty=mfDirty;mfDirty=false;closeModal(true);
+              editNcr();await wait(150);const ta=document.querySelector('#mf [name=defectDesc]'),f=document.querySelector('#mf');o.blank=ta.value;
+              f.basis.value='공정 감사';f.basis.onchange();o.audit=ta.value;f.basis.value='불량';f.basis.onchange();o.back=ta.value===o.blank;
+              ta.value='직접 쓴 내용';f.basis.value='공정 감사';f.basis.onchange();o.keep=ta.value;mfDirty=false;closeModal(true);
+              const n=db.ncrs[0],old=n.defectDesc;n.defectDesc='';editNcr(n.id,null,'issue');o.existing=document.querySelector('#mf [name=defectDesc]').value;mfDirty=false;closeModal(true);n.defectDesc=old;
+              window.askConfirm=o0;db.defects=db.defects.filter(x=>x!==d);return o}""")
+            fd = r["fromDefect"].split("\n")
+            ok(len(fd) == 5 and fd[0].startswith("1. 발견 일시/장소 (When/Where) : ") and "완성품 81841-BE100 CNTR BAL ASSY 에서 발견 · 2대" in fd[0], f"불량 → NCR: 작성 양식이 기본으로 들어감 ({fd[0]})")
+            ok(fd[1] == "2. 불량 현상 (What) : 치수 — 구멍 지름 큼" and fd[2].startswith("3. 발생 수량/범위 (How many) : 3 EA / 2,160 EA 중") and fd[3] == "4. 영향 (Impact) : " and fd[4] == "5. 당사 조치 (Containment) : 전수 선별", "양식의 2~5번이 불량 내용으로 채워짐 (요약 줄 중복 없음)")
+            ok(r["blank"].startswith("1. 발견 일시/장소 (When/Where) : \n2. 불량 현상 (What) : ") and r["blank"].count("\n") == 4, "빈 새 NCR 에도 작성 양식이 기본으로")
+            ok(r["audit"] == "" and r["back"] and r["keep"] == "직접 쓴 내용", "발행 근거를 바꾸면 손대지 않은 빈 양식만 지움 · 쓴 내용은 그대로")
+            ok(r["existing"] == "", "기존 NCR 의 빈 서술 칸은 바꾸지 않음")
             # 로그아웃
             A.click("button:has-text('로그아웃')"); A.wait_for_url("**/login")
             ok(True, "로그아웃")

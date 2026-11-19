@@ -20,7 +20,7 @@ async function ncrFromDefect(id,extra=[]){
     d2:`[${d.date} / ${d.source}]${fg?' '+fg+' —':''} ${d.desc||''}\n불량수량 ${num(d.qty)}개${d.inspQty?' / 로트 '+d.inspQty+'개':''}${d.spec||d.actual?`\n규격: ${d.spec||'-'} / 실측: ${d.actual||'-'}`:''}${lotOf(d)?' / LOT '+lotOf(d):''}`,
     d3:d.containment||'',...(invTxt?{d4:invTxt}:{}),defectIds:grp.map(x=>x.id),
     ...(iv.farReq?{far:farFromInv(d)}:{}),issueDate:today(),owner:d.owner,reqType:RESP[worst]||sevOf(d).resp,
-    lotNo:lotOf(d),lotQty:d.inspQty||'',foundAt:d.source||'',recvDate:d.delivDate||((d.source||'').includes('수입')?d.date:''),spec:d.spec||'',actual:d.actual||'',defectDesc:`${d.date} ${d.source||''} ${fg?fg:'발견'} — ${d.type||''}${d.desc?': '+d.desc:''}\n불량 ${num(d.qty).toLocaleString()} EA${d.inspQty?' / '+num(d.inspQty).toLocaleString()+' EA':''}${lotOf(d)?' (LOT '+lotOf(d)+')':''}`,defectQtyText:`${num(d.qty).toLocaleString()} EA / ${d.inspQty?num(d.inspQty).toLocaleString()+' EA':'-'}`});
+    lotNo:lotOf(d),lotQty:d.inspQty||'',foundAt:d.source||'',recvDate:d.delivDate||((d.source||'').includes('수입')?d.date:''),spec:d.spec||'',actual:d.actual||'',defectDesc:descTplDefect(d,lotOf(d)),defectQtyText:`${num(d.qty).toLocaleString()} EA / ${d.inspQty?num(d.inspQty).toLocaleString()+' EA':'-'}`});
 }
 // 기존 NCR 에 불량을 추가로 연결 — NCR 창(발행 정보)을 열고 연결 목록에 넣어 둠. 저장해야 반영됨
 function ncrAddDefect(nid,did){
@@ -126,6 +126,7 @@ function editNcr(id,preset,mode){
   const n=id?{...db.ncrs.find(x=>x.id===id)}:{issueDate:today(),owner:S.owners[0]||'',...(preset||{})};
   curLinks=[...(n.defectIds||[])];
   {const r=farAlign(n.far,curLinks,false);if(r)n.far=r.far}   // FAR 은 FAR 화면이 원본 — NCR 창에는 읽기 전용 요약만
+  if(!id&&!(n.defectDesc||'').trim()&&(n.basis||'불량')==='불량')n.defectDesc=descTplDefect(db.defects.find(x=>x.id===curLinks[0])||null,n.lotNo||'');   // 새 NCR: 불량 내용 서술에 작성 양식을 기본으로
   curStock=(n.stock&&n.stock.length?n.stock:STOCK_DEF.map(l=>({loc:l}))).map(r=>({loc:r.loc||'',stocked:r.stocked??r.qty??'',ng:r.ng??''}));
   curExcl=new Set(n.photoExcl||[]);
   curContain=(n.contain&&n.contain.length?n.contain:CONTAIN_DEF.map(l=>({loc:l}))).map(r=>({loc:r.loc||'',target:r.target??'',sorted:r.sorted??'',ng:r.ng??'',done:r.done||''}));
@@ -145,7 +146,7 @@ function editNcr(id,preset,mode){
     <label class="full">제목<input name="title" value="${esc(n.title)}"></label>
     <label>재발 — 이전 NCR 번호<input name="repeatOf" list="dlNcrNos" autocomplete="off" value="${esc(n.repeatOf)}" placeholder="같은 문제가 다시 생긴 경우만" oninput="repHint()"><datalist id="dlNcrNos">${db.ncrs.filter(x=>x.id!==id&&x.no).sort((a,b)=>(b.issueDate||'').localeCompare(a.issueDate||'')).map(x=>`<option value="${esc(x.no)}">${esc(supName(x.supplierId))} · ${esc(x.partNo)} · ${esc(x.issueDate)}</option>`).join('')}</datalist></label>
     <div class="muted" id="repHint" style="font-size:12px;align-self:end;padding-bottom:6px"></div>
-    <label>발행 근거<select name="basis" onchange="mfDirty=true;applyBasis(true)">${opts(NCR_BASIS,n.basis||'불량')}</select></label>
+    <label>발행 근거<select name="basis" onchange="mfDirty=true;applyBasis(true);descBasisSwap()">${opts(NCR_BASIS,n.basis||'불량')}</select></label>
     <div class="full muted" id="basisHint" style="grid-column:1/-1;font-size:12px;margin-top:-4px"></div>
     <div id="auditBox" class="fg" style="grid-column:1/-1;margin:0">
       <label>감사일<input type="date" name="auditDate" value="${esc(n.auditDate)}"></label>
@@ -175,7 +176,7 @@ function editNcr(id,preset,mode){
     <label>Defect Q'ty / Sample Size<input name="defectQtyText" value="${esc(n.defectQtyText)}" placeholder="예: 12 / 200, ALL / -"></label>
     <label class="full">Specification (도면사양)<textarea name="spec" style="min-height:44px" placeholder="예: Parting line step ≤ 0.1mm, No grease leakage">${esc(n.spec)}</textarea></label>
     <label class="full">Actual (실제)<textarea name="actual" style="min-height:44px" placeholder="예: Grease leak caused by a gap from parting line mismatch">${esc(n.actual)}</textarea></label>
-    <label class="full">Defect Description (불량 내용 서술) <span><button type="button" class="b s" onclick="descTemplate()">작성 양식 넣기</button> <span class="muted">통보서 ‘Defect Description’ 제목 아래, 사진 위에 출력됩니다</span></span><textarea name="defectDesc" style="min-height:90px" placeholder="예) 2026-07-18 조립 라인에서 Spindle Nut 그리스 누유 발견. 파팅라인 단차로 틈새 발생, 입고 LOT 20260507 전량 해당 의심.">${esc(n.defectDesc)}</textarea></label>
+    <label class="full">Defect Description (불량 내용 서술) <span><button type="button" class="b s" onclick="descTemplate()">작성 양식 넣기</button> <span class="muted">새 NCR에는 작성 양식이 기본으로 들어갑니다. 통보서 ‘Defect Description’ 제목 아래, 사진 위에 출력됩니다</span></span><textarea name="defectDesc" style="min-height:90px" placeholder="예) 2026-07-18 조립 라인에서 Spindle Nut 그리스 누유 발견. 파팅라인 단차로 틈새 발생, 입고 LOT 20260507 전량 해당 의심.">${esc(n.defectDesc)}</textarea></label>
     <label class="full">Supplied part Situation (공급품 현황)<textarea name="supplySit" style="min-height:44px" placeholder="예: LOT 20260507 2,000EA × 24BOX 입고 / 라인 투입 중 발견">${esc(n.supplySit)}</textarea></label>
   </div>
   <div style="margin-top:10px;font-size:12px;color:var(--sub)">Inventory Check (재고 현황) <button type="button" class="b s" onclick="curStock.push({loc:'',stocked:'',ng:''});mfDirty=true;renderStock()">+ 행</button></div>
@@ -582,9 +583,21 @@ function renderStock(){
     <td><input value="${esc(r.ng)}" style="width:170px" placeholder="예: 24,000EA 또는 -" oninput="curStock[${i}].ng=this.value;mfDirty=true"></td>
     <td><button type="button" class="b s d" onclick="curStock.splice(${i},1);mfDirty=true;renderStock()">✕</button></td></tr>`).join('')}</tbody></table>`;
 }
+// 불량 내용 서술의 작성 양식 (발행 근거 ‘불량’) — 연결 불량의 내용으로 채움. 새 NCR 에는 기본으로 들어감
+function descTplDefect(d,lot){
+  const fg=d&&(d.fgNo||d.fgName)?` (완성품 ${[d.fgNo,d.fgName].filter(Boolean).join(' ')} 에서 발견${d.fgQty?` · ${num(d.fgQty).toLocaleString()}대`:''})`:'';
+  return [`1. 발견 일시/장소 (When/Where) : ${d?(d.date||'')+' / '+(d.source||'')+fg:''}`,`2. 불량 현상 (What) : ${d?[d.type,d.desc].filter(Boolean).join(' — '):''}`,
+    `3. 발생 수량/범위 (How many) : ${d?num(d.qty).toLocaleString()+' EA'+(d.inspQty?' / '+num(d.inspQty).toLocaleString()+' EA 중':''):''}${lot?' (LOT '+lot+')':''}`,`4. 영향 (Impact) : `,`5. 당사 조치 (Containment) : ${d?.containment||''}`].join('\n');
+}
+// 발행 근거를 바꿀 때 — 손대지 않은 빈 불량 양식은 지우고(감사 · PPM 은 양식이 다름), 새 NCR 에서 ‘불량’으로 돌아오면 다시 넣음
+function descBasisSwap(){
+  const f=$('#mf'),ta=f&&f.defectDesc;if(!ta)return;const blank=descTplDefect(null,'').trim(),b=f.basis.value;
+  if(b!=='불량'&&ta.value.trim()===blank)ta.value='';
+  else if(b==='불량'&&!ncrCurId&&!ta.value.trim())ta.value=descTplDefect(db.defects.find(x=>x.id===curLinks[0])||null,f.lotNo.value);
+}
 async function descTemplate(){
   const f=$('#mf'),ta=f.defectDesc,d=db.defects.find(x=>x.id===curLinks[0]);
-  const t=basisTpl(f)||[`1. 발견 일시/장소 (When/Where) : ${d?d.date+' / '+(d.source||''):''}`,`2. 불량 현상 (What) : ${d?.desc||''}`,`3. 발생 수량/범위 (How many) : ${d?num(d.qty).toLocaleString()+' EA'+(d.inspQty?' / '+num(d.inspQty).toLocaleString()+' EA 중':''):''}${f.lotNo.value?' (LOT '+f.lotNo.value+')':''}`,`4. 영향 (Impact) : `,`5. 당사 조치 (Containment) : ${d?.containment||''}`].join('\n');
+  const t=basisTpl(f)||descTplDefect(d||null,f.lotNo.value);
   if(ta.value.trim()&&!await askConfirm({title:'작성 양식을 추가할까요?',msg:'이미 작성한 내용 <b>아래에</b> 양식이 추가됩니다.',ok:'아래에 추가',danger:false}))return;
   ta.value=(ta.value.trim()?ta.value.trim()+'\n\n':'')+t;mfDirty=true;ta.focus();
 }
