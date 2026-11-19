@@ -368,6 +368,10 @@ def main(seed_path):
             ok(r["issue"]["tabs"] == "and" and r["reply"]["tabs"] == "rbfd" and r["verify"]["tabs"] == "cd", f"NCR 단계별 탭 ({r['issue']['tabs']}/{r['reply']['tabs']}/{r['verify']['tabs']})")
             ok("발행 정보" in r["issue"]["t"] and "협력사 회신" in r["reply"]["t"] and "검증" in r["verify"]["t"], "NCR 창 제목에 단계 이름")
             ok(r["link"], "다른 화면의 NCR 링크(단계 지정 없음): 단계 전환 줄 유지")
+            r = A.evaluate("""() => {const n=db.ncrs.find(x=>x.reqType!=='단순 통보')||db.ncrs[0],lab=()=>[...document.querySelector('#mfoot').children].filter(e=>!e.className.includes('mfsp')).map(e=>e.textContent).join(',');
+              editNcr(n.id,null,'reply');const rp=lab();mfDirty=false;closeModal(true);editNcr(n.id,null,'verify');const vf=lab();mfDirty=false;closeModal(true);return {rp,vf,info:n.reqType==='단순 통보'}}""")
+            ok(r["info"] or r["rp"] == "취소,저장", f"NCR 협력사 회신 창: 아래 단추는 취소 · 저장만 ({r['rp']})")
+            ok("8D 출력" in r["vf"] and "RCA" not in r["vf"], f"NCR 검증 창: 8D 출력 있음 ({r['vf']})")
             # 조회 권한: 발행 정보 창에서 통보서 출력 (저장 단추는 없음)
             r = C.evaluate("""async () => {await srvSync();mfDirty=false;closeModal(true);editNcr(db.ncrs[0].id,null,'issue');await new Promise(r=>setTimeout(r,300));
               const v=[...document.querySelectorAll('#mfoot button')].filter(b=>b.style.display!=='none').map(b=>b.textContent.trim());closeModal(true);return v}""")

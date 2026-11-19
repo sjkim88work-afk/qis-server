@@ -377,8 +377,8 @@ function ncrFoot(m){
   const id=ncrCurId,f=$('#mfoot');if(!f)return;const n=id&&db.ncrs.find(x=>x.id===id);
   const B=[];
   if(id&&m==='issue')B.push({label:'삭제',cls:'d',left:1,fn:async()=>{await delNcr(id);if(!db.ncrs.find(x=>x.id===id))closeModal(true)}});
-  if(id&&m!=='issue')B.push({label:'8D 출력',fn:()=>{const nid=mfDirty?saveNcr(id):id;if(nid)print8D(nid)}});
-  if(id&&m==='reply')B.push({label:n&&n.caseId&&czById('cases',n.caseId)?'RCA 열기':'RCA 요청',fn:async()=>{if(mfDirty&&!await askConfirm({title:'저장하지 않고 이동할까요?',msg:'먼저 저장하려면 취소 후 저장을 누르세요.',ok:'이동',danger:false}))return;mfDirty=false;closeModal(true);czFromNcr(id)}});
+  // 협력사 회신 단계는 입력만(취소 · 저장). 8D 출력은 검증 · 종결 단계에서, RCA 요청은 연결 불량의 진행 창에서 함
+  if(id&&m==='verify')B.push({label:'8D 출력',fn:()=>{const nid=mfDirty?saveNcr(id):id;if(nid)print8D(nid)}});
   if(id&&m!=='reply')B.push({label:'A3 보고서',fn:()=>a3Report('ncr',id)});
   B.push({label:'취소',fn:closeModal});
   if(id&&m==='issue'&&RO)B.push({label:'통보서 출력',fn:()=>printNotice(id)});   // 조회 권한: 저장 없이 출력만
