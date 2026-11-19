@@ -5,10 +5,9 @@
 const ISS_URG=['긴급','높음','보통'],ISS_UCLS={'긴급':'bad','높음':'warn','보통':'mut'};
 const ISS_KINDS=['발견','격리','공유','인터뷰','회의','조사 · 측정','기타'];
 const ISS_KCLS={'발견':'bad','격리':'ok','공유':'mut','인터뷰':'warn','회의':'inf','조사 · 측정':'inf','분류':'inf','종결':'ok','다시 열기':'warn','기타':'mut'};
+// 처리 방향 — 이슈 다음은 불량 등록 · RCA · 종결. FAR 요청과 NCR 발행은 불량 등록 뒤의 단계라 불량의 ‘다음 단계’에서 함
 const ISS_ROUTES=[
-  {k:'defect',l:'불량 등록',w:'원인 부품 · 귀책이 분명할 때',cta:'불량 등록 창 열기',m:['불량 등록 창 — 이슈의 품목 · 수량 · 현상 · 사진 · 격리 내용이 채워짐 (불량 유형 · 처리는 직접)','저장하면 이 이슈의 후속 건으로 연결']},
-  {k:'far',l:'FAR 요청',w:'협력사 원인이 의심될 때',cta:'불량(귀책 미정) 등록 → FAR 요청',m:['불량 등록 창 — 귀책 ‘미정’','저장하면 귀책 조사 창이 열려 FAR 요청일 · 회신 기한을 기록']},
-  {k:'ncr',l:'NCR 발행',w:'협력사 귀책이 확실할 때',cta:'불량(협력사) 등록 → NCR 발행',m:['불량 등록 창 — 귀책 ‘협력사’ · 수입검사 검출 판정 선택','저장하면 NCR 발행 창 (요구사항에 유출 원인 · 출하검사 대책 문구)']},
+  {k:'defect',l:'불량 등록',w:'불량으로 확인됐을 때',cta:'불량 등록 창 열기',m:['불량 등록 창 — 이슈의 품목 · 수량 · 현상 · 사진 · 격리 내용이 채워짐 (불량 유형 · 귀책 · 처리는 직접)','저장하면 이 이슈의 후속 건으로 연결','FAR 요청 · NCR 발행은 불량을 등록한 뒤 불량의 ‘다음 단계’에서 진행 (귀책 미정 → FAR 요청, 협력사 → NCR 발행)']},
   {k:'rca',l:'RCA 요청',w:'사내 원인이거나 큰 건일 때',cta:'RCA 만들기',m:['RCA 1건 — 제목 · 현상 · 격리 내용 · 우선순위 복사, 이슈 기록은 이력에서 볼 수 있음','불량이 따로 필요하면 ‘불량 등록’도 이어서']},
   {k:'close',l:'종결',w:'이상 없음 · 관찰만 필요할 때',cta:'이슈 종결',m:['후속 건 없이 종결 — 사유가 기록에 남음 (다시 열 수 있음)']}];
 const ISS_RL=Object.fromEntries(ISS_ROUTES.map(r=>[r.k,r.l]));
@@ -170,11 +169,10 @@ function issDetailHTML(i){
         <div class="row" style="justify-content:flex-end;margin-top:8px"><button class="b p" onclick="issAddLog('${i.id}')">기록 추가</button></div></div>`}
     </div>
     <div style="flex:1 1 380px;min-width:0;display:flex;flex-direction:column;gap:14px">
-      ${ro?'':`<div class="card noprint"><h3 style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap"><span style="white-space:nowrap">처리 방향</span><span class="muted" style="font-weight:normal;font-size:12px;flex:1 1 160px">이슈 내용 · 사진이 넘어갑니다. 여러 번 보낼 수 있습니다</span></h3>
+      ${ro?'':`<div class="card noprint"><h3 style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap"><span style="white-space:nowrap">처리 방향</span><span class="muted" style="font-weight:normal;font-size:12px;flex:1 1 160px">이슈 내용 · 사진이 넘어갑니다. 여러 번 보낼 수 있습니다. FAR · NCR은 불량 등록 뒤에 합니다</span></h3>
         <div style="display:flex;flex-direction:column;gap:6px">${ISS_ROUTES.map(x=>`<button type="button" class="isr ${x.k===r.k?'on':''}" aria-pressed="${x.k===r.k}" onclick="state.issRoute='${x.k}';render()"><b>${x.l}</b><span class="muted">${x.w}</span></button>`).join('')}</div>
         <div class="isprev"><div class="muted" style="font-size:12px;font-weight:600">누르면 만들어지는 것</div><ul>${r.m.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>
           ${r.k==='close'&&of.length?`<div style="color:var(--warn);font-size:12.5px">진행 중인 후속 건 ${of.length}건 — 종결해도 후속 건은 각자 계속 진행됩니다</div>`:''}
-          ${r.k==='ncr'&&L.ns.length?`<div style="color:var(--warn);font-size:12.5px">연결된 NCR ${L.ns.length}건 (${L.ns.map(n=>esc(n.no)).join(' · ')}) — 누르면 기존 NCR을 열지, 새 NCR을 발행할지 묻습니다</div>`:''}
           <button class="b p" style="width:100%;padding:10px" onclick="issRoute('${i.id}','${r.k}')">${r.cta}</button></div></div>`}
       <div class="card"><h3>후속 건 <span class="muted" style="font-weight:normal;font-size:12px">이 이슈에서 만든 기록</span></h3>
         ${fol?`<div style="display:flex;flex-direction:column;gap:6px">${fol}</div>`:'<div class="muted">아직 없습니다 — 처리 방향을 정하면 여기에 이어집니다.</div>'}
@@ -227,7 +225,7 @@ function issSaveLog(id,k){
 async function issVoid(id,k){const i=issById(id),l=i&&i.logs[k];if(!l)return;
   const r=await askConfirm({title:'이 기록을 취소할까요?',msg:`${esc(issAt(l.at))} ${esc(l.kind)} — ${esc(l.text.slice(0,60))}`,note:'지우지 않고 취소선과 사유가 남습니다.',ok:'기록 취소',danger:false,input:{label:'취소 사유',ph:'예: 다른 건 내용을 잘못 입력'}});
   if(!r)return;l.void={at:nowMin(),by:czMe(),reason:r};touch(i);save();render()}
-let issPend=null;   // 이슈에서 연 불량 등록 창 — 저장하면 이슈에 연결하고 다음 단계(FAR · NCR)로
+let issPend=null;   // 이슈에서 연 불량 등록 창 — 저장하면 이슈에 연결
 async function issRoute(id,k){
   const i=issById(id);if(!i)return;const p=partByNo((i.partNo||'').trim()),date=(i.at||'').slice(0,10)||today();
   if(k==='close'){const of=issOpenFollow(i);
@@ -238,31 +236,19 @@ async function issRoute(id,k){
       Owner:i.owner||czMe(),Priority:i.urg==='긴급'?'긴급':i.urg==='높음'?'높음':'보통',ContainDate:i.contain?date:'',ContainScope:i.containText||'',IssueId:i.id,Created:today()};
     if(!await askConfirm({title:'이 이슈로 RCA를 만들까요?',items:[esc(i.title),`발견 ${esc(i.source||'')} · ${esc(issAt(i.at))}`,'심각도 S · 영향도 I와 TIER는 RCA 기본 탭에서 정합니다'],ok:'RCA 만들기',danger:false}))return;
     const c=czCreateCase(o);i.caseIds=[...new Set([...(i.caseIds||[]),c.id])];issLog(i,'분류',`RCA 요청 — ${c.CaseNo}`);czLog(c,'연결',`이슈 ${i.no}에서 생성`);touch(i);save();czOpenCase(c.id);toast(`${c.CaseNo} RCA를 만들었습니다`);return}
-  // NCR 발행: 이미 연결된 NCR 이 있으면 기존 NCR 을 열어 고칠지, 새 NCR 을 발행할지 물음 (같은 건으로 NCR 이 여러 장 생기는 것을 막음)
-  if(k==='ncr'){const ns=issLinks(i).ns;
-    if(ns.length){
-      const op=ns.filter(n=>ncrStatus(n)!=='종결'),tgt=(op.length?op:ns).slice().sort((a,b)=>(b.issueDate||'').localeCompare(a.issueDate||''))[0];
-      const r=await askConfirm({title:`이 이슈에 연결된 NCR이 ${ns.length}건 있습니다`,msg:'같은 건이면 기존 NCR을 열어서 고치세요. 다른 불량이나 다른 협력사의 건이면 새 NCR을 발행하세요.',
-        items:ns.map(n=>`<a class="lk" onclick="issNcrOpen('${n.id}')"><b>${esc(n.no)}</b></a> — ${esc(ncrStatus(n))}${n.supplierId?' · '+esc(supName(n.supplierId)):''}${n.partNo?' · '+esc(n.partNo):''}`),
-        note:(ns.length>1?'NCR 번호를 누르면 그 NCR이 열립니다. ':'')+'기존 NCR의 발행 정보에서 불량을 추가로 연결할 수 있습니다.',ok:`${tgt.no} 열기`,alt:'새 NCR 발행',danger:false});
-      if(!r)return;if(r!=='alt'){issNcrOpen(tgt.id);return}
-    }}
-  const resp=k==='far'?'미정':k==='ncr'?'협력사':(/수입/.test(i.source||'')?'협력사':'미정');
+  const resp=/수입/.test(i.source||'')?'협력사':'미정';
   const preset={date,source:i.source||db.settings.sources[0],partNo:p?p.partNo:(i.partNo||''),partName:p?p.name:'',supplierId:p?p.supplierId||'':'',model:p?p.model||'':'',qty:i.qty??'',
     desc:[i.title,i.desc].filter(Boolean).join(' — '),containment:i.contain?(i.containText||'격리 · 보류함'):'',owner:i.owner||czMe(),resp,sev:{special:!!i.special},issueId:i.id};
-  issPend={iid:i.id,route:k};
+  issPend={iid:i.id,route:'defect'};
   editDefect(null,null,preset);
   if((i.photos||[]).length){try{const rs=await photoGetMany(i.photos);if($('#photoBox')){rs.forEach(r=>curPhotos.push({id:uid(),name:r.name,caption:r.caption||'',data:r.data,thumb:r.thumb,createdAt:now(),isNew:true}));renderPhotoBox()}}catch(e){}}
 }
-// 이슈에서 기존 NCR 열기 — 확인 창이 떠 있으면 닫고 발행 정보 화면을 엶
-function issNcrOpen(nid){const c=$('#cfmNo');if(c)c.click();setTimeout(()=>editNcr(nid,null,'issue'),0)}
-// 불량 저장 직후 — 이슈에서 연 창이면 연결하고 FAR · NCR로 이어감
+// 불량 저장 직후 — 이슈에서 연 창이면 이슈에 연결. FAR · NCR 은 불량의 다음 단계라 여기서 바로 열지 않고 안내만 함
 function issAfterDefect(d){
   const ip=issPend;issPend=null;if(!ip)return;const i=issById(ip.iid);if(!i)return;
   d.issueId=i.id;i.defectIds=[...new Set([...(i.defectIds||[]),d.id])];
-  issLog(i,'분류',`${ISS_RL[ip.route]} — 불량 등록 (${d.partNo||'품번 미정'} ${num(d.qty).toLocaleString()}EA · 귀책 ${d.resp||'-'})`);touch(i);touch(d);save();
-  if(ip.route==='ncr'){hideAct();setTimeout(()=>ncrFromDefect(d.id),250)}
-  else if(ip.route==='far')setTimeout(()=>editInv(d.id,'inv_farReq'),250);
+  issLog(i,'분류',`불량 등록 — ${d.partNo||'품번 미정'} ${num(d.qty).toLocaleString()}EA · 귀책 ${d.resp||'-'}`);touch(i);touch(d);save();
+  if(invOpen(d))offerAction(`${i.no} → 불량 등록 완료 · 귀책 미정 — 다음 단계: FAR 요청`,'FAR 요청',()=>editInv(d.id,'inv_farReq'));
 }
 async function issReopen(id){const i=issById(id);if(!i)return;
   const r=await askConfirm({title:`${i.no} 이슈를 다시 열까요?`,ok:'다시 열기',danger:false,input:{label:'다시 여는 사유',ph:'예: 동일 현상 재발'}});

@@ -3,6 +3,15 @@ let curLinks=[];
 async function ncrFromDefect(id,extra=[]){
   const d=db.defects.find(x=>x.id===id);if(!d)return;
   const grp=[d,...extra.map(i=>db.defects.find(x=>x.id===i)).filter(x=>x&&x.id!==id&&!x.ncrId)],worst=grp.map(x=>sevOf(x).grade).sort()[0];
+  // 같은 이슈에서 나온 다른 불량에 진행 중인 NCR 이 있으면 — 그 NCR 에 이 불량을 묶을지, 새 NCR 을 발행할지 물음 (같은 건으로 NCR 이 여러 장 생기는 것을 막음)
+  {const is=!d.ncrId&&d.issueId&&typeof issById==='function'?issById(d.issueId):null;
+    const ns=is?issLinks(is).ns.filter(n=>ncrStatus(n)!=='종결'&&(!d.supplierId||!n.supplierId||n.supplierId===d.supplierId)).sort((a,b)=>(b.issueDate||'').localeCompare(a.issueDate||'')):[];
+    if(ns.length){
+      const r=await askConfirm({title:`같은 이슈(${is.no})에 진행 중인 NCR이 있습니다`,msg:'같은 건이면 기존 NCR에 이 불량을 연결하세요. 다른 건이면 새 NCR을 발행하세요.',
+        items:ns.map(n=>`<a class="lk" onclick="ncrAddDefect('${n.id}','${d.id}')"><b>${esc(n.no)}</b></a> — ${esc(ncrStatus(n))}${n.supplierId?' · '+esc(supName(n.supplierId)):''}${n.partNo?' · '+esc(n.partNo):''} · 연결 불량 ${(n.defectIds||[]).length}건`),
+        note:(ns.length>1?'NCR 번호를 누르면 그 NCR에 연결합니다. ':'')+'연결하면 기존 NCR 창이 열립니다. 내용을 확인하고 저장하세요.',ok:`${ns[0].no}에 연결`,alt:'새 NCR 발행',danger:false});
+      if(!r)return;if(r!=='alt'){ncrAddDefect(ns[0].id,d.id);return}
+    }}
   if(invOpen(d)&&!await askConfirm({title:'귀책 조사 중인 건입니다',msg:'FAR · 사내 RCA로 귀책을 판정하기 전입니다. 그래도 NCR을 발행할까요?<br>(판정 후 발행하려면 취소하고 불량 기록의 ‘귀책 판정’을 먼저 입력하세요)',ok:'NCR 발행',danger:false}))return;
   if(!d.partNo&&!await askConfirm({title:'원인 부품이 비어 있습니다',msg:'NCR은 원인 부품 기준으로 협력사에 통보합니다. 원인 품번 없이 발행할까요?',ok:'그대로 발행',danger:false}))return;
   const fg=d.fgNo||d.fgName?`완성품 ${[d.fgNo,d.fgName].filter(Boolean).join(' ')} 에서 발견${d.fgQty?` (${num(d.fgQty).toLocaleString()}대)`:''}`:'';
@@ -12,6 +21,12 @@ async function ncrFromDefect(id,extra=[]){
     d3:d.containment||'',...(invTxt?{d4:invTxt}:{}),defectIds:grp.map(x=>x.id),
     ...(iv.farReq?{far:farFromInv(d)}:{}),issueDate:today(),owner:d.owner,reqType:RESP[worst]||sevOf(d).resp,
     lotNo:lotOf(d),lotQty:d.inspQty||'',foundAt:d.source||'',recvDate:d.delivDate||((d.source||'').includes('수입')?d.date:''),spec:d.spec||'',actual:d.actual||'',defectDesc:`${d.date} ${d.source||''} ${fg?fg:'발견'} — ${d.type||''}${d.desc?': '+d.desc:''}\n불량 ${num(d.qty).toLocaleString()} EA${d.inspQty?' / '+num(d.inspQty).toLocaleString()+' EA':''}${lotOf(d)?' (LOT '+lotOf(d)+')':''}`,defectQtyText:`${num(d.qty).toLocaleString()} EA / ${d.inspQty?num(d.inspQty).toLocaleString()+' EA':'-'}`});
+}
+// 기존 NCR 에 불량을 추가로 연결 — NCR 창(발행 정보)을 열고 연결 목록에 넣어 둠. 저장해야 반영됨
+function ncrAddDefect(nid,did){
+  const c=$('#cfmNo');if(c)c.click();
+  setTimeout(()=>{editNcr(nid,null,'issue');if(!curLinks.includes(did)){curLinks.push(did);refreshLinks();mfDirty=true}
+    const b=$('#linkBox');if(b)b.scrollIntoView({block:'center'});toast('불량을 이 NCR의 연결 목록에 추가했습니다. 확인하고 저장하세요')},0);
 }
 // NCR 목록 정렬 기준 (열 제목 클릭) — 상태는 진행 순서대로
 const NCR_ST_ORD=['미통보','발행','대책요청','대책서 검토','보완요청','승인(검증대기)','검증 무효','종결'];

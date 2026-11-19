@@ -160,7 +160,7 @@ async function offerNcrAfterVerdict(ids,v){
     msg:`${v==='공동'?'공동 귀책 — 협력사 몫의 ':'협력사 귀책 — '}원인과 재발 방지 대책은 NCR로 요구합니다.`,
     items:[`${esc(supName(sid)||'협력사 미지정')} · 불량 ${same.length}건${same.length>1?' (한 NCR로 묶음)':''}`,
       `심각도 ${g}등급 → 회신 유형 <b>${rt}</b>${g==='C'?' (대책서 없이 통보 · 반복되면 등급 상승)':''}`]
-      .concat(far?['귀책 조사의 FAR 내용이 NCR ‘불량 분석 요청’으로 넘어갑니다']:[])
+      .concat(far?['FAR 결과는 NCR 창 위쪽에 요약으로 표시됩니다']:[])
       .concat(rest?[`다른 협력사 불량 ${rest}건은 각 불량 화면에서 따로 발행하세요`]:[]),
     note:'나중에 발행하려면 불량 목록의 ‘NCR 발행 필요’ 또는 대시보드의 NCR 권고에서 할 수 있습니다.'});
   if(ok)ncrFromDefect(same[0].id,same.slice(1).map(d=>d.id));
