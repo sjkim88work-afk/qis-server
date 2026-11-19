@@ -183,6 +183,9 @@ function icaVerify(d){
 const defCase=d=>d&&d.caseId&&typeof czById==='function'?czById('cases',d.caseId):null;
 const icaNeed=d=>!d.ncrId&&!d.closed&&d.resp==='사내'&&icaLevel(d)!==ICA_NONE&&!defCase(d);
 const isDone=d=>defStage(d).done;
+// A3 보고서는 결과 보고용 — 단순 통보는 통보(종결) 뒤, 대책서 건은 대책 승인(타당성 ‘적정’) 뒤, NCR 이 없는 불량은 처리 완료 뒤에 출력
+const a3ReadyNcr=n=>!!n&&(n.reqType==='단순 통보'?ncrStatus(n)==='종결':n.validity==='적정'||ncrStatus(n)==='종결');
+function a3ReadyDefect(d){if(!d)return false;const n=d.ncrId&&db.ncrs.find(x=>x.id===d.ncrId);return n?a3ReadyNcr(n):isDone(d)}
 function verifyInfo(n){
   if(!n)return null;
   if(n.reqType==='단순 통보'&&!n.verifyDate)return null; // 단순 통보는 유효성 검증 대상이 아님

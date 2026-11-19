@@ -485,6 +485,19 @@ def main(seed_path):
             ok(r["blank"].startswith("1. 발견 일시/장소 (When/Where) : \n2. 불량 현상 (What) : ") and r["blank"].count("\n") == 4, "빈 새 NCR 에도 작성 양식이 기본으로")
             ok(r["audit"] == "" and r["back"] and r["keep"] == "직접 쓴 내용", "발행 근거를 바꾸면 손대지 않은 빈 양식만 지움 · 쓴 내용은 그대로")
             ok(r["existing"] == "", "기존 NCR 의 빈 서술 칸은 바꾸지 않음")
+            # A3 보고서: 단순 통보 종결 · 대책 승인 뒤에만 출력 단추가 나옴
+            r = A.evaluate("""() => {
+              mfDirty=false;closeModal(true);const lab=()=>[...document.querySelector('#mfoot').children].filter(e=>!e.className.includes('mfsp')).map(e=>e.textContent).join(',');
+              const mk=x=>{const n=Object.assign({id:uid(),issueDate:addDays(today(),-20),supplierId:db.suppliers[0].id,defectIds:[]},x);db.ncrs.push(n);return n},o={},has=(n,m)=>{editNcr(n.id,null,m);const v=lab().includes('A3 보고서');mfDirty=false;closeModal(true);return v};
+              const a=mk({no:'A3-INFO',reqType:'단순 통보'});o.info0=has(a,'issue');a.notifyDate=addDays(today(),-19);o.info1=has(a,'issue');
+              const b=mk({no:'A3-8D',reqType:'8D 보고서',notifyDate:addDays(today(),-19),requestDate:addDays(today(),-19)});o.d0=has(b,'issue')||has(b,'verify');
+              b.replyDate=addDays(today(),-10);b.validity='보완요청';o.d1=has(b,'issue')||has(b,'verify');b.validity='적정';b.approvedDate=addDays(today(),-9);o.d2=has(b,'issue')&&has(b,'verify');
+              const d=db.defects.find(x=>!x.deleted&&!x.ncrId)||db.defects[0],keep={ncrId:d.ncrId};
+              d.ncrId=b.id;b.validity='';openLog(d.id);o.def0=lab().includes('A3 보고서');mfDirty=false;closeModal(true);b.validity='적정';openLog(d.id);o.def1=lab().includes('A3 보고서');mfDirty=false;closeModal(true);
+              d.ncrId=keep.ncrId;db.ncrs=db.ncrs.filter(x=>x!==a&&x!==b);return o}""")
+            ok(not r["info0"] and r["info1"], "A3 보고서: 단순 통보는 통보(종결) 뒤에 단추가 나옴")
+            ok(not r["d0"] and not r["d1"] and r["d2"], "A3 보고서: 대책서 건은 대책 승인(적정) 뒤에 단추가 나옴")
+            ok(not r["def0"] and r["def1"], "불량 진행 창의 A3 보고서도 같은 기준")
             # 로그아웃
             A.click("button:has-text('로그아웃')"); A.wait_for_url("**/login")
             ok(True, "로그아웃")

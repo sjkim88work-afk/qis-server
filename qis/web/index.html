@@ -1276,6 +1276,9 @@ function icaVerify(d){
 const defCase=d=>d&&d.caseId&&typeof czById==='function'?czById('cases',d.caseId):null;
 const icaNeed=d=>!d.ncrId&&!d.closed&&d.resp==='사내'&&icaLevel(d)!==ICA_NONE&&!defCase(d);
 const isDone=d=>defStage(d).done;
+// A3 보고서는 결과 보고용 — 단순 통보는 통보(종결) 뒤, 대책서 건은 대책 승인(타당성 ‘적정’) 뒤, NCR 이 없는 불량은 처리 완료 뒤에 출력
+const a3ReadyNcr=n=>!!n&&(n.reqType==='단순 통보'?ncrStatus(n)==='종결':n.validity==='적정'||ncrStatus(n)==='종결');
+function a3ReadyDefect(d){if(!d)return false;const n=d.ncrId&&db.ncrs.find(x=>x.id===d.ncrId);return n?a3ReadyNcr(n):isDone(d)}
 function verifyInfo(n){
   if(!n)return null;
   if(n.reqType==='단순 통보'&&!n.verifyDate)return null; // 단순 통보는 유효성 검증 대상이 아님
@@ -3125,7 +3128,7 @@ function openLog(id){
       ${n?`<a class="bg inf" style="cursor:pointer" onclick="gotoNcr('${n.id}')">${esc(n.no)} · ${ncrStatus(n)}</a>`:`<span class="bg mut">NCR 없음 (${v.resp})</span>`} ${costTotal(d)?`<span class="bg mut">비용 ${won(costTotal(d))}원</span>`:''}${claimStatus(d)?` <span class="bg ${CLAIM_CLS[claimStatus(d)]}">구상 ${claimStatus(d)}</span>`:''}</div></div>
     ${routeHTML(d)}
     <div class="sec">조사 · 진행 기록 <span class="muted" style="font-weight:normal;font-size:12px">— 실제로 한 일과 결과만 남기는 증빙용 기록 · NCR·대책서·구상 진행(자동)이 함께 표시</span></div><div id="logBox"></div>`,
-    [{label:'A3 보고서',fn:()=>a3Report('defect',id)},{label:'불량 정보 수정',fn:async()=>{if(mfDirty&&!await askConfirm({title:'기록을 저장하지 않고 이동할까요?',ok:'이동',danger:false}))return;closeModal(true);editDefect(id)}},{label:'닫기',fn:closeModal},{label:'저장',cls:'p',fn:()=>{
+    [...(a3ReadyDefect(d)?[{label:'A3 보고서',fn:()=>a3Report('defect',id)}]:[]),{label:'불량 정보 수정',fn:async()=>{if(mfDirty&&!await askConfirm({title:'기록을 저장하지 않고 이동할까요?',ok:'이동',danger:false}))return;closeModal(true);editDefect(id)}},{label:'닫기',fn:closeModal},{label:'저장',cls:'p',fn:()=>{
       if(tl.edit!=null){toast('수정 중인 기록을 먼저 저장하거나 취소하세요');return}
       if(tlDraftHas()&&!tlPushDraft())return;   // 쓰던 기록이 있으면 함께 저장
       const r=tlCommit();d.logs=r.logs;touch(d);save();mfDirty=false;closeModal(true);render();toast('진행 기록 저장')}}]);
@@ -4032,7 +4035,7 @@ function ncrFoot(m){
   if(id&&m==='issue')B.push({label:'삭제',cls:'d',left:1,fn:async()=>{await delNcr(id);if(!db.ncrs.find(x=>x.id===id))closeModal(true)}});
   // 협력사 회신 단계는 입력만(취소 · 저장). 8D 출력은 검증 · 종결 단계에서, RCA 요청은 연결 불량의 진행 창에서 함
   if(id&&m==='verify')B.push({label:'8D 출력',fn:()=>{const nid=mfDirty?saveNcr(id):id;if(nid)print8D(nid)}});
-  if(id&&m!=='reply')B.push({label:'A3 보고서',fn:()=>a3Report('ncr',id)});
+  if(id&&m!=='reply'&&a3ReadyNcr(n))B.push({label:'A3 보고서',fn:()=>a3Report('ncr',id)});   // 단순 통보 종결 · 대책 승인 뒤에만
   B.push({label:'취소',fn:closeModal});
   if(id&&m==='issue'&&RO)B.push({label:'통보서 출력',fn:()=>printNotice(id)});   // 조회 권한: 저장 없이 출력만
   if(m==='issue')B.push({label:id?'저장 후 통보서 출력':'발행 후 통보서 출력',fn:()=>{const nid=saveNcr(id);if(nid)printNotice(nid)}});
