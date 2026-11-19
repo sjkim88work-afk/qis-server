@@ -64,7 +64,7 @@ function ncrNotifyApply(n,date){
 function ncrQuickNotify(id){
   const n=db.ncrs.find(x=>x.id===id);if(!n)return;
   ncrNotifyApply(n,today());touch(n);save();render();
-  toast(`${n.no} 통보 완료 (${n.notifyDate})${n.reqType!=='단순 통보'?` — 대책서 회신 기한 ${n.dueDate||'-'}`:''} · 통보 방법은 발행 정보에서 기록`);
+  toast(`${n.no} 통보 완료 (${n.notifyDate})${n.reqType!=='단순 통보'?` — 대책서 회신 기한 ${n.dueDate||'-'}`:''} · 통보 방법은 발행 정보의 ‘③ 협력사 통보’ 탭에서 기록`);
 }
 // 독촉 기록 — 진행 기록(logs)에 ‘협력사 연락’으로 남김 (nudge 표시)
 const nudgeLogs=n=>(n.logs||[]).filter(l=>l.nudge&&!l.void).sort((a,b)=>(a.date||'').localeCompare(b.date||''));
@@ -187,8 +187,9 @@ function editNcr(id,preset,mode){
   <div style="margin-top:10px;font-size:12px;color:var(--sub)">통보서에 넣을 사진 <span class="muted">(연결된 불량의 사진 · 체크 해제하면 제외)</span></div>
   <div id="ncrPhotoBox" class="row" style="gap:8px;margin-top:4px"></div>
   </div>
-<div class="ntp" data-p="a">
+<div class="ntp" data-p="t">
   <div class="sec">협력사 통보 <span class="muted" style="font-weight:normal;font-size:12px">통보서를 실제로 보낸 날 — 넣으면 대책 요청일 · 회신 기한이 통보일 기준으로 맞춰집니다</span></div>
+  <div class="help" style="margin:0 0 8px">순서: ① 발행 정보 → ② 통보서 내용 → 창 아래 ‘저장 후 통보서 출력’으로 통보서를 보냄 → 여기에 통보일 · 방법을 기록하고 보낸 파일을 첨부</div>
   <div class="fg">
     <label>통보 여부<select name="notifyYN" onchange="ncrNotify('yn')">${opts(['미통보','통보 완료'],ncrNotified(n)?'통보 완료':'미통보')}</select></label>
     <label>통보일<input type="date" name="notifyDate" value="${esc(n.notifyDate||'')}" data-prev="${esc(n.notifyDate||'')}" onchange="ncrNotify('date')"></label>
@@ -196,6 +197,8 @@ function editNcr(id,preset,mode){
   </div>
   <div class="muted" style="font-size:12px;margin:8px 0 4px">발송한 통보서 파일 — 보낸 PDF · 메일(.msg) · 엑셀 등 (파일당 20MB, 끌어다 놓아도 됨)</div>
   <div id="noticeBox" class="docbox"></div>
+  </div>
+<div class="ntp" data-p="a">
   <div class="sec">대응 수준 · 회신 기한</div>
   <div class="fg">
     <label>요구 회신 유형 (대응 수준)<select name="reqType" onchange="mfDirty=true;applyReqType(true)">${opts(REQ_TYPES,n.reqType||REQ_TYPES[0])}</select></label>
@@ -357,15 +360,15 @@ function concCommit(n){
   n.concDocs=curConc.map(r=>r.id);if(!n.concDocs.length)delete n.concDocs;
   curConc.forEach(r=>r.isNew=false);curConcDel=[];
 }
-const NCR_TABS=[['a','① 발행 정보'],['n','② 통보서 내용'],['r','대책서 회신'],['b','D3 봉쇄'],['c','유효성 검증 · 종결'],['d','진행 기록']];
-const NCR_MODES={issue:{l:'발행 · 통보',tabs:['a','n','d'],t:'발행 정보'},reply:{l:'협력사 회신',tabs:['r','b','d'],t:'협력사 회신'},verify:{l:'검증 · 종결',tabs:['c','d'],t:'검증 · 종결'}};
+const NCR_TABS=[['a','① 발행 정보'],['n','② 통보서 내용'],['t','③ 협력사 통보'],['r','대책서 회신'],['b','D3 봉쇄'],['c','유효성 검증 · 종결'],['d','진행 기록']];
+const NCR_MODES={issue:{l:'발행 · 통보',tabs:['a','n','t','d'],t:'발행 정보'},reply:{l:'협력사 회신',tabs:['r','b','d'],t:'협력사 회신'},verify:{l:'검증 · 종결',tabs:['c','d'],t:'검증 · 종결'}};
 let ncrModeCur='issue',ncrCurId=null,ncrCurNo='';
 // solo: 목록의 단추(발행 정보 · 회신 · 검증)로 단계를 골라 연 창 — 그 단계만 보이고, 단계 전환 줄은 넣지 않음
 function ncrTabsBar(id,n,solo){
   const fl=id?ncrFlags(n):{},dot={reply:fl.d3Late||fl.replyLate,verify:fl.verifyLate};
   const lg=(n.logs||[]).length;
   const modes=id&&!solo?`<div class="nmodes" id="ncrModes" role="tablist" aria-label="NCR 화면">${Object.entries(NCR_MODES).map(([k,m])=>`<button type="button" data-m="${k}" onclick="ncrMode('${k}')">${m.l}${dot[k]?'<i class="tdot" title="기한 경과"></i>':''}</button>`).join('')}</div>`:'';
-  const dotT={r:fl.replyLate,b:fl.d3Late,c:fl.verifyLate};
+  const dotT={t:id&&notifyLate(n),r:fl.replyLate,b:fl.d3Late,c:fl.verifyLate};
   return modes+`<div class="dtabs" id="ncrTabs" role="tablist">${NCR_TABS.map(([k,l])=>`<button type="button" role="tab" data-t="${k}" onclick="ncrTab('${k}')">${l}${k==='d'&&lg?` <span class="mono" style="opacity:.7">${lg}</span>`:''}${dotT[k]?'<i class="tdot" title="기한 경과"></i>':''}</button>`).join('')}</div>`;
 }
 function ncrModeDefault(n,id){
@@ -687,7 +690,7 @@ function saveNcr(id){
   {const pf=((id&&db.ncrs.find(x=>x.id===id))||{}).far||null,r=farAlign(pf,curLinks);o.far=r?r.far:pf;if(r&&r.chInv&&r.src)touch(r.src)}   // FAR 은 FAR 화면이 원본 — NCR 은 비춘 값만 가짐
   if(!o.issueDate){ncrTab('a');toast('발행일을 입력하세요');return null}
   if(o.notifyYN==='통보 완료'&&!o.notifyDate)o.notifyDate=today();delete o.notifyYN;
-  if(o.notifyDate&&o.notifyDate<o.issueDate){ncrTab('a');toast('통보일이 발행일보다 빠릅니다');return null}
+  if(o.notifyDate&&o.notifyDate<o.issueDate){ncrTab('t');toast('통보일이 발행일보다 빠릅니다');return null}
   if(o.no&&db.ncrs.some(x=>x.id!==id&&x.no===o.no.trim())){ncrTab('a');toast(`NCR 번호 ${o.no} 은(는) 이미 사용 중입니다`);return null}
   if(o.reqType!=='단순 통보'&&!o.requestDate)o.requestDate=o.issueDate;
   if(o.reqType==='단순 통보'){o.dueDate=''}else if(o.requestDate&&!o.dueDate)o.dueDate=addDays(o.requestDate,typeDays(o.reqType));
