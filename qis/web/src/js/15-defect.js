@@ -635,7 +635,7 @@ function openLog(id){
       ${n?`<a class="bg inf" style="cursor:pointer" onclick="gotoNcr('${n.id}')">${esc(n.no)} · ${ncrStatus(n)}</a>`:`<span class="bg mut">NCR 없음 (${v.resp})</span>`} ${costTotal(d)?`<span class="bg mut">비용 ${won(costTotal(d))}원</span>`:''}${claimStatus(d)?` <span class="bg ${CLAIM_CLS[claimStatus(d)]}">구상 ${claimStatus(d)}</span>`:''}</div></div>
     ${routeHTML(d)}
     <div class="sec">조사 · 진행 기록 <span class="muted" style="font-weight:normal;font-size:12px">— 실제로 한 일과 결과만 남기는 증빙용 기록 · NCR·대책서·구상 진행(자동)이 함께 표시</span></div><div id="logBox"></div>`,
-    [{label:'A3 보고서',fn:()=>a3Report('defect',id)},{label:d.caseId&&czById('cases',d.caseId)?'RCA 열기':'RCA 요청',fn:async()=>{if(mfDirty&&!await askConfirm({title:'기록을 저장하지 않고 이동할까요?',ok:'이동',danger:false}))return;mfDirty=false;czFromDefect(id)}},{label:'불량 정보 수정',fn:async()=>{if(mfDirty&&!await askConfirm({title:'기록을 저장하지 않고 이동할까요?',ok:'이동',danger:false}))return;closeModal(true);editDefect(id)}},{label:'닫기',fn:closeModal},{label:'저장',cls:'p',fn:()=>{const r=tlCommit();d.logs=r.logs;touch(d);save();closeModal(true);render();toast('진행 기록 저장')}}]);
+    [{label:'A3 보고서',fn:()=>a3Report('defect',id)},{label:'불량 정보 수정',fn:async()=>{if(mfDirty&&!await askConfirm({title:'기록을 저장하지 않고 이동할까요?',ok:'이동',danger:false}))return;closeModal(true);editDefect(id)}},{label:'닫기',fn:closeModal},{label:'저장',cls:'p',fn:()=>{const r=tlCommit();d.logs=r.logs;touch(d);save();closeModal(true);render();toast('진행 기록 저장')}}]);
   tlInit('defect',d);setTimeout(()=>$('#lgText')?.focus(),0);
 }
 async function gotoProgress(id){if(mfDirty&&!await askConfirm({title:'수정 중인 불량 정보를 저장하지 않고 이동할까요?',msg:'먼저 저장하려면 취소 후 저장을 누르세요.',ok:'이동',danger:false}))return;closeModal(true);openLog(id)}
