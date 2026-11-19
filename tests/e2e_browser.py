@@ -356,6 +356,22 @@ def main(seed_path):
             ok(r["hint"] and r["dueHidden"], "단순 통보: NCR 창에 검증 불필요 안내 · 검증 기한 칸 숨김")
             ok(r["s2"] == "검증 무효", "단순 통보: 재발은 무효(재발)로 기록할 수 있음")
             ok(r["s3"] == "승인(검증대기)" and r["late3"], "8D NCR 은 유효성 검증을 그대로 요구")
+            # NCR 목록의 단계 단추: 그 단계 화면만 열림 (단계 전환 줄 없음) · 통보서 단추 없음
+            r = A.evaluate("""() => {mfDirty=false;closeModal(true);state.tab='ncr';render();
+              const n=db.ncrs.find(x=>x.reqType!=='단순 통보')||db.ncrs[0],row=[...document.querySelectorAll('#ntab tbody tr')][0],btn=[...row.querySelectorAll('td:last-child button')].map(b=>b.textContent.trim()).join(',');
+              const tabs=()=>[...document.querySelectorAll('#ncrTabs [data-t]')].filter(b=>b.style.display!=='none').map(b=>b.dataset.t).join('');
+              const o={btn};for(const m of ['issue','reply','verify']){editNcr(n.id,null,m);o[m]={sw:!!document.querySelector('#ncrModes'),tabs:tabs(),t:document.querySelector('#mt').textContent};mfDirty=false;closeModal(true)}
+              editNcr(n.id);o.link=!!document.querySelector('#ncrModes');mfDirty=false;closeModal(true);
+              row.querySelector('a.lk').click();o.no=!!document.querySelector('#ncrModes');mfDirty=false;closeModal(true);return o}""")
+            ok("통보서" not in r["btn"] and r["btn"].startswith("발행 정보"), f"NCR 목록: 통보서 단추 없음 ({r['btn']})")
+            ok(not r["issue"]["sw"] and not r["reply"]["sw"] and not r["verify"]["sw"] and not r["no"], "NCR 목록의 단계 단추 · 번호: 단계 전환 줄 없이 그 단계만")
+            ok(r["issue"]["tabs"] == "and" and r["reply"]["tabs"] == "rbfd" and r["verify"]["tabs"] == "cd", f"NCR 단계별 탭 ({r['issue']['tabs']}/{r['reply']['tabs']}/{r['verify']['tabs']})")
+            ok("발행 정보" in r["issue"]["t"] and "협력사 회신" in r["reply"]["t"] and "검증" in r["verify"]["t"], "NCR 창 제목에 단계 이름")
+            ok(r["link"], "다른 화면의 NCR 링크(단계 지정 없음): 단계 전환 줄 유지")
+            # 조회 권한: 발행 정보 창에서 통보서 출력 (저장 단추는 없음)
+            r = C.evaluate("""async () => {await srvSync();mfDirty=false;closeModal(true);editNcr(db.ncrs[0].id,null,'issue');await new Promise(r=>setTimeout(r,300));
+              const v=[...document.querySelectorAll('#mfoot button')].filter(b=>b.style.display!=='none').map(b=>b.textContent.trim());closeModal(true);return v}""")
+            ok("통보서 출력" in r and not any("저장" in x or "삭제" in x for x in r), f"조회: NCR 발행 정보 창에 통보서 출력만 ({','.join(r)})")
             # 로그아웃
             A.click("button:has-text('로그아웃')"); A.wait_for_url("**/login")
             ok(True, "로그아웃")

@@ -3687,11 +3687,11 @@ async function ncrQuickReply(id){
 function ncrTable(){
   const ns=filteredNcrs();
   return `<div class="muted" style="font-size:12px;margin-bottom:6px">${ns.length}/${db.ncrs.length}건${msState.ncr&&msState.ncr.k?` · <a class="lk" onclick="msState.ncr={k:'',d:1};msSave();$('#ntab').innerHTML=ncrTable()">기본 정렬(최근 발행 순)로</a>`:''}</div><div class="tw"><table><thead><tr>${sth('ncr','no','NCR 번호')}${sth('ncr','issue','발행일')}${sth('ncr','sup','협력사')}${sth('ncr','part','부품')}${sth('ncr','title','제목')}${sth('ncr','status','상태')}${sth('ncr','notify','통보')}${sth('ncr','due','회신 기한')}${sth('ncr','reply','회신일')}${sth('ncr','verify','유효성 기한')}${sth('ncr','links','연결 불량','n')}${sth('ncr','owner','담당')}<th class="noprint"></th></tr></thead><tbody>
-  ${ns.map(n=>{const st=ncrStatus(n),fl=ncrFlags(n);return `<tr class="${lateInfo('ncr',n).length?'late':''}"><td><a class="lk" onclick="editNcr('${n.id}')"><b>${esc(n.no)}</b></a></td><td>${esc(n.issueDate)}</td><td>${esc(supName(n.supplierId))}</td><td>${esc(n.partNo)}<br><span class="muted">${esc(n.partName)}</span></td><td>${esc(n.title)}<br><span class="bg ${(n.reqType||'8D 보고서')==='8D 보고서'?'inf':'mut'}">${esc(n.reqType||'8D 보고서')}</span>${n.basis?` <span class="bg inf">${esc(n.basis)}</span>`:''}${n.repeatOf?` <span class="bg bad" title="이전 NCR ${esc(n.repeatOf)}">재발</span>`:''}${n.siteAudit==='요청'?' <span class="bg inf">현장 감사</span>':''}</td><td>${stB(st)}${ncrMini(n)}${farOn(n)?farBadge(n):''}${ncrEsc(n)?'<br>'+escB(n):''}</td>
+  ${ns.map(n=>{const st=ncrStatus(n),fl=ncrFlags(n);return `<tr class="${lateInfo('ncr',n).length?'late':''}"><td><a class="lk" onclick="editNcr('${n.id}',null,'${ncrModeDefault(n,n.id)}')"><b>${esc(n.no)}</b></a></td><td>${esc(n.issueDate)}</td><td>${esc(supName(n.supplierId))}</td><td>${esc(n.partNo)}<br><span class="muted">${esc(n.partName)}</span></td><td>${esc(n.title)}<br><span class="bg ${(n.reqType||'8D 보고서')==='8D 보고서'?'inf':'mut'}">${esc(n.reqType||'8D 보고서')}</span>${n.basis?` <span class="bg inf">${esc(n.basis)}</span>`:''}${n.repeatOf?` <span class="bg bad" title="이전 NCR ${esc(n.repeatOf)}">재발</span>`:''}${n.siteAudit==='요청'?' <span class="bg inf">현장 감사</span>':''}</td><td>${stB(st)}${ncrMini(n)}${farOn(n)?farBadge(n):''}${ncrEsc(n)?'<br>'+escB(n):''}</td>
   <td>${ncrNotifyCell(n)}</td>
   <td style="white-space:nowrap">${dday(n.dueDate,!!n.replyDate)}${fl.d3Late?`<br><span class="bg bad" title="봉쇄 회신 기한 ${esc(n.d3Due)}">D3 봉쇄 지연</span>`:''}</td><td>${esc(n.replyDate)||(st==='대책요청'&&n.reqType!=='단순 통보'?`<button class="b s noprint" onclick="ncrQuickReply('${n.id}')" title="오늘 날짜로 회신일 기록">회신 접수</button>`:'<span class="muted">-</span>')}${!n.replyDate&&nudgeLogs(n).length?`<br><span class="muted" style="font-size:11.5px">독촉 ${nudgeLogs(n).length}회</span>`:''}${(n.replyDocs||[]).length?` <span class="bg inf" title="협력사 대책서 파일 ${(n.replyDocs||[]).length}개">📎 ${(n.replyDocs||[]).length}</span>`:''}${n.replyDate&&n.dueDate&&n.replyDate>n.dueDate?' <span class="bg warn">지연접수</span>':''}${n.evalVerdict?`<br><span class="bg ${VD_CLS[n.evalVerdict]}" title="대책서 평가 ${(n.evals||[]).length}회차">${n.evalScore}점 ${n.evalVerdict}</span>`:''}</td>
   <td style="white-space:nowrap">${dday(n.verifyDue,st==='종결')}</td><td class="n">${(n.defectIds||[]).length}</td><td>${esc(n.owner)}</td>
-  <td class="noprint" style="white-space:nowrap">${(()=>{const nx=ncrModeDefault(n,n.id),b=(m,l)=>`<button class="b s ${nx===m?'p':''}" onclick="editNcr('${n.id}',null,'${m}')">${l}</button>`;return b('issue','발행 정보')+' '+(n.reqType==='단순 통보'?'':b('reply','회신')+' ')+b('verify','검증')})()} <button class="b s" onclick="printNotice('${n.id}')">통보서</button></td></tr>`}).join('')||'<tr><td colspan="13" class="muted" style="text-align:center;padding:30px">조건에 맞는 NCR이 없습니다.</td></tr>'}
+  <td class="noprint" style="white-space:nowrap">${(()=>{const nx=ncrModeDefault(n,n.id),b=(m,l)=>`<button class="b s ${nx===m?'p':''}" onclick="editNcr('${n.id}',null,'${m}')">${l}</button>`;return b('issue','발행 정보')+' '+(n.reqType==='단순 통보'?'':b('reply','회신')+' ')+b('verify','검증')})()}</td></tr>`}).join('')||'<tr><td colspan="13" class="muted" style="text-align:center;padding:30px">조건에 맞는 NCR이 없습니다.</td></tr>'}
   </tbody></table></div>`;
 }
 function renderNcr(){
@@ -3723,7 +3723,7 @@ function editNcr(id,preset,mode){
   const has8D=!!n.replyDate||['d4','d5','d6','d7','d8'].some(k=>String(n[k]||'').trim());
  const sevD=(n.defectIds||[]).map(i=>db.defects.find(d=>d.id===i)).filter(Boolean).map(sevOf).sort((a,b)=>'ABC'.indexOf(a.grade)-'ABC'.indexOf(b.grade)||b.score-a.score)[0];
   curNcrSev=sevD||null;
-  const body=`${id?ncrTrack(n):''}${sevD?`<div class="banner" style="background:${sevD.grade==='A'?'var(--badb)':sevD.grade==='B'?'var(--warnb)':'var(--mut)'};border-color:transparent;color:#1d2433">연결 불량 심각도 <span class="bg ${SEV_CLS[sevD.grade]}" style="font-size:13px">${sevD.grade}</span> ${sevD.score}점${sevD.forced.length?' (강제 A: '+esc(sevD.forced.join(', '))+')':''}${sevD.overridden?' (수동 조정: '+esc(sevD.reason)+')':''} → 권장 대응 <b>${sevD.resp}</b></div>`:''}${ncrTabsBar(id,n)}<div class="ntp" data-p="a">
+  const body=`${id?ncrTrack(n):''}${sevD?`<div class="banner" style="background:${sevD.grade==='A'?'var(--badb)':sevD.grade==='B'?'var(--warnb)':'var(--mut)'};border-color:transparent;color:#1d2433">연결 불량 심각도 <span class="bg ${SEV_CLS[sevD.grade]}" style="font-size:13px">${sevD.grade}</span> ${sevD.score}점${sevD.forced.length?' (강제 A: '+esc(sevD.forced.join(', '))+')':''}${sevD.overridden?' (수동 조정: '+esc(sevD.reason)+')':''} → 권장 대응 <b>${sevD.resp}</b></div>`:''}${ncrTabsBar(id,n,!!mode)}<div class="ntp" data-p="a">
 <div class="fg">
     <label>NCR 번호<input name="no" value="${esc(n.no)}" placeholder="저장 시 자동 채번"></label>
     <label>발행일 *<input type="date" name="issueDate" value="${esc(n.issueDate)}" data-prev="${esc(n.issueDate)}" oninput="ncrAutoDates('issue')"></label>
@@ -3951,10 +3951,11 @@ function concCommit(n){
 const NCR_TABS=[['a','① 발행 정보'],['n','② 통보서 내용'],['r','대책서 회신'],['b','D3 봉쇄'],['f','불량 분석 (FAR)'],['c','유효성 검증 · 종결'],['d','진행 기록']];
 const NCR_MODES={issue:{l:'발행 · 통보',tabs:['a','n','d'],t:'발행 정보'},reply:{l:'협력사 회신',tabs:['r','b','f','d'],t:'협력사 회신'},verify:{l:'검증 · 종결',tabs:['c','d'],t:'검증 · 종결'}};
 let ncrModeCur='issue',ncrCurId=null,ncrCurNo='';
-function ncrTabsBar(id,n){
+// solo: 목록의 단추(발행 정보 · 회신 · 검증)로 단계를 골라 연 창 — 그 단계만 보이고, 단계 전환 줄은 넣지 않음
+function ncrTabsBar(id,n,solo){
   const fl=id?ncrFlags(n):{},dot={reply:fl.d3Late||fl.replyLate,verify:fl.verifyLate};
   const lg=(n.logs||[]).length;
-  const modes=id?`<div class="nmodes" id="ncrModes" role="tablist" aria-label="NCR 화면">${Object.entries(NCR_MODES).map(([k,m])=>`<button type="button" data-m="${k}" onclick="ncrMode('${k}')">${m.l}${dot[k]?'<i class="tdot" title="기한 경과"></i>':''}</button>`).join('')}</div>`:'';
+  const modes=id&&!solo?`<div class="nmodes" id="ncrModes" role="tablist" aria-label="NCR 화면">${Object.entries(NCR_MODES).map(([k,m])=>`<button type="button" data-m="${k}" onclick="ncrMode('${k}')">${m.l}${dot[k]?'<i class="tdot" title="기한 경과"></i>':''}</button>`).join('')}</div>`:'';
   const dotT={r:fl.replyLate,b:fl.d3Late,f:id&&farState(n)==='지연',c:fl.verifyLate};
   return modes+`<div class="dtabs" id="ncrTabs" role="tablist">${NCR_TABS.map(([k,l])=>`<button type="button" role="tab" data-t="${k}" onclick="ncrTab('${k}')">${l}${k==='d'&&lg?` <span class="mono" style="opacity:.7">${lg}</span>`:''}${dotT[k]?'<i class="tdot" title="기한 경과"></i>':''}</button>`).join('')}</div>`;
 }
@@ -3984,6 +3985,7 @@ function ncrFoot(m){
   if(id&&m==='reply')B.push({label:n&&n.caseId&&czById('cases',n.caseId)?'RCA 열기':'RCA 요청',fn:async()=>{if(mfDirty&&!await askConfirm({title:'저장하지 않고 이동할까요?',msg:'먼저 저장하려면 취소 후 저장을 누르세요.',ok:'이동',danger:false}))return;mfDirty=false;closeModal(true);czFromNcr(id)}});
   if(id&&m!=='reply')B.push({label:'A3 보고서',fn:()=>a3Report('ncr',id)});
   B.push({label:'취소',fn:closeModal});
+  if(id&&m==='issue'&&RO)B.push({label:'통보서 출력',fn:()=>printNotice(id)});   // 조회 권한: 저장 없이 출력만
   if(m==='issue')B.push({label:id?'저장 후 통보서 출력':'발행 후 통보서 출력',fn:()=>{const nid=saveNcr(id);if(nid)printNotice(nid)}});
   B.push({label:id?'저장':'발행',cls:'p',fn:()=>saveNcr(id)});
   modalFoot(B);
