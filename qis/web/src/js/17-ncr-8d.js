@@ -382,7 +382,7 @@ function ncrFoot(m){
   B.push({label:'취소',fn:closeModal});
   if(m==='issue')B.push({label:id?'저장 후 통보서 출력':'발행 후 통보서 출력',fn:()=>{const nid=saveNcr(id);if(nid)printNotice(nid)}});
   B.push({label:id?'저장':'발행',cls:'p',fn:()=>saveNcr(id)});
-  f.innerHTML='';B.forEach(b=>{const e=document.createElement('button');e.type='button';e.className='b '+(b.cls||'');e.textContent=b.label;e.onclick=b.fn;if(b.left)e.style.marginRight='auto';f.appendChild(e)});
+  modalFoot(B);
 }
 function ncrTabDefault(n,id){
   if(!id)return 'a';const st=ncrStatus(n);

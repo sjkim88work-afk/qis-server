@@ -116,7 +116,6 @@ function editDefect(id,copy,preset){
   if(id){btns.unshift({label:'복사해서 새로 등록',fn:async()=>{if(mfDirty&&!await askConfirm({title:'수정한 내용을 저장하지 않고 복사할까요?',msg:'먼저 저장하려면 취소 후 저장을 누르세요.',ok:'복사',danger:false}))return;closeModal(true);editDefect(id,true)}});
     btns.unshift({label:'삭제',cls:'d',fn:()=>delDefect(id)})}
   openModal(id?'불량 상세':'불량 등록',body,btns);
-  if(id){const f0=$('#mfoot').firstElementChild;if(f0)f0.style.marginRight='auto'}
   initPhotoBox(copy?[]:(d.photos||[]));
   srcLayout();{const f=$('#mf');['fgNo','fgName'].forEach(k=>f[k]&&f[k].addEventListener('input',srcLayout))}curRcvId=copy?'':(d.rcvId||'');bomDefect();rcvHint();
   // 새 불량: 발생처가 수입검사면 귀책 기본 '협력사', 공정·출하·고객이면 '미정' (귀책을 직접 고르기 전까지)

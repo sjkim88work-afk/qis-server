@@ -33,12 +33,19 @@ async function doUndo(){
   try{if(s.ph.length){await photoPut(s.ph);photoStr=null}}catch(e){toast('사진 복원 실패: '+e.message)}
   save();undoBusy=false;render();toast('되돌렸습니다');
 }
+// 창 아래 단추 줄 — 삭제(cls 'd') · left 단추는 왼쪽 끝에 따로, 나머지(취소 · 저장 …)는 오른쪽에
+function modalFoot(btns){
+  const f=$('#mfoot');if(!f)return;f.innerHTML='';
+  const isL=b=>b.left||/(^|\s)d(\s|$)/.test(b.cls||''),mk=b=>{const e=document.createElement('button');e.type='button';e.className='b '+(b.cls||'');e.textContent=b.label;e.onclick=b.fn;f.appendChild(e)};
+  const L=btns.filter(isL);L.forEach(mk);
+  if(L.length){const s=document.createElement('span');s.className='mfsp';f.appendChild(s)}
+  btns.filter(b=>!isL(b)).forEach(mk);
+}
 function openModal(title,body,btns){
   delete $('#modal').dataset.iss;   // 이슈 상세 창 표시 (11-issue.js issShow 가 다시 붙임)
   $('#mt').textContent=title;
   $('#mbody').innerHTML=`<form id="mf" onsubmit="return false">${body}</form>`;
-  const f=$('#mfoot');f.innerHTML='';
-  btns.forEach(b=>{const e=document.createElement('button');e.type='button';e.className='b '+(b.cls||'');e.textContent=b.label;e.onclick=b.fn;f.appendChild(e)});
+  modalFoot(btns);
   $('#modal').classList.add('on');$('#modal').scrollTop=0;$('#mbody').scrollTop=0;
   mfDirty=false;const mf=$('#mf');mf.addEventListener('input',()=>mfDirty=true);mf.addEventListener('change',()=>mfDirty=true);
 }

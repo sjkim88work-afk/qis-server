@@ -74,6 +74,8 @@ a.lk{color:var(--pri);cursor:pointer;text-decoration:none}a.lk:hover{text-decora
 .modal .mh h2{font-size:15px;margin:0;flex:1}
 .modal .mb{padding:14px 16px}
 .modal .mf{padding:10px 16px;border-top:1px solid var(--line);display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+/* 삭제 단추는 왼쪽 끝에 따로 — 저장 · 취소와 붙어 있으면 잘못 누르기 쉬움 */
+.modal .mf .mfsp{flex:1 1 24px}
 .fg{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px}
 .fg label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--sub)}
 .fg label.full{grid-column:1/-1}
