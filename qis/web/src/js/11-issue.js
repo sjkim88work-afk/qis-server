@@ -13,7 +13,27 @@ const ISS_ROUTES=[
 const ISS_RL=Object.fromEntries(ISS_ROUTES.map(r=>[r.k,r.l]));
 const issById=id=>(db.issues||[]).find(x=>x.id===id);
 const nowMin=()=>{const d=new Date();return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`};
-const issAt=s=>String(s||'').replace('T',' ').slice(0,16);
+// 일시 표시 — 날짜는 필수, 시간은 선택: 정확한 시각이 없으면 시간대(오전 · 오후 · 야간)나 날짜만 보임
+const issAt=(s,band)=>{const v=String(s||''),d=v.slice(0,10),t=v.slice(11,16);return d+(t?' '+t:band?' '+band:'')};
+const TBANDS=['오전','오후','야간'],TBAND_T={'오전':'09:00','오후':'15:00','야간':'22:00'};   // 야간 = 그날 야간조 (저녁 ~ 다음 날 새벽)
+// 일시 입력 칸: 날짜 + [시각 입력 | 오전 | 오후 | 야간 | 시간 모름] + 시각
+function dtpHTML(id,at,band){const v=String(at||''),d=v.slice(0,10),t=v.slice(11,16),m=t?'':(TBANDS.includes(band)?band:'?');
+  return `<span class="dtp"><input type="date" id="${id}D" value="${esc(d)}" max="${today()}"><select id="${id}B" onchange="dtpBand('${id}')" title="정확한 시각을 모르면 오전 · 오후 · 야간(그날 야간조)이나 ‘시간 모름’을 고르세요">${[['','시각 입력'],['오전','오전'],['오후','오후'],['야간','야간'],['?','시간 모름']].map(([k,l])=>`<option value="${k}" ${k===m?'selected':''}>${l}</option>`).join('')}</select><input type="time" id="${id}T" value="${esc(t)}" ${m?'style="display:none"':''}></span>`}
+function dtpSync(id){const b=$('#'+id+'B'),t=$('#'+id+'T');if(b&&t)t.style.display=b.value?'none':''}
+function dtpBand(id){const b=$('#'+id+'B'),t=$('#'+id+'T');if(b.value)t.value='';else if(!t.value)t.value=nowMin().slice(11,16);dtpSync(id);if(!b.value)t.focus();mfDirty=true}
+function dtpVal(id){const d=($('#'+id+'D')||{}).value||'',b=($('#'+id+'B')||{}).value||'',t=b?'':(($('#'+id+'T')||{}).value||'');return {at:d?(t?d+'T'+t:d):'',band:TBANDS.includes(b)?b:''}}
+function dtpSet(id,at,band){const v=String(at||''),t=v.slice(11,16);$('#'+id+'D').value=v.slice(0,10);$('#'+id+'T').value=t;$('#'+id+'B').value=t?'':(TBANDS.includes(band)?band:'?');dtpSync(id)}
+// 기록 순서: 날짜 → (손으로 정한 순서 ord) → 시각 · 시간대 → 입력한 순서. 시간 모름은 그날의 끝
+const issTk=l=>String(l.at||'').slice(11,16)||TBAND_T[l.band]||'24:00';
+function issCmp(a,b){const da=String(a.at||'').slice(0,10),db2=String(b.at||'').slice(0,10);if(da!==db2)return da.localeCompare(db2);
+  if(a.ord!=null||b.ord!=null)return (a.ord==null?1e9:a.ord)-(b.ord==null?1e9:b.ord)||(a.rec||'').localeCompare(b.rec||'');
+  return issTk(a).localeCompare(issTk(b))||(a.rec||'').localeCompare(b.rec||'')}
+// 같은 날의 기록 순서를 한 칸 옮김 (dir: -1 위로 · +1 아래로). 날짜가 다른 기록과는 바꿀 수 없음
+function issMove(id,k,dir){
+  const i=issById(id),l=i&&i.logs[k];if(!l)return;const day=String(l.at||'').slice(0,10);
+  const L=i.logs.filter(x=>String(x.at||'').slice(0,10)===day).sort(issCmp),a=L.indexOf(l),b=a+dir;if(b<0||b>=L.length)return;
+  [L[a],L[b]]=[L[b],L[a]];L.forEach((x,n)=>{x.ord=n});touch(i);save();render();
+}
 function issLinks(i){
   const ds=(i.defectIds||[]).map(x=>db.defects.find(d=>d.id===x)).filter(Boolean);
   const ns=[...new Set(ds.map(d=>d.ncrId).filter(Boolean))].map(x=>db.ncrs.find(n=>n.id===x)).filter(Boolean);
@@ -58,7 +78,7 @@ function renderIssue(){
   ${L.map(i=>{const st=issStatus(i),age=i.closedAt?'종결':diffDays((i.at||'').slice(0,10)||today(),today())+'일';return `<tr class="${issStale(i)?'late':''}" style="cursor:pointer" onclick="if(!event.target.closest('a,button,input'))issOpen('${i.id}')">
     <td class="mono"><a class="lk" onclick="issOpen('${i.id}')"><b>${esc(i.no)}</b></a></td>
     <td style="min-width:220px"><b>${esc(i.title)}</b><br><span class="muted" style="font-size:12px">${esc([i.partNo,i.qty?num(i.qty).toLocaleString()+'EA':''].filter(Boolean).join(' · ')||'품목 미정')}</span></td>
-    <td style="white-space:nowrap">${esc(issAt(i.at).slice(5))}<br><span class="muted" style="font-size:12px">${esc([i.source,i.loc].filter(Boolean).join(' · '))}</span></td>
+    <td style="white-space:nowrap">${esc(issAt(i.at,i.band).slice(5))}<br><span class="muted" style="font-size:12px">${esc([i.source,i.loc].filter(Boolean).join(' · '))}</span></td>
     <td style="white-space:nowrap"><span class="bg ${ISS_UCLS[i.urg]||'mut'}">${esc(i.urg||'보통')}</span>${i.special?' <span class="bg svA">CC/SC</span>':''}</td>
     <td style="white-space:nowrap"><span class="bg ${ISS_SCLS[st]}">${st==='접수'?'접수 · 분류 대기':st==='종결'&&!issLinks(i).n?'종결 · 이상 없음':st}</span></td>
     <td class="n">${(i.logs||[]).filter(l=>!l.void).length}</td><td>${out(i)}</td><td>${esc(i.owner)}</td><td class="mono">${age}</td></tr>`}).join('')||'<tr><td colspan="9" class="muted" style="text-align:center;padding:28px">조건에 맞는 이슈가 없습니다.</td></tr>'}
@@ -69,12 +89,12 @@ function issOpen(id){if(!issById(id))return;state.tab='issue';state.issId=id;sta
 function issShow(id,keep){
   const i=issById(id),m=$('#modal');if(!i)return;
   // 다시 그릴 때: 쓰던 기록 입력 · 스크롤 위치 유지
-  const KEEP=['isK','isAt','isWho','isTx','ieK','ieAt','ieWho','ieTx','ieWhy'];
+  const KEEP=['isK','isAtD','isAtB','isAtT','isWho','isTx','ieK','ieAtD','ieAtB','ieAtT','ieWho','ieTx','ieWhy'];
   if(!keep||m.dataset.iss!==id)state.issEditK=null;
   const old=keep&&m.dataset.iss===id?{v:KEEP.map(k=>$('#'+k)?$('#'+k).value:null),top:$('#mbody').scrollTop}:null;
   openModal(`${i.no} 이슈`,issDetailHTML(i),[...(RO?[]:[{label:'삭제',cls:'d',fn:()=>delIssue(id)},...(i.closedAt?[{label:'다시 열기',fn:()=>issReopen(id)}]:[]),{label:'수정',fn:()=>editIssue(id)}]),{label:'닫기',fn:closeModal},...(RO?[]:[{label:'저장',cls:'p',fn:()=>issSaveAll(id)}])]);
   m.dataset.iss=id;
-  if(old){KEEP.forEach((k,n)=>{if($('#'+k)&&old.v[n]!=null)$('#'+k).value=old.v[n]});$('#mbody').scrollTop=old.top;mfDirty=!!(old.v[3]||'').trim()||state.issEditK!=null}
+  if(old){KEEP.forEach((k,n)=>{if($('#'+k)&&old.v[n]!=null)$('#'+k).value=old.v[n]});dtpSync('isAt');dtpSync('ieAt');$('#mbody').scrollTop=old.top;mfDirty=!!(old.v[KEEP.indexOf('isTx')]||'').trim()||state.issEditK!=null}
 }
 // 화면을 다시 그린 뒤: 상세 창이 떠 있으면 갱신, 아무 창도 없으면 '보고 있던 이슈' 표시를 지움
 function issSync(){
@@ -87,9 +107,9 @@ function editIssue(id){
   const S=db.settings,i=id?{...issById(id)}:{at:nowMin(),source:S.sources.find(x=>/공정/.test(x))||S.sources[0],urg:'높음',owner:czMe(),special:false,contain:false};
   const body=`<div class="fg">
     <label class="full">무엇이 (제목) *<input name="title" value="${esc(i.title)}" placeholder="예: 도어 래치 스프링 미조립 의심"></label>
+    <label class="w2"><span>언제 * <span class="muted" style="font-size:11px">— 날짜는 필수 · 시간은 선택</span></span>${dtpHTML('iat',i.at,i.band)}</label>
     <label>어디서 *<select name="source">${opts(S.sources,i.source)}</select></label>
     <label>세부 위치<input name="loc" value="${esc(i.loc)}" placeholder="예: 조립 2라인"></label>
-    <label>언제 *<input type="datetime-local" name="at" value="${esc(i.at)}"></label>
     <label>담당<input name="owner" list="dlOwners" value="${esc(i.owner)}"></label>
     <label class="full">현상<textarea name="desc" placeholder="확인한 사실 — 무엇이 · 어떻게 · 몇 개">${esc(i.desc)}</textarea></label>
     <label>품목 (추정 · 선택)<input name="partNo" data-combo="parts" autocomplete="off" value="${esc(i.partNo)}" placeholder="품번 · 품명 · 차종 · 협력사로 검색 (모르면 비워 두기)"></label>
@@ -107,15 +127,16 @@ function editIssue(id){
 }
 async function saveIssue(id,open){
   const f=$('#mf'),g=k=>f[k]?String(f[k].value||'').trim():'';
-  const o={title:g('title'),source:g('source'),loc:g('loc'),at:g('at'),owner:g('owner'),desc:g('desc'),partNo:g('partNo'),qty:g('qty')===''?'':num(g('qty')),urg:g('urg')||'보통',special:!!f.special.checked,contain:!!f.contain.checked,containText:g('containText')};
+  const dv=dtpVal('iat'),o={title:g('title'),source:g('source'),loc:g('loc'),at:dv.at,band:dv.band,owner:g('owner'),desc:g('desc'),partNo:g('partNo'),qty:g('qty')===''?'':num(g('qty')),urg:g('urg')||'보통',special:!!f.special.checked,contain:!!f.contain.checked,containText:g('containText')};
   if(!o.title){toast('무엇이 (제목)을 입력하세요');f.title.focus();return}
-  if(!o.at){toast('언제를 입력하세요');return}
+  if(!o.at){toast('언제(날짜)를 입력하세요');$('#iatD').focus();return}
+  if(o.at.slice(0,10)>today()){toast('발견 날짜는 오늘 이후일 수 없습니다');return}
   if((o.special||o.urg==='긴급')&&!o.contain&&!await askConfirm({title:'즉시 조치(격리) 없이 저장할까요?',msg:'긴급 · 특별특성 건입니다. 재고 · 재공 · 이송 중 물량을 막았는지 확인하세요 (IATF 8.7.1).',ok:'그래도 저장',danger:false}))return;
   let i;
   if(id){i=issById(id);if(!i){toast('이 이슈를 찾을 수 없습니다');return}Object.assign(i,o)}
   else{const g2=genDocNo('iss',o.at.slice(0,10));i={id:uid(),no:g2.no,...o,photos:[],logs:[],defectIds:[],caseIds:[],createdAt:now()};
-    issLog(i,'발견',[o.desc||o.title,o.qty?`${num(o.qty).toLocaleString()}EA`:''].filter(Boolean).join(' · '),{at:o.at});
-    if(o.contain)issLog(i,'격리',o.containText||'격리 · 보류함',{at:o.at});
+    issLog(i,'발견',[o.desc||o.title,o.qty?`${num(o.qty).toLocaleString()}EA`:''].filter(Boolean).join(' · '),{at:o.at,band:o.band});
+    if(o.contain)issLog(i,'격리',o.containText||'격리 · 보류함',{at:o.at,band:o.band});
     const sh=g('shareTo');if(sh)issLog(i,'공유',`${o.title} — 현상 · 사진 · 즉시 조치 공유`,{who:sh});
     db.issues.push(i)}
   try{const put=curPhotos.filter(p=>p.isNew||p.dirty).map(p=>({id:p.id,defectId:i.id,name:p.name,caption:p.caption||'',data:p.data,thumb:p.thumb,createdAt:p.createdAt,updatedAt:now()}));
@@ -128,7 +149,11 @@ async function saveIssue(id,open){
 
 function issDetailHTML(i){
   const st=issStatus(i),L=issLinks(i),r=ISS_ROUTES.find(x=>x.k===state.issRoute)||ISS_ROUTES[0],ro=RO||!!i.closedAt;
-  const logs=(i.logs||[]).map((l,k)=>({...l,_k:k})).sort((a,b)=>(a.at||'').localeCompare(b.at||'')||(a.rec||'').localeCompare(b.rec||''));
+  const logs=(i.logs||[]).map((l,k)=>({...l,_k:k})).sort(issCmp);
+  // 같은 날 기록이 2건 이상이면 ▲▼로 순서를 바꿀 수 있음 (날짜가 다른 기록과는 못 바꿈)
+  const dayOf=l=>String(l.at||'').slice(0,10),days={};logs.forEach(l=>{(days[dayOf(l)]=days[dayOf(l)]||[]).push(l._k)});
+  const mv=l=>{const D=days[dayOf(l)],n=D.indexOf(l._k);if(ro||D.length<2)return '';
+    return `<span class="mv"><button type="button" class="b s" ${n?'':'disabled'} onclick="issMove('${i.id}',${l._k},-1)" title="같은 날 안에서 위로" aria-label="위로">▲</button><button type="button" class="b s" ${n<D.length-1?'':'disabled'} onclick="issMove('${i.id}',${l._k},1)" title="같은 날 안에서 아래로" aria-label="아래로">▼</button></span>`};
   setTimeout(()=>issPhotos(i),0);
   const kv=(k,v,s)=>`<div><div class="muted" style="font-size:12px">${k}</div><div style="font-weight:600;margin-top:2px">${v}</div>${s?`<div style="font-size:12.5px">${s}</div>`:''}</div>`;
   const p=partByNo(i.partNo||'');
@@ -140,7 +165,7 @@ function issDetailHTML(i){
     <div class="row" style="gap:8px;align-items:center"><span class="mono muted">${esc(i.no)}</span><span class="bg ${ISS_UCLS[i.urg]||'mut'}">${esc(i.urg||'보통')}</span>${i.special?'<span class="bg svA">CC/SC 특별특성</span>':''}<span class="bg ${ISS_SCLS[st]}">${st}</span>
       <h2 style="margin:0;font-size:18px">${esc(i.title)}</h2></div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-top:14px;font-size:13px">
-      ${kv('발견',esc(issAt(i.at)),esc([i.source,i.loc].filter(Boolean).join(' · ')))}
+      ${kv('발견',esc(issAt(i.at,i.band)),esc([i.source,i.loc].filter(Boolean).join(' · ')))}
       ${kv('품목 (추정)',esc(i.partNo||'미정'),p?esc(`${p.name} · ${supName(p.supplierId)||'협력사 미지정'}`):'')}
       ${kv('수량',i.qty!==''&&i.qty!=null?num(i.qty).toLocaleString()+' EA':'미정','')}
       ${kv('즉시 조치 (격리)',i.contain?'<span style="color:var(--ok)">했음</span>':issHot(i)?'<span style="color:var(--bad)">기록 없음</span>':'—',esc(i.containText||''))}
@@ -153,19 +178,19 @@ function issDetailHTML(i){
     <div class="card" style="flex:999 1 520px;min-width:0"><h3 style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap"><span style="white-space:nowrap">기록</span><span class="muted" style="font-weight:normal;font-size:12px;flex:1 1 200px">발견부터 분류까지 한 일을 시간순으로 — 내용은 수정할 수 있고(수정 이력이 남음), 잘못 쓴 기록은 사유와 함께 취소</span></h3>
       <ol class="isl">${logs.map(l=>{
         const can=!ro&&!l.void&&!ISS_SYS.includes(l.kind),ed=l.edits||[];
-        if(can&&state.issEditK===l._k)return `<li class="ised"><div style="grid-column:1/-1"><div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px">
-          <label class="fgl">구분<select id="ieK">${opts(ISS_KINDS.includes(l.kind)?ISS_KINDS:[l.kind,...ISS_KINDS],l.kind)}</select></label>
-          <label class="fgl">일시<input type="datetime-local" id="ieAt" value="${esc((l.at||'').slice(0,16))}"></label>
-          <label class="fgl">상대 · 참석<input id="ieWho" value="${esc(l.who||'')}"></label></div>
+        if(can&&state.issEditK===l._k)return `<li class="ised"><div style="grid-column:1/-1"><div class="dtrow">
+          <label class="fgl"><span>일시 <span class="muted" style="font-weight:normal">(시간은 선택)</span></span>${dtpHTML('ieAt',l.at,l.band)}</label>
+          <label class="fgl">구분<select id="ieK">${opts(ISS_KINDS.includes(l.kind)?ISS_KINDS:[l.kind,...ISS_KINDS],l.kind)}</select></label></div>
+          <label class="fgl" style="margin-top:8px">상대방 · 참석<input id="ieWho" value="${esc(l.who||'')}"></label>
           <label class="fgl" style="margin-top:8px">내용<textarea id="ieTx" style="min-height:120px;width:100%">${esc(l.text)}</textarea></label>
           <label class="fgl" style="margin-top:8px">수정 사유 <span class="muted" style="font-weight:normal">(선택 — 적으면 기록 아래에 남습니다)</span><input id="ieWhy" placeholder="예: 오타 수정, 협력사 회신 내용 보완"></label>
           <div class="row" style="justify-content:flex-end;gap:8px;margin-top:8px"><button type="button" class="b" onclick="issEditLog('${i.id}',null)">취소</button><button type="button" class="b p" onclick="issSaveLog('${i.id}',${l._k})">수정 저장</button></div></div></li>`;
-        return `<li class="${l.void?'void':''}"><span class="mono">${esc(issAt(l.at).slice(5))}</span><span><span class="bg ${ISS_KCLS[l.kind]||'mut'}">${esc(l.kind)}</span></span><div>${l.who?`<div class="muted" style="font-size:12px">${esc(l.who)}</div>`:''}<div>${nl(issTidy(l.text))}</div>${l.void?`<div class="muted" style="font-size:12px">취소 ${esc(issAt(l.void.at))} — ${esc(l.void.reason)}</div>`:''}${ed.length?`<details class="muted" style="font-size:12px;margin-top:4px"><summary style="cursor:pointer">수정 ${ed.length}회 · 최근 ${esc(issAt(ed[ed.length-1].at))}${ed[ed.length-1].by?' '+esc(ed[ed.length-1].by):''}${ed[ed.length-1].reason?' — '+esc(ed[ed.length-1].reason):''}</summary>${ed.slice().reverse().map(e=>`<div style="border-left:2px solid var(--line);padding:2px 0 2px 8px;margin-top:6px"><div>${esc(issAt(e.at))}${e.by?' '+esc(e.by):''} 수정${e.reason?' — '+esc(e.reason):' (사유 없음)'}</div><div>수정 전: ${esc(issAt(e.prev.at).slice(5))} · ${esc(e.prev.kind)}${e.prev.who?' · '+esc(e.prev.who):''}</div><div style="white-space:pre-wrap">${esc(issTidy(e.prev.text))}</div></div>`).join('')}</details>`:''}</div>${can?`<span class="noprint" style="display:flex;flex-direction:column;gap:4px"><button type="button" class="b s" onclick="issEditLog('${i.id}',${l._k})" title="이 기록의 내용 고치기">수정</button><button type="button" class="b s" onclick="issVoid('${i.id}',${l._k})" title="잘못 쓴 기록을 취소선으로 남기고 무효 처리">기록 취소</button></span>`:'<span></span>'}</li>`}).join('')||'<li class="muted">기록이 없습니다</li>'}</ol>
+        return `<li class="${l.void?'void':''}"><span class="mono" title="${l.at&&String(l.at).length>10?'':l.band?'정확한 시각 모름 — '+esc(l.band):'시간 모름'}">${esc(issAt(l.at,l.band).slice(5))}</span><span><span class="bg ${ISS_KCLS[l.kind]||'mut'}">${esc(l.kind)}</span></span><div>${l.who?`<div class="muted" style="font-size:12px">${esc(l.who)}</div>`:''}<div>${nl(issTidy(l.text))}</div>${l.void?`<div class="muted" style="font-size:12px">취소 ${esc(issAt(l.void.at))} — ${esc(l.void.reason)}</div>`:''}${ed.length?`<details class="muted" style="font-size:12px;margin-top:4px"><summary style="cursor:pointer">수정 ${ed.length}회 · 최근 ${esc(issAt(ed[ed.length-1].at))}${ed[ed.length-1].by?' '+esc(ed[ed.length-1].by):''}${ed[ed.length-1].reason?' — '+esc(ed[ed.length-1].reason):''}</summary>${ed.slice().reverse().map(e=>`<div style="border-left:2px solid var(--line);padding:2px 0 2px 8px;margin-top:6px"><div>${esc(issAt(e.at))}${e.by?' '+esc(e.by):''} 수정${e.reason?' — '+esc(e.reason):' (사유 없음)'}</div><div>수정 전: ${esc(issAt(e.prev.at,e.prev.band).slice(5))} · ${esc(e.prev.kind)}${e.prev.who?' · '+esc(e.prev.who):''}</div><div style="white-space:pre-wrap">${esc(issTidy(e.prev.text))}</div></div>`).join('')}</details>`:''}</div>${can?`<span class="noprint" style="display:flex;flex-direction:column;gap:4px">${mv(l)}<button type="button" class="b s" onclick="issEditLog('${i.id}',${l._k})" title="이 기록의 내용 고치기">수정</button><button type="button" class="b s" onclick="issVoid('${i.id}',${l._k})" title="잘못 쓴 기록을 취소선으로 남기고 무효 처리">기록 취소</button></span>`:`<span class="noprint">${mv(l)}</span>`}</li>`}).join('')||'<li class="muted">기록이 없습니다</li>'}</ol>
       ${ro?'':`<div class="lgc isadd noprint"><div class="ch">✎ 기록 남기기 <span class="muted" style="font-weight:normal">— 확인한 사실과 결정 사항을 적습니다. 저장한 기록을 고치면 수정 이력이 남습니다.</span></div>
-        <div class="cg c3">
-        <label>일시<input type="datetime-local" id="isAt" value="${nowMin()}"></label>
-        <label>구분<select id="isK">${opts(ISS_KINDS,'인터뷰')}</select></label>
-        <label>상대방 · 참석<input id="isWho" placeholder="예: 생산팀 · 생산기술팀"></label></div>
+        <div class="dtrow">
+        <label><span>일시 <span class="muted" style="font-weight:normal">(시간은 선택)</span></span>${dtpHTML('isAt',nowMin(),'')}</label>
+        <label>구분<select id="isK">${opts(ISS_KINDS,'인터뷰')}</select></label></div>
+        <label style="margin-top:8px">상대방 · 참석<input id="isWho" placeholder="예: 생산팀 · 생산기술팀"></label>
         <label style="margin-top:8px">내용 *<textarea id="isTx" placeholder="확인한 사실 · 원인 추정 · 결정 사항"></textarea></label>
         <div class="cf"><span style="flex:1"></span><button type="button" class="b" onclick="issClearLog()">취소</button><button type="button" class="b p" onclick="issAddLog('${i.id}')">저장</button></div></div>`}
     </div>
@@ -199,10 +224,11 @@ async function issPhotos(i){const b=$('#issPh');if(!b||!(i.photos||[]).length)re
   try{const rs=await photoGetMany(i.photos);if(!$('#issPh'))return;b.innerHTML=rs.map((p,k)=>`<img src="${p.thumb||p.data}" alt="${esc(p.caption||'이슈 사진')}" title="${esc(p.caption||'')}" style="width:140px;height:100px;object-fit:cover;border-radius:6px;cursor:pointer" onclick="issLb('${i.id}',${k})">`).join('')}catch(e){}}
 async function issLb(id,k){const i=issById(id);if(!i)return;try{const rs=await photoGetMany(i.photos);lbOpen(rs.map(r=>({...r,caption:`${i.no} · ${r.caption||''}`})),k)}catch(e){}}
 function issAddLog(id){const i=issById(id);if(!i)return false;const t=($('#isTx').value||'').trim();if(!t){toast('내용을 입력하세요');$('#isTx').focus();return false}
-  const at=$('#isAt').value||nowMin();if(at.slice(0,10)>today()){toast('기록 일시는 오늘 이후일 수 없습니다');return false}
-  issLog(i,$('#isK').value,t,{at,who:($('#isWho').value||'').trim()});$('#isTx').value='';touch(i);save();render();toast('기록했습니다');return true}
+  const dv=dtpVal('isAt');if(!dv.at){toast('날짜를 입력하세요');$('#isAtD').focus();return false}
+  if(dv.at.slice(0,10)>today()){toast('기록 날짜는 오늘 이후일 수 없습니다');return false}
+  issLog(i,$('#isK').value,t,{at:dv.at,band:dv.band,who:($('#isWho').value||'').trim()});$('#isTx').value='';touch(i);save();render();toast('기록했습니다');return true}
 // 기록 작성 칸의 ‘취소’ — 쓰던 내용을 지움
-function issClearLog(){const had=['isTx','isWho'].some(k=>($('#'+k).value||'').trim());$('#isTx').value='';$('#isWho').value='';$('#isAt').value=nowMin();if(state.issEditK==null)mfDirty=false;if(had)toast('쓰던 내용을 지웠습니다')}
+function issClearLog(){const had=['isTx','isWho'].some(k=>($('#'+k).value||'').trim());$('#isTx').value='';$('#isWho').value='';dtpSet('isAt',nowMin(),'');if(state.issEditK==null)mfDirty=false;if(had)toast('쓰던 내용을 지웠습니다')}
 // 상세 창의 ‘저장’ — 쓰던 기록(새 기록 · 수정 중인 기록)을 저장하고 창을 닫음. ‘닫기’는 저장하지 않음
 function issSaveAll(id){
   if(state.issEditK!=null&&$('#ieTx')&&!issSaveLog(id,state.issEditK))return;
@@ -212,21 +238,21 @@ function issSaveAll(id){
 // 기록 수정 — 내용 · 일시 · 구분 · 상대를 고침. 수정 전 내용과 사유(선택)는 기록에 남음
 const ISS_SYS=['분류','종결','다시 열기'];                             // 프로그램이 남긴 기록 — 수정 · 취소 불가
 const issTidy=t=>String(t||'').replace(/[ \t]+\n/g,'\n').replace(/\n{3,}/g,'\n\n').trim();   // 붙여 넣은 메일의 빈 줄 여러 개 → 하나
-function issEditLog(id,k){['ieK','ieAt','ieWho','ieTx','ieWhy'].forEach(x=>{const e=$('#'+x);if(e)e.removeAttribute('id')});   // 다른 기록의 편집 내용이 넘어오지 않게
+function issEditLog(id,k){['ieK','ieAtD','ieAtB','ieAtT','ieWho','ieTx','ieWhy'].forEach(x=>{const e=$('#'+x);if(e)e.removeAttribute('id')});   // 다른 기록의 편집 내용이 넘어오지 않게
   state.issEditK=k;issShow(id,true);if(k!=null){const t=$('#ieTx');if(t){t.focus();t.scrollIntoView({block:'center'})}}}
 function issSaveLog(id,k){
   const i=issById(id),l=i&&i.logs[k];if(!l||l.void||ISS_SYS.includes(l.kind))return false;
-  const o={kind:$('#ieK').value,at:$('#ieAt').value||l.at,who:($('#ieWho').value||'').trim(),text:($('#ieTx').value||'').trim()},why=($('#ieWhy').value||'').trim();
+  const dv=dtpVal('ieAt'),o={kind:$('#ieK').value,at:dv.at||l.at,band:dv.at?dv.band:(l.band||''),who:($('#ieWho').value||'').trim(),text:($('#ieTx').value||'').trim()},why=($('#ieWhy').value||'').trim();
   if(!o.text){toast('내용을 입력하세요');$('#ieTx').focus();return false}
   if(o.at.slice(0,10)>today()){toast('기록 일시는 오늘 이후일 수 없습니다');return false}
-  const prev={kind:l.kind,at:l.at,who:l.who||'',text:l.text};
+  const prev={kind:l.kind,at:l.at,band:l.band||'',who:l.who||'',text:l.text};
   state.issEditK=null;
-  if(['kind','at','who','text'].every(f=>o[f]===prev[f])){issShow(id,true);return true}   // 바뀐 것 없음
-  (l.edits=l.edits||[]).push({at:nowMin(),by:czMe(),reason:why,prev});Object.assign(l,o);
+  if(['kind','at','band','who','text'].every(f=>o[f]===prev[f])){issShow(id,true);return true}   // 바뀐 것 없음
+  (l.edits=l.edits||[]).push({at:nowMin(),by:czMe(),reason:why,prev});if(o.at!==prev.at||o.band!==prev.band){const D=[prev.at,o.at].map(x=>String(x||'').slice(0,10));i.logs.forEach(x=>{if(D.includes(String(x.at||'').slice(0,10)))delete x.ord})}Object.assign(l,o);   // 일시를 고치면 그날의 손으로 정한 순서는 풀리고 다시 시간순
   touch(i);save();render();toast('기록을 수정했습니다');return true;
 }
 async function issVoid(id,k){const i=issById(id),l=i&&i.logs[k];if(!l)return;
-  const r=await askConfirm({title:'이 기록을 취소할까요?',msg:`${esc(issAt(l.at))} ${esc(l.kind)} — ${esc(l.text.slice(0,60))}`,note:'지우지 않고 취소선과 사유가 남습니다.',ok:'기록 취소',danger:false,input:{label:'취소 사유',ph:'예: 다른 건 내용을 잘못 입력'}});
+  const r=await askConfirm({title:'이 기록을 취소할까요?',msg:`${esc(issAt(l.at,l.band))} ${esc(l.kind)} — ${esc(l.text.slice(0,60))}`,note:'지우지 않고 취소선과 사유가 남습니다.',ok:'기록 취소',danger:false,input:{label:'취소 사유',ph:'예: 다른 건 내용을 잘못 입력'}});
   if(!r)return;l.void={at:nowMin(),by:czMe(),reason:r};touch(i);save();render()}
 let issPend=null;   // 이슈에서 연 불량 등록 창 — 저장하면 이슈에 연결
 async function issRoute(id,k){
@@ -237,7 +263,7 @@ async function issRoute(id,k){
   if(k==='rca'){
     const o={Title:i.title,Origin:czOrigin(i.source),PartId:p?p.id:'',SupplierId:p?p.supplierId||'':'',DefectQty:i.qty!==''&&i.qty!=null?String(i.qty):'',Description:[i.desc||i.title,i.containText?`[즉시 조치] ${i.containText}`:''].filter(Boolean).join('\n'),
       Owner:i.owner||czMe(),Priority:i.urg==='긴급'?'긴급':i.urg==='높음'?'높음':'보통',ContainDate:i.contain?date:'',ContainScope:i.containText||'',IssueId:i.id,Created:today()};
-    if(!await askConfirm({title:'이 이슈로 RCA를 만들까요?',items:[esc(i.title),`발견 ${esc(i.source||'')} · ${esc(issAt(i.at))}`,'심각도 S · 영향도 I와 TIER는 RCA 기본 탭에서 정합니다'],ok:'RCA 만들기',danger:false}))return;
+    if(!await askConfirm({title:'이 이슈로 RCA를 만들까요?',items:[esc(i.title),`발견 ${esc(i.source||'')} · ${esc(issAt(i.at,i.band))}`,'심각도 S · 영향도 I와 TIER는 RCA 기본 탭에서 정합니다'],ok:'RCA 만들기',danger:false}))return;
     const c=czCreateCase(o);i.caseIds=[...new Set([...(i.caseIds||[]),c.id])];issLog(i,'분류',`RCA 요청 — ${c.CaseNo}`);czLog(c,'연결',`이슈 ${i.no}에서 생성`);touch(i);save();czOpenCase(c.id);toast(`${c.CaseNo} RCA를 만들었습니다`);return}
   const resp=/수입/.test(i.source||'')?'협력사':'미정';
   const preset={date,source:i.source||db.settings.sources[0],partNo:p?p.partNo:(i.partNo||''),partName:p?p.name:'',supplierId:p?p.supplierId||'':'',model:p?p.model||'':'',qty:i.qty??'',

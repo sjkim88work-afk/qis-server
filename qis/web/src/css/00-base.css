@@ -57,6 +57,11 @@ tr:hover td{background:#fafbfd}
 .kpi.go{cursor:pointer;transition:box-shadow .15s}.kpi.go:hover{box-shadow:0 0 0 2px var(--pri) inset}
 tr.late>td{background:var(--badb)}
 ol.isl{list-style:none;margin:0;padding:0}ol.isl li{display:grid;grid-template-columns:86px 74px minmax(0,1fr) auto;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);align-items:start;line-height:1.55}ol.isl li.void>div{text-decoration:line-through;opacity:.6}ol.isl .mono{font-size:12.5px;color:var(--sub)}
+/* 일시 입력 (날짜 + 시각 입력 · 오전 · 오후 · 야간 · 시간 모름 + 시각) · 같은 날 순서 바꾸기 ▲▼ */
+.dtp{display:flex;gap:6px;min-width:0}.dtp>*{min-width:0;flex:1 1 0}.dtp>input[type=date]{flex:1.5 1 0}
+.dtrow{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:8px}.fg label.w2{grid-column:span 2}
+@media(max-width:560px){.dtrow{grid-template-columns:1fr}.fg label.w2{grid-column:1/-1}.dtp{flex-wrap:wrap}.dtp>input[type=date]{flex:1 1 100%}}
+.mv{display:inline-flex;gap:2px;vertical-align:middle}.mv button.b.s{padding:0 5px;height:20px;min-height:0;min-width:24px;font-size:9px;line-height:1;flex:1}.mv button:disabled{opacity:.3;cursor:default}
 .isadd{margin-top:12px}.isadd textarea{min-height:56px;width:100%}   /* 이슈의 기록 작성 칸 — 모양은 실행 기록 작성 칸(.lgc)과 같음 */
 button.isr{font:inherit;text-align:left;padding:10px 12px;border-radius:8px;border:1px solid var(--line);background:var(--card);cursor:pointer;display:flex;justify-content:space-between;gap:8px;align-items:baseline;color:inherit}button.isr.on{border:2px solid var(--pri);background:var(--pri2)}button.isr .muted{font-size:12px}
 .isprev{background:var(--mut);border-radius:8px;padding:12px;margin-top:10px}.isprev ul{margin:6px 0 10px;padding-left:18px;font-size:13px;line-height:1.6}
