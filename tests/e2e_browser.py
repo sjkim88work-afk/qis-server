@@ -519,6 +519,44 @@ def main(seed_path):
             ok(r["st1"] == "대책서 검토" and r["pend"] and r["resubs"] == 1 and r["reply"] and not r["btn1"] and r["cell"], f"재회신 접수 → 상태 ‘대책서 검토’, 처음 회신일은 그대로, 목록에 재회신일 표시 ({r['st1']})")
             ok(r["banner"] and r["st2"] == "대책서 검토", "회신 창에 재제출 평가 안내 · 평가 전에는 검토 단계 유지")
             ok(r["st3"] == "승인(검증대기)" and r["cleared"] and r["val"] == "적정", f"재제출 평가(승인)를 마치면 그 결과로 바뀜 ({r['st3']})")
+            # 일시: 날짜는 필수 · 시간은 선택 (오전 · 오후 · 야간 · 시간 모름) · 같은 날 순서 바꾸기
+            r = A.evaluate("""async () => {const wait=ms=>new Promise(r=>setTimeout(r,ms)),o={},q=s=>document.querySelector(s),o0=window.askConfirm;window.askConfirm=async()=>true;
+              mfDirty=false;closeModal(true);go('issue');editIssue();await wait(150);
+              o.form=!!q('#iatD')&&!!q('#iatB')&&!!q('#iatT')&&!document.querySelector('#mf input[type=datetime-local]');
+              q('#mf [name=title]').value='시간 선택 시험';const n0=db.issues.length;
+              q('#iatD').value='';saveIssue(null,false);await wait(150);o.needDate=db.issues.length===n0;
+              q('#iatD').value='2026-11-10';q('#iatB').value='야간';dtpBand('iat');o.hid=q('#iatT').style.display==='none';
+              saveIssue(null,false);await wait(300);const i=db.issues.find(x=>x.title==='시간 선택 시험');o.at=i.at;o.band=i.band;o.show=issAt(i.at,i.band);
+              o.log0=i.logs[0].at+'/'+i.logs[0].band;
+              issOpen(i.id);await wait(200);
+              const add=async(b,t,tx)=>{q('#isAtD').value='2026-11-10';q('#isAtB').value=b;dtpBand('isAt');if(t)q('#isAtT').value=t;q('#isTx').value=tx;issAddLog(i.id);await wait(120)};
+              await add('?','','모름');await add('','14:20','시각');await add('오전','','오전');await add('오후','','오후');
+              const L=()=>[...document.querySelectorAll('#modal ol.isl li')].map(li=>li.querySelector('div').innerText.trim().split('\\n').pop()).join('>');
+              const rec=t=>i.logs.find(l=>l.text===t);
+              o.saved=[rec('모름').at,rec('모름').band||'',rec('시각').at,rec('오전').at+rec('오전').band].join();
+              o.order=[...i.logs].sort(issCmp).map(l=>l.text).join('>');o.cells=[...document.querySelectorAll('#modal ol.isl li>.mono')].map(e=>e.textContent).join('|');
+              o.mv=document.querySelectorAll('#modal ol.isl .mv').length;
+              issMove(i.id,i.logs.indexOf(rec('모름')),-1);await wait(150);o.order2=[...i.logs].sort(issCmp).map(l=>l.text).join('>');
+              issLog(i,'기타','다른 날',{at:'2026-11-11'});const k=i.logs.length-1;issMove(i.id,k,-1);o.order3=[...i.logs].sort(issCmp).map(l=>l.text).join('>');
+              issOpen(i.id);await wait(150);issEditLog(i.id,i.logs.indexOf(rec('모름')));await wait(150);q('#ieAtB').value='';dtpBand('ieAt');q('#ieAtT').value='08:00';issSaveLog(i.id,i.logs.indexOf(rec('모름')));await wait(200);
+              o.edited=rec('모름').at+'/'+i.logs.every(l=>l.ord==null)+'/'+JSON.stringify(rec('모름').edits[0].prev.at);o.order4=[...i.logs].sort(issCmp).map(l=>l.text).join('>');
+              mfDirty=false;closeModal(true);removeRec('issues',i.id);save();
+              // 불량 실행 기록: 같은 실행일끼리 순서 바꾸기
+              const d=db.defects[0],keep=JSON.stringify(d.logs||[]),t0=today();
+              d.logs=[{id:'mvA',date:t0,kind:LOG_KINDS[0],party:'',method:'',text:'A 기록',result:'',photos:[],by:'',at:'2026-11-19T01:00:00.000Z'},{id:'mvB',date:t0,kind:LOG_KINDS[0],party:'',method:'',text:'B 기록',result:'',photos:[],by:'',at:'2026-11-19T02:00:00.000Z'}];
+              openLog(d.id);await wait(250);const TL=()=>[...document.querySelectorAll('#modal ul.logs li:not(.au) .lt')].map(e=>e.textContent).join('>');
+              o.tl0=TL();o.tlmv=document.querySelectorAll('#modal ul.logs .mv').length;
+              document.querySelectorAll('#modal ul.logs .mv button')[1].click();await wait(300);o.tl1=TL();o.tlSaved=db.defects[0].logs.map(l=>l.id+':'+l.ord).join();
+              mfDirty=false;closeModal(true);d.logs=JSON.parse(keep);save();window.askConfirm=o0;render();return o}""")
+            ok(r["form"] and r["needDate"], "이슈 ‘언제’: 날짜 · 시간대 · 시각 칸으로 나뉨 · 날짜가 없으면 저장하지 않음")
+            ok(r["hid"] and r["at"] == "2026-11-10" and r["band"] == "야간" and r["show"] == "2026-11-10 야간" and r["log0"] == "2026-11-10/야간", f"야간을 고르면 시각 칸 숨김 · 날짜와 ‘야간’만 저장 ({r['show']})")
+            ok(r["saved"] == "2026-11-10,,2026-11-10T14:20,2026-11-10오전", f"기록 일시: 시간 모름 · 시각 · 시간대 저장 ({r['saved']})")
+            ok(r["order"] == "오전>시각>오후>시간 선택 시험>모름" or r["order"].startswith("오전>시각>오후>") and r["order"].endswith(">모름"), f"같은 날 순서: 오전 → 14:20 → 오후 → 야간 → 시간 모름 ({r['order']})")
+            ok("11-10 오전" in r["cells"] and "11-10 14:20" in r["cells"] and "11-10 야간" in r["cells"] and r["mv"] >= 5, f"목록에 시각 대신 시간대 표시 · ▲▼ 단추 ({r['cells']})")
+            ok(r["order2"].endswith(">모름>" + r["order"].split(">")[-2]) , f"▲ → 같은 날 안에서 한 칸 위로 ({r['order2']})")
+            ok(r["order3"].endswith(">다른 날"), "날짜가 다른 기록과는 순서를 바꾸지 않음")
+            ok(r["edited"] == '2026-11-10T08:00/true/"2026-11-10"' and r["order4"].startswith("모름>오전>시각>오후>"), f"일시를 고치면 그날은 다시 시간순 · 수정 이력에 전 일시 ({r['order4']})")
+            ok(r["tl0"] == "B 기록>A 기록" and r["tlmv"] == 2 and r["tl1"] == "A 기록>B 기록" and r["tlSaved"] == "mvA:1,mvB:0", f"실행 기록: 같은 실행일끼리 ▲▼로 순서 바꿈 · 바로 저장 ({r['tl0']} → {r['tl1']})")
             # 로그아웃
             A.click("button:has-text('로그아웃')"); A.wait_for_url("**/login")
             ok(True, "로그아웃")

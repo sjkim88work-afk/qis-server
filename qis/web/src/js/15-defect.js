@@ -448,7 +448,7 @@ let curSev={};
 /* ---- 조사 · 진행 기록 (통합 타임라인) ---- */
 const LOG_KINDS=['협력사 연락','현장 확인','측정·시험','회의·보고','조치 실시','조사','기타'];
 const LOG_CLS={'조사':'inf','협력사 연락':'warn','현장 확인':'inf','측정·시험':'inf','시험·분석':'inf','회의·보고':'mut','조치 실시':'ok','조치':'ok','기타':'mut','자동':'mut'};
-const lastLog=d=>(d.logs||[]).slice().sort((a,b)=>(b.date||'').localeCompare(a.date||'')||(b.at||'').localeCompare(a.at||''))[0];
+const lastLog=d=>(d.logs||[]).slice().sort(lgCmpDesc)[0];
 const defLabel=d=>`${d.date} ${d.partName||d.partNo||(d.fgName||d.fgNo?'[완성품] '+(d.fgName||d.fgNo):'')}`;
 const ncrOfDefect=d=>d.ncrId?db.ncrs.find(n=>n.id===d.ncrId):null;
 function autoEvents(d,n,lbl){
@@ -476,7 +476,7 @@ function caseReadonly(kind,obj){
 }
 function caseEntries(kind,obj){return [...(obj.logs||[]),...caseReadonly(kind,obj)]}
 const caseLast=(kind,obj)=>caseEntries(kind,obj).reduce((a,e)=>e.date>a?e.date:a,'');
-const caseLastManual=(kind,obj)=>caseEntries(kind,obj).filter(e=>!e.auto).sort((a,b)=>(b.date||'').localeCompare(a.date||'')||(b.at||'').localeCompare(a.at||''))[0];
+const caseLastManual=(kind,obj)=>caseEntries(kind,obj).filter(e=>!e.auto).sort(lgCmpDesc)[0];
 let curLogs=[];
 let tl={own:[],kind:'',obj:null,edit:null,voiding:null,hist:new Set(),hideAuto:false,next:null,newPh:{},draftPh:[],editPh:null};
 const LOG_METHODS=['전화','메일','방문','회의','메신저','공문','기타'];
@@ -534,7 +534,11 @@ function lgPartyList(){
 function renderLogsInner(b){
   const ownL=tl.own.map((x,i)=>({...x,_i:i}));
   let L=[...ownL,...caseReadonly(tl.kind,tl.obj)];if(tl.hideAuto)L=L.filter(e=>!e.auto);
-  L.sort((a,c)=>(c.date||'').localeCompare(a.date||'')||((a.auto?1:0)-(c.auto?1:0))||(c.at||'').localeCompare(a.at||''));
+  L.sort(lgCmpDesc);
+  // 같은 날 직접 쓴 기록이 2건 이상이면 ▲▼로 순서를 바꿀 수 있음 (화면은 최근 것이 위)
+  const ownDay={};L.filter(x=>x._i!=null).forEach(x=>{(ownDay[x.date||'']=ownDay[x.date||'']||[]).push(x._i)});
+  const mv=x=>{const D=ownDay[x.date||'']||[],n=D.indexOf(x._i);if(D.length<2||tl.edit!=null||tl.voiding!=null)return '';
+    return `<span class="mv"><button type="button" class="b s" ${n?'':'disabled'} onclick="lgMove(${x._i},-1)" title="같은 날 안에서 위로" aria-label="위로">▲</button><button type="button" class="b s" ${n<D.length-1?'':'disabled'} onclick="lgMove(${x._i},1)" title="같은 날 안에서 아래로" aria-label="아래로">▼</button></span> `};
   const nOwn=L.filter(x=>!x.auto).length,nAuto=L.filter(x=>x.auto).length,pend=tl.own.filter(x=>x._new).length,pendEd=tl.own.filter(x=>x._dirty&&!x._new).length;
   const ownCase=typeof czOwns==='function'&&czOwns(tl.obj,tl.kind)?(()=>{const id=tl.obj.caseId||(db.ncrs.find(n=>n.id===tl.obj.ncrId)||{}).caseId;return czById('cases',id)})():null;
   const dd=dt=>{if(!dt)return '';const x=diffDays(today(),dt);return `<span class="bg ${x<0?'bad':x<=2?'warn':'mut'}">${dt} ${x<0?'D+'+(-x):x===0?'오늘':'D-'+x}</span>`};
@@ -560,7 +564,7 @@ function renderLogsInner(b){
       lgLate(x)?`<span class="bg warn" title="실행일보다 늦게 작성">사후 기록 · 작성 ${loc(x.at,10).slice(5)}</span>`:''].join(' ');
     const who=[x.party,x.method].filter(Boolean).join(' · ');
     const del=`<a class="lk" style="font-size:11px;color:var(--bad)" onclick="delLog(${x._i})">삭제</a>`;
-    const acts=own&&!ed&&!vo&&x.void?del:own&&!ed&&!vo?`<a class="lk" style="font-size:11px" onclick="lgEdit(${x._i})">수정</a> ${x._new?'':`<a class="lk" style="font-size:11px;color:var(--bad)" onclick="tl.voiding=${x._i};renderLogs()">취소 처리</a> `}${del}`:x.ro&&!x.auto?'<span class="muted" style="font-size:11px">원본에서 수정</span>':'';
+    const acts=own&&!ed&&!vo&&x.void?mv(x)+del:own&&!ed&&!vo?`${mv(x)}<a class="lk" style="font-size:11px" onclick="lgEdit(${x._i})">수정</a> ${x._new?'':`<a class="lk" style="font-size:11px;color:var(--bad)" onclick="tl.voiding=${x._i};renderLogs()">취소 처리</a> `}${del}`:x.ro&&!x.auto?'<span class="muted" style="font-size:11px">원본에서 수정</span>':'';
     if(ed)return `<li class="ed"><div class="lh"><b>기록 수정</b>${saved?' <span class="muted" style="font-size:11.5px">— 원문은 이력으로 보존됩니다</span>':''}</div>
       <div class="cg" style="margin-top:6px"><label>실행일<input type="date" id="leDate" value="${esc(x.date)}" max="${today()}"></label><label>구분<select id="leKind">${opts(LOG_KINDS.includes(x.kind)?LOG_KINDS:[x.kind,...LOG_KINDS],x.kind)}</select></label>
         <label>상대방<input id="leParty" list="lgParties" value="${esc(x.party)}"></label><label>방법<select id="leMethod">${opts(LOG_METHODS,x.method||'',true)}</select></label></div>
@@ -575,6 +579,14 @@ function renderLogsInner(b){
       ${hist.length&&tl.hist.has(x.id)?`<div class="lhist">${hist.map((h,k)=>`<div><b>${k+1}차 원문</b> <span class="muted">${esc(loc(h.at))} 수정 · ${esc(h.by||'')} · 사유: ${esc(h.reason||'-')}</span><br>${esc(h.date)} · ${esc(h.kind)}${h.party?' · '+esc(h.party):''}${h.method?' · '+esc(h.method):''}<br>${nl(h.text)}${h.result?`<br>결과: ${nl(h.result)}`:''}</div>`).join('')}</div>`:''}</li>`;
   };
   b.innerHTML=plan+comp+warn+head+(L.length?`<ul class="logs">${L.map(item).join('')}</ul>`:'<div class="muted" style="font-size:12px;padding:6px 2px">아직 기록이 없습니다.</div>');
+}
+// 실행 기록 순서 (최근 것이 위): 실행일 → 직접 쓴 기록이 자동 기록보다 위 → 손으로 정한 순서(ord) → 작성 시각
+const lgOrd=x=>x.ord==null?1e9:x.ord;
+function lgCmpDesc(a,c){return (c.date||'').localeCompare(a.date||'')||((a.auto?1:0)-(c.auto?1:0))||(a.ord!=null||c.ord!=null?lgOrd(c)-lgOrd(a):0)||(c.at||'').localeCompare(a.at||'')}
+// 같은 실행일의 직접 쓴 기록을 한 칸 옮김 (dir: -1 위로 · +1 아래로) — 바로 저장
+function lgMove(i,dir){
+  const x=tl.own[i];if(!x)return;const D=tl.own.filter(y=>(y.date||'')===(x.date||'')).sort(lgCmpDesc),a=D.indexOf(x),b=a+dir;if(b<0||b>=D.length)return;
+  [D[a],D[b]]=[D[b],D[a]];D.forEach((y,n)=>{y.ord=D.length-1-n});renderLogs(false);tlPersist('순서를 바꿨습니다');
 }
 const lgRmDraft=k=>{tl.draftPh.splice(k,1);renderLogs()};
 const lgRmEdit=k=>{tl.editPh.splice(k,1);renderLogs()};
@@ -607,6 +619,7 @@ function saveLog(i){
   if(same){tl.edit=null;tl.editPh=null;renderLogs(false);return}
   if(!x._new){const r=($('#leReason')?.value||'').trim();if(!r){toast('수정 사유를 입력하세요');$('#leReason')?.focus();return}
     x.hist=[...(x.hist||[]),{at:now(),by:db.settings.owners[0]||'',reason:r,date:x.date,kind:x.kind,party:x.party||'',method:x.method||'',text:x.text,result:x.result||'',photos:[...(x.photos||[])]}];x.editedAt=now();x._dirty=true}
+  if(nv.date!==x.date)delete x.ord;   // 실행일을 고치면 손으로 정한 순서는 풀림
   Object.assign(x,nv);delete x.next;delete x.nextDate;delete x.done;
   tl.edit=null;tl.editPh=null;renderLogs();tlPersist('기록을 수정했습니다');
 }
@@ -630,7 +643,7 @@ function tlCommit(){
 // 기록 출력 (클레임 협의 · 감사 제출용)
 async function lgPrint(){
   const w=reportWin(),o=tl.obj,isN=tl.kind==='ncr';
-  const L=[...tl.own.filter(x=>!x._new),...caseReadonly(tl.kind,o)].sort((a,c)=>(a.date||'').localeCompare(c.date||'')||(a.at||'').localeCompare(c.at||''));
+  const L=[...tl.own.filter(x=>!x._new),...caseReadonly(tl.kind,o)].sort((a,c)=>lgCmpDesc(c,a));
   const ids=[...new Set(L.flatMap(l=>l.photos||[]))];let P={};try{(await photoGetMany(ids)).forEach(r=>{P[r.id]=r})}catch(e){}
   const pn={};let k=0;L.forEach(l=>(l.photos||[]).forEach(id=>{if(!pn[id])pn[id]=++k}));
   const title=isN?`${o.no} · ${supName(o.supplierId)||''}`:`${defLabel(o)} · ${supName(o.supplierId)||''}`;
