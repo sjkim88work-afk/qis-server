@@ -395,7 +395,7 @@ function ncrFoot(m){
   if(id&&m==='issue')B.push({label:'삭제',cls:'d',left:1,fn:async()=>{await delNcr(id);if(!db.ncrs.find(x=>x.id===id))closeModal(true)}});
   // 협력사 회신 단계는 입력만(취소 · 저장). 8D 출력은 검증 · 종결 단계에서, RCA 요청은 연결 불량의 진행 창에서 함
   if(id&&m==='verify')B.push({label:'8D 출력',fn:()=>{const nid=mfDirty?saveNcr(id):id;if(nid)print8D(nid)}});
-  if(id&&m!=='reply')B.push({label:'A3 보고서',fn:()=>a3Report('ncr',id)});
+  if(id&&m!=='reply'&&a3ReadyNcr(n))B.push({label:'A3 보고서',fn:()=>a3Report('ncr',id)});   // 단순 통보 종결 · 대책 승인 뒤에만
   B.push({label:'취소',fn:closeModal});
   if(id&&m==='issue'&&RO)B.push({label:'통보서 출력',fn:()=>printNotice(id)});   // 조회 권한: 저장 없이 출력만
   if(m==='issue')B.push({label:id?'저장 후 통보서 출력':'발행 후 통보서 출력',fn:()=>{const nid=saveNcr(id);if(nid)printNotice(nid)}});

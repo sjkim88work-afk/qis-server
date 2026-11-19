@@ -661,7 +661,7 @@ function openLog(id){
       ${n?`<a class="bg inf" style="cursor:pointer" onclick="gotoNcr('${n.id}')">${esc(n.no)} · ${ncrStatus(n)}</a>`:`<span class="bg mut">NCR 없음 (${v.resp})</span>`} ${costTotal(d)?`<span class="bg mut">비용 ${won(costTotal(d))}원</span>`:''}${claimStatus(d)?` <span class="bg ${CLAIM_CLS[claimStatus(d)]}">구상 ${claimStatus(d)}</span>`:''}</div></div>
     ${routeHTML(d)}
     <div class="sec">조사 · 진행 기록 <span class="muted" style="font-weight:normal;font-size:12px">— 실제로 한 일과 결과만 남기는 증빙용 기록 · NCR·대책서·구상 진행(자동)이 함께 표시</span></div><div id="logBox"></div>`,
-    [{label:'A3 보고서',fn:()=>a3Report('defect',id)},{label:'불량 정보 수정',fn:async()=>{if(mfDirty&&!await askConfirm({title:'기록을 저장하지 않고 이동할까요?',ok:'이동',danger:false}))return;closeModal(true);editDefect(id)}},{label:'닫기',fn:closeModal},{label:'저장',cls:'p',fn:()=>{
+    [...(a3ReadyDefect(d)?[{label:'A3 보고서',fn:()=>a3Report('defect',id)}]:[]),{label:'불량 정보 수정',fn:async()=>{if(mfDirty&&!await askConfirm({title:'기록을 저장하지 않고 이동할까요?',ok:'이동',danger:false}))return;closeModal(true);editDefect(id)}},{label:'닫기',fn:closeModal},{label:'저장',cls:'p',fn:()=>{
       if(tl.edit!=null){toast('수정 중인 기록을 먼저 저장하거나 취소하세요');return}
       if(tlDraftHas()&&!tlPushDraft())return;   // 쓰던 기록이 있으면 함께 저장
       const r=tlCommit();d.logs=r.logs;touch(d);save();mfDirty=false;closeModal(true);render();toast('진행 기록 저장')}}]);
