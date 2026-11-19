@@ -57,6 +57,8 @@ tr:hover td{background:#fafbfd}
 .kpi.go{cursor:pointer;transition:box-shadow .15s}.kpi.go:hover{box-shadow:0 0 0 2px var(--pri) inset}
 tr.late>td{background:var(--badb)}
 ol.isl{list-style:none;margin:0;padding:0}ol.isl li{display:grid;grid-template-columns:86px 74px minmax(0,1fr) auto;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);align-items:start;line-height:1.55}ol.isl li.void>div{text-decoration:line-through;opacity:.6}ol.isl .mono{font-size:12.5px;color:var(--sub)}
+/* 불량 목록의 ‘조사 · 진행 기록’ 단추 — 누르기 쉬운 크기 */
+a.bg.lgchip{display:inline-flex;align-items:center;gap:4px;min-height:26px;padding:2px 11px;margin-top:5px;font-size:13.5px;font-weight:600;border-radius:13px;cursor:pointer}a.bg.lgchip:hover{box-shadow:0 0 0 1px currentColor inset}
 /* 일시 입력 (날짜 + 시각 입력 · 오전 · 오후 · 야간 · 시간 모름 + 시각) · 같은 날 순서 바꾸기 ▲▼ */
 .dtp{display:flex;gap:6px;min-width:0}.dtp>*{min-width:0;flex:1 1 0}.dtp>input[type=date]{flex:1.5 1 0}
 .dtrow{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:8px}.fg label.w2{grid-column:span 2}
