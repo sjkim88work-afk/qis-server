@@ -391,6 +391,26 @@ def main(seed_path):
             r = C.evaluate("""async () => {await srvSync();mfDirty=false;closeModal(true);editNcr(db.ncrs[0].id,null,'issue');await new Promise(r=>setTimeout(r,300));
               const v=[...document.querySelectorAll('#mfoot button')].filter(b=>b.style.display!=='none').map(b=>b.textContent.trim());closeModal(true);return v}""")
             ok("통보서 출력" in r and not any("저장" in x or "삭제" in x for x in r), f"조회: NCR 발행 정보 창에 통보서 출력만 ({','.join(r)})")
+            # 이슈 → NCR 발행: 연결된 NCR 이 있으면 기존 NCR 을 열지 새로 발행할지 물음
+            r = A.evaluate("""async () => {
+              mfDirty=false;closeModal(true);const wait=ms=>new Promise(r=>setTimeout(r,ms)),o0=window.askConfirm;
+              const n=db.ncrs.find(x=>(x.defectIds||[]).length),d=db.defects.find(x=>x.id===n.defectIds[0]);
+              const i={id:uid(),no:'ISS-NCR',title:'NCR 중복 시험',at:nowMin(),source:d.source,partNo:d.partNo,qty:1,urg:'보통',owner:'나',logs:[],photos:[],defectIds:[d.id]};db.issues.push(i);
+              const j={id:uid(),no:'ISS-NONE',title:'NCR 없음',at:nowMin(),source:d.source,partNo:d.partNo,qty:1,urg:'보통',owner:'나',logs:[],photos:[],defectIds:[]};db.issues.push(j);
+              let asked=[],ans=true;window.askConfirm=async a=>{asked.push(a);return ans};const out={};
+              const t=()=>document.querySelector('#modal').classList.contains('on')?document.querySelector('#mt').textContent:'';
+              ans=true;await issRoute(i.id,'ncr');await wait(150);out.open={t:t(),ok:asked[0].ok,alt:asked[0].alt,items:asked[0].items.join('|'),pend:!!issPend};mfDirty=false;closeModal(true);
+              ans=false;issPend=null;await issRoute(i.id,'ncr');await wait(150);out.cancel={t:t(),pend:!!issPend};
+              ans='alt';await issRoute(i.id,'ncr');await wait(150);out.alt={t:t(),pend:!!issPend};mfDirty=false;closeModal(true);issPend=null;
+              asked=[];await issRoute(j.id,'ncr');await wait(150);out.none={t:t(),asked:asked.length};mfDirty=false;closeModal(true);issPend=null;
+              state.tab='issue';state.issRoute='ncr';render();issOpen(i.id);await wait(200);out.hint=document.querySelector('#modal .isprev').innerText.includes('연결된 NCR 1건');mfDirty=false;closeModal(true);state.issRoute='';
+              window.askConfirm=o0;db.issues=db.issues.filter(x=>x!==i&&x!==j);out.no=n.no;return out}""")
+            ok(r["open"]["ok"] == r["no"] + " 열기" and r["open"]["alt"] == "새 NCR 발행" and r["no"] in r["open"]["items"], f"이슈 → NCR 발행: 연결된 NCR 이 있으면 물음 ({r['open']['ok']} / {r['open']['alt']})")
+            ok(r["no"] in r["open"]["t"] and "발행 정보" in r["open"]["t"] and not r["open"]["pend"], f"기존 NCR 열기 → 그 NCR 의 발행 정보 창 ({r['open']['t']})")
+            ok(r["cancel"]["t"] == "" and not r["cancel"]["pend"], "취소 → 아무 것도 만들지 않음")
+            ok("불량 등록" in r["alt"]["t"] and r["alt"]["pend"], "새 NCR 발행 → 불량 등록 창으로 이어감")
+            ok(r["none"]["asked"] == 0 and "불량 등록" in r["none"]["t"], "연결된 NCR 이 없으면 묻지 않고 바로 진행")
+            ok(r["hint"], "이슈 상세의 처리 방향 안내에 연결된 NCR 표시")
             # 로그아웃
             A.click("button:has-text('로그아웃')"); A.wait_for_url("**/login")
             ok(True, "로그아웃")
