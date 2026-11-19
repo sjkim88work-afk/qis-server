@@ -149,11 +149,12 @@ function renderInner(){
   try{czSyncAll()}catch(e){}
   if(mobView()){
     $('#dlParts').innerHTML=db.parts.map(p=>`<option value="${esc(p.partNo)}">${esc(p.name)} · ${esc(supName(p.supplierId))}</option>`).join('');
+    navFoot();   // 사이드바 아래 칸에 있던 사용자 · 로그아웃을 머리글로 되돌린 뒤에 메뉴를 바꿈
     renderMobile();renderBrand();updateSaveInfo();return}
   document.body.classList.remove('mob');document.body.classList.toggle('pcnarrow',mobPref==='pc'&&!!(mobMQ&&mobMQ.matches));
-  const navFt0=$('#navFt');if(navFt0){navFt0.remove();window.__navFt=navFt0}   // 사이드바 하단(사용자 · 관리 · 저작권)은 innerHTML 교체 전에 떼어 두고 기억함
+  const navFt0=$('#navFt'),navTop=$('#nav').scrollTop;if(navFt0){navFt0.remove();window.__navFt=navFt0}   // 사이드바 하단(사용자 · 관리 · 저작권)은 innerHTML 교체 전에 떼어 두고 기억함
   let navG='';$('#nav').innerHTML=TABS.filter(([k])=>!(RO||SRV)||RO_TABS.includes(k)).map(([k,l])=>{const n=k==='case'?czBadgeN():k==='inv'?invLateN():k==='issue'?issWaitN():0;const g=NAV_GRP[k]||navG,gh=g!==navG?`<div class="gh">${g}</div>`:'';navG=g;return gh+`<button class="${state.tab===k?'on':''}" onclick="go('${k}')">${l}${n?` <span class="bg bad" style="font-size:10.5px">${n}</span>`:''}</button>`}).join('');
-  navFoot();
+  navFoot();$('#nav').scrollTop=navTop;   // 낮은 창에서 메뉴를 내려 둔 위치 유지
   $('#dlParts').innerHTML=db.parts.map(p=>`<option value="${esc(p.partNo)}">${esc(p.name)} · ${esc(supName(p.supplierId))}</option>`).join('');
   $('#dlOwners').innerHTML=db.settings.owners.map(o=>`<option value="${esc(o)}">`).join('');
   $('#dlSources').innerHTML=db.settings.sources.map(o=>`<option value="${esc(o)}">`).join('');
