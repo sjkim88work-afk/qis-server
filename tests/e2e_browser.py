@@ -183,6 +183,20 @@ def main(seed_path):
             ok(A.locator("#mt").inner_text().endswith("수정"), "상세 → 수정 창")
             A.evaluate("closeModal(true)"); A.wait_for_timeout(300)
             ok(A.locator("#modal.on .isl").count() == 1, "수정 창 닫기 → 상세 창으로 돌아옴")
+            # 창 아래 단추: 삭제는 왼쪽 끝에 따로 · 상세 창에 저장 단추 · 삭제는 확인을 물음
+            r = A.evaluate("""() => {const k=[...document.querySelector('#mfoot').children],lab=k.map(e=>e.className.includes('mfsp')?'|':e.textContent).join(','),
+              d=k[0].getBoundingClientRect(),n=k[2].getBoundingClientRect();return {lab,gap:n.left-d.right,tx:document.querySelector('#isTx').value}}""")
+            ok(r["lab"] == "삭제,|,수정,닫기,저장" and r["gap"] > 100, f"이슈 상세: 삭제는 왼쪽 끝 · 저장 단추 있음 ({r['lab']}, 간격 {round(r['gap'])}px)")
+            ok(r["tx"] == "", "기록 추가 후 입력 칸 비움")
+            r = A.evaluate("""async i => {const o=window.askConfirm;let n=0;window.askConfirm=async()=>{n++;return false};
+              document.querySelector('#mfoot button.d').click();await new Promise(r=>setTimeout(r,300));window.askConfirm=o;return {n,alive:!!issById(i)}}""", iid)
+            ok(r["n"] == 1 and r["alive"], "이슈 삭제: 확인을 묻고, 취소하면 지우지 않음")
+            A.fill("#isTx", "저장 단추로 쓴 기록"); A.click("#mfoot button.p"); A.wait_for_timeout(500)
+            ok(A.evaluate("i=>!document.querySelector('#modal').classList.contains('on')&&issById(i).logs.filter(x=>x.text==='저장 단추로 쓴 기록').length===1", iid), "이슈 상세 저장 단추: 쓰던 기록 저장 후 창 닫음")
+            r = A.evaluate("""() => {const lab=()=>[...document.querySelector('#mfoot').children].map(e=>e.className.includes('mfsp')?'|':e.textContent).join(',');
+              editDefect(db.defects[0].id);const d=lab();mfDirty=false;closeModal(true);editNcr(db.ncrs[0].id,null,'issue');const n=lab();mfDirty=false;closeModal(true);return {d,n}}""")
+            ok(r["d"].startswith("삭제,|,") and r["n"].startswith("삭제,|,"), f"불량 · NCR 창: 삭제는 왼쪽 끝에 따로 ({r['d']} / {r['n']})")
+            A.evaluate("i=>issOpen(i)", iid); A.wait_for_timeout(300)
             A.click("#mfoot button:has-text('삭제')"); A.wait_for_timeout(1500)
             ok(A.evaluate("i=>!issById(i)&&state.issId===null", iid), "이슈 삭제 → 목록으로")
             ok(A.evaluate("()=>{const d=db.defects.find(x=>x.id==='diss');return !!d&&!d.issueId}"), "연결된 불량은 남고 이슈 연결만 끊김")

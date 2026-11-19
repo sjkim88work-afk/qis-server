@@ -73,7 +73,7 @@ function issShow(id,keep){
   const KEEP=['isK','isAt','isWho','isTx','ieK','ieAt','ieWho','ieTx','ieWhy'];
   if(!keep||m.dataset.iss!==id)state.issEditK=null;
   const old=keep&&m.dataset.iss===id?{v:KEEP.map(k=>$('#'+k)?$('#'+k).value:null),top:$('#mbody').scrollTop}:null;
-  openModal(`${i.no} 이슈`,issDetailHTML(i),[...(RO?[]:[{label:'삭제',cls:'d',fn:()=>delIssue(id)},...(i.closedAt?[{label:'다시 열기',fn:()=>issReopen(id)}]:[]),{label:'수정',fn:()=>editIssue(id)}]),{label:'닫기',fn:closeModal}]);
+  openModal(`${i.no} 이슈`,issDetailHTML(i),[...(RO?[]:[{label:'삭제',cls:'d',fn:()=>delIssue(id)},...(i.closedAt?[{label:'다시 열기',fn:()=>issReopen(id)}]:[]),{label:'수정',fn:()=>editIssue(id)}]),{label:'닫기',fn:closeModal},...(RO?[]:[{label:'저장',cls:'p',fn:()=>issSaveAll(id)}])]);
   m.dataset.iss=id;
   if(old){KEEP.forEach((k,n)=>{if($('#'+k)&&old.v[n]!=null)$('#'+k).value=old.v[n]});$('#mbody').scrollTop=old.top;mfDirty=!!(old.v[3]||'').trim()||state.issEditK!=null}
 }
@@ -198,24 +198,30 @@ async function delIssue(id){
 async function issPhotos(i){const b=$('#issPh');if(!b||!(i.photos||[]).length)return;
   try{const rs=await photoGetMany(i.photos);if(!$('#issPh'))return;b.innerHTML=rs.map((p,k)=>`<img src="${p.thumb||p.data}" alt="${esc(p.caption||'이슈 사진')}" title="${esc(p.caption||'')}" style="width:140px;height:100px;object-fit:cover;border-radius:6px;cursor:pointer" onclick="issLb('${i.id}',${k})">`).join('')}catch(e){}}
 async function issLb(id,k){const i=issById(id);if(!i)return;try{const rs=await photoGetMany(i.photos);lbOpen(rs.map(r=>({...r,caption:`${i.no} · ${r.caption||''}`})),k)}catch(e){}}
-function issAddLog(id){const i=issById(id);if(!i)return;const t=($('#isTx').value||'').trim();if(!t){toast('내용을 입력하세요');$('#isTx').focus();return}
-  const at=$('#isAt').value||nowMin();if(at.slice(0,10)>today()){toast('기록 일시는 오늘 이후일 수 없습니다');return}
-  issLog(i,$('#isK').value,t,{at,who:($('#isWho').value||'').trim()});touch(i);save();render();toast('기록했습니다')}
+function issAddLog(id){const i=issById(id);if(!i)return false;const t=($('#isTx').value||'').trim();if(!t){toast('내용을 입력하세요');$('#isTx').focus();return false}
+  const at=$('#isAt').value||nowMin();if(at.slice(0,10)>today()){toast('기록 일시는 오늘 이후일 수 없습니다');return false}
+  issLog(i,$('#isK').value,t,{at,who:($('#isWho').value||'').trim()});$('#isTx').value='';touch(i);save();render();toast('기록했습니다');return true}
+// 상세 창의 ‘저장’ — 쓰던 기록(새 기록 · 수정 중인 기록)을 저장하고 창을 닫음. ‘닫기’는 저장하지 않음
+function issSaveAll(id){
+  if(state.issEditK!=null&&$('#ieTx')&&!issSaveLog(id,state.issEditK))return;
+  if($('#isTx')&&($('#isTx').value||'').trim()&&!issAddLog(id))return;
+  mfDirty=false;closeModal(true);toast('저장했습니다');
+}
 // 기록 수정 — 내용 · 일시 · 구분 · 상대를 고침. 수정 전 내용과 사유(선택)는 기록에 남음
 const ISS_SYS=['분류','종결','다시 열기'];                             // 프로그램이 남긴 기록 — 수정 · 취소 불가
 const issTidy=t=>String(t||'').replace(/[ \t]+\n/g,'\n').replace(/\n{3,}/g,'\n\n').trim();   // 붙여 넣은 메일의 빈 줄 여러 개 → 하나
 function issEditLog(id,k){['ieK','ieAt','ieWho','ieTx','ieWhy'].forEach(x=>{const e=$('#'+x);if(e)e.removeAttribute('id')});   // 다른 기록의 편집 내용이 넘어오지 않게
   state.issEditK=k;issShow(id,true);if(k!=null){const t=$('#ieTx');if(t){t.focus();t.scrollIntoView({block:'center'})}}}
 function issSaveLog(id,k){
-  const i=issById(id),l=i&&i.logs[k];if(!l||l.void||ISS_SYS.includes(l.kind))return;
+  const i=issById(id),l=i&&i.logs[k];if(!l||l.void||ISS_SYS.includes(l.kind))return false;
   const o={kind:$('#ieK').value,at:$('#ieAt').value||l.at,who:($('#ieWho').value||'').trim(),text:($('#ieTx').value||'').trim()},why=($('#ieWhy').value||'').trim();
-  if(!o.text){toast('내용을 입력하세요');$('#ieTx').focus();return}
-  if(o.at.slice(0,10)>today()){toast('기록 일시는 오늘 이후일 수 없습니다');return}
+  if(!o.text){toast('내용을 입력하세요');$('#ieTx').focus();return false}
+  if(o.at.slice(0,10)>today()){toast('기록 일시는 오늘 이후일 수 없습니다');return false}
   const prev={kind:l.kind,at:l.at,who:l.who||'',text:l.text};
   state.issEditK=null;
-  if(['kind','at','who','text'].every(f=>o[f]===prev[f])){issShow(id,true);return}   // 바뀐 것 없음
+  if(['kind','at','who','text'].every(f=>o[f]===prev[f])){issShow(id,true);return true}   // 바뀐 것 없음
   (l.edits=l.edits||[]).push({at:nowMin(),by:czMe(),reason:why,prev});Object.assign(l,o);
-  touch(i);save();render();toast('기록을 수정했습니다');
+  touch(i);save();render();toast('기록을 수정했습니다');return true;
 }
 async function issVoid(id,k){const i=issById(id),l=i&&i.logs[k];if(!l)return;
   const r=await askConfirm({title:'이 기록을 취소할까요?',msg:`${esc(issAt(l.at))} ${esc(l.kind)} — ${esc(l.text.slice(0,60))}`,note:'지우지 않고 취소선과 사유가 남습니다.',ok:'기록 취소',danger:false,input:{label:'취소 사유',ph:'예: 다른 건 내용을 잘못 입력'}});
