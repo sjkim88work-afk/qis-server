@@ -1,6 +1,8 @@
 /* ================= 출력 공통 (새 창 → 막히면 파일로) ================= */
 const REPORT_HEAD=`<style>@page{size:A4;margin:11mm}.rbar{position:sticky;top:0;background:#14213d;color:#fff;padding:8px 12px;display:flex;gap:8px;align-items:center;margin:-24px -24px 16px;font-family:'Malgun Gothic',sans-serif;font-size:13px}.rbar button{font:inherit;padding:5px 12px;border-radius:5px;border:0;cursor:pointer}.rbar .pp{background:#fff;color:#14213d;font-weight:bold}@media print{.rbar{display:none}}</style></head>`;
-const REPORT_BAR=`<div class="rbar"><span style="flex:1">인쇄 미리보기 — 인쇄 창에서 ‘대상: PDF로 저장’을 고르면 PDF 파일로 저장됩니다.</span><button class="pp" onclick="window.print()">인쇄 / PDF 저장</button><button onclick="window.close()">닫기</button></div><script>window.addEventListener('load',function(){setTimeout(function(){try{window.print()}catch(e){}},400)})<\/script>`;
+/* 보고서 창의 ‘닫기’ — 프로그램(데스크톱) 창은 window.close() 가 듣지 않아(macOS) 프로그램에 닫기를 요청, 브라우저는 window.close() */
+const REPORT_CLOSE="try{var a=window.pywebview&&window.pywebview.api;if(a&&a.close_report){a.close_report()}else{window.close()}}catch(e){window.close()}";
+const REPORT_BAR=`<div class="rbar"><span style="flex:1">인쇄 미리보기 — 인쇄 창에서 ‘대상: PDF로 저장’을 고르면 PDF 파일로 저장됩니다.</span><button class="pp" onclick="window.print()">인쇄 / PDF 저장</button><button onclick="${REPORT_CLOSE}">닫기</button></div><script>window.addEventListener('load',function(){setTimeout(function(){try{window.print()}catch(e){}},400)})<\/script>`;
 const inFrame=(()=>{try{return window.self!==window.top}catch(e){return true}})();
 function reportWin(){let w=null;try{w=window.open('','_blank')}catch(e){}if(w){try{w.document.write('<p style="font-family:sans-serif;padding:20px">보고서 준비 중…</p>')}catch(e){w=null}}return w}
 /* 보고서 HTML 에 인쇄 설정(REPORT_HEAD)과 위쪽 인쇄 막대(REPORT_BAR)를 끼움 */

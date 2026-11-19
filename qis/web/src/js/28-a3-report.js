@@ -97,7 +97,7 @@ async function a3Report(kind,id){
   .ft{margin-top:6px;color:#666;font-size:10px;display:flex;justify-content:space-between}
   @media print{body{background:#fff}.bar{display:none}.pg{margin:0;box-shadow:none;width:auto;min-height:0;padding:0}.sb:focus{background:none}}
   </style></head><body>
-  <div class="bar"><span style="flex:1">A3 보고서 — 글자를 눌러 바로 고친 뒤 인쇄하세요 (A3 가로 · 고친 내용은 앱에 저장되지 않음)</span><button class="pp" onclick="window.print()">인쇄 / PDF 저장</button><button onclick="window.close()">닫기</button></div>
+  <div class="bar"><span style="flex:1">A3 보고서 — 글자를 눌러 바로 고친 뒤 인쇄하세요 (A3 가로 · 고친 내용은 앱에 저장되지 않음)</span><button class="pp" onclick="window.print()">인쇄 / PDF 저장</button><button onclick="${REPORT_CLOSE}">닫기</button></div>
   <div class="pg">
   <div class="hd">${S.logo?`<img class="lg" src="${S.logo}">`:`<b>${esc(S.company||'')}</b>`}
     <div><h1 contenteditable="true">${esc(titleTxt)}</h1><div class="meta">${esc([(c&&c.CaseNo)||'',n?n.no:'',d?`${d.fgNo||''} ${d.partNo||''}`.trim():'',sup,d&&d.model].filter(Boolean).join(' · '))} · 작성 ${today()} · ${esc((c&&c.Owner)||(d&&d.owner)||S.owners[0]||'')}</div></div>

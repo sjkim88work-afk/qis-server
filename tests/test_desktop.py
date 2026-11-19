@@ -619,3 +619,37 @@ def test_tailscale_scope_binds_only_that_address(data, monkeypatch):
         r.stop()
     h = pages.lan_info_page([f"http://{ip}:{cfg.port}"], cfg.port, True, tailscale=True)
     assert "remoteip=100.64.0.0/10" in h and ip in h
+
+
+def test_report_window_can_close(monkeypatch):
+    """보고서 창: '닫기' 단추가 부르는 close_report 가 그 창을 닫음 (macOS 에서 window.close() 가 듣지 않음)."""
+    import sys, time, types
+    from qis.desktop import gui
+
+    made = []
+
+    class Win:
+        def __init__(self):
+            self.destroyed = 0
+
+        def destroy(self):
+            self.destroyed += 1
+
+    def create_window(title, **kw):
+        w = Win()
+        made.append((title, kw, w))
+        return w
+
+    monkeypatch.setitem(sys.modules, "webview", types.SimpleNamespace(create_window=create_window))
+    gui.Controller.open_report(types.SimpleNamespace(), "<html><body>보고서</body></html>")
+    title, kw, w = made[0]
+    api = kw["js_api"]
+    assert title == "QIS 보고서" and isinstance(api, gui.ReportApi) and api._win is w
+    assert [n for n in dir(api) if not n.startswith("_")] == ["close_report"]     # 화면에 보이는 메서드는 닫기뿐
+    api.close_report()
+    for _ in range(40):
+        if w.destroyed:
+            break
+        time.sleep(0.02)
+    assert w.destroyed == 1
+    gui.ReportApi().close_report()                                               # 창이 없으면 아무 것도 하지 않음

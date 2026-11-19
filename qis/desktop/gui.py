@@ -110,6 +110,27 @@ class DesktopApi:
             webbrowser.open(u)
 
 
+class ReportApi:
+    """보고서 창의 다리 — 닫기만 함.
+    보고서 창은 화면 코드가 연 창이 아니라서 window.close() 가 듣지 않음(macOS WKWebView). 그래서 '닫기' 단추가 이 메서드를 부름.
+    (_win 처럼 밑줄로 시작하는 속성은 화면에 보이지 않음)"""
+
+    def __init__(self):
+        self._win = None
+
+    def close_report(self):
+        w = self._win
+        if w is None:
+            return
+        # 다리 호출이 끝난 뒤에 닫음 — 호출 중인 창을 바로 없애면 일부 플랫폼에서 응답 전달이 꼬임
+        def go():
+            try:
+                w.destroy()
+            except Exception:
+                log.exception("보고서 창 닫기 실패")
+        threading.Timer(0.05, go).start()
+
+
 class Controller:
     def __init__(self, data_dir: Path | None = None):
         self.data_dir = Path(data_dir) if data_dir else user_data_dir()
@@ -439,7 +460,9 @@ class Controller:
     def open_report(self, html: str):
         import webview
         log.info("보고서 창 (%d자)", len(html))
-        webview.create_window("QIS 보고서", html=html, width=1200, height=900, text_select=True, zoomable=True)
+        rapi = ReportApi()
+        rapi._win = webview.create_window("QIS 보고서", html=html, js_api=rapi, width=1200, height=900,
+                                          text_select=True, zoomable=True)
 
     def _ask_save(self, name: str, types=()):
         return attach.ask_save(self.window, name, types)
