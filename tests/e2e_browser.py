@@ -168,7 +168,7 @@ def main(seed_path):
             A.evaluate("i=>issOpen(i)", iid); A.wait_for_timeout(300)
             ok(A.locator("#mfoot button:has-text('삭제'):visible").count() == 1, "작성자: 이슈 상세에 삭제 버튼")
             # 상세 창에서 기록 추가 → 창이 그대로 열린 채 갱신 · 수정 창을 닫으면 상세로 돌아옴
-            A.fill("#isTx", "창에서 쓴 기록"); A.click("#modal button:has-text('기록 추가')"); A.wait_for_timeout(400)
+            A.fill("#isTx", "창에서 쓴 기록"); A.click("#modal .isadd button.p:has-text('저장')"); A.wait_for_timeout(400)
             ok(A.locator("#modal.on").count() == 1 and "창에서 쓴 기록" in A.inner_text("#modal .isl"), "상세 창에서 기록 추가 → 창 유지 · 갱신")
             # 기록 수정: 사유 없이도 저장 · 사유를 적으면 이력에 남음 · 수정 전 내용 보관
             A.click("#modal .isl li:has-text('창에서 쓴 기록') button:has-text('수정')"); A.wait_for_timeout(300)
@@ -188,6 +188,9 @@ def main(seed_path):
               d=k[0].getBoundingClientRect(),n=k[2].getBoundingClientRect();return {lab,gap:n.left-d.right,tx:document.querySelector('#isTx').value}}""")
             ok(r["lab"] == "삭제,|,수정,닫기,저장" and r["gap"] > 100, f"이슈 상세: 삭제는 왼쪽 끝 · 저장 단추 있음 ({r['lab']}, 간격 {round(r['gap'])}px)")
             ok(r["tx"] == "", "기록 추가 후 입력 칸 비움")
+            r2 = A.evaluate("""() => {const b=[...document.querySelectorAll('#modal .isadd .cf button')].map(x=>x.textContent).join(),lgc=document.querySelector('#modal .isadd').classList.contains('lgc');
+              document.querySelector('#isTx').value='지울 내용';document.querySelector('#isWho').value='누구';issClearLog();return {b,lgc,v:document.querySelector('#isTx').value+document.querySelector('#isWho').value,on:document.querySelector('#modal').classList.contains('on')}}""")
+            ok(r2["b"] == "취소,저장" and r2["lgc"] and r2["v"] == "" and r2["on"], f"이슈 기록 작성 칸: 실행 기록과 같은 모양 · 취소 · 저장 ({r2['b']})")
             r = A.evaluate("""async i => {const o=window.askConfirm;let n=0;window.askConfirm=async()=>{n++;return false};
               document.querySelector('#mfoot button.d').click();await new Promise(r=>setTimeout(r,300));window.askConfirm=o;return {n,alive:!!issById(i)}}""", iid)
             ok(r["n"] == 1 and r["alive"], "이슈 삭제: 확인을 묻고, 취소하면 지우지 않음")
@@ -311,7 +314,13 @@ def main(seed_path):
             A.evaluate("i=>{state.tab='defect';render();openLog(i)}", did); A.wait_for_timeout(500)
             n0 = A.evaluate("tl.own.length")
             for t in ("삭제 시험 기록 1", "삭제 시험 기록 2"):
-                A.fill("#lgText", t); A.click("#modal button:has-text('기록 추가')"); A.wait_for_timeout(150)
+                A.fill("#lgText", t); A.click("#modal .lgc button.p:has-text('저장')"); A.wait_for_timeout(250)
+            r = A.evaluate("""i=>{const d=db.defects.find(x=>x.id===i),b=[...document.querySelectorAll('#modal .lgc .cf button')].map(x=>x.textContent).join();
+              return {b,open:document.querySelector('#modal').classList.contains('on'),saved:(d.logs||[]).filter(l=>/삭제 시험 기록/.test(l.text)).length,pend:tl.own.filter(x=>x._new).length,dirty:mfDirty,empty:document.querySelector('#lgText').value===''}}""", did)
+            ok(r["b"] == "취소,저장", f"실행 기록 작성 칸: 취소 · 저장 단추 ({r['b']})")
+            ok(r["open"] and r["saved"] == 2 and r["pend"] == 0 and not r["dirty"] and r["empty"], f"작성 칸의 저장 → 창을 닫지 않고 바로 저장 · 작성 칸 비움 ({r})")
+            A.fill("#lgText", "쓰다 만 내용"); A.fill("#lgParty", "누구"); A.click("#modal .lgc .cf button:has-text('취소')"); A.wait_for_timeout(200)
+            ok(A.evaluate("document.querySelector('#lgText').value+document.querySelector('#lgParty').value") == "" and not A.evaluate("mfDirty") and A.locator("#modal.on").count() == 1, "작성 칸의 취소 → 쓰던 내용만 지움 (창은 그대로)")
             A.click("#mfoot button.p:has-text('저장')"); A.wait_for_timeout(900)
             A.evaluate("i=>openLog(i)", did); A.wait_for_timeout(500)
             ok(A.evaluate("tl.own.length") == n0 + 2 and A.evaluate("tl.own.every(x=>!x._new)"), "실행 기록 2건 저장됨")
@@ -374,6 +383,19 @@ def main(seed_path):
             ok(r["def2"]["v"] == "judge" and r["def2"]["t"].startswith("귀책 판정 —") and r["def2"]["f"] == "취소,저장" and r["def2"]["sum"], "귀책 판정 창: 사내 분석 · 판정 구역만 · FAR 요약 표시")
             ok(r["kept"] == "2026-11-10|재현 시험|2026-11-15|협력사 귀책 인정", f"단계별로 저장해도 다른 단계 값은 그대로 ({r['kept']})")
             ok(r["req"] == "req" and r["foc"] == "judge", "단계를 지정해서 열기 · 판정 칸으로 열면 판정 창")
+            # NCR 진행 기록 · 이슈 기록: 같은 작성 칸(취소 · 저장), 바로 저장
+            r = A.evaluate("""async () => {
+              mfDirty=false;closeModal(true);const wait=ms=>new Promise(r=>setTimeout(r,ms)),o={};
+              const n=db.ncrs[0],n0=(n.logs||[]).length;state.tab='ncr';render();editNcr(n.id,null,'issue');ncrTab('d');await wait(150);
+              o.btn=[...document.querySelectorAll('#modal .lgc .cf button')].map(x=>x.textContent).join();
+              const ev=(el)=>el.dispatchEvent(new Event('input',{bubbles:true}));
+              document.querySelector('#lgText').value='NCR 진행 기록 시험';ev(document.querySelector('#lgText'));addLog();await wait(200);
+              o.saved=(n.logs||[]).length===n0+1&&n.logs.some(l=>l.text==='NCR 진행 기록 시험');o.open=document.querySelector('#modal').classList.contains('on');o.dirty1=mfDirty;
+              const t=document.querySelector('#mf [name=title]');t.value=t.value+' ';ev(t);document.querySelector('#lgText').value='둘째 기록';ev(document.querySelector('#lgText'));addLog();await wait(200);o.dirty2=mfDirty;
+              n.logs=n.logs.filter(l=>!/NCR 진행 기록 시험|둘째 기록/.test(l.text));mfDirty=false;closeModal(true);
+              return o}""")
+            ok(r["btn"] == "취소,저장" and r["saved"] and r["open"], "NCR 진행 기록: 같은 작성 칸 · 저장하면 창을 닫지 않고 바로 저장")
+            ok(not r["dirty1"] and r["dirty2"], "NCR: 기록만 저장했으면 닫을 때 묻지 않음 · 다른 칸을 고쳤으면 물음")
             # 단순 통보 NCR: 유효성 검증 없이 통보하면 종결
             r = A.evaluate("""() => {
               const n={id:uid(),no:'N-INFO',issueDate:addDays(today(),-40),reqType:'단순 통보',supplierId:db.suppliers[0].id,defectIds:[]};db.ncrs.push(n);

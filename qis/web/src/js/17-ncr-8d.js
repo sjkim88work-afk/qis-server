@@ -683,6 +683,7 @@ function refreshLinks(){
 }
 function saveNcr(id){
   const o=gather(),S=db.settings;
+  if(tl.kind==='ncr'&&((document.getElementById('lgText')||{}).value||'').trim()){if(!tlPushDraft()){ncrTab('d');return null}renderLogs(false)}   // 진행 기록에 쓰던 내용도 함께 저장
   {const pf=((id&&db.ncrs.find(x=>x.id===id))||{}).far||null,r=farAlign(pf,curLinks);o.far=r?r.far:pf;if(r&&r.chInv&&r.src)touch(r.src)}   // FAR 은 FAR 화면이 원본 — NCR 은 비춘 값만 가짐
   if(!o.issueDate){ncrTab('a');toast('발행일을 입력하세요');return null}
   if(o.notifyYN==='통보 완료'&&!o.notifyDate)o.notifyDate=today();delete o.notifyYN;
