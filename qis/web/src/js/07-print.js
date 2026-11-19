@@ -1,5 +1,5 @@
 /* ================= 출력 공통 (새 창 → 막히면 파일로) ================= */
-const REPORT_HEAD=`<style>@page{size:A4;margin:11mm}.rbar{position:sticky;top:0;background:#14213d;color:#fff;padding:8px 12px;display:flex;gap:8px;align-items:center;margin:-24px -24px 16px;font-family:'Malgun Gothic',sans-serif;font-size:13px}.rbar button{font:inherit;padding:5px 12px;border-radius:5px;border:0;cursor:pointer}.rbar .pp{background:#fff;color:#14213d;font-weight:bold}@media print{.rbar{display:none}}</style></head>`;
+const REPORT_HEAD=`<style>@page{size:A4;margin:11mm}.rbar{position:sticky;top:0;background:#0B4F4D;color:#fff;padding:8px 12px;display:flex;gap:8px;align-items:center;margin:-24px -24px 16px;font-family:'Malgun Gothic',sans-serif;font-size:13px}.rbar button{font:inherit;padding:5px 12px;border-radius:5px;border:0;cursor:pointer}.rbar .pp{background:#fff;color:#0B4F4D;font-weight:bold}@media print{.rbar{display:none}}</style></head>`;
 /* 보고서 창의 ‘닫기’ — 프로그램(데스크톱) 창은 window.close() 가 듣지 않아(macOS) 프로그램에 닫기를 요청, 브라우저는 window.close() */
 const REPORT_CLOSE="try{var a=window.pywebview&&window.pywebview.api;if(a&&a.close_report){a.close_report()}else{window.close()}}catch(e){window.close()}";
 const REPORT_BAR=`<div class="rbar"><span style="flex:1">인쇄 미리보기 — 인쇄 창에서 ‘대상: PDF로 저장’을 고르면 PDF 파일로 저장됩니다.</span><button class="pp" onclick="window.print()">인쇄 / PDF 저장</button><button onclick="${REPORT_CLOSE}">닫기</button></div><script>window.addEventListener('load',function(){setTimeout(function(){try{window.print()}catch(e){}},400)})<\/script>`;
@@ -31,14 +31,14 @@ function dashReport(){
   const rv=getReview(m)||{};
   const html=reportFrame(`<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>품질현황보고_${m}</title><style>
   body{font-family:'Malgun Gothic','맑은 고딕',sans-serif;font-size:11px;color:#111;margin:24px}
-  .hd{display:flex;align-items:center;gap:14px;border-bottom:2.5px solid #14213d;padding-bottom:8px}
+  .hd{display:flex;align-items:center;gap:14px;border-bottom:2.5px solid #0B4F4D;padding-bottom:8px}
   .hd img{max-height:46px;max-width:170px;object-fit:contain}.hd .t{flex:1}.hd h1{font-size:19px;margin:0}.hd .s{color:#555;margin-top:3px}
   table{border-collapse:collapse;width:100%}th,td{border:1px solid #888;padding:4px 6px;text-align:left;vertical-align:top}th{background:#eef1f5;white-space:nowrap}td.n,th.n{text-align:right}
   .sign{width:auto}.sign th{text-align:center;width:62px;font-weight:normal}.sign td{height:42px}
-  h2{font-size:13px;margin:16px 0 6px;padding-left:7px;border-left:4px solid #1f5fbf}
+  h2{font-size:13px;margin:16px 0 6px;padding-left:7px;border-left:4px solid #007A78}
   .kp{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:12px}.kp div{border:1px solid #bbb;border-radius:5px;padding:7px}.kp b{display:block;font-size:17px;margin-top:2px}.kp span{color:#555;font-size:10px}.kp .r b{color:#c0392b}.kp .w b{color:#b7791f}
   .g{display:grid;grid-template-columns:1fr 1fr;gap:8px}.g>div{border:1px solid #ccc;border-radius:5px;padding:6px}.g h3{font-size:11px;margin:0 0 4px}
-  svg{width:100%;height:auto;display:block}.sec{break-inside:avoid}.memo td{height:70px;line-height:1.6}@media print{.scr{display:none}}@media screen{.ed{outline:1px dashed #9db4dc;background:#fbfdff}.ed:focus{outline:2px solid #1f5fbf;background:#fff}}
+  svg{width:100%;height:auto;display:block}.sec{break-inside:avoid}.memo td{height:70px;line-height:1.6}@media print{.scr{display:none}}@media screen{.ed{outline:1px dashed #9db4dc;background:#fbfdff}.ed:focus{outline:2px solid #007A78;background:#fff}}
   </style></head><body>
   <div class="hd">${S.logo?`<img src="${S.logo}">`:''}<div class="t"><h1>월간 품질 현황 보고 (${m.replace('-','년 ')}월)</h1><div class="s">${esc(S.company)}${S.dept?' · '+esc(S.dept):''} · 출력일 ${today()}</div></div>
   <table class="sign"><tr><th>작성</th><th>검토</th><th>승인</th></tr><tr><td></td><td></td><td></td></tr></table></div>
@@ -52,7 +52,7 @@ function dashReport(){
     <div class="${recs.length?'w':''}"><span>NCR 권고 미발행</span><b>${recs.length}</b><span>최근 90일</span></div>
     <div><span>순손실 (COPQ−회수)</span><b>${won(cost-rec)}원</b><span>전월 ${won(pcost-prec)}원</span></div>
   </div>
-  <div class="sec"><h2>1. 특이사항 및 검토 의견</h2><div class="scr" style="color:#1f5fbf;margin-bottom:4px">✎ 점선 칸은 인쇄 직전에 바로 고칠 수 있습니다. (이 창에서 고친 내용은 저장되지 않으니, 계속 남길 내용은 대시보드에서 입력하세요)</div><table class="memo"><tr><th style="width:17%">특이사항</th><td class="ed" contenteditable="true">${nl(rv.issues)}</td></tr><tr><th>검토 의견 · 향후 조치</th><td class="ed" contenteditable="true">${nl(rv.opinion)}</td></tr></table>${rv.author?`<div style="text-align:right;margin-top:4px;color:#555">작성: ${esc(rv.author)}${rv.updatedAt?' ('+loc(rv.updatedAt,10)+')':''}</div>`:''}</div>
+  <div class="sec"><h2>1. 특이사항 및 검토 의견</h2><div class="scr" style="color:#007A78;margin-bottom:4px">✎ 점선 칸은 인쇄 직전에 바로 고칠 수 있습니다. (이 창에서 고친 내용은 저장되지 않으니, 계속 남길 내용은 대시보드에서 입력하세요)</div><table class="memo"><tr><th style="width:17%">특이사항</th><td class="ed" contenteditable="true">${nl(rv.issues)}</td></tr><tr><th>검토 의견 · 향후 조치</th><td class="ed" contenteditable="true">${nl(rv.opinion)}</td></tr></table>${rv.author?`<div style="text-align:right;margin-top:4px;color:#555">작성: ${esc(rv.author)}${rv.updatedAt?' ('+loc(rv.updatedAt,10)+')':''}</div>`:''}</div>
   <div class="sec"><h2>2. 주요 지표 (전월 대비)</h2><table><tr><th>항목</th><th class="n">${pm}</th><th class="n">${m}</th><th class="n">증감</th></tr>
     <tr><td>불량 건수</td><td class="n">${pds.length}</td><td class="n">${ds.length}</td><td class="n">${dl(ds.length,pds.length)}</td></tr>
     <tr><td>불량 수량</td><td class="n">${sum(pds,'qty').toLocaleString()}</td><td class="n">${sum(ds,'qty').toLocaleString()}</td><td class="n">${dl(sum(ds,'qty'),sum(pds,'qty'))}</td></tr>
@@ -60,7 +60,7 @@ function dashReport(){
     <tr><td>구상 회수 (원)</td><td class="n">${won(prec)}</td><td class="n">${won(rec)}</td><td class="n">${dl(rec,prec,won)}</td></tr>
     <tr><td>NCR 발행 / 종결</td><td class="n">${pnNew} / ${pnClose}</td><td class="n">${nNew} / ${nClose}</td><td class="n">-</td></tr></table></div>
   <div class="sec"><h2>3. 추이 및 파레토</h2><div class="g">
-    <div><h3>월별 불량 건수 (12개월)</h3>${barChart(lbl,[{name:'건수',values:byM.map(a=>a.length),color:'#1f5fbf'}],{h:200})}</div>
+    <div><h3>월별 불량 건수 (12개월)</h3>${barChart(lbl,[{name:'건수',values:byM.map(a=>a.length),color:'#007A78'}],{h:200})}</div>
     <div><h3>월별 불량 수량 (12개월)</h3>${barChart(lbl,[{name:'수량',values:byM.map(a=>sum(a,'qty')),color:'#5b8def'}],{h:200})}</div>
     <div><h3>협력사별 불량 수량</h3>${pareto(supMap,'개')}</div>
     <div><h3>불량유형별 건수</h3>${pareto(typeMap,'건')}</div></div></div>

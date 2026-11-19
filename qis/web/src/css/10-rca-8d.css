@@ -1,5 +1,5 @@
 /* ================= RCA · 사내 8D ================= */
-.cz{--line2:#eef0f3;--ink2:#56606a;--ink3:#8b949d;--acc:#1f5fbf;--acc-bg:#e9f0fb;--red:#c0392b;--red-bg:#fdeceb;--amb:#9a5b00;--amb-bg:#fff3de;--grn:#1d7a3b;--grn-bg:#e6f4eb;font-size:13.5px}
+.cz{--line2:#eef0f3;--ink2:#56606a;--ink3:#8b949d;--acc:#007A78;--acc-bg:#e9f0fb;--red:#c0392b;--red-bg:#fdeceb;--amb:#9a5b00;--amb-bg:#fff3de;--grn:#1d7a3b;--grn-bg:#e6f4eb;font-size:13.5px}
 .cz h1{font-size:18px;margin:0 0 4px}
 .cz .sub{color:var(--ink2);margin:0 0 16px}
 .cz .bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
@@ -7,11 +7,11 @@
 .cz .btn{border:1px solid var(--line);background:#fff;border-radius:6px;padding:6px 12px;cursor:pointer;white-space:nowrap;font:inherit;color:var(--ink)}
 .cz .btn:hover{border-color:#c4cad1;background:var(--mut)}
 .cz .btn.pri{background:var(--acc);border-color:var(--acc);color:#fff}
-.cz .btn.pri:hover{background:#1a52a6}
+.cz .btn.pri:hover{background:#005F5D}
 .cz .btn.sm{padding:3px 8px;font-size:12px}
 .cz .btn.danger{color:var(--red);border-color:#f0c4bf}
 .cz input[type=text],.cz input[type=number],.cz input[type=date],.cz input:not([type]),.cz select,.cz textarea{border:1px solid var(--line);border-radius:6px;padding:6px 8px;background:#fff;width:100%;min-width:0}
-.cz input:focus,.cz select:focus,.cz textarea:focus{outline:2px solid #bcd3f5;border-color:var(--acc)}
+.cz input:focus,.cz select:focus,.cz textarea:focus{outline:2px solid #B5DEDC;border-color:var(--acc)}
 .cz textarea{resize:vertical;min-height:62px;line-height:1.5}
 .cz .card h3 .muted{font-weight:400}
 .cz .kpi{cursor:pointer}
@@ -32,7 +32,7 @@
 .cz .today{color:var(--amb);font-weight:600}
 .cz .empty{padding:26px;text-align:center;color:var(--ink3)}
 .cz .ball{display:inline-block;min-width:44px;text-align:center;border-radius:10px;padding:0 8px;font-size:12px;line-height:19px;background:#eef1f4;color:var(--ink2)}
-.cz .ball.me{background:#1f5fbf;color:#fff}
+.cz .ball.me{background:#007A78;color:#fff}
 .cz .chead{background:#fff;border:1px solid var(--line);border-radius:10px;padding:14px 18px;margin-bottom:14px;position:sticky;top:0;z-index:5;box-shadow:0 2px 8px rgba(20,30,40,.04)}
 .cz .chead .r1{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 @media(max-width:760px),(max-height:700px){.cz.czm .chead{position:static}}   /* RCA 창: 좁거나 낮은 화면에서는 머리 칸을 고정하지 않음 (내용이 가려짐) */

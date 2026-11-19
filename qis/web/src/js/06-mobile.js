@@ -151,7 +151,9 @@ function renderInner(){
     $('#dlParts').innerHTML=db.parts.map(p=>`<option value="${esc(p.partNo)}">${esc(p.name)} · ${esc(supName(p.supplierId))}</option>`).join('');
     renderMobile();renderBrand();updateSaveInfo();return}
   document.body.classList.remove('mob');document.body.classList.toggle('pcnarrow',mobPref==='pc'&&!!(mobMQ&&mobMQ.matches));
-  $('#nav').innerHTML=TABS.filter(([k])=>!(RO||SRV)||RO_TABS.includes(k)).map(([k,l])=>{const n=k==='case'?czBadgeN():k==='inv'?invLateN():k==='issue'?issWaitN():0;return `<button class="${state.tab===k?'on':''}" onclick="go('${k}')">${l}${n?` <span class="bg bad" style="font-size:10.5px">${n}</span>`:''}</button>`}).join('');
+  const navFt0=$('#navFt');if(navFt0){navFt0.remove();window.__navFt=navFt0}   // 사이드바 하단(사용자 · 관리 · 저작권)은 innerHTML 교체 전에 떼어 두고 기억함
+  let navG='';$('#nav').innerHTML=TABS.filter(([k])=>!(RO||SRV)||RO_TABS.includes(k)).map(([k,l])=>{const n=k==='case'?czBadgeN():k==='inv'?invLateN():k==='issue'?issWaitN():0;const g=NAV_GRP[k]||navG,gh=g!==navG?`<div class="gh">${g}</div>`:'';navG=g;return gh+`<button class="${state.tab===k?'on':''}" onclick="go('${k}')">${l}${n?` <span class="bg bad" style="font-size:10.5px">${n}</span>`:''}</button>`}).join('');
+  navFoot();
   $('#dlParts').innerHTML=db.parts.map(p=>`<option value="${esc(p.partNo)}">${esc(p.name)} · ${esc(supName(p.supplierId))}</option>`).join('');
   $('#dlOwners').innerHTML=db.settings.owners.map(o=>`<option value="${esc(o)}">`).join('');
   $('#dlSources').innerHTML=db.settings.sources.map(o=>`<option value="${esc(o)}">`).join('');
@@ -183,7 +185,7 @@ function renderBrand(){
   document.title=(RO?'[읽기 전용] ':'')+(S.company?S.company+' 품질관리':'QIS');  // 설치 앱 창 제목: ‘QIS - 회사 품질관리’
   $('#printHead').innerHTML=`${S.logo?`<img src="${S.logo}" alt="">`:''}<div class="t"><b>${esc(S.company||'품질관리')} — ${esc(tab)}${state.tab==='dash'?' ('+esc(state.dashMonth)+')':''}</b><span>${esc(S.dept)}</span></div><div class="d">출력일 ${today()}</div>`;
 }
-function logoHead(){const S=db.settings;return (S.logo||S.company)?`<div style="display:flex;align-items:center;gap:12px;border-bottom:2px solid #14213d;padding-bottom:8px;margin-bottom:12px">${S.logo?`<img src="${S.logo}" style="max-height:44px;max-width:180px;object-fit:contain">`:''}<div style="flex:1"><b style="font-size:15px">${esc(S.company)}</b><br><span style="font-size:11px;color:#555">${esc(S.dept)}</span></div><div style="font-size:11px;color:#555">출력일 ${today()}</div></div>`:''}
+function logoHead(){const S=db.settings;return (S.logo||S.company)?`<div style="display:flex;align-items:center;gap:12px;border-bottom:2px solid #0B4F4D;padding-bottom:8px;margin-bottom:12px">${S.logo?`<img src="${S.logo}" style="max-height:44px;max-width:180px;object-fit:contain">`:''}<div style="flex:1"><b style="font-size:15px">${esc(S.company)}</b><br><span style="font-size:11px;color:#555">${esc(S.dept)}</span></div><div style="font-size:11px;color:#555">출력일 ${today()}</div></div>`:''}
 async function setLogo(f){
   if(!f)return;
   try{

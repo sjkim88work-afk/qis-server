@@ -31,7 +31,7 @@ function paretoSvg(map,unit='',W=620){
   for(let i=0;i<=4;i++){const y=pt+ih*(1-i/4);g+=`<line x1="${pl}" x2="${W-pr}" y1="${y}" y2="${y}" stroke="#e6ebef"/><text x="${pl-6}" y="${y+4}" text-anchor="end" font-size="11.5" fill="#5b6875">${fmtShort(max*i/4)}</text><text x="${W-pr+6}" y="${y+4}" font-size="11.5" fill="#c0392b">${i*25}%</text>`}
   top.forEach((it,i)=>{
     const x=pl+gw*i,bh=ih*it.v/max,bw=Math.min(46,gw-10);
-    g+=`<rect x="${x+(gw-bw)/2}" y="${pt+ih-bh}" width="${bw}" height="${bh}" fill="#1f5fbf" rx="2"><title>${esc(it.k)}: ${it.v.toLocaleString()}${unit}</title></rect>`;
+    g+=`<rect x="${x+(gw-bw)/2}" y="${pt+ih-bh}" width="${bw}" height="${bh}" fill="#007A78" rx="2"><title>${esc(it.k)}: ${it.v.toLocaleString()}${unit}</title></rect>`;
     g+=`<text x="${x+gw/2}" y="${pt+ih-bh-4}" text-anchor="middle" font-size="11.5" fill="#16202a">${fmtShort(it.v)}</text>`;
     const lb=it.k.length>7?it.k.slice(0,7)+'…':it.k;
     g+=`<text x="${x+gw/2}" y="${H-pb+15}" text-anchor="middle" font-size="11.5" fill="#16202a">${esc(lb)}</text>`;

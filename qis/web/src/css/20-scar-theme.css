@@ -1,6 +1,6 @@
 /* ================= SCAR 관리대장 테마 (화면 전용 · 인쇄 양식은 그대로) =================
    대장(ledger) 구성: 흰 머리글 → 고정 탭 → 요약 지표 줄 → 표. 편집 창은 오른쪽 서류철(drawer) */
-:root{--bg:#eef1f3;--card:#fff;--ink:#16202a;--sub:#5b6875;--line:#d5dce2;--line2:#e6ebef;--pri:#1d4f73;--pri-d:#163d5a;--pri2:#e2edf5;
+:root{--bg:#eef1f3;--card:#fff;--ink:#16202a;--sub:#5b6875;--line:#d5dce2;--line2:#e6ebef;--pri:#007A78;--pri-d:#005F5D;--pri2:#E3F3F2;
   --ok:#1f7a4d;--okb:#e3f3ea;--warn:#a35f00;--warnb:#fbefd9;--bad:#b3261e;--badb:#fbe4e2;--mut:#e9edf0;--th:#6b7884;
   --f-body:"IBM Plex Sans KR","Malgun Gothic","맑은 고딕","Apple SD Gothic Neo",sans-serif;--f-mono:"IBM Plex Mono",Consolas,"D2Coding",monospace}
 body{font-family:var(--f-body);font-size:13.5px;line-height:1.5}
@@ -72,7 +72,7 @@ body{font-family:var(--f-body);font-size:13.5px;line-height:1.5}
   .modal .mb{flex:1;overflow-y:auto;padding:18px 22px 28px;overscroll-behavior:contain}
   .modal .mf{padding:12px 22px;background:var(--card);border-top-color:var(--line)}
   /* RCA · 사내 8D 화면도 같은 색으로 */
-  .cz{--acc:#1d4f73;--acc-bg:#e2edf5;--line2:#e6ebef;--red:#b3261e;--red-bg:#fbe4e2;--grn:#1f7a4d;--grn-bg:#e3f3ea;--amb:#a35f00;--amb-bg:#fbefd9}
+  .cz{--acc:#007A78;--acc-bg:#E3F3F2;--line2:#e6ebef;--red:#b3261e;--red-bg:#fbe4e2;--grn:#1f7a4d;--grn-bg:#e3f3ea;--amb:#a35f00;--amb-bg:#fbefd9}
   .cz .btn.pri:hover{background:var(--pri-d)}
   .cz .ball.me{background:var(--pri)}
   .cz table.t th,.cz table.mini th{background:var(--card);color:var(--th);letter-spacing:.04em}
@@ -137,7 +137,7 @@ details>summary.sec{list-style:none}
 details>summary.sec::-webkit-details-marker{display:none}
 details>summary.sec::before{content:"▸";display:inline-block;width:12px;color:var(--sub);font-size:11px;transition:transform .15s}
 details[open]>summary.sec::before{transform:rotate(90deg)}
-details>summary.sec:hover{color:var(--pri-d,#163d5a)}
+details>summary.sec:hover{color:var(--pri-d,#005F5D)}
 /* 진행 단계 표시 (NCR 서류철 상단 · 목록) */
 .qtrack{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:4px;margin:0 0 16px}
 .qtrack div{font-size:11.5px;color:#8a96a1;border-top:3px solid var(--line);padding-top:6px;min-width:0;line-height:1.35}

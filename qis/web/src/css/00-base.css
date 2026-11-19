@@ -1,11 +1,11 @@
-:root{--bg:#f4f6f9;--card:#fff;--ink:#1d2433;--sub:#667085;--line:#e3e7ee;--pri:#1f5fbf;--pri2:#e8f0fc;--ok:#1a8f5a;--okb:#e6f5ee;--warn:#b7791f;--warnb:#fdf3e1;--bad:#c0392b;--badb:#fbeaea;--mut:#f0f2f5}
+:root{--bg:#f4f6f9;--card:#fff;--ink:#1d2433;--sub:#667085;--line:#e3e7ee;--pri:#007A78;--pri2:#e8f0fc;--ok:#1a8f5a;--okb:#e6f5ee;--warn:#b7791f;--warnb:#fdf3e1;--bad:#c0392b;--badb:#fbeaea;--mut:#f0f2f5}
 *{box-sizing:border-box}
 body{margin:0;font-family:'Malgun Gothic','맑은 고딕','Apple SD Gothic Neo',sans-serif;background:var(--bg);color:var(--ink);font-size:13px}
-header{display:flex;align-items:center;gap:12px;padding:10px 18px;background:#14213d;color:#fff}
+header{display:flex;align-items:center;gap:12px;padding:10px 18px;background:#0B4F4D;color:#fff}
 header h1{font-size:16px;margin:0}
 .brandlogo{height:30px;max-width:150px;object-fit:contain;background:#fff;border-radius:5px;padding:3px 6px;display:block}
 .print-only{display:none}
-.phead{align-items:center;gap:14px;border-bottom:2px solid #14213d;padding-bottom:8px;margin-bottom:14px}
+.phead{align-items:center;gap:14px;border-bottom:2px solid #0B4F4D;padding-bottom:8px;margin-bottom:14px}
 .phead img{max-height:44px;max-width:180px;object-fit:contain}
 .phead .t{flex:1}.phead .t b{font-size:17px;display:block}.phead .t span,.phead .d{font-size:11px;color:#555}
 .logoprev{display:flex;align-items:center;justify-content:center;width:240px;height:90px;border:1px dashed #b9c6dc;border-radius:8px;background:repeating-conic-gradient(#f0f2f5 0 25%,#fff 0 50%) 0 0/16px 16px}
@@ -29,7 +29,7 @@ main{padding:16px 18px;max-width:1440px;margin:0 auto}
 .kpi.bad .v{color:var(--bad)}.kpi.warn .v{color:var(--warn)}.kpi.ok .v{color:var(--ok)}
 button.b,label.b{border:1px solid var(--line);background:#fff;color:var(--ink);padding:6px 11px;border-radius:6px;font:inherit;cursor:pointer}
 button.b:hover,label.b:hover{background:var(--mut)}
-button.p,label.p{background:var(--pri);color:#fff;border-color:var(--pri)}button.p:hover,label.p:hover{background:#174a96}
+button.p,label.p{background:var(--pri);color:#fff;border-color:var(--pri)}button.p:hover,label.p:hover{background:#005F5D}
 button.d{color:var(--bad)}
 button.s{padding:3px 7px;font-size:12px}
 input,select,textarea{font:inherit;padding:5px 7px;border:1px solid #cfd5df;border-radius:5px;background:#fff;color:inherit;min-width:0}

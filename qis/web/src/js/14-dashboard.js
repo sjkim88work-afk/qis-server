@@ -78,7 +78,7 @@ function renderDash(){
   ${reviewCard(m)}
   ${(()=>{const it=dashItems=actions.match(/<li[\s\S]*?<\/li>/g)||[],all=!!state.dashAll,k=all?it.length:6;return `<div class="card"><h3>오늘 챙길 일 ${it.length?`<span class="bg mut">${it.length}</span>`:''}<span class="sp"></span>${it.length>6?`<button class="b s noprint" onclick="state.dashAll=!state.dashAll;render()">${all?'6건만 보기':`전체 ${it.length}건 보기`}</button>`:''}</h3>${it.length?`<ul class="act">${it.slice(0,k).join('')}</ul>${it.length>k?`<div class="muted" style="font-size:12px">외 ${it.length-k}건 — <a class="lk" onclick="state.dashAll=true;render()">모두 펼치기</a></div>`:''}`:'<div class="muted">지연·임박 항목이 없습니다.</div>'}</div>`})()}
   <div class="grid g2">
-    <div class="card"><h3>월별 불량 건수 (최근 12개월)</h3>${barChart(ms.map(x=>x.slice(2).replace('-','.')),[{name:'건수',values:byM.map(a=>a.length),color:'#1f5fbf'}])}</div>
+    <div class="card"><h3>월별 불량 건수 (최근 12개월)</h3>${barChart(ms.map(x=>x.slice(2).replace('-','.')),[{name:'건수',values:byM.map(a=>a.length),color:'#007A78'}])}</div>
     <div class="card"><h3>월별 불량 수량</h3>${barChart(ms.map(x=>x.slice(2).replace('-','.')),[{name:'수량',values:byM.map(a=>sum(a,'qty')),color:'#5b8def'}])}</div>
     ${db.cases.length?`<div class="card"><h3>RCA 월별 등록 · 종결 (최근 12개월)</h3>${barChart(ms.map(x=>x.slice(2).replace('-','.')),[{name:'등록',values:ms.map(x=>db.cases.filter(c=>(c.Created||'').startsWith(x)).length),color:'#d9822b'},{name:'종결',values:ms.map(x=>db.cases.filter(c=>c.Status==='종결'&&(c.CloseDate||'').startsWith(x)).length),color:'#1a8f5a'}])}</div>`:''}
     <div class="card"><h3>${m} 협력사별 불량 수량 (파레토)</h3>${pareto(supMap,'개')}</div>

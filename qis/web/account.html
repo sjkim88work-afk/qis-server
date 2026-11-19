@@ -5,8 +5,9 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>QIS 비밀번호 변경</title>
 <link rel="icon" type="image/png" href="/icons/favicon-32.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
 <style>
-:root{--ink:#1d2433;--sub:#667085;--line:#d5dbe5;--pri:#1f5fbf;--bad:#c0392b;--ok:#1a8f5a}
+:root{--ink:#1d2433;--sub:#667085;--line:#d5dbe5;--pri:#007A78;--bad:#c0392b;--ok:#1a8f5a}
 *{box-sizing:border-box}
 body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#f4f6f9;font-family:'Malgun Gothic','맑은 고딕','Apple SD Gothic Neo',sans-serif;color:var(--ink)}
 .card{background:#fff;border:1px solid #e3e7ee;border-radius:12px;padding:28px 28px 22px;width:min(400px,calc(100vw - 32px))}
@@ -21,6 +22,13 @@ button.p{background:var(--pri);border-color:var(--pri);color:#fff;font-weight:60
 .err{color:var(--bad);font-size:13px;min-height:18px;margin-top:12px}
 .err.ok{color:var(--ok)}
 .rule{font-size:12px;color:var(--sub);margin-top:6px}
+/* 2026-11 디자인 리뉴얼 */
+:root{--sub:#5B6577;--line:#D5DBE5;--pri:#007A78;--bad:#A62A1A;--ok:#157A4B}
+body{font-family:"IBM Plex Sans KR","Malgun Gothic","맑은 고딕","Apple SD Gothic Neo",sans-serif}
+.card{border-radius:16px;padding:32px 32px 26px}
+input{min-height:46px;padding:0 14px;border-radius:10px;font-size:15px}
+input:focus{outline:3px solid #B5DEDC;border-color:var(--pri)}
+button{min-height:46px;border-radius:10px;font-size:14.5px}
 </style>
 </head>
 <body>

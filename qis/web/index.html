@@ -6,7 +6,7 @@
 <title>QIS</title>
 <!-- 설치형 앱(PWA): 웹 주소(https)로 열었을 때 ‘앱으로 설치’ · 오프라인 실행. 파일로 직접 열면 지금처럼 동작 -->
 <link rel="manifest" href="manifest.webmanifest">
-<meta name="theme-color" content="#1d4f73">
+<meta name="theme-color" content="#007A78">
 <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <meta name="mobile-web-app-capable" content="yes">
@@ -14,14 +14,14 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 <style>
-:root{--bg:#f4f6f9;--card:#fff;--ink:#1d2433;--sub:#667085;--line:#e3e7ee;--pri:#1f5fbf;--pri2:#e8f0fc;--ok:#1a8f5a;--okb:#e6f5ee;--warn:#b7791f;--warnb:#fdf3e1;--bad:#c0392b;--badb:#fbeaea;--mut:#f0f2f5}
+:root{--bg:#f4f6f9;--card:#fff;--ink:#1d2433;--sub:#667085;--line:#e3e7ee;--pri:#007A78;--pri2:#e8f0fc;--ok:#1a8f5a;--okb:#e6f5ee;--warn:#b7791f;--warnb:#fdf3e1;--bad:#c0392b;--badb:#fbeaea;--mut:#f0f2f5}
 *{box-sizing:border-box}
 body{margin:0;font-family:'Malgun Gothic','맑은 고딕','Apple SD Gothic Neo',sans-serif;background:var(--bg);color:var(--ink);font-size:13px}
-header{display:flex;align-items:center;gap:12px;padding:10px 18px;background:#14213d;color:#fff}
+header{display:flex;align-items:center;gap:12px;padding:10px 18px;background:#0B4F4D;color:#fff}
 header h1{font-size:16px;margin:0}
 .brandlogo{height:30px;max-width:150px;object-fit:contain;background:#fff;border-radius:5px;padding:3px 6px;display:block}
 .print-only{display:none}
-.phead{align-items:center;gap:14px;border-bottom:2px solid #14213d;padding-bottom:8px;margin-bottom:14px}
+.phead{align-items:center;gap:14px;border-bottom:2px solid #0B4F4D;padding-bottom:8px;margin-bottom:14px}
 .phead img{max-height:44px;max-width:180px;object-fit:contain}
 .phead .t{flex:1}.phead .t b{font-size:17px;display:block}.phead .t span,.phead .d{font-size:11px;color:#555}
 .logoprev{display:flex;align-items:center;justify-content:center;width:240px;height:90px;border:1px dashed #b9c6dc;border-radius:8px;background:repeating-conic-gradient(#f0f2f5 0 25%,#fff 0 50%) 0 0/16px 16px}
@@ -45,7 +45,7 @@ main{padding:16px 18px;max-width:1440px;margin:0 auto}
 .kpi.bad .v{color:var(--bad)}.kpi.warn .v{color:var(--warn)}.kpi.ok .v{color:var(--ok)}
 button.b,label.b{border:1px solid var(--line);background:#fff;color:var(--ink);padding:6px 11px;border-radius:6px;font:inherit;cursor:pointer}
 button.b:hover,label.b:hover{background:var(--mut)}
-button.p,label.p{background:var(--pri);color:#fff;border-color:var(--pri)}button.p:hover,label.p:hover{background:#174a96}
+button.p,label.p{background:var(--pri);color:#fff;border-color:var(--pri)}button.p:hover,label.p:hover{background:#005F5D}
 button.d{color:var(--bad)}
 button.s{padding:3px 7px;font-size:12px}
 input,select,textarea{font:inherit;padding:5px 7px;border:1px solid #cfd5df;border-radius:5px;background:#fff;color:inherit;min-width:0}
@@ -241,7 +241,7 @@ ul.act{margin:0;padding-left:18px}ul.act li{margin:4px 0}
 @media(max-width:600px){.g2{grid-template-columns:1fr}main{padding:12px}.card h3{flex-wrap:wrap}.card{min-width:0;overflow-wrap:anywhere}.card .row{flex-wrap:wrap}.card .row input{min-width:0;max-width:100%}}
 .updbadge{display:inline-block;margin-left:8px;padding:2px 8px;border-radius:10px;font:600 11px/1.6 var(--f);vertical-align:middle;background:#dcfce7;color:#14532d;text-decoration:none}
 /* ================= RCA · 사내 8D ================= */
-.cz{--line2:#eef0f3;--ink2:#56606a;--ink3:#8b949d;--acc:#1f5fbf;--acc-bg:#e9f0fb;--red:#c0392b;--red-bg:#fdeceb;--amb:#9a5b00;--amb-bg:#fff3de;--grn:#1d7a3b;--grn-bg:#e6f4eb;font-size:13.5px}
+.cz{--line2:#eef0f3;--ink2:#56606a;--ink3:#8b949d;--acc:#007A78;--acc-bg:#e9f0fb;--red:#c0392b;--red-bg:#fdeceb;--amb:#9a5b00;--amb-bg:#fff3de;--grn:#1d7a3b;--grn-bg:#e6f4eb;font-size:13.5px}
 .cz h1{font-size:18px;margin:0 0 4px}
 .cz .sub{color:var(--ink2);margin:0 0 16px}
 .cz .bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
@@ -249,11 +249,11 @@ ul.act{margin:0;padding-left:18px}ul.act li{margin:4px 0}
 .cz .btn{border:1px solid var(--line);background:#fff;border-radius:6px;padding:6px 12px;cursor:pointer;white-space:nowrap;font:inherit;color:var(--ink)}
 .cz .btn:hover{border-color:#c4cad1;background:var(--mut)}
 .cz .btn.pri{background:var(--acc);border-color:var(--acc);color:#fff}
-.cz .btn.pri:hover{background:#1a52a6}
+.cz .btn.pri:hover{background:#005F5D}
 .cz .btn.sm{padding:3px 8px;font-size:12px}
 .cz .btn.danger{color:var(--red);border-color:#f0c4bf}
 .cz input[type=text],.cz input[type=number],.cz input[type=date],.cz input:not([type]),.cz select,.cz textarea{border:1px solid var(--line);border-radius:6px;padding:6px 8px;background:#fff;width:100%;min-width:0}
-.cz input:focus,.cz select:focus,.cz textarea:focus{outline:2px solid #bcd3f5;border-color:var(--acc)}
+.cz input:focus,.cz select:focus,.cz textarea:focus{outline:2px solid #B5DEDC;border-color:var(--acc)}
 .cz textarea{resize:vertical;min-height:62px;line-height:1.5}
 .cz .card h3 .muted{font-weight:400}
 .cz .kpi{cursor:pointer}
@@ -274,7 +274,7 @@ ul.act{margin:0;padding-left:18px}ul.act li{margin:4px 0}
 .cz .today{color:var(--amb);font-weight:600}
 .cz .empty{padding:26px;text-align:center;color:var(--ink3)}
 .cz .ball{display:inline-block;min-width:44px;text-align:center;border-radius:10px;padding:0 8px;font-size:12px;line-height:19px;background:#eef1f4;color:var(--ink2)}
-.cz .ball.me{background:#1f5fbf;color:#fff}
+.cz .ball.me{background:#007A78;color:#fff}
 .cz .chead{background:#fff;border:1px solid var(--line);border-radius:10px;padding:14px 18px;margin-bottom:14px;position:sticky;top:0;z-index:5;box-shadow:0 2px 8px rgba(20,30,40,.04)}
 .cz .chead .r1{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 @media(max-width:760px),(max-height:700px){.cz.czm .chead{position:static}}   /* RCA 창: 좁거나 낮은 화면에서는 머리 칸을 고정하지 않음 (내용이 가려짐) */
@@ -375,7 +375,7 @@ ul.act{margin:0;padding-left:18px}ul.act li{margin:4px 0}
 
 /* ================= SCAR 관리대장 테마 (화면 전용 · 인쇄 양식은 그대로) =================
    대장(ledger) 구성: 흰 머리글 → 고정 탭 → 요약 지표 줄 → 표. 편집 창은 오른쪽 서류철(drawer) */
-:root{--bg:#eef1f3;--card:#fff;--ink:#16202a;--sub:#5b6875;--line:#d5dce2;--line2:#e6ebef;--pri:#1d4f73;--pri-d:#163d5a;--pri2:#e2edf5;
+:root{--bg:#eef1f3;--card:#fff;--ink:#16202a;--sub:#5b6875;--line:#d5dce2;--line2:#e6ebef;--pri:#007A78;--pri-d:#005F5D;--pri2:#E3F3F2;
   --ok:#1f7a4d;--okb:#e3f3ea;--warn:#a35f00;--warnb:#fbefd9;--bad:#b3261e;--badb:#fbe4e2;--mut:#e9edf0;--th:#6b7884;
   --f-body:"IBM Plex Sans KR","Malgun Gothic","맑은 고딕","Apple SD Gothic Neo",sans-serif;--f-mono:"IBM Plex Mono",Consolas,"D2Coding",monospace}
 body{font-family:var(--f-body);font-size:13.5px;line-height:1.5}
@@ -447,7 +447,7 @@ body{font-family:var(--f-body);font-size:13.5px;line-height:1.5}
   .modal .mb{flex:1;overflow-y:auto;padding:18px 22px 28px;overscroll-behavior:contain}
   .modal .mf{padding:12px 22px;background:var(--card);border-top-color:var(--line)}
   /* RCA · 사내 8D 화면도 같은 색으로 */
-  .cz{--acc:#1d4f73;--acc-bg:#e2edf5;--line2:#e6ebef;--red:#b3261e;--red-bg:#fbe4e2;--grn:#1f7a4d;--grn-bg:#e3f3ea;--amb:#a35f00;--amb-bg:#fbefd9}
+  .cz{--acc:#007A78;--acc-bg:#E3F3F2;--line2:#e6ebef;--red:#b3261e;--red-bg:#fbe4e2;--grn:#1f7a4d;--grn-bg:#e3f3ea;--amb:#a35f00;--amb-bg:#fbefd9}
   .cz .btn.pri:hover{background:var(--pri-d)}
   .cz .ball.me{background:var(--pri)}
   .cz table.t th,.cz table.mini th{background:var(--card);color:var(--th);letter-spacing:.04em}
@@ -512,7 +512,7 @@ details>summary.sec{list-style:none}
 details>summary.sec::-webkit-details-marker{display:none}
 details>summary.sec::before{content:"▸";display:inline-block;width:12px;color:var(--sub);font-size:11px;transition:transform .15s}
 details[open]>summary.sec::before{transform:rotate(90deg)}
-details>summary.sec:hover{color:var(--pri-d,#163d5a)}
+details>summary.sec:hover{color:var(--pri-d,#005F5D)}
 /* 진행 단계 표시 (NCR 서류철 상단 · 목록) */
 .qtrack{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:4px;margin:0 0 16px}
 .qtrack div{font-size:11.5px;color:#8a96a1;border-top:3px solid var(--line);padding-top:6px;min-width:0;line-height:1.35}
@@ -568,7 +568,7 @@ body.mob main{padding:10px 12px 0;max-width:640px;margin:0 auto}
 body.mob #nav{display:block;overflow:visible;position:sticky;top:0;z-index:5;padding:8px 12px;background:var(--card,#fff);border-bottom:1px solid var(--line,#ddd)}
 .mtabs{width:100%;display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:6px;max-width:640px;margin:0 auto}
 .mtabs button{font:inherit;font-size:15px;font-weight:600;padding:11px 8px;border:1px solid var(--line,#ccc);border-radius:10px;background:var(--card,#fff);color:inherit}
-.mtabs button.on{background:var(--pri,#1d4f73);border-color:var(--pri,#1d4f73);color:#fff}
+.mtabs button.on{background:var(--pri,#007A78);border-color:var(--pri,#007A78);color:#fff}
 .mform{display:flex;flex-direction:column;gap:12px}
 .mform label{display:flex;flex-direction:column;gap:5px;font-size:13px;color:var(--sub,#555);font-weight:600}
 .mform input,.mform select,.mform textarea{font:inherit;font-size:16px;padding:11px 12px;border:1px solid var(--line,#ccc);border-radius:10px;background:#fff;color:#16202a;width:100%;box-sizing:border-box}
@@ -618,6 +618,90 @@ fieldset.murg label{position:relative}
   .kpi .l{font-size:11.5px;line-height:1.3}
   .kpi .v{font-size:19px;margin-top:1px;line-height:1.25}
   .kpi .s{font-size:10.5px;line-height:1.35;margin-top:1px}
+}
+/* ================= 2026-11 디자인 리뉴얼 — 회사 색(#007A78) · 좌측 사이드바 =================
+   위의 관리대장 테마 위에 덮어쓰는 층. 토큰(:root)과 화면 전용(@media screen) 규칙만 바꾸고 인쇄 양식은 그대로 */
+:root{--bg:#F4F6F9;--card:#fff;--ink:#1D2433;--sub:#5B6577;--line:#E3E7EE;--line2:#EEF1F5;--pri:#007A78;--pri-d:#005F5D;--pri2:#E3F3F2;--pri-ring:#B5DEDC;
+  --ok:#157A4B;--okb:#E3F4EA;--warn:#9A5B00;--warnb:#FDF1DC;--bad:#B9321F;--badb:#FBE7E4;--mut:#EEF1F5;--th:#3D4659;--ctl:#D5DBE5;
+  --nav:#0B4F4D;--nav-ink:#D2E8E6;--nav-sub:#9FCBC8;--nav-gh:#7FB3AF;--ctl-h:38px}
+@media screen{
+  body{background:var(--bg);color:var(--ink)}
+  header{padding:14px 28px;gap:12px}
+  header h1::before{content:"QIS · 품질정보시스템"}
+  .card{border-radius:12px;padding:18px 20px;margin-bottom:18px}
+  .card h3{font-size:15px;font-weight:600}
+  .kpis{gap:12px;background:none;border:0;overflow:visible;border-radius:0;margin-bottom:18px}
+  .kpi{border:1px solid var(--line);border-radius:12px;box-shadow:none;padding:16px 18px}
+  .kpi .l{font-size:12.5px}
+  .kpi .v{font-size:28px;letter-spacing:-.02em;line-height:1.1;margin-top:4px}
+  .kpi .s{font-size:12px;margin-top:4px}
+  .kpi.go:hover{box-shadow:0 0 0 2px var(--pri) inset}
+  button.b,label.b{border-radius:8px;border-color:var(--ctl);padding:8px 14px;font-weight:500}
+  button.b:hover,label.b:hover{background:var(--mut);border-color:var(--ctl)}
+  button.p,label.p{background:var(--pri);border-color:var(--pri)}
+  button.p:hover,label.p:hover{background:var(--pri-d);border-color:var(--pri-d)}
+  button.s{padding:4px 10px;font-size:12.5px;border-radius:7px}
+  input,select,textarea{border-color:var(--ctl);border-radius:8px;background:#fff;padding:6px 10px}
+  input:focus,select:focus,textarea:focus{outline:3px solid var(--pri-ring);outline-offset:0;border-color:var(--pri)}
+  :focus-visible{outline:2px solid var(--pri);outline-offset:2px}
+  th{background:#F8FAFC;color:var(--th);font-size:12px;letter-spacing:0;padding:10px 12px}
+  td{padding:11px 12px}
+  .tw{border-radius:12px}
+  .tw th,.tw td{padding:10px 10px}
+  .tw th{font-size:12px}
+  .tw td:first-child,.tw th:first-child{padding-left:14px}
+  tr:hover td,tr.late:hover>td{background:#F8FAFD}
+  tr.late>td{background:transparent}
+  tr.late>td:first-child{box-shadow:inset 3px 0 0 var(--bad)}
+  .bg{border-radius:11px;padding:2px 9px;font-size:11.5px;font-weight:600;line-height:18px}
+  .bg.svA{background:#B9321F}.bg.svB{background:#C96A14}.bg.svC{background:#7B8594}
+  .sec{color:var(--pri);letter-spacing:0;font-size:13px}
+  .modal{border-radius:14px}
+  .snav{border-radius:12px}
+  .snav button{min-height:44px;border-radius:8px}
+  .cz{--acc:var(--pri);--acc-bg:var(--pri2);--line2:#EEF1F5;--red:var(--bad);--red-bg:var(--badb);--grn:var(--ok);--grn-bg:var(--okb);--amb:var(--warn);--amb-bg:var(--warnb)}
+  .cz .btn{border-radius:8px}
+  .mtabs button{border-radius:10px}
+  nav .gh{display:none}
+  /* 설정 줄: 오른쪽 입력 칸이 넓으면(TIER별 4칸 등) 설명을 누르지 말고 아래 줄로 내림 — 사이드바가 생겨 본문이 좁아진 창에서 글자가 세로로 떨어지던 것 */
+  .srow{flex-wrap:wrap;gap:12px 24px}
+  .srow .si{flex:1 1 260px;min-width:0}
+  .srow .sc{flex:0 1 auto;max-width:100%;flex-wrap:wrap;row-gap:6px}
+  .srow .st,.srow .sd,.sgh,.spane h2{word-break:keep-all;overflow-wrap:anywhere}
+  .snum{max-width:100%}
+}
+/* 사이드바가 있을 때는 설정 화면의 왼쪽 메뉴를 더 일찍(1240px 이하) 위로 올림 */
+@media screen and (min-width:1001px) and (max-width:1240px){
+  body:not(.mob) .set{grid-template-columns:1fr}
+  body:not(.mob) .snav{position:static;display:flex;flex-wrap:wrap;gap:4px}
+  body:not(.mob) .snav .gh{width:100%;padding:6px 6px 2px}
+  body:not(.mob) .snav button{width:auto}
+}
+/* 좌측 사이드바 — PC 화면(1001px 이상) · 휴대폰 화면 모드 제외. 좁은 화면은 기존 상단 탭을 그대로 씀 */
+@media screen and (min-width:1001px){
+  body:not(.mob){display:grid;grid-template-columns:200px minmax(0,1fr);grid-template-rows:auto auto auto auto minmax(0,1fr) auto;min-height:100vh;align-items:start}
+  body:not(.mob)>*{grid-column:2}
+  body:not(.mob)>nav#nav{grid-column:1;grid-row:1/-1;align-self:stretch;position:sticky;top:0;height:100vh;box-sizing:border-box;overflow-y:auto;display:flex;flex-direction:column;gap:2px;padding:16px 10px 14px;background:var(--nav);border:0;z-index:40}
+  body:not(.mob)>nav#nav::before{content:"QIS\A품질정보시스템";white-space:pre;display:block;color:#fff;font-weight:700;font-size:17px;line-height:1.25;letter-spacing:.02em;padding:4px 12px 10px}
+  body:not(.mob)>nav#nav::first-line{font-size:17px}
+  body:not(.mob)>header{grid-row:1}
+  body:not(.mob)>.roBar{grid-row:2}
+  body:not(.mob)>#alertBar{grid-row:3}
+  body:not(.mob)>#recon{grid-row:4}
+  body:not(.mob)>main{grid-row:5;width:100%;box-sizing:border-box;padding:22px 28px 40px;max-width:1440px}
+  body:not(.mob)>#mswitch{grid-row:6}
+  body:not(.mob) header h1::before{display:none}
+  body:not(.mob) nav .gh{display:block;font-size:11px;font-weight:600;letter-spacing:.08em;color:var(--nav-gh);padding:14px 12px 6px}
+  body:not(.mob) nav button{display:flex;align-items:center;gap:10px;width:100%;box-sizing:border-box;min-height:42px;padding:9px 10px;border:0;border-radius:8px;background:none;color:var(--nav-ink);font-size:13.5px;font-weight:500;text-align:left;white-space:normal;line-height:1.3}
+  body:not(.mob) nav button:hover{background:rgba(255,255,255,.08);color:#fff}
+  body:not(.mob) nav button.on{background:rgba(255,255,255,.14);color:#fff;font-weight:600;border:0}
+  body:not(.mob) nav .navft{margin-top:auto;padding:12px 4px 2px;border-top:1px solid rgba(255,255,255,.12);display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:12px;color:var(--nav-sub)}
+  body:not(.mob) nav .navft #srvUser{flex:1 1 100%;font-size:13px!important;color:#fff;opacity:1!important;padding:0 4px 4px;white-space:normal;line-height:1.4}
+  body:not(.mob) nav .navft #srvUser span{color:var(--nav-sub)}
+  body:not(.mob) nav .navft button.b{background:rgba(255,255,255,.1);border-color:transparent;color:#fff;padding:5px 10px;font-size:12px;min-height:30px}
+  body:not(.mob) nav .navft button.b:hover{background:rgba(255,255,255,.2);border-color:transparent}
+  body:not(.mob) nav .navft #copyInfo{flex:1 1 100%;order:9;font-size:11px;opacity:.7!important;padding:6px 4px 0;color:var(--nav-sub)}
+  body:not(.mob) nav button .bg{margin-left:auto;font-size:11px!important;min-width:18px;text-align:center;background:#E5533D;color:#fff;border-radius:9px;padding:1px 6px}
 }
 </style>
 </head>
@@ -1483,7 +1567,7 @@ function paretoSvg(map,unit='',W=620){
   for(let i=0;i<=4;i++){const y=pt+ih*(1-i/4);g+=`<line x1="${pl}" x2="${W-pr}" y1="${y}" y2="${y}" stroke="#e6ebef"/><text x="${pl-6}" y="${y+4}" text-anchor="end" font-size="11.5" fill="#5b6875">${fmtShort(max*i/4)}</text><text x="${W-pr+6}" y="${y+4}" font-size="11.5" fill="#c0392b">${i*25}%</text>`}
   top.forEach((it,i)=>{
     const x=pl+gw*i,bh=ih*it.v/max,bw=Math.min(46,gw-10);
-    g+=`<rect x="${x+(gw-bw)/2}" y="${pt+ih-bh}" width="${bw}" height="${bh}" fill="#1f5fbf" rx="2"><title>${esc(it.k)}: ${it.v.toLocaleString()}${unit}</title></rect>`;
+    g+=`<rect x="${x+(gw-bw)/2}" y="${pt+ih-bh}" width="${bw}" height="${bh}" fill="#007A78" rx="2"><title>${esc(it.k)}: ${it.v.toLocaleString()}${unit}</title></rect>`;
     g+=`<text x="${x+gw/2}" y="${pt+ih-bh-4}" text-anchor="middle" font-size="11.5" fill="#16202a">${fmtShort(it.v)}</text>`;
     const lb=it.k.length>7?it.k.slice(0,7)+'…':it.k;
     g+=`<text x="${x+gw/2}" y="${H-pb+15}" text-anchor="middle" font-size="11.5" fill="#16202a">${esc(lb)}</text>`;
@@ -1509,6 +1593,23 @@ function fitCharts(root){
 window.addEventListener('resize',()=>{clearTimeout(fitCharts._t);fitCharts._t=setTimeout(()=>fitCharts(document),150)});
 
 /* ================= 화면 라우팅 ================= */
+const NAV_GRP={dash:'업무',sup:'분석',copq:'분석',master:'관리',data:'관리'};   // 좌측 사이드바 그룹 머리글
+/* 좌측 사이드바 모드(1001px 이상 · 휴대폰 화면 아님)면 머리글의 사용자 · 비밀번호 · 관리 · 로그아웃 · 저작권을 사이드바 맨 아래로 옮기고, 아니면 머리글로 되돌림 */
+const NAV_FT_IDS=['srvUser','hdrPw','hdrAdm','hdrOut','copyInfo'];
+function navFoot(){
+  const nav=$('#nav'),hd=document.querySelector('header');if(!nav||!hd)return;
+  const side=window.matchMedia('(min-width:1001px)').matches&&!document.body.classList.contains('mob');
+  let ft=$('#navFt')||window.__navFt||null;   // 떼어 둔 구역(문서 밖)도 재사용 — 그 안에 옮겨 둔 항목이 들어 있음
+  const find=i=>$('#'+i)||(ft&&ft.querySelector('#'+i))||null;
+  if(side){
+    if(!ft){ft=document.createElement('div');ft.id='navFt';ft.className='navft noprint'}
+    window.__navFt=ft;nav.appendChild(ft);NAV_FT_IDS.forEach(i=>{const e=find(i);if(e)ft.appendChild(e)});
+  }else{
+    const bk=$('#hdrBk');NAV_FT_IDS.forEach(i=>{const e=find(i);if(e&&e.parentNode!==hd)hd.insertBefore(e,bk)});
+    if(ft)ft.remove();window.__navFt=null;
+  }
+}
+try{window.matchMedia('(min-width:1001px)').addEventListener('change',()=>{if(typeof render==='function')render()})}catch(e){}
 const TABS=[['dash','대시보드'],['issue','이슈'],['defect','불량 관리'],['inv','FAR'],['ncr','NCR / 8D'],['case','RCA'],['sup','협력사 품질'],['copq','COPQ'],['master','기준정보'],['data','설정 · 백업']];
 const state={setTab:'general',tab:'dash',dashMonth:today().slice(0,7),
   df:{from:today().slice(0,4)+'-01-01',to:'',sup:'',status:'',type:'',q:''},
@@ -1671,7 +1772,9 @@ function renderInner(){
     $('#dlParts').innerHTML=db.parts.map(p=>`<option value="${esc(p.partNo)}">${esc(p.name)} · ${esc(supName(p.supplierId))}</option>`).join('');
     renderMobile();renderBrand();updateSaveInfo();return}
   document.body.classList.remove('mob');document.body.classList.toggle('pcnarrow',mobPref==='pc'&&!!(mobMQ&&mobMQ.matches));
-  $('#nav').innerHTML=TABS.filter(([k])=>!(RO||SRV)||RO_TABS.includes(k)).map(([k,l])=>{const n=k==='case'?czBadgeN():k==='inv'?invLateN():k==='issue'?issWaitN():0;return `<button class="${state.tab===k?'on':''}" onclick="go('${k}')">${l}${n?` <span class="bg bad" style="font-size:10.5px">${n}</span>`:''}</button>`}).join('');
+  const navFt0=$('#navFt');if(navFt0){navFt0.remove();window.__navFt=navFt0}   // 사이드바 하단(사용자 · 관리 · 저작권)은 innerHTML 교체 전에 떼어 두고 기억함
+  let navG='';$('#nav').innerHTML=TABS.filter(([k])=>!(RO||SRV)||RO_TABS.includes(k)).map(([k,l])=>{const n=k==='case'?czBadgeN():k==='inv'?invLateN():k==='issue'?issWaitN():0;const g=NAV_GRP[k]||navG,gh=g!==navG?`<div class="gh">${g}</div>`:'';navG=g;return gh+`<button class="${state.tab===k?'on':''}" onclick="go('${k}')">${l}${n?` <span class="bg bad" style="font-size:10.5px">${n}</span>`:''}</button>`}).join('');
+  navFoot();
   $('#dlParts').innerHTML=db.parts.map(p=>`<option value="${esc(p.partNo)}">${esc(p.name)} · ${esc(supName(p.supplierId))}</option>`).join('');
   $('#dlOwners').innerHTML=db.settings.owners.map(o=>`<option value="${esc(o)}">`).join('');
   $('#dlSources').innerHTML=db.settings.sources.map(o=>`<option value="${esc(o)}">`).join('');
@@ -1703,7 +1806,7 @@ function renderBrand(){
   document.title=(RO?'[읽기 전용] ':'')+(S.company?S.company+' 품질관리':'QIS');  // 설치 앱 창 제목: ‘QIS - 회사 품질관리’
   $('#printHead').innerHTML=`${S.logo?`<img src="${S.logo}" alt="">`:''}<div class="t"><b>${esc(S.company||'품질관리')} — ${esc(tab)}${state.tab==='dash'?' ('+esc(state.dashMonth)+')':''}</b><span>${esc(S.dept)}</span></div><div class="d">출력일 ${today()}</div>`;
 }
-function logoHead(){const S=db.settings;return (S.logo||S.company)?`<div style="display:flex;align-items:center;gap:12px;border-bottom:2px solid #14213d;padding-bottom:8px;margin-bottom:12px">${S.logo?`<img src="${S.logo}" style="max-height:44px;max-width:180px;object-fit:contain">`:''}<div style="flex:1"><b style="font-size:15px">${esc(S.company)}</b><br><span style="font-size:11px;color:#555">${esc(S.dept)}</span></div><div style="font-size:11px;color:#555">출력일 ${today()}</div></div>`:''}
+function logoHead(){const S=db.settings;return (S.logo||S.company)?`<div style="display:flex;align-items:center;gap:12px;border-bottom:2px solid #0B4F4D;padding-bottom:8px;margin-bottom:12px">${S.logo?`<img src="${S.logo}" style="max-height:44px;max-width:180px;object-fit:contain">`:''}<div style="flex:1"><b style="font-size:15px">${esc(S.company)}</b><br><span style="font-size:11px;color:#555">${esc(S.dept)}</span></div><div style="font-size:11px;color:#555">출력일 ${today()}</div></div>`:''}
 async function setLogo(f){
   if(!f)return;
   try{
@@ -1736,7 +1839,7 @@ async function clearSign(nm){if(!await askConfirm({title:`${nm} 서명을 삭제
 async function clearLogo(){if(!await askConfirm({title:'로고를 삭제할까요?',msg:'상단 바와 출력물에서 로고가 빠집니다.'}))return;const snap=await takeSnap();db.settings.logo='';save();render();offerUndo(snap,'로고를 삭제했습니다')}
 
 /* ================= 출력 공통 (새 창 → 막히면 파일로) ================= */
-const REPORT_HEAD=`<style>@page{size:A4;margin:11mm}.rbar{position:sticky;top:0;background:#14213d;color:#fff;padding:8px 12px;display:flex;gap:8px;align-items:center;margin:-24px -24px 16px;font-family:'Malgun Gothic',sans-serif;font-size:13px}.rbar button{font:inherit;padding:5px 12px;border-radius:5px;border:0;cursor:pointer}.rbar .pp{background:#fff;color:#14213d;font-weight:bold}@media print{.rbar{display:none}}</style></head>`;
+const REPORT_HEAD=`<style>@page{size:A4;margin:11mm}.rbar{position:sticky;top:0;background:#0B4F4D;color:#fff;padding:8px 12px;display:flex;gap:8px;align-items:center;margin:-24px -24px 16px;font-family:'Malgun Gothic',sans-serif;font-size:13px}.rbar button{font:inherit;padding:5px 12px;border-radius:5px;border:0;cursor:pointer}.rbar .pp{background:#fff;color:#0B4F4D;font-weight:bold}@media print{.rbar{display:none}}</style></head>`;
 /* 보고서 창의 ‘닫기’ — 프로그램(데스크톱) 창은 window.close() 가 듣지 않아(macOS) 프로그램에 닫기를 요청, 브라우저는 window.close() */
 const REPORT_CLOSE="try{var a=window.pywebview&&window.pywebview.api;if(a&&a.close_report){a.close_report()}else{window.close()}}catch(e){window.close()}";
 const REPORT_BAR=`<div class="rbar"><span style="flex:1">인쇄 미리보기 — 인쇄 창에서 ‘대상: PDF로 저장’을 고르면 PDF 파일로 저장됩니다.</span><button class="pp" onclick="window.print()">인쇄 / PDF 저장</button><button onclick="${REPORT_CLOSE}">닫기</button></div><script>window.addEventListener('load',function(){setTimeout(function(){try{window.print()}catch(e){}},400)})<\/script>`;
@@ -1768,14 +1871,14 @@ function dashReport(){
   const rv=getReview(m)||{};
   const html=reportFrame(`<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>품질현황보고_${m}</title><style>
   body{font-family:'Malgun Gothic','맑은 고딕',sans-serif;font-size:11px;color:#111;margin:24px}
-  .hd{display:flex;align-items:center;gap:14px;border-bottom:2.5px solid #14213d;padding-bottom:8px}
+  .hd{display:flex;align-items:center;gap:14px;border-bottom:2.5px solid #0B4F4D;padding-bottom:8px}
   .hd img{max-height:46px;max-width:170px;object-fit:contain}.hd .t{flex:1}.hd h1{font-size:19px;margin:0}.hd .s{color:#555;margin-top:3px}
   table{border-collapse:collapse;width:100%}th,td{border:1px solid #888;padding:4px 6px;text-align:left;vertical-align:top}th{background:#eef1f5;white-space:nowrap}td.n,th.n{text-align:right}
   .sign{width:auto}.sign th{text-align:center;width:62px;font-weight:normal}.sign td{height:42px}
-  h2{font-size:13px;margin:16px 0 6px;padding-left:7px;border-left:4px solid #1f5fbf}
+  h2{font-size:13px;margin:16px 0 6px;padding-left:7px;border-left:4px solid #007A78}
   .kp{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:12px}.kp div{border:1px solid #bbb;border-radius:5px;padding:7px}.kp b{display:block;font-size:17px;margin-top:2px}.kp span{color:#555;font-size:10px}.kp .r b{color:#c0392b}.kp .w b{color:#b7791f}
   .g{display:grid;grid-template-columns:1fr 1fr;gap:8px}.g>div{border:1px solid #ccc;border-radius:5px;padding:6px}.g h3{font-size:11px;margin:0 0 4px}
-  svg{width:100%;height:auto;display:block}.sec{break-inside:avoid}.memo td{height:70px;line-height:1.6}@media print{.scr{display:none}}@media screen{.ed{outline:1px dashed #9db4dc;background:#fbfdff}.ed:focus{outline:2px solid #1f5fbf;background:#fff}}
+  svg{width:100%;height:auto;display:block}.sec{break-inside:avoid}.memo td{height:70px;line-height:1.6}@media print{.scr{display:none}}@media screen{.ed{outline:1px dashed #9db4dc;background:#fbfdff}.ed:focus{outline:2px solid #007A78;background:#fff}}
   </style></head><body>
   <div class="hd">${S.logo?`<img src="${S.logo}">`:''}<div class="t"><h1>월간 품질 현황 보고 (${m.replace('-','년 ')}월)</h1><div class="s">${esc(S.company)}${S.dept?' · '+esc(S.dept):''} · 출력일 ${today()}</div></div>
   <table class="sign"><tr><th>작성</th><th>검토</th><th>승인</th></tr><tr><td></td><td></td><td></td></tr></table></div>
@@ -1789,7 +1892,7 @@ function dashReport(){
     <div class="${recs.length?'w':''}"><span>NCR 권고 미발행</span><b>${recs.length}</b><span>최근 90일</span></div>
     <div><span>순손실 (COPQ−회수)</span><b>${won(cost-rec)}원</b><span>전월 ${won(pcost-prec)}원</span></div>
   </div>
-  <div class="sec"><h2>1. 특이사항 및 검토 의견</h2><div class="scr" style="color:#1f5fbf;margin-bottom:4px">✎ 점선 칸은 인쇄 직전에 바로 고칠 수 있습니다. (이 창에서 고친 내용은 저장되지 않으니, 계속 남길 내용은 대시보드에서 입력하세요)</div><table class="memo"><tr><th style="width:17%">특이사항</th><td class="ed" contenteditable="true">${nl(rv.issues)}</td></tr><tr><th>검토 의견 · 향후 조치</th><td class="ed" contenteditable="true">${nl(rv.opinion)}</td></tr></table>${rv.author?`<div style="text-align:right;margin-top:4px;color:#555">작성: ${esc(rv.author)}${rv.updatedAt?' ('+loc(rv.updatedAt,10)+')':''}</div>`:''}</div>
+  <div class="sec"><h2>1. 특이사항 및 검토 의견</h2><div class="scr" style="color:#007A78;margin-bottom:4px">✎ 점선 칸은 인쇄 직전에 바로 고칠 수 있습니다. (이 창에서 고친 내용은 저장되지 않으니, 계속 남길 내용은 대시보드에서 입력하세요)</div><table class="memo"><tr><th style="width:17%">특이사항</th><td class="ed" contenteditable="true">${nl(rv.issues)}</td></tr><tr><th>검토 의견 · 향후 조치</th><td class="ed" contenteditable="true">${nl(rv.opinion)}</td></tr></table>${rv.author?`<div style="text-align:right;margin-top:4px;color:#555">작성: ${esc(rv.author)}${rv.updatedAt?' ('+loc(rv.updatedAt,10)+')':''}</div>`:''}</div>
   <div class="sec"><h2>2. 주요 지표 (전월 대비)</h2><table><tr><th>항목</th><th class="n">${pm}</th><th class="n">${m}</th><th class="n">증감</th></tr>
     <tr><td>불량 건수</td><td class="n">${pds.length}</td><td class="n">${ds.length}</td><td class="n">${dl(ds.length,pds.length)}</td></tr>
     <tr><td>불량 수량</td><td class="n">${sum(pds,'qty').toLocaleString()}</td><td class="n">${sum(ds,'qty').toLocaleString()}</td><td class="n">${dl(sum(ds,'qty'),sum(pds,'qty'))}</td></tr>
@@ -1797,7 +1900,7 @@ function dashReport(){
     <tr><td>구상 회수 (원)</td><td class="n">${won(prec)}</td><td class="n">${won(rec)}</td><td class="n">${dl(rec,prec,won)}</td></tr>
     <tr><td>NCR 발행 / 종결</td><td class="n">${pnNew} / ${pnClose}</td><td class="n">${nNew} / ${nClose}</td><td class="n">-</td></tr></table></div>
   <div class="sec"><h2>3. 추이 및 파레토</h2><div class="g">
-    <div><h3>월별 불량 건수 (12개월)</h3>${barChart(lbl,[{name:'건수',values:byM.map(a=>a.length),color:'#1f5fbf'}],{h:200})}</div>
+    <div><h3>월별 불량 건수 (12개월)</h3>${barChart(lbl,[{name:'건수',values:byM.map(a=>a.length),color:'#007A78'}],{h:200})}</div>
     <div><h3>월별 불량 수량 (12개월)</h3>${barChart(lbl,[{name:'수량',values:byM.map(a=>sum(a,'qty')),color:'#5b8def'}],{h:200})}</div>
     <div><h3>협력사별 불량 수량</h3>${pareto(supMap,'개')}</div>
     <div><h3>불량유형별 건수</h3>${pareto(typeMap,'건')}</div></div></div>
@@ -1822,12 +1925,12 @@ function weekReport(){
   const tb=(h,rows,empty)=>rows.length?`<table><tr>${h.map(x=>`<th>${x}</th>`).join('')}</tr>${rows.map(r=>`<tr>${r.map(v=>`<td>${v}</td>`).join('')}</tr>`).join('')}</table>`:`<div class="em">${empty}</div>`;
   const html=reportFrame(`<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>주간품질보고_${from}_${to}</title><style>
   body{font-family:'Malgun Gothic','맑은 고딕',sans-serif;font-size:11px;color:#111;margin:24px}
-  .hd{display:flex;align-items:center;gap:14px;border-bottom:2.5px solid #14213d;padding-bottom:8px}.hd img{max-height:46px;max-width:170px;object-fit:contain}.hd .t{flex:1}.hd h1{font-size:19px;margin:0}.hd .s{color:#555;margin-top:3px}
+  .hd{display:flex;align-items:center;gap:14px;border-bottom:2.5px solid #0B4F4D;padding-bottom:8px}.hd img{max-height:46px;max-width:170px;object-fit:contain}.hd .t{flex:1}.hd h1{font-size:19px;margin:0}.hd .s{color:#555;margin-top:3px}
   table{border-collapse:collapse;width:100%}th,td{border:1px solid #888;padding:4px 6px;text-align:left;vertical-align:top}th{background:#eef1f5;white-space:nowrap}
   .sign{width:auto}.sign th{text-align:center;width:62px;font-weight:normal}.sign td{height:42px}
-  h2{font-size:13px;margin:16px 0 6px;padding-left:7px;border-left:4px solid #1f5fbf}.sec{break-inside:avoid}.em{color:#666;padding:4px 0}
+  h2{font-size:13px;margin:16px 0 6px;padding-left:7px;border-left:4px solid #007A78}.sec{break-inside:avoid}.em{color:#666;padding:4px 0}
   .kp{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:12px}.kp div{border:1px solid #bbb;border-radius:5px;padding:7px}.kp b{display:block;font-size:17px;margin-top:2px}.kp span{color:#555;font-size:10px}.kp .r b{color:#c0392b}
-  .memo td{height:60px;line-height:1.6}@media print{.scr{display:none}}@media screen{.ed{outline:1px dashed #9db4dc;background:#fbfdff}.ed:focus{outline:2px solid #1f5fbf;background:#fff}}
+  .memo td{height:60px;line-height:1.6}@media print{.scr{display:none}}@media screen{.ed{outline:1px dashed #9db4dc;background:#fbfdff}.ed:focus{outline:2px solid #007A78;background:#fff}}
   </style></head><body>
   <div class="hd">${S.logo?`<img src="${S.logo}">`:''}<div class="t"><h1>주간 품질 현황 보고</h1><div class="s">${from} ~ ${to} (최근 7일) · ${esc(S.company||'')}${S.dept?' · '+esc(S.dept):''} · 출력일 ${today()}</div></div>
   <table class="sign"><tr><th>작성</th><th>검토</th><th>승인</th></tr><tr><td></td><td></td><td></td></tr></table></div>
@@ -1836,7 +1939,7 @@ function weekReport(){
     <div><span>NCR 발행 / 회신 / 승인 / 종결</span><b>${nNew.length} / ${nRep.length} / ${nOk.length} / ${nClose.length}</b><span>독촉 ${nudges.length}회</span></div>
     <div><span>RCA 등록 / 종결</span><b>${cNew.length} / ${cClose.length}</b><span>진행 중 ${db.cases.filter(czOpen).length}건</span></div>
     <div class="${late.length?'r':''}"><span>지연 중인 건 (${to})</span><b>${late.length}</b><span>다음 7일 기한 ${next.length}건</span></div></div>
-  <div class="sec"><h2>1. 이번 주 특이사항</h2><div class="scr" style="color:#1f5fbf;margin-bottom:4px">✎ 점선 칸은 인쇄 직전에 바로 쓸 수 있습니다 (저장되지 않음)</div><table class="memo"><tr><th style="width:17%">특이사항</th><td class="ed" contenteditable></td></tr><tr><th>다음 주 계획</th><td class="ed" contenteditable></td></tr></table></div>
+  <div class="sec"><h2>1. 이번 주 특이사항</h2><div class="scr" style="color:#007A78;margin-bottom:4px">✎ 점선 칸은 인쇄 직전에 바로 쓸 수 있습니다 (저장되지 않음)</div><table class="memo"><tr><th style="width:17%">특이사항</th><td class="ed" contenteditable></td></tr><tr><th>다음 주 계획</th><td class="ed" contenteditable></td></tr></table></div>
   <div class="sec"><h2>2. 신규 불량 (${ds.length}건)</h2>${tb(['발생일','발생처','심각도','협력사','부품','유형','수량','진행'],ds.map(d=>[esc(d.date),esc(d.source),sevOf(d).grade,esc(supName(d.supplierId)),`${esc(d.partNo)} ${esc(d.partName)}`,esc(d.type),num(d.qty).toLocaleString(),esc(defStage(d).label)]),'이번 주 등록된 불량 없음')}</div>
   <div class="sec"><h2>3. NCR 진행</h2>${tb(['구분','NCR','협력사','부품','일자','상태'],[...nNew.map(n=>['발행',n,n.issueDate]),...nRep.map(n=>['대책서 회신',n,n.replyDate]),...nOk.map(n=>['대책서 승인',n,n.approvedDate]),...nClose.map(n=>['종결',n,ncrCloseDate(n)]),...nudges.map(x=>['독촉',x.n,x.l.date])].map(([k,n,d])=>[k,esc(n.no),esc(supName(n.supplierId)),`${esc(n.partNo||'')} ${esc(n.partName||'')}`,esc(d),esc(ncrStatus(n))]),'이번 주 NCR 변동 없음')}</div>
   <div class="sec"><h2>4. RCA 진행</h2>${tb(['구분','RCA','제목','TIER','일자','단계'],[...cNew.map(c=>['등록',c,c.Created]),...cClose.map(c=>['종결',c,c.CloseDate])].map(([k,c,d])=>[k,esc(c.CaseNo),esc(c.Title),esc(c.Tier||''),esc(d),esc(c.Stage)]),'이번 주 RCA 등록 · 종결 없음')}</div>
@@ -2491,7 +2594,7 @@ function renderDash(){
   ${reviewCard(m)}
   ${(()=>{const it=dashItems=actions.match(/<li[\s\S]*?<\/li>/g)||[],all=!!state.dashAll,k=all?it.length:6;return `<div class="card"><h3>오늘 챙길 일 ${it.length?`<span class="bg mut">${it.length}</span>`:''}<span class="sp"></span>${it.length>6?`<button class="b s noprint" onclick="state.dashAll=!state.dashAll;render()">${all?'6건만 보기':`전체 ${it.length}건 보기`}</button>`:''}</h3>${it.length?`<ul class="act">${it.slice(0,k).join('')}</ul>${it.length>k?`<div class="muted" style="font-size:12px">외 ${it.length-k}건 — <a class="lk" onclick="state.dashAll=true;render()">모두 펼치기</a></div>`:''}`:'<div class="muted">지연·임박 항목이 없습니다.</div>'}</div>`})()}
   <div class="grid g2">
-    <div class="card"><h3>월별 불량 건수 (최근 12개월)</h3>${barChart(ms.map(x=>x.slice(2).replace('-','.')),[{name:'건수',values:byM.map(a=>a.length),color:'#1f5fbf'}])}</div>
+    <div class="card"><h3>월별 불량 건수 (최근 12개월)</h3>${barChart(ms.map(x=>x.slice(2).replace('-','.')),[{name:'건수',values:byM.map(a=>a.length),color:'#007A78'}])}</div>
     <div class="card"><h3>월별 불량 수량</h3>${barChart(ms.map(x=>x.slice(2).replace('-','.')),[{name:'수량',values:byM.map(a=>sum(a,'qty')),color:'#5b8def'}])}</div>
     ${db.cases.length?`<div class="card"><h3>RCA 월별 등록 · 종결 (최근 12개월)</h3>${barChart(ms.map(x=>x.slice(2).replace('-','.')),[{name:'등록',values:ms.map(x=>db.cases.filter(c=>(c.Created||'').startsWith(x)).length),color:'#d9822b'},{name:'종결',values:ms.map(x=>db.cases.filter(c=>c.Status==='종결'&&(c.CloseDate||'').startsWith(x)).length),color:'#1a8f5a'}])}</div>`:''}
     <div class="card"><h3>${m} 협력사별 불량 수량 (파레토)</h3>${pareto(supMap,'개')}</div>
@@ -4327,7 +4430,7 @@ async function renderNcrPhotos(){
   if(!ids.length){b.innerHTML='<span class="muted" style="font-size:12px">연결된 불량에 사진이 없습니다. 불량 기록에 사진을 첨부하면 여기에 나타납니다.</span>';return}
   let rs=[];try{rs=await photoGetMany(ids)}catch(e){}
   if(!$('#ncrPhotoBox'))return;
-  b.innerHTML=rs.map(p=>`<label style="display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11px;cursor:pointer"><img src="${p.thumb||p.data}" style="width:110px;height:80px;object-fit:cover;border-radius:4px;border:2px solid ${curExcl.has(p.id)?'#ddd':'#1f5fbf'};opacity:${curExcl.has(p.id)?.4:1}"><span><input type="checkbox" ${curExcl.has(p.id)?'':'checked'} onchange="this.checked?curExcl.delete('${p.id}'):curExcl.add('${p.id}');mfDirty=true;renderNcrPhotos()"> ${esc((p.caption||'').slice(0,12))}</span></label>`).join('');
+  b.innerHTML=rs.map(p=>`<label style="display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11px;cursor:pointer"><img src="${p.thumb||p.data}" style="width:110px;height:80px;object-fit:cover;border-radius:4px;border:2px solid ${curExcl.has(p.id)?'#ddd':'#007A78'};opacity:${curExcl.has(p.id)?.4:1}"><span><input type="checkbox" ${curExcl.has(p.id)?'':'checked'} onchange="this.checked?curExcl.delete('${p.id}'):curExcl.add('${p.id}');mfDirty=true;renderNcrPhotos()"> ${esc((p.caption||'').slice(0,12))}</span></label>`).join('');
 }
 function ncrNotify(src){
   const f=$('#mf');mfDirty=true;
@@ -4786,7 +4889,7 @@ function supDetail(id){
   const ms=lastMonths(to.slice(0,7),12);
   const ns=db.ncrs.filter(n=>n.supplierId===id).sort((a,b)=>(b.issueDate||'').localeCompare(a.issueDate||''));
   const body=`<div class="help">${esc(s.code)} · ${esc(s.items)}</div>${contactTable(s,false)}
-  <div class="grid g2" style="margin-top:10px"><div>${pareto(tm,'개')}</div><div>${barChart(ms.map(x=>x.slice(2).replace('-','.')),[{name:'불량수량',values:ms.map(m=>sum(db.defects.filter(d=>d.supplierId===id&&(d.date||'').startsWith(m)),'qty')),color:'#1f5fbf'}])}</div></div>
+  <div class="grid g2" style="margin-top:10px"><div>${pareto(tm,'개')}</div><div>${barChart(ms.map(x=>x.slice(2).replace('-','.')),[{name:'불량수량',values:ms.map(m=>sum(db.defects.filter(d=>d.supplierId===id&&(d.date||'').startsWith(m)),'qty')),color:'#007A78'}])}</div></div>
   <div class="sec">불량 이력 (${from} ~ ${to}, ${ds.length}건)</div>
   <div class="tw" style="max-height:260px"><table><thead><tr><th>발생일</th><th>부품</th><th>유형</th><th class="n">수량</th><th>처리</th><th>NCR</th></tr></thead><tbody>${ds.map(d=>`<tr><td>${d.date}</td><td>${esc(d.partNo)} ${esc(d.partName)}</td><td>${esc(d.type)}</td><td class="n">${num(d.qty)}</td><td>${esc(d.disposition)}</td><td>${esc(db.ncrs.find(n=>n.id===d.ncrId)?.no||'')}</td></tr>`).join('')}</tbody></table></div>
   <div class="sec">NCR 이력 (전체 ${ns.length}건)</div>
@@ -4859,7 +4962,7 @@ function renderCopq(){
   <div class="card"><h3>구상 미회수 · 이의 관리 <span class="bg ${osTot?'bad':'mut'}">${won(osTot)}원</span><span class="sp"></span>${Object.entries(osSup).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([k,v])=>`<span class="bg inf" style="font-weight:normal">${esc(k)} ${won(v)}</span>`).join(' ')}</h3>
     ${oc.length?`<div class="tw" style="max-height:360px"><table><thead><tr><th>협력사</th><th>불량</th><th>청구일</th><th class="n">경과</th><th class="n">청구액</th><th class="n">합의액</th><th class="n">회수액</th><th class="n">미회수</th><th>상태</th><th></th></tr></thead><tbody>
     ${oc.map(d=>{const c=d.claim,el=c.reqDate?diffDays(c.reqDate,today()):null;return `<tr><td>${esc(supName(d.supplierId))}</td><td>${dl(d)}</td><td>${esc(c.reqDate)}</td><td class="n">${el==null?'-':`<span class="bg ${el>60?'bad':el>30?'warn':'mut'}">${el}일</span>`}</td><td class="n">${won(c.reqAmt)}</td><td class="n">${c.agreeAmt?won(c.agreeAmt):''}</td><td class="n">${c.recvAmt?won(c.recvAmt):''}</td><td class="n"><b>${won(outstanding(d))}</b></td><td><span class="bg ${CLAIM_CLS[claimStatus(d)]}">${claimStatus(d)}</span>${c.dispute&&c.disputeReason?`<br><span class="muted" style="font-size:11px">${esc(c.disputeReason)}</span>`:''}</td><td><button class="b s" onclick="openCost('${d.id}')">관리</button></td></tr>`}).join('')}</tbody></table></div>`:'<div class="muted">미회수 건이 없습니다.</div>'}</div>
-  <div class="card"><h3>월별 실패비용</h3>${barChart(ms.map(m=>m.slice(5)+'월'),[{name:'내부실패',values:rows.map(r=>r.int),color:'#1f5fbf'},{name:'외부실패',values:rows.map(r=>r.ext),color:'#c0392b'},{name:'회수',values:rows.map(r=>r.rec),color:'#1a8f5a'}],{fmt:won})}</div>
+  <div class="card"><h3>월별 실패비용</h3>${barChart(ms.map(m=>m.slice(5)+'월'),[{name:'내부실패',values:rows.map(r=>r.int),color:'#007A78'},{name:'외부실패',values:rows.map(r=>r.ext),color:'#c0392b'},{name:'회수',values:rows.map(r=>r.rec),color:'#1a8f5a'}],{fmt:won})}</div>
   <div class="card"><h3>월별 상세 (원)</h3><div class="tw"><table><thead><tr><th>월</th>${COST_CATS.map(c=>`<th class="n">${c}</th>`).join('')}<th class="n">내부실패</th><th class="n">외부실패</th><th class="n">합계</th><th class="n">회수</th><th class="n">순손실</th></tr></thead><tbody>
   ${rows.map(r=>`<tr><td>${r.m}</td>${COST_CATS.map(c=>`<td class="n">${r[c]?won(r[c]):''}</td>`).join('')}<td class="n">${won(r.int)}</td><td class="n">${won(r.ext)}</td><td class="n"><b>${won(r.tot)}</b></td><td class="n">${won(r.rec)}</td><td class="n">${won(r.net)}</td></tr>`).join('')}
   <tr style="background:#f7f8fa;font-weight:bold"><td>합계</td>${COST_CATS.map(c=>`<td class="n">${won(T[c])}</td>`).join('')}<td class="n">${won(T.int)}</td><td class="n">${won(T.ext)}</td><td class="n">${won(T.tot)}</td><td class="n">${won(T.rec)}</td><td class="n">${won(T.net)}</td></tr>
@@ -7345,15 +7448,15 @@ async function a3Report(kind,id){
   const html=`<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>A3_${esc((c&&c.CaseNo)||(n&&n.no)||(d&&d.date)||'')}</title><style>
   @page{size:A3 landscape;margin:9mm}*{box-sizing:border-box}
   body{font-family:'Malgun Gothic','맑은 고딕',sans-serif;font-size:11.5px;color:#111;margin:0;background:#e9edf2}
-  .bar{position:sticky;top:0;z-index:5;background:#14213d;color:#fff;padding:8px 14px;display:flex;gap:10px;align-items:center;font-size:13px}.bar button{font:inherit;padding:5px 14px;border:0;border-radius:5px;cursor:pointer}.bar .pp{background:#fff;color:#14213d;font-weight:bold}
+  .bar{position:sticky;top:0;z-index:5;background:#0B4F4D;color:#fff;padding:8px 14px;display:flex;gap:10px;align-items:center;font-size:13px}.bar button{font:inherit;padding:5px 14px;border:0;border-radius:5px;cursor:pointer}.bar .pp{background:#fff;color:#0B4F4D;font-weight:bold}
   .pg{width:400mm;min-height:277mm;margin:12px auto;background:#fff;padding:9mm 10mm;box-shadow:0 2px 12px rgba(0,0,0,.15)}
-  .hd{display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:center;border-bottom:3px solid #14213d;padding-bottom:6px}
+  .hd{display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:center;border-bottom:3px solid #0B4F4D;padding-bottom:6px}
   .hd img.lg{max-height:40px;max-width:160px}.hd h1{font-size:21px;margin:0}.hd .meta{color:#444;font-size:11.5px;margin-top:3px}
   .sgn{border-collapse:collapse}.sgn td{border:1px solid #444;width:24mm;text-align:center;padding:0}.sgn .r{background:#eef1f5;font-size:9.5px;border-bottom:1px solid #444;padding:2px 3px;white-space:nowrap;font-weight:600}.sgn .nm{height:13mm;display:flex;align-items:center;justify-content:center}.sgn img{max-height:11mm;max-width:18mm}
   .kp{display:flex;gap:8px;margin:7px 0 8px;flex-wrap:wrap}.kp div{border:1px solid #cfd6df;border-radius:5px;padding:4px 10px;background:#f7f9fb}.kp b{font-size:14px;margin-left:4px}.kp .bad b{color:#b42318}
   .cols{display:grid;grid-template-columns:1fr 1fr;gap:10px}.col{display:flex;flex-direction:column;gap:8px}
-  .sx{border:1.5px solid #14213d;border-radius:4px;break-inside:avoid}.sh{background:#14213d;color:#fff;font-weight:bold;padding:4px 8px;font-size:12.5px;display:flex;gap:7px;align-items:center}
-  .sh span{background:#fff;color:#14213d;border-radius:50%;width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;font-size:11px}
+  .sx{border:1.5px solid #0B4F4D;border-radius:4px;break-inside:avoid}.sh{background:#0B4F4D;color:#fff;font-weight:bold;padding:4px 8px;font-size:12.5px;display:flex;gap:7px;align-items:center}
+  .sh span{background:#fff;color:#0B4F4D;border-radius:50%;width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;font-size:11px}
   .sb{padding:6px 9px;line-height:1.55;min-height:16mm;outline:none}.sb:focus{background:#fffbe6}
   .two{display:grid;grid-template-columns:1.25fr 1fr;gap:8px}.ph{display:flex;gap:5px;margin-top:5px}.ph img{height:34mm;max-width:33%;object-fit:cover;border:1px solid #ccc}
   table.at{width:100%;border-collapse:collapse;font-size:11px}table.at th,table.at td{border:1px solid #9aa4b1;padding:3px 5px;text-align:left;vertical-align:top}table.at th{background:#eef1f5;white-space:nowrap}
@@ -7432,6 +7535,7 @@ if(SRV){
     `<button class="b s noprint" id="hdrPw" onclick="location.href='/account'" title="내 비밀번호 바꾸기">비밀번호</button>`+
     (srvCanAdmin()?`<button class="b s noprint" id="hdrAdm" onclick="window.open('/admin','qisAdmin')" title="사용자 · 변경 이력 · 백업">관리</button>`:'')+
     `<button class="b s noprint" id="hdrOut" onclick="srvLogout()">로그아웃</button>`);
+  if(typeof navFoot==='function')navFoot();
   // 서버가 맡는 기능 (브라우저 저장소 · PC 폴더 · 파일 백업/복원)
   ['resetAll','pickImport','restoreFromFolder','pickRoot','unlinkRoot','pickDir','unlinkDir','photoDirNow','chooseQmsDir','openImport']
     .forEach(n=>{if(typeof window[n]==='function')window[n]=function(){toast('사내 서버 모드에서는 서버가 백업 · 복원합니다 — 관리자 화면을 쓰세요')}});

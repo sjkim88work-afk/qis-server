@@ -5,11 +5,12 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>QIS 관리</title>
 <link rel="icon" type="image/png" href="/icons/favicon-32.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
 <style>
-:root{--bg:#f4f6f9;--card:#fff;--ink:#1d2433;--sub:#667085;--line:#e3e7ee;--pri:#1f5fbf;--pri2:#e8f0fc;--ok:#1a8f5a;--okb:#e6f5ee;--warn:#b7791f;--warnb:#fdf3e1;--bad:#c0392b;--badb:#fbeaea}
+:root{--bg:#f4f6f9;--card:#fff;--ink:#1d2433;--sub:#667085;--line:#e3e7ee;--pri:#007A78;--pri2:#e8f0fc;--ok:#1a8f5a;--okb:#e6f5ee;--warn:#b7791f;--warnb:#fdf3e1;--bad:#c0392b;--badb:#fbeaea}
 *{box-sizing:border-box}
 body{margin:0;font-family:'Malgun Gothic','맑은 고딕','Apple SD Gothic Neo',sans-serif;background:var(--bg);color:var(--ink);font-size:13px}
-header{display:flex;align-items:center;gap:12px;padding:10px 18px;background:#14213d;color:#fff}
+header{display:flex;align-items:center;gap:12px;padding:10px 18px;background:#0B4F4D;color:#fff}
 header h1{margin:0;font-size:17px}
 header .sp{flex:1}
 header a{color:#cfe0ff;font-size:12.5px;text-decoration:none}
@@ -43,6 +44,18 @@ input,select{border:1px solid #d5dbe5;border-radius:6px;padding:6px 8px;font:inh
 .kv{display:grid;grid-template-columns:140px 1fr;gap:6px 12px;font-size:13px}
 .kv div:nth-child(odd){color:var(--sub)}
 .scroll{max-height:calc(100vh - 290px);overflow:auto}
+/* 2026-11 디자인 리뉴얼 */
+:root{--bg:#F4F6F9;--ink:#1D2433;--sub:#5B6577;--line:#E3E7EE;--pri:#007A78;--pri2:#E3F3F2;--ok:#157A4B;--okb:#E3F4EA;--warn:#9A5B00;--warnb:#FDF1DC;--bad:#B9321F;--badb:#FBE7E4}
+body{font-family:"IBM Plex Sans KR","Malgun Gothic","맑은 고딕","Apple SD Gothic Neo",sans-serif;font-size:13.5px}
+header{background:#0B4F4D;padding:14px 28px}header a{color:#D2E8E6}
+nav button.on{color:var(--pri);border-bottom-color:var(--pri)}
+main{padding:22px 28px}
+.card{border-radius:12px;padding:18px 20px}
+.b{border-radius:8px;padding:8px 14px;font-size:13.5px;border-color:#D5DBE5}.b.p{background:var(--pri);border-color:var(--pri)}
+input,select{border-radius:8px;padding:8px 10px;font-size:13.5px;border-color:#D5DBE5}
+th{background:#F8FAFC;color:#3D4659;font-size:12px}
+td{padding:10px 8px}
+.bg{border-radius:11px;font-weight:600}
 </style>
 </head>
 <body>

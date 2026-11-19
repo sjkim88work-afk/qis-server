@@ -5,34 +5,75 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>QIS 로그인</title>
 <link rel="icon" type="image/png" href="/icons/favicon-32.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
 <style>
-:root{--ink:#1d2433;--sub:#667085;--line:#d5dbe5;--pri:#1f5fbf;--bad:#c0392b}
+/* 2026-11 디자인 리뉴얼 — 왼쪽 브랜드 패널 + 오른쪽 로그인 카드 (900px 미만은 카드만 가운데) */
+:root{--ink:#1D2433;--sub:#5B6577;--line:#D5DBE5;--pri:#007A78;--pri-d:#005F5D;--ring:#B5DEDC;--bad:#A62A1A;--nav:#0B4F4D;--bg:#F4F6F9}
 *{box-sizing:border-box}
-body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#14213d;font-family:'Malgun Gothic','맑은 고딕','Apple SD Gothic Neo',sans-serif;color:var(--ink)}
-.card{background:#fff;border-radius:12px;padding:32px 30px 26px;width:min(360px,calc(100vw - 32px));box-shadow:0 10px 40px rgba(0,0,0,.25)}
-h1{margin:0 0 4px;font-size:24px;letter-spacing:.5px}
-p.sub{margin:0 0 22px;color:var(--sub);font-size:13px}
-label{display:block;font-size:12.5px;color:var(--sub);margin:12px 0 5px}
-input{width:100%;padding:10px 11px;border:1px solid var(--line);border-radius:7px;font:inherit;font-size:14px}
-input:focus{outline:2px solid #bcd3f5;border-color:var(--pri)}
-button{width:100%;margin-top:20px;padding:11px;border:0;border-radius:7px;background:var(--pri);color:#fff;font:inherit;font-size:14.5px;font-weight:600;cursor:pointer}
+html,body{height:100%}
+body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--nav);font-family:"IBM Plex Sans KR","Malgun Gothic","맑은 고딕","Apple SD Gothic Neo",sans-serif;color:var(--ink);line-height:1.5}
+.wrap{display:flex;width:100%;min-height:100vh}
+.brand{flex:0 0 44%;max-width:560px;padding:56px 60px;color:#fff;display:flex;flex-direction:column}
+.logo{display:flex;align-items:center;gap:12px;font-weight:700;font-size:20px;letter-spacing:.02em}
+.logo i{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:11px;background:var(--pri);font-style:normal;font-size:18px}
+.brand h2{margin:72px 0 0;font-size:34px;font-weight:700;line-height:1.25;letter-spacing:-.02em;word-break:keep-all}
+.brand p{margin:14px 0 0;font-size:15px;color:#D2E8E6;max-width:400px;word-break:keep-all}
+.brand ul{list-style:none;margin:48px 0 0;padding:0;display:flex;flex-direction:column;gap:16px}
+.brand li{display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px;align-items:start;font-size:14px;color:#D2E8E6;word-break:keep-all}
+.brand li svg{margin-top:3px}
+.brand .copy{margin-top:auto;padding-top:40px;font-size:12.5px;color:#7FB3AF}
+.pane{flex:1;display:flex;align-items:center;justify-content:center;padding:40px 24px;background:var(--bg)}
+.card{background:#fff;border:1px solid #E3E7EE;border-radius:16px;padding:36px 36px 30px;width:min(400px,100%);box-shadow:0 10px 30px rgba(11,79,77,.08);display:flex;flex-direction:column;gap:4px}
+h1{margin:0;font-size:24px;letter-spacing:-.01em}
+p.sub{margin:0 0 14px;color:var(--sub);font-size:13.5px}
+label{display:block;font-size:13px;font-weight:500;color:var(--sub);margin:12px 0 6px}
+input{width:100%;min-height:46px;padding:0 14px;border:1px solid var(--line);border-radius:10px;font:inherit;font-size:15px;color:var(--ink);background:#fff}
+input:focus{outline:3px solid var(--ring);border-color:var(--pri)}
+.opt{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:14px;font-size:13px;color:var(--sub)}
+.opt label{display:inline-flex;align-items:center;gap:8px;margin:0;font-weight:400}
+.opt input{width:16px;height:16px;min-height:0;padding:0;accent-color:var(--pri)}
+button{width:100%;margin-top:18px;min-height:48px;padding:0 14px;border:0;border-radius:10px;background:var(--pri);color:#fff;font:inherit;font-size:15.5px;font-weight:600;cursor:pointer}
+button:hover{background:var(--pri-d)}
 button:disabled{opacity:.6;cursor:default}
-.err{color:var(--bad);font-size:13px;min-height:18px;margin-top:12px}
-.foot{margin-top:14px;font-size:12px;color:var(--sub);line-height:1.5}
+.err{color:var(--bad);font-size:13px;min-height:20px;margin-top:10px}
+.foot{display:flex;align-items:center;gap:10px;margin-top:6px;padding-top:12px;border-top:1px solid #EEF1F5;font-size:12.5px;color:var(--sub);line-height:1.5}
+@media(max-width:900px){
+  .brand{display:none}
+  .pane{background:transparent}
+  .card{box-shadow:0 18px 50px rgba(0,0,0,.28);border:0}
+}
+/* 다른 창에서 다시 로그인한 뒤 본문이 카드 하나로 바뀌는 경우 (스크립트에서 body 교체) */
+body>.card{margin:auto}
 </style>
 </head>
 <body>
-<form class="card" id="f" autocomplete="on">
-  <h1>QIS</h1>
-  <p class="sub">품질정보시스템 · 사내 전용</p>
-  <label for="u">아이디</label>
-  <input id="u" name="username" autocomplete="username" required autofocus>
-  <label for="p">비밀번호</label>
-  <input id="p" name="password" type="password" autocomplete="current-password" required>
-  <button id="b" type="submit">로그인</button>
-  <div class="err" id="e" role="alert"></div>
-  <div class="foot">계정이 없거나 비밀번호를 잊었으면 QIS 관리자에게 요청하세요.</div>
-</form>
+<div class="wrap">
+  <aside class="brand" aria-label="QIS 소개">
+    <div class="logo"><i aria-hidden="true">Q</i>QIS</div>
+    <h2>불량에서 종결까지,<br>한 화면에서 추적합니다.</h2>
+    <p>불량 등록 · 귀책 조사(FAR) · NCR/8D · RCA · COPQ를 하나의 흐름으로 관리하는 사내 품질정보시스템입니다.</p>
+    <ul>
+      <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5CC8C4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span>지연 · 임박 항목을 대시보드에서 오늘 바로 확인</span></li>
+      <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5CC8C4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span>부적합 통보서 · 8D 보고서 · 주간 보고 자동 생성</span></li>
+      <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5CC8C4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span>협력사 PPM · 실패비용 · 구상 회수 현황 집계</span></li>
+    </ul>
+    <div class="copy">© 2026 김선중 · 사내 사용 허락 (LICENSE) · 오픈소스 구성요소는 NOTICE 참고</div>
+  </aside>
+  <main class="pane">
+    <form class="card" id="f" autocomplete="on">
+      <h1>로그인</h1>
+      <p class="sub">품질정보시스템 · 사내 전용</p>
+      <label for="u">아이디</label>
+      <input id="u" name="username" autocomplete="username" required autofocus placeholder="사번 또는 아이디">
+      <label for="p">비밀번호</label>
+      <input id="p" name="password" type="password" autocomplete="current-password" required>
+      <div class="opt"><span>비밀번호 분실 시 관리자에게 요청하세요.</span></div>
+      <button id="b" type="submit">로그인</button>
+      <div class="err" id="e" role="alert"></div>
+      <div class="foot"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><span>계정이 없으면 QIS 관리자에게 요청하세요.</span></div>
+    </form>
+  </main>
+</div>
 <script>
 document.getElementById('f').addEventListener('submit',async ev=>{
   ev.preventDefault();
