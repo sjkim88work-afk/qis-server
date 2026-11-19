@@ -355,6 +355,25 @@ def main(seed_path):
             ok(r["c"]["gone"] and r["c"]["keep"], "FAR: FAR 화면에서 지우면 NCR 쪽도 없어짐 · 연결 불량 없는 NCR 의 FAR 는 그대로")
             ok(r["scr"]["purpose"] == "고장 원인 규명" and r["scr"]["item"] and r["scr"]["ship"] == "A-1" and r["scr"]["vd"] == "협력사 귀책 인정", "FAR 화면: 요청 목적 · 분석 항목 · 송장 · 협력사 분석 판정 입력 칸")
             ok(r["scr"]["saved"] == "외관 관찰,치수 측정|재분석 요청|재분석 요청|재분석 요청|false", f"FAR 화면 저장: 분석 항목 · 당사 검토 저장, NCR 배지에 반영 ({r['scr']['saved']})")
+            # FAR 화면: 요청 · 회신 · 판정을 따로 엶
+            r = A.evaluate("""() => {
+              mfDirty=false;closeModal(true);const d=db.defects.find(x=>!x.deleted&&!x.ncrId)||db.defects[0],inv0=d.inv,resp0=d.resp;d.resp='미정';d.inv={};state.tab='inv';state.ivf.status='all';render();
+              const vis=()=>[...document.querySelectorAll('#mf .ivs')].filter(e=>e.style.display!=='none').map(e=>e.dataset.s).join(),foot=()=>[...document.querySelectorAll('#mfoot button')].map(b=>b.textContent).join(),tt=()=>document.querySelector('#mt').textContent;
+              const o={};o.btn=[...document.querySelectorAll('#ivtab tbody tr')].map(tr=>[...tr.querySelectorAll('td:last-child button')].map(b=>b.textContent+(b.classList.contains('p')?'*':'')).join()).find(x=>x.includes('요청*'))||'';
+              editInv(d.id);o.def0={v:vis(),t:tt(),f:foot()};
+              const f=document.querySelector('#mf');f.inv_farReq.value='2026-11-10';invAuto();f.inv_farPurpose.value='재현 시험';saveInv(d.id);
+              editInv(d.id);o.def1={v:vis(),t:tt(),f:foot(),sum:document.querySelector('#mf .ivs[data-s=reply]').innerText.includes('FAR 요청 2026-11-10')};
+              const g=document.querySelector('#mf');g.inv_farRecv.value='2026-11-15';g.inv_farVerdict.value='협력사 귀책 인정';saveInv(d.id);
+              o.kept=d.inv.farReq+'|'+d.inv.farPurpose+'|'+d.inv.farRecv+'|'+d.inv.farVerdict;
+              editInv(d.id);o.def2={v:vis(),t:tt(),f:foot(),sum:document.querySelector('#mf .ivs[data-s=judge]').innerText.includes('FAR 회신 2026-11-15')};mfDirty=false;closeModal(true);
+              editInv(d.id,'','req');o.req=vis();mfDirty=false;closeModal(true);editInv(d.id,'inv_verdict');o.foc=vis();mfDirty=false;closeModal(true);
+              d.inv=inv0;d.resp=resp0;farSyncAll();render();return o}""")
+            ok(r["btn"].startswith("요청*,회신,판정,불량"), f"FAR 목록: 요청 · 회신 · 판정 단추 (다음 단계 강조) ({r['btn']})")
+            ok(r["def0"]["v"] == "req" and r["def0"]["t"].startswith("FAR 요청 —") and "저장 후 FAR 요청서 출력" in r["def0"]["f"], "FAR 요청 창: 요청 구역만 · 요청서 출력 단추")
+            ok(r["def1"]["v"] == "reply" and r["def1"]["t"].startswith("FAR 회신 —") and r["def1"]["f"] == "취소,저장" and r["def1"]["sum"], "FAR 회신 창: 회신 구역만 · 요청 요약 표시")
+            ok(r["def2"]["v"] == "judge" and r["def2"]["t"].startswith("귀책 판정 —") and r["def2"]["f"] == "취소,저장" and r["def2"]["sum"], "귀책 판정 창: 사내 분석 · 판정 구역만 · FAR 요약 표시")
+            ok(r["kept"] == "2026-11-10|재현 시험|2026-11-15|협력사 귀책 인정", f"단계별로 저장해도 다른 단계 값은 그대로 ({r['kept']})")
+            ok(r["req"] == "req" and r["foc"] == "judge", "단계를 지정해서 열기 · 판정 칸으로 열면 판정 창")
             # 단순 통보 NCR: 유효성 검증 없이 통보하면 종결
             r = A.evaluate("""() => {
               const n={id:uid(),no:'N-INFO',issueDate:addDays(today(),-40),reqType:'단순 통보',supplierId:db.suppliers[0].id,defectIds:[]};db.ncrs.push(n);
