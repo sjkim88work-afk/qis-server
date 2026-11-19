@@ -356,7 +356,7 @@ function czFkey(el){
 }
 function czSoft(){
   if(czMouse){czPending=true;return}
-  setTimeout(()=>{czPending=false;if(state.tab!=='case')return;const k=czFkey(document.activeElement);const y=window.scrollY;render();window.scrollTo(0,y);if(k){const n=document.querySelector(k);if(n)n.focus()}},0);
+  setTimeout(()=>{czPending=false;if(state.tab!=='case'&&!$('#modal').dataset.cz)return;const k=czFkey(document.activeElement);const y=window.scrollY;render();window.scrollTo(0,y);if(k){const n=document.querySelector(k);if(n)n.focus()}},0);
 }
 document.addEventListener('mousedown',()=>{czMouse=true},true);
 document.addEventListener('mouseup',()=>{czMouse=false;if(czPending)setTimeout(()=>{if(czPending){czPending=false;czSoft()}},0)},true);
@@ -372,9 +372,37 @@ function czCounts(){
 }
 function czBadgeN(){const k=czCounts();let p=0;try{p=progCases().filter(c=>c.kind!=='rca'&&c.next&&c.next.nextDate<today()).length}catch(e){}return k.mine+k.chase+k.lateActs+p}
 function czGo(v){state.tab='case';czUi.view=v;render();window.scrollTo(0,0)}
+// RCA 상세는 창(팝업)으로 엶 — NCR / 8D 창과 같은 방식. 보던 화면은 그대로 뒤에 남음
 async function czOpenCase(id,tab){
-  if($('#modal').classList.contains('on')){if(mfDirty&&!await askConfirm({title:'작성 중인 내용을 저장하지 않고 이동할까요?',ok:'이동',danger:false}))return;closeModal(true)}
-  state.tab='case';czUi.view='case';czUi.caseId=id;czUi.tab=tab||'basic';czUi.showGate=false;render();window.scrollTo(0,0);
+  const m=$('#modal');
+  if(m.classList.contains('on')){if(m.dataset.cz)czFlush();else if(mfDirty&&!await askConfirm({title:'작성 중인 내용을 저장하지 않고 이동할까요?',ok:'이동',danger:false}))return}
+  if(!czById('cases',id)){toast('이 RCA를 찾을 수 없습니다');return}
+  czUi.caseId=id;czUi.tab=tab||'basic';czUi.showGate=false;czShow();
+}
+const czFoot=c=>[{label:'RCA 삭제',cls:'d',fn:()=>czDelCase(c.id)},{label:'닫기',fn:closeModal},{label:'저장',cls:'p',fn:czSaveClose}];
+function czShow(keep){
+  const c=czById('cases',czUi.caseId),m=$('#modal');if(!c)return;
+  const top=keep&&m.dataset.cz===c.id&&m.classList.contains('on')?$('#mbody').scrollTop:0;
+  openModal(`${c.CaseNo} RCA`,`<div class="cz czm" id="czm">${czCaseHTML(c)}</div>`,czFoot(c));
+  m.dataset.cz=c.id;czUi.openId=c.id;$('#mbody').scrollTop=top;mfDirty=false;
+}
+// 화면을 다시 그린 뒤: RCA 창이 떠 있으면 새 내용으로 갱신 (스크롤 위치 유지)
+function czModalSync(){
+  const m=$('#modal');if(!m.dataset.cz)return;
+  if(!m.classList.contains('on')){delete m.dataset.cz;return}
+  const c=czById('cases',m.dataset.cz),box=$('#czm');if(!c){closeModal(true);return}if(!box)return;
+  const top=$('#mbody').scrollTop;box.innerHTML=czCaseHTML(c);$('#mt').textContent=`${c.CaseNo} RCA`;$('#mbody').scrollTop=top;mfDirty=false;
+}
+// 쓰던 칸의 내용을 저장 (RCA 는 칸을 벗어날 때 바로 저장됨)
+function czFlush(){const a=document.activeElement;if(a&&a.closest&&a.closest('#czm')&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))a.blur()}
+function czSaveClose(){czFlush();closeModal(true);toast('저장했습니다')}
+async function czDelCase(id){
+  const c=czById('cases',id);if(!c)return;
+  if(!await askConfirm({title:`${c.CaseNo} RCA를 삭제할까요?`,items:[esc(c.Title),`조치 ${czActs(c).length}건 함께 삭제`,`연결된 불량 ${(c.DefectIds||[]).length}건 · NCR은 유지 (연결만 해제)`],note:'기록을 남기려면 상태를 ‘취소’로 바꾸는 편이 낫습니다. 삭제 후 10초 안에 되돌릴 수 있습니다.'}))return;
+  const snap=await takeSnap();
+  db.defects.forEach(d=>{if(d.caseId===c.id){d.caseId='';touch(d)}});db.ncrs.forEach(n=>{if(n.caseId===c.id){n.caseId='';touch(n)}});
+  czActs(c).forEach(a=>removeRec('actions',a.id));removeRec('cases',c.id);save();
+  if($('#modal').dataset.cz===id)closeModal(true);render();offerUndo(snap,`${c.CaseNo} RCA를 삭제했습니다`);
 }
 const czBall=b=>`<span class="ball ${b==='나'?'me':''}">${esc(b||'-')}</span>`;
 function czDate(d,closed){if(!has(d))return '<span class="muted">-</span>';if(closed)return esc(d);const t=today();return d<t?`<span class="late">${esc(d)}</span>`:d===t?`<span class="today">${esc(d)}</span>`:esc(d)}
@@ -386,9 +414,9 @@ function czRender(){
   const k=czCounts(),v=czUi.view;
   const P=progCases(),pod=P.filter(c=>c.kind!=='rca'&&c.next&&c.next.nextDate<today()).length;
   const seg=[['today','오늘 할 일',k.mine+k.chase+pod],['prog','진행 중 전체',0],['cases','RCA 목록',0],['actions','조치',k.lateActs]];
-  const bar=`<div class="cz"><div class="bar noprint"><div class="seg">${seg.map(([x,l,n])=>`<a class="${v===x||(x==='cases'&&v==='case')?'on':''}" data-act="czNav" data-v="${x}">${l}${n?` <span class="bg bad" style="font-size:10.5px">${n}</span>`:''}</a>`).join('')}</div><span class="grow"></span><button class="btn pri" data-act="newCase">+ 새 RCA</button></div>`;
+  const bar=`<div class="cz"><div class="bar noprint"><div class="seg">${seg.map(([x,l,n])=>`<a class="${v===x?'on':''}" data-act="czNav" data-v="${x}">${l}${n?` <span class="bg bad" style="font-size:10.5px">${n}</span>`:''}</a>`).join('')}</div><span class="grow"></span><button class="btn pri" data-act="newCase">+ 새 RCA</button></div>`;
   if(v==='prog')return bar+'</div>'+renderProg();
-  const body=v==='case'?czViewCase():v==='cases'?czViewCases():v==='actions'?czViewActions():czViewToday();
+  const body=v==='cases'?czViewCases():v==='actions'?czViewActions():czViewToday();
   return bar+body+'</div>';
 }
 function czStartCard(){return `<div class="card start"><h2>RCA · 사내 8D</h2>
@@ -482,8 +510,7 @@ function czLinkHTML(c){
       <div class="muted" style="font-size:12px;margin-top:4px">불량 ${ds.length}건 · 수량 ${sum(ds,'qty').toLocaleString()}개${cost?` · 실패비용 ${won(cost)}원`:''}${os?` · <span style="color:var(--red)">구상 미회수 ${won(os)}원</span>`:''}</div>`:'<div class="muted" style="font-size:12px">연결된 불량 없음</div>'}
     ${candD.length?`<div class="row" style="margin-top:6px;gap:6px"><select id="czLinkD"><option value="">— 불량 추가 연결${c.SupplierId?' (같은 협력사)':''} —</option>${candD.map(d=>`<option value="${d.id}">${esc(d.date)} · ${esc(d.partNo)} ${esc(d.partName)} · ${esc(d.type)} · ${num(d.qty)}개</option>`).join('')}</select><button class="btn sm" data-act="linkDef">추가</button></div>`:''}</div>`;
 }
-function czViewCase(){
-  const c=czById('cases',czUi.caseId);if(!c){czUi.view='cases';return czViewCases()}
+function czCaseHTML(c){
   const p=czPath(c),ns=czNext(c),ps=czPrev(c),closed=c.Status==='종결'||c.Status==='취소';
   const missing=ns?czGate(c,ns):[];
   const missSet=new Set(czUi.showGate?missing.map(r=>r.f).filter(Boolean):[]),missTabs=new Set(czUi.showGate?missing.map(r=>r.tab):[]);
@@ -501,8 +528,7 @@ function czViewCase(){
   else body=(tab.id==='basic'?czLinkHTML(c):'')+(tab.id==='verify'?czNcrNote(c,'verify'):'')+(tab.note?`<div class="note">${esc(tab.note)}</div>`:'')+`<div class="grid">${tab.fields.map(fd=>czField(c,fd,missSet)).join('')}</div>`;
   const nOpen=czActs(c).filter(a=>!['완료','취소'].includes(a.ActionStatus)).length;
   const n=c.NcrId?db.ncrs.find(x=>x.id===c.NcrId):null,ds=(c.DefectIds||[]).map(i=>db.defects.find(d=>d.id===i)).filter(Boolean),cost=ds.reduce((a,d)=>a+costTotal(d),0);
-  return `<div class="bar noprint"><button class="btn sm" data-act="czNav" data-v="cases">← RCA 목록</button></div>
-    <div class="chead"><div class="r1"><span class="mono">${esc(c.CaseNo)}</span><span class="badge ${czTierCls(c.Tier)}">${esc(c.Tier||'TIER 미정')}</span><span class="badge ${czStCls(c.Status)}">${esc(c.Status)}</span>${!closed&&czTarget(c)?(()=>{const t=czTarget(c),k=diffDays(today(),t);return `<span class="bg ${k<0?'bad':k<=7?'warn':'mut'}" title="${has(c.TargetClose)?'직접 입력한 목표 종결일':`등록일 + ${esc(c.Tier||'TIER')} 기준 ${czDays(c)}일 (기본 탭에서 바꿀 수 있음)`}">목표 종결 ${t} ${k<0?'D+'+(-k):k===0?'오늘':'D-'+k}</span>`})():''}
+  return `<div class="chead"><div class="r1"><span class="mono">${esc(c.CaseNo)}</span><span class="badge ${czTierCls(c.Tier)}">${esc(c.Tier||'TIER 미정')}</span><span class="badge ${czStCls(c.Status)}">${esc(c.Status)}</span>${!closed&&czTarget(c)?(()=>{const t=czTarget(c),k=diffDays(today(),t);return `<span class="bg ${k<0?'bad':k<=7?'warn':'mut'}" title="${has(c.TargetClose)?'직접 입력한 목표 종결일':`등록일 + ${esc(c.Tier||'TIER')} 기준 ${czDays(c)}일 (기본 탭에서 바꿀 수 있음)`}">목표 종결 ${t} ${k<0?'D+'+(-k):k===0?'오늘':'D-'+k}</span>`})():''}
       <h2>${esc(c.Title||'(제목 없음)')}</h2><select data-scope="case" data-f="Status">${czOptHTML(CZ_OPT.Status,c.Status)}</select>
       <button class="btn" data-act="a3">A3 보고서</button><button class="btn" data-act="report">8D 보고서</button>
       ${ps&&!closed?`<button class="btn" data-act="stagePrev">← ${esc(ps)}</button>`:''}
@@ -515,8 +541,7 @@ function czViewCase(){
         <div><button class="btn" data-act="bump" data-id="${c.id}">+2일</button></div></div>
       ${czUi.showGate&&missing.length?`<div class="gate"><b>${esc(ns)} 단계로 넘어가려면 ${missing.length}개 항목이 필요합니다.</b><ul>${missing.map(r=>`<li><a data-act="gotoTab" data-tab="${r.tab}" data-f="${r.f||''}">${esc(r.t)}</a></li>`).join('')}</ul></div>`:''}</div>
     <div class="tabs">${tabs.map(t=>`<div class="tab ${t.id===tab.id?'on':''}" data-act="tab" data-tab="${t.id}">${t.label}${t.id==='actions'?` (${nOpen}/${czActs(c).length})`:''}${t.id==='cause'&&(c.Analyses||[]).length?` (${c.Analyses.length})`:''}${t.id==='hist'&&(c.Log||[]).length?` (${c.Log.length})`:''}${missTabs.has(t.id)?'<span class="dot"></span>':''}</div>`).join('')}</div>
-    <div class="card">${body}</div>
-    <div class="bar"><span class="grow"></span><button class="btn sm danger" data-act="delCase">RCA 삭제</button></div>`;
+    <div class="card">${body}</div>`;
 }
 // RCA 원인분석 결론 → 연결 불량의 귀책 판정 (귀책 조사와 연결)
 const czCauseSum=c=>[c.CauseOccur&&'발생: '+String(c.CauseOccur).trim(),c.CauseEscape&&'유출: '+String(c.CauseEscape).trim()].filter(Boolean).join(' / ');
@@ -812,11 +837,7 @@ document.addEventListener('click',async e=>{
     case 'reopen':czReopen(czById('cases',czUi.caseId));break;
     case 'showGate':czUi.showGate=true;render();break;
     case 'histAll':czUi.histOwn=!czUi.histOwn;render();break;
-    case 'delCase':{const c=czById('cases',czUi.caseId);
-      if(!await askConfirm({title:`${c.CaseNo} RCA를 삭제할까요?`,items:[esc(c.Title),`조치 ${czActs(c).length}건 함께 삭제`,`연결된 불량 ${(c.DefectIds||[]).length}건 · NCR은 유지 (연결만 해제)`],note:'기록을 남기려면 상태를 ‘취소’로 바꾸는 편이 낫습니다. 삭제 후 10초 안에 되돌릴 수 있습니다.'}))break;
-      const snap=await takeSnap();
-      db.defects.forEach(d=>{if(d.caseId===c.id){d.caseId='';touch(d)}});db.ncrs.forEach(n=>{if(n.caseId===c.id){n.caseId='';touch(n)}});
-      czActs(c).forEach(a=>removeRec('actions',a.id));removeRec('cases',c.id);save();czUi.view='cases';render();offerUndo(snap,`${c.CaseNo} RCA를 삭제했습니다`);break}
+    case 'delCase':czDelCase(czUi.caseId);break;
     case 'addAct':{czCreateAction({CaseId:czUi.caseId});save();render();const last=[...document.querySelectorAll('[data-scope="act"][data-f="Title"]')].find(x=>!x.value);if(last)last.focus();break}
     case 'delAct':{const a=czById('actions',id);if(a&&(!a.Title||await askConfirm({title:'이 조치를 삭제할까요?',items:[esc(a.Title)]}))){if(a.Title){const c=czById('cases',a.CaseId);czLog(c,'조치',`조치 삭제 — ${a.Category}: ${a.Title}`,{actId:a.id});c&&touch(c)}removeRec('actions',id);save();render()}break}
     case 'actDone':{const a=czById('actions',id);a.ActionStatus='완료';a.DoneDate=today();{const c=czById('cases',a.CaseId);czLog(c,'조치 완료',`${a.Category} — ${a.Title||''}`,{actId:a.id});c&&touch(c)}touch(a);save();render();toast('완료 처리했습니다.');break}

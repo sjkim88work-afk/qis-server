@@ -142,7 +142,7 @@ function mobCard(kind,id){
 function mobCardClose(){$('#mcard').classList.remove('on')}
 function render(){
   const own=!sevMemo;if(own){sevMemo=new Map();pcMemo={}}
-  try{renderInner()}finally{if(own){sevMemo=null;pcMemo=null}}
+  try{renderInner();if(typeof czModalSync==='function')czModalSync()}finally{if(own){sevMemo=null;pcMemo=null}}
 }
 function renderInner(){
   if((RO||SRV)&&!RO_TABS.includes(state.tab)&&state.tab!=='prog')state.tab='dash';  // 공유본: 허용한 화면만
