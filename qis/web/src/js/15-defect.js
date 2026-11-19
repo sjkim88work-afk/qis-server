@@ -208,7 +208,7 @@ function invTable(){
     <td>${cs?`<a class="lk" onclick="czOpenCase('${cs.id}','cause')">RCA ${esc(cs.CaseNo)}</a><br><span class="muted">${esc(cs.Stage||'')}</span>`:(iv.rca||'').trim()?'<span class="bg inf">메모</span>':'<span class="muted">-</span>'}</td>
     <td>${iv.verdict?`<b>${esc(iv.verdict)}</b>${iv.verdict==='공동'&&iv.share!==''&&iv.share!=null?` <span class="muted">${esc(iv.share)}%</span>`:''}<br><span class="muted mono">${esc(iv.verdictDate||'')}</span>`:'<span class="muted">-</span>'}</td>
     <td style="white-space:nowrap">${opn&&d.date?dday(ntfDue(d),false):'<span class="muted">-</span>'}</td>
-    <td class="noprint" style="white-space:nowrap"><button class="b s" onclick="editInv('${d.id}')">조사</button> <button class="b s" onclick="editDefect('${d.id}')">불량</button></td></tr>`}).join('')||`<tr><td colspan="11" class="muted" style="text-align:center;padding:30px">${state.ivf.status==='open'?'진행 중인 귀책 조사가 없습니다. 불량 등록에서 귀책을 ‘미정’으로 두면 여기에 나타납니다.':'조건에 맞는 건이 없습니다.'}</td></tr>`}
+    <td class="noprint" style="white-space:nowrap">${(()=>{const nx=invStageDefault(d),b=(k,l)=>`<button class="b s ${nx===k&&opn?'p':''}" onclick="editInv('${d.id}','','${k}')">${l}</button>`;return b('req','요청')+' '+b('reply','회신')+' '+b('judge','판정')})()} <button class="b s" onclick="editDefect('${d.id}')">불량</button></td></tr>`}).join('')||`<tr><td colspan="11" class="muted" style="text-align:center;padding:30px">${state.ivf.status==='open'?'진행 중인 귀책 조사가 없습니다. 불량 등록에서 귀책을 ‘미정’으로 두면 여기에 나타납니다.':'조건에 맞는 건이 없습니다.'}</td></tr>`}
   </tbody></table></div>`;
 }
 function invSteps(d){
@@ -221,14 +221,23 @@ function invSteps(d){
   return `<div class="qtrack${iv.verdict?' closed':''}" style="grid-template-columns:repeat(5,minmax(0,1fr))">${S.map((x,i)=>{const late=!x.done&&x.due&&t>x.due;return `<div class="${x.done||i<cur?'past':i===cur?'cur':''}${late?' late':''}">${x.l}<b>${x.d?(x.due&&!x.done?'기한 ':'')+esc(x.txt?String(x.d):String(x.d).slice(5)):'–'}${late?' 초과':''}</b></div>`}).join('')}</div>`;
 }
 let invCurId='';
-function editInv(id,focus){
+// FAR 화면의 창은 단계별로 따로 엶 — 요청(req) · 회신(reply) · 판정(judge: 사내 분석 + 귀책 판정).
+// 입력 칸은 모두 창 안에 있고(저장은 한 번에), 고른 단계의 구역만 보임
+const INV_STG={req:'FAR 요청',reply:'FAR 회신',judge:'귀책 판정'};
+function invStageDefault(d,focus){
+  if(focus==='inv_farReq')return 'req';if(focus==='inv_verdict')return 'judge';
+  const iv=d.inv||{};if(iv.verdict)return 'judge';const k=invInfo(d).k;return k==='pre'?'req':k==='far'?'reply':'judge';
+}
+function editInv(id,focus,stage){
   const d=db.defects.find(x=>x.id===id);if(!d)return;invCurId=id;
-  const iv=d.inv||{},S=db.settings,cs=defCase(d);
+  const iv=d.inv||{},S=db.settings,cs=defCase(d),stg=INV_STG[stage]?stage:invStageDefault(d,focus),sh=k=>stg===k?'':'style="display:none"';
+  const reqSum=iv.farReq?`FAR 요청 ${esc(iv.farReq)}${iv.farDue?` · 회신 기한 ${esc(iv.farDue)}`:''}${iv.farPurpose?` · ${esc(iv.farPurpose)}`:''}${iv.sample?` · 시료 ${esc(iv.sample)}`:''}`:'';
+  const repSum=iv.farRecv?`FAR 회신 ${esc(iv.farRecv)}${iv.farVerdict?` · 협력사 분석 판정: ${esc(iv.farVerdict)}`:''}${iv.farReview?` · 당사 검토: ${esc(iv.farReview)}`:''}`:'';
   const body=`${invSteps(d)}
   <div class="route" style="margin-top:0;margin-bottom:6px"><div class="ri"><div class="tx"><b>${esc(d.partNo||d.fgNo||'')} ${esc(d.partName||d.fgName||'')}</b> ${sevBadge(d)}<br>
     <span class="muted">${esc(d.date)} · ${esc(d.source||'')} · ${esc(d.type||'')} · ${num(d.qty).toLocaleString()}EA · ${esc(supName(d.supplierId))||'협력사 미지정'}</span>${d.desc?`<br><span style="font-size:12.5px">${esc(d.desc)}</span>`:''}</div>
     <button type="button" class="b s" onclick="routeGo(&quot;editDefect('${id}')&quot;)">불량 열기</button></div></div>
-  ${d.resp!=='미정'&&!iv.verdict?`<div class="banner" style="margin:8px 0 0">이 불량의 귀책은 현재 <b>${esc(d.resp||'협력사')}</b>입니다. 판정을 입력하면 판정 결과로 바뀝니다.</div>`:''}
+  <div class="ivs" data-s="req" ${sh('req')}>
   <div class="sec">FAR 요청 <span class="muted" style="font-weight:normal;font-size:12px">협력사에 원인 분석을 요청합니다. 귀책 인정 요구가 아닙니다</span></div>
   <div class="fg">
     <label>FAR 요청일<input type="date" name="inv_farReq" value="${esc(iv.farReq)}" oninput="invAuto()"></label>
@@ -240,6 +249,11 @@ function editInv(id,focus){
     <label>송장 · 반출증 번호<input name="inv_farShipRef" value="${esc(iv.farShipRef)}"></label>
     <label class="full row" style="flex-direction:row;align-items:center;gap:6px"><input type="checkbox" name="inv_costNotice" ${iv.costNotice?'checked':''}> 비용 청구 가능성 통보 <span class="muted" style="font-size:11px">— FAR 요청서에 ‘귀사 부품 원인으로 확인되면 비용을 청구할 수 있다’는 문구를 넣습니다</span></label>
   </div>
+  <div style="margin-top:12px;font-size:12px;color:var(--sub)">FAR 요청서에 넣을 사진 <span class="muted">(불량 사진 · 진행 기록 사진 · 체크 해제하면 제외 · 최대 ${FAR_PH_MAX}장)</span></div>
+  <div id="invPhBox" class="row" style="gap:8px;margin-top:6px"></div>
+  </div>
+  <div class="ivs" data-s="reply" ${sh('reply')}>
+  ${reqSum?`<div class="banner" style="margin:8px 0 0;background:var(--pri2);border-color:transparent;color:var(--ink)">${reqSum}</div>`:'<div class="banner" style="margin:8px 0 0">FAR 요청일이 없습니다. 목록의 ‘요청’에서 FAR 요청을 먼저 입력하세요.</div>'}
   <div class="sec">FAR 회신 <span class="muted" style="font-weight:normal;font-size:12px">협력사 분석 결과와 당사 검토</span></div>
   <div class="fg">
     <label>FAR 회신일<input type="date" name="inv_farRecv" value="${esc(iv.farRecv)}"></label>
@@ -248,8 +262,10 @@ function editInv(id,focus){
     <label class="full">FAR 회신 요약 (협력사 분석 결과)<textarea name="inv_farResult" placeholder="예: 파단면 관찰 결과 피로 파괴, 열처리 경도 HRC 38 (규격 42~48) 미달">${esc(iv.farResult)}</textarea></label>
     <label class="full">검토 의견 · 비고<input name="inv_farNote" value="${esc(iv.farNote)}" placeholder="예: 경도 측정 성적서 원본 추가 요청"></label>
   </div>
-  <div style="margin-top:12px;font-size:12px;color:var(--sub)">FAR 요청서에 넣을 사진 <span class="muted">(불량 사진 · 진행 기록 사진 · 체크 해제하면 제외 · 최대 ${FAR_PH_MAX}장)</span></div>
-  <div id="invPhBox" class="row" style="gap:8px;margin-top:6px"></div>
+  </div>
+  <div class="ivs" data-s="judge" ${sh('judge')}>
+  ${d.resp!=='미정'&&!iv.verdict?`<div class="banner" style="margin:8px 0 0">이 불량의 귀책은 현재 <b>${esc(d.resp||'협력사')}</b>입니다. 판정을 입력하면 판정 결과로 바뀝니다.</div>`:''}
+  ${reqSum||repSum?`<div class="banner" style="margin:8px 0 0;background:var(--pri2);border-color:transparent;color:var(--ink)">${[reqSum,repSum].filter(Boolean).join('<br>')}${iv.farResult?`<div style="margin-top:3px;font-size:12.5px;white-space:pre-wrap">${esc(iv.farResult)}</div>`:''}</div>`:''}
   <div class="sec">사내 분석 <span class="muted" style="font-weight:normal;font-size:12px">재현시험 · 측정 · 분해 분석</span></div>
   ${cs?`<div class="route" style="margin-top:0"><div class="ri dn"><span class="ck">✓</span><div class="tx"><b>RCA ${esc(cs.CaseNo)}</b> · ${esc(cs.Stage||'')} · ${esc(cs.Status||'')}<br><span class="muted">${czCauseSum(cs)?'RCA 결론 — '+esc(czCauseSum(cs).slice(0,140)):'사내 분석은 RCA 원인분석에서 관리합니다. RCA의 ‘귀책 판정 반영’으로 판정할 수 있습니다.'}</span></div><button type="button" class="b s" onclick="routeGo(&quot;czOpenCase('${cs.id}','cause')&quot;)">RCA 열기</button></div></div>
     ${(iv.rca||'').trim()?`<div class="help" style="margin-top:6px">RCA 연결 전 메모: ${esc(iv.rca)}</div>`:''}<input type="hidden" name="inv_rca" value="${esc(iv.rca)}">`
@@ -261,11 +277,12 @@ function editInv(id,focus){
     <label id="shareL" style="${iv.verdict==='공동'?'':'display:none'}">협력사 부담 비율 (%)<input type="number" min="0" max="100" name="inv_share" value="${esc(iv.share)}" placeholder="합의 비율"></label>
     <label class="full">판정 근거 · 비용 처리 <span style="font-size:11px">(FAR·RCA 결론 요약, 원인 불명: 사내 부담 / 협의 비율 등)</span><input name="inv_basis" value="${esc(iv.basis)}"></label>
   </div>
-  <div class="help" style="margin-top:6px" id="invNext">판정하면 불량의 귀책이 바뀝니다 — <b>협력사</b>: 원인 부품 지정 후 NCR 발행 · <b>사내</b>: 사내 대책·RCA · <b>공동</b>: 분담 비율로 구상 · <b>원인 불명</b>: 완료 처리 (재발 시 재조사).</div>`;
+  <div class="help" style="margin-top:6px" id="invNext">판정하면 불량의 귀책이 바뀝니다 — <b>협력사</b>: 원인 부품 지정 후 NCR 발행 · <b>사내</b>: 사내 대책·RCA · <b>공동</b>: 분담 비율로 구상 · <b>원인 불명</b>: 완료 처리 (재발 시 재조사).</div>
+  </div>`;
   const btns=[{label:'취소',fn:closeModal},{label:'저장',cls:'p',fn:()=>saveInv(id)}];
-  btns.unshift({label:'저장 후 FAR 요청서 출력',fn:()=>{const w=reportWin();if(saveInv(id,true))printFar(id,w);else if(w)w.close()}});
+  if(stg==='req')btns.unshift({label:'저장 후 FAR 요청서 출력',fn:()=>{const w=reportWin();if(saveInv(id,true))printFar(id,w);else if(w)w.close()}});
   curInvExcl=new Set(iv.photoExcl||[]);
-  openModal(`귀책 조사 — ${defLabel(d)}`,body,btns);renderInvPhotos();
+  openModal(`${INV_STG[stg]} — ${defLabel(d)}`,body,btns);renderInvPhotos();$('#modal').dataset.inv=stg;
   if(iv.verdict)$('#mt').insertAdjacentHTML('beforeend','<span class="qstamp">판정 완료</span>');
   if(focus)setTimeout(()=>{const e=document.querySelector(`#mf [name=${focus}]`);if(e){e.scrollIntoView({block:'center'});e.focus()}},120);
 }

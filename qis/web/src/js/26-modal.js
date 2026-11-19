@@ -43,6 +43,7 @@ function modalFoot(btns){
 }
 function openModal(title,body,btns){
   delete $('#modal').dataset.iss;   // 이슈 상세 창 표시 (11-issue.js issShow 가 다시 붙임)
+  delete $('#modal').dataset.inv;   // FAR 창의 단계 표시 (15-defect.js editInv 가 다시 붙임)
   $('#mt').textContent=title;
   $('#mbody').innerHTML=`<form id="mf" onsubmit="return false">${body}</form>`;
   modalFoot(btns);
