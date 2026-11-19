@@ -2115,6 +2115,7 @@ function issDetailHTML(i){
         <div style="display:flex;flex-direction:column;gap:6px">${ISS_ROUTES.map(x=>`<button type="button" class="isr ${x.k===r.k?'on':''}" aria-pressed="${x.k===r.k}" onclick="state.issRoute='${x.k}';render()"><b>${x.l}</b><span class="muted">${x.w}</span></button>`).join('')}</div>
         <div class="isprev"><div class="muted" style="font-size:12px;font-weight:600">누르면 만들어지는 것</div><ul>${r.m.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>
           ${r.k==='close'&&of.length?`<div style="color:var(--warn);font-size:12.5px">진행 중인 후속 건 ${of.length}건 — 종결해도 후속 건은 각자 계속 진행됩니다</div>`:''}
+          ${r.k==='ncr'&&L.ns.length?`<div style="color:var(--warn);font-size:12.5px">연결된 NCR ${L.ns.length}건 (${L.ns.map(n=>esc(n.no)).join(' · ')}) — 누르면 기존 NCR을 열지, 새 NCR을 발행할지 묻습니다</div>`:''}
           <button class="b p" style="width:100%;padding:10px" onclick="issRoute('${i.id}','${r.k}')">${r.cta}</button></div></div>`}
       <div class="card"><h3>후속 건 <span class="muted" style="font-weight:normal;font-size:12px">이 이슈에서 만든 기록</span></h3>
         ${fol?`<div style="display:flex;flex-direction:column;gap:6px">${fol}</div>`:'<div class="muted">아직 없습니다 — 처리 방향을 정하면 여기에 이어집니다.</div>'}
@@ -2178,6 +2179,15 @@ async function issRoute(id,k){
       Owner:i.owner||czMe(),Priority:i.urg==='긴급'?'긴급':i.urg==='높음'?'높음':'보통',ContainDate:i.contain?date:'',ContainScope:i.containText||'',IssueId:i.id,Created:today()};
     if(!await askConfirm({title:'이 이슈로 RCA를 만들까요?',items:[esc(i.title),`발견 ${esc(i.source||'')} · ${esc(issAt(i.at))}`,'심각도 S · 영향도 I와 TIER는 RCA 기본 탭에서 정합니다'],ok:'RCA 만들기',danger:false}))return;
     const c=czCreateCase(o);i.caseIds=[...new Set([...(i.caseIds||[]),c.id])];issLog(i,'분류',`RCA 요청 — ${c.CaseNo}`);czLog(c,'연결',`이슈 ${i.no}에서 생성`);touch(i);save();czOpenCase(c.id);toast(`${c.CaseNo} RCA를 만들었습니다`);return}
+  // NCR 발행: 이미 연결된 NCR 이 있으면 기존 NCR 을 열어 고칠지, 새 NCR 을 발행할지 물음 (같은 건으로 NCR 이 여러 장 생기는 것을 막음)
+  if(k==='ncr'){const ns=issLinks(i).ns;
+    if(ns.length){
+      const op=ns.filter(n=>ncrStatus(n)!=='종결'),tgt=(op.length?op:ns).slice().sort((a,b)=>(b.issueDate||'').localeCompare(a.issueDate||''))[0];
+      const r=await askConfirm({title:`이 이슈에 연결된 NCR이 ${ns.length}건 있습니다`,msg:'같은 건이면 기존 NCR을 열어서 고치세요. 다른 불량이나 다른 협력사의 건이면 새 NCR을 발행하세요.',
+        items:ns.map(n=>`<a class="lk" onclick="issNcrOpen('${n.id}')"><b>${esc(n.no)}</b></a> — ${esc(ncrStatus(n))}${n.supplierId?' · '+esc(supName(n.supplierId)):''}${n.partNo?' · '+esc(n.partNo):''}`),
+        note:(ns.length>1?'NCR 번호를 누르면 그 NCR이 열립니다. ':'')+'기존 NCR의 발행 정보에서 불량을 추가로 연결할 수 있습니다.',ok:`${tgt.no} 열기`,alt:'새 NCR 발행',danger:false});
+      if(!r)return;if(r!=='alt'){issNcrOpen(tgt.id);return}
+    }}
   const resp=k==='far'?'미정':k==='ncr'?'협력사':(/수입/.test(i.source||'')?'협력사':'미정');
   const preset={date,source:i.source||db.settings.sources[0],partNo:p?p.partNo:(i.partNo||''),partName:p?p.name:'',supplierId:p?p.supplierId||'':'',model:p?p.model||'':'',qty:i.qty??'',
     desc:[i.title,i.desc].filter(Boolean).join(' — '),containment:i.contain?(i.containText||'격리 · 보류함'):'',owner:i.owner||czMe(),resp,sev:{special:!!i.special},issueId:i.id};
@@ -2185,6 +2195,8 @@ async function issRoute(id,k){
   editDefect(null,null,preset);
   if((i.photos||[]).length){try{const rs=await photoGetMany(i.photos);if($('#photoBox')){rs.forEach(r=>curPhotos.push({id:uid(),name:r.name,caption:r.caption||'',data:r.data,thumb:r.thumb,createdAt:now(),isNew:true}));renderPhotoBox()}}catch(e){}}
 }
+// 이슈에서 기존 NCR 열기 — 확인 창이 떠 있으면 닫고 발행 정보 화면을 엶
+function issNcrOpen(nid){const c=$('#cfmNo');if(c)c.click();setTimeout(()=>editNcr(nid,null,'issue'),0)}
 // 불량 저장 직후 — 이슈에서 연 창이면 연결하고 FAR · NCR로 이어감
 function issAfterDefect(d){
   const ip=issPend;issPend=null;if(!ip)return;const i=issById(ip.iid);if(!i)return;
