@@ -2689,14 +2689,24 @@ function editInv(id,focus){
     <span class="muted">${esc(d.date)} · ${esc(d.source||'')} · ${esc(d.type||'')} · ${num(d.qty).toLocaleString()}EA · ${esc(supName(d.supplierId))||'협력사 미지정'}</span>${d.desc?`<br><span style="font-size:12.5px">${esc(d.desc)}</span>`:''}</div>
     <button type="button" class="b s" onclick="routeGo(&quot;editDefect('${id}')&quot;)">불량 열기</button></div></div>
   ${d.resp!=='미정'&&!iv.verdict?`<div class="banner" style="margin:8px 0 0">이 불량의 귀책은 현재 <b>${esc(d.resp||'협력사')}</b>입니다. 판정을 입력하면 판정 결과로 바뀝니다.</div>`:''}
-  <div class="sec">협력사 FAR (원인 분석 요청) <span class="muted" style="font-weight:normal;font-size:12px">귀책 인정 요구가 아니라 분석 요청입니다</span></div>
+  <div class="sec">FAR 요청 <span class="muted" style="font-weight:normal;font-size:12px">협력사에 원인 분석을 요청합니다. 귀책 인정 요구가 아닙니다</span></div>
   <div class="fg">
     <label>FAR 요청일<input type="date" name="inv_farReq" value="${esc(iv.farReq)}" oninput="invAuto()"></label>
     <label>FAR 회신 기한 <span style="font-size:11px">(요청 + ${num(S.farDays)||5}영업일)</span><input type="date" name="inv_farDue" value="${esc(iv.farDue)}"></label>
-    <label>FAR 회신일<input type="date" name="inv_farRecv" value="${esc(iv.farRecv)}"></label>
-    <label>불량 샘플 송부<input name="inv_sample" value="${esc(iv.sample)}" placeholder="예: 3EA 택배 송부"></label>
+    <label>요청 목적<select name="inv_farPurpose">${opts(FAR_PURPOSE,iv.farPurpose||'',true)}</select></label>
+    <label class="full">요청 분석 항목<span class="checks" style="display:flex;flex-wrap:wrap;gap:4px 14px;padding-top:3px">${FAR_ITEMS.map(x=>`<label style="flex-direction:row;align-items:center;gap:4px;color:var(--ink)"><input type="checkbox" name="inv_farItem" value="${esc(x)}" ${(iv.farItems||[]).includes(x)?'checked':''}>${esc(x)}</label>`).join('')}</span></label>
+    <label>시료 (수량 · 송부 방법)<input name="inv_sample" value="${esc(iv.sample)}" placeholder="예: 3EA 택배 송부"></label>
+    <label>시료 발송일<input type="date" name="inv_farShipDate" value="${esc(iv.farShipDate)}"></label>
+    <label>송장 · 반출증 번호<input name="inv_farShipRef" value="${esc(iv.farShipRef)}"></label>
     <label class="full row" style="flex-direction:row;align-items:center;gap:6px"><input type="checkbox" name="inv_costNotice" ${iv.costNotice?'checked':''}> 비용 청구 가능성 통보 <span class="muted" style="font-size:11px">— FAR 요청서에 ‘귀사 부품 원인으로 확인되면 비용을 청구할 수 있다’는 문구를 넣습니다</span></label>
-    <label class="full">FAR 회신 요약 (협력사 분석 결과)<textarea name="inv_farResult">${esc(iv.farResult)}</textarea></label>
+  </div>
+  <div class="sec">FAR 회신 <span class="muted" style="font-weight:normal;font-size:12px">협력사 분석 결과와 당사 검토</span></div>
+  <div class="fg">
+    <label>FAR 회신일<input type="date" name="inv_farRecv" value="${esc(iv.farRecv)}"></label>
+    <label>협력사 분석 판정<select name="inv_farVerdict">${opts(FAR_VERDICT,iv.farVerdict||'',true)}</select></label>
+    <label>당사 검토<select name="inv_farReview">${opts(FAR_REVIEW,iv.farReview||'',true)}</select></label>
+    <label class="full">FAR 회신 요약 (협력사 분석 결과)<textarea name="inv_farResult" placeholder="예: 파단면 관찰 결과 피로 파괴, 열처리 경도 HRC 38 (규격 42~48) 미달">${esc(iv.farResult)}</textarea></label>
+    <label class="full">검토 의견 · 비고<input name="inv_farNote" value="${esc(iv.farNote)}" placeholder="예: 경도 측정 성적서 원본 추가 요청"></label>
   </div>
   <div style="margin-top:12px;font-size:12px;color:var(--sub)">FAR 요청서에 넣을 사진 <span class="muted">(불량 사진 · 진행 기록 사진 · 체크 해제하면 제외 · 최대 ${FAR_PH_MAX}장)</span></div>
   <div id="invPhBox" class="row" style="gap:8px;margin-top:6px"></div>
@@ -2731,6 +2741,7 @@ function saveInv(id,keep){
   const o=gather(),iv=Object.assign({},d.inv||{});
   Object.keys(o).forEach(k=>{if(k.startsWith('inv_'))iv[k.slice(4)]=o[k]});
   iv.costNotice=!!o.inv_costNotice;
+  delete iv.farItem;iv.farItems=[...$('#mf').querySelectorAll('input[name=inv_farItem]:checked')].map(x=>x.value);
   if(invCurId===id)iv.photoExcl=[...curInvExcl];
   if(iv.share!==''&&iv.share!=null)iv.share=Math.max(0,Math.min(100,num(iv.share)));
   if(iv.farReq&&!iv.farDue)iv.farDue=addBiz(iv.farReq,num(db.settings.farDays)||5);
@@ -2743,28 +2754,6 @@ function saveInv(id,keep){
   if(!keep&&iv.verdict&&iv.verdict!==prev)setTimeout(()=>offerNcrAfterVerdict([id],iv.verdict),350);
   toast(iv.verdict?`귀책 판정: ${iv.verdict} → ${iv.verdict==='협력사'?'NCR 발행 단계':iv.verdict==='사내'?'사내 대책 단계':iv.verdict==='공동'?'분담·NCR 단계':'완료 처리'}`:'귀책 조사를 저장했습니다');
   return true;
-}
-function invSection(d,id){
-  const iv=d.inv||{},S=db.settings;
-  const filled=[iv.farReq&&'FAR 요청',iv.farRecv&&'FAR 회신',(iv.rca||'').trim()&&'RCA 기록',iv.verdict&&'판정: '+iv.verdict].filter(Boolean);
-  return `<details id="invWrap" ${d.resp==='미정'||filled.length?'open':''} style="margin-top:14px">
-  <summary class="sec" style="cursor:pointer;list-style:revert">귀책 조사 — 협력사 FAR · 사내 RCA ${filled.length?`<span class="bg inf" style="font-weight:normal">${esc(filled.join(' · '))}</span>`:''} <span class="muted" style="font-weight:normal;font-size:12px">원인·귀책이 불분명할 때: 격리·선별 후 FAR 요청과 사내 RCA를 동시에 진행하고 판정 (귀책 ‘미정’이면 자동으로 펼쳐짐)</span></summary>
-  <div class="fg">
-    <label class="row" style="flex-direction:row;align-items:center;gap:6px;margin-top:16px"><input type="checkbox" name="inv_costNotice" ${iv.costNotice?'checked':''}><span title="체크하면 FAR 요청서에 ‘원인이 귀사 부품으로 확인되면 비용을 청구할 수 있다’는 문구가 들어갑니다" style="white-space:nowrap">비용 청구 가능성 통보 <span class="muted" style="font-size:11px">(FAR 요청서)</span></span></label>
-    <label>FAR 요청일<input type="date" name="inv_farReq" value="${esc(iv.farReq)}" oninput="invAuto()"></label>
-    <label>FAR 회신 기한 <span style="font-size:11px">(요청 + ${num(S.farDays)||5}영업일)</span><input type="date" name="inv_farDue" value="${esc(iv.farDue)}"></label>
-    <label>FAR 회신일<input type="date" name="inv_farRecv" value="${esc(iv.farRecv)}"></label>
-    <label>불량 샘플 송부<input name="inv_sample" value="${esc(iv.sample)}" placeholder="예: 3EA 택배 송부"></label>
-    <label>원인 불명 종결 검토 기한<input type="date" disabled value="${esc(d.date?ntfDue(d):'')}" title="등록일 + ${num(S.ntfDays)||30}일 (설정에서 변경)"></label>
-    <label class="full">FAR 회신 요약 (협력사 분석 결과)<textarea name="inv_farResult">${esc(iv.farResult)}</textarea></label>
-    <label class="full">사내 RCA 결과 (재현시험 · 측정 · 분해 분석 등)<textarea name="inv_rca">${esc(iv.rca)}</textarea></label>
-    <label>귀책 판정<select name="inv_verdict" onchange="invVerdict()">${opts(VERDICTS,iv.verdict,true)}</select></label>
-    <label>판정일<input type="date" name="inv_verdictDate" value="${esc(iv.verdictDate)}"></label>
-    <label id="shareL" style="${iv.verdict==='공동'||d.resp==='공동'?'':'display:none'}">협력사 부담 비율 (%)<input type="number" min="0" max="100" name="inv_share" value="${esc(iv.share)}" placeholder="합의 비율"></label>
-    <label class="full">판정 근거 · 비용 처리 <span style="font-size:11px">(원인 불명: 사내 부담 / 협의 비율 등)</span><input name="inv_basis" value="${esc(iv.basis)}"></label>
-  </div>
-  <div class="help" style="margin-top:6px">판정하면 귀책이 바뀝니다 — <b>협력사</b>: 원인 부품 지정 후 NCR 발행 · <b>사내</b>: 사내 대책 · <b>공동</b>: 분담 비율로 구상 · <b>원인 불명</b>: 완료 처리 (재발 시 재조사).
-  ${id?` <button type="button" class="b s" onclick="farPrint('${id}')">FAR 요청서 출력</button>`:' 저장 후 FAR 요청서를 출력할 수 있습니다.'}</div></details>`;
 }
 let icaCurId=null;
 function editIca(id){
@@ -2841,11 +2830,6 @@ async function printIca(id,w0){
   </body></html>`);
   reportShow(w,html,`사내대책서_${d.date}.html`);
 }
-function farPrint(id){
-  const w=reportWin();
-  if(mfDirty){saveDefect(id).then(nid=>{if(nid)printFar(nid,w);else if(w)w.close()});return}
-  printFar(id,w);
-}
 async function printFar(id,w0){
   const d=db.defects.find(x=>x.id===id);if(!d)return;
   const w=w0||reportWin(),S=db.settings,iv=d.inv||{},sp=supById(d.supplierId),att=sp?primaryOf(sp):null;
@@ -2868,10 +2852,13 @@ async function printFar(id,w0){
   ${row('LOT / 납품일자',esc(lotOf(d)))}
   ${row('불량 현상',nl(d.desc))}
   ${row('당사 임시조치',nl(d.containment))}
-  ${iv.sample?row('불량 샘플',esc(iv.sample)):''}</table>
+  ${iv.farPurpose?row('요청 목적',esc(iv.farPurpose)):''}
+  ${(iv.farItems||[]).length?row('요청 분석 항목',esc(iv.farItems.join(' / '))):''}
+  ${iv.sample||iv.farShipDate||iv.farShipRef?row('불량 샘플',esc([iv.sample,iv.farShipDate&&'발송 '+iv.farShipDate,iv.farShipRef].filter(Boolean).join(' · '))):''}</table>
   <b>요청 사항</b><ol class="req">
     <li>불량 원인 분석 보고서(FAR)를 <b>${esc(due)}</b>까지 회신 바랍니다 — 발생 원인 · 유출 원인, 분석 근거(측정 데이터 · 시험 결과 · 사진) 포함.</li>
     <li>동일 LOT 및 의심 LOT의 재고(사내 · 운송 중)를 즉시 확인 · 격리하고 결과를 함께 회신 바랍니다.</li>
+    <li>분석 방법 · 조건과 측정 데이터 원본을 첨부하고, 분석 후 시료 반환 여부를 알려 주시기 바랍니다.</li>
     <li>분석 결과 귀사 부품의 문제로 확인될 경우, 별도 부적합 통보(NCR)에 따라 대책서를 요청드립니다.</li></ol>
   ${iv.costNotice?`<div class="ntc">※ 본 건의 원인이 귀사 부품으로 확인될 경우, 선별 · 재작업 · 폐기 · 물류 등 당사에 발생한 비용을 청구할 수 있음을 알려드립니다. 비용 내역은 원인 확정 후 별도 통보드립니다.</div>`:''}
   ${phs.length?`<b>불량 사진</b><div class="pg">${phs.map(p=>`<figure><img src="${p.data}">${p.caption?`<figcaption>${esc(p.caption)}</figcaption>`:''}</figure>`).join('')}</div>`:''}
@@ -2900,12 +2887,6 @@ function icaShow(){
   $('#icaStd').style.display=none?'none':'';
 }
 function invAuto(){const f=$('#mf');if(f.inv_farReq.value)f.inv_farDue.value=addBiz(f.inv_farReq.value,num(db.settings.farDays)||5)}
-function invVerdict(){
-  const f=$('#mf'),v=f.inv_verdict.value;
-  if(v){f.resp.value=VERDICT_RESP[v];if(!f.inv_verdictDate.value)f.inv_verdictDate.value=today()}
-  if(v==='협력사'&&!f.partNo.value.trim())toast('협력사 귀책 — 원인 품번을 지정해야 NCR을 발행할 수 있습니다');
-  respChanged();renderSev();
-}
 let curSev={};
 /* ---- 조사 · 진행 기록 (통합 타임라인) ---- */
 const LOG_KINDS=['협력사 연락','현장 확인','측정·시험','회의·보고','조치 실시','조사','기타'];
@@ -3713,7 +3694,7 @@ function editNcr(id,preset,mode){
   const S=db.settings;
   const n=id?{...db.ncrs.find(x=>x.id===id)}:{issueDate:today(),owner:S.owners[0]||'',...(preset||{})};
   curLinks=[...(n.defectIds||[])];
-  {const r=farAlign(n.far,curLinks,false);if(r){n.far=r.far;n._farInh=defLabel(r.src);n._farSrcId=r.src.id}}
+  {const r=farAlign(n.far,curLinks,false);if(r)n.far=r.far}   // FAR 은 FAR 화면이 원본 — NCR 창에는 읽기 전용 요약만
   curStock=(n.stock&&n.stock.length?n.stock:STOCK_DEF.map(l=>({loc:l}))).map(r=>({loc:r.loc||'',stocked:r.stocked??r.qty??'',ng:r.ng??''}));
   curExcl=new Set(n.photoExcl||[]);
   curContain=(n.contain&&n.contain.length?n.contain:CONTAIN_DEF.map(l=>({loc:l}))).map(r=>({loc:r.loc||'',target:r.target??'',sorted:r.sorted??'',ng:r.ng??'',done:r.done||''}));
@@ -3722,7 +3703,7 @@ function editNcr(id,preset,mode){
   const has8D=!!n.replyDate||['d4','d5','d6','d7','d8'].some(k=>String(n[k]||'').trim());
  const sevD=(n.defectIds||[]).map(i=>db.defects.find(d=>d.id===i)).filter(Boolean).map(sevOf).sort((a,b)=>'ABC'.indexOf(a.grade)-'ABC'.indexOf(b.grade)||b.score-a.score)[0];
   curNcrSev=sevD||null;
-  const body=`${id?ncrTrack(n):''}${sevD?`<div class="banner" style="background:${sevD.grade==='A'?'var(--badb)':sevD.grade==='B'?'var(--warnb)':'var(--mut)'};border-color:transparent;color:#1d2433">연결 불량 심각도 <span class="bg ${SEV_CLS[sevD.grade]}" style="font-size:13px">${sevD.grade}</span> ${sevD.score}점${sevD.forced.length?' (강제 A: '+esc(sevD.forced.join(', '))+')':''}${sevD.overridden?' (수동 조정: '+esc(sevD.reason)+')':''} → 권장 대응 <b>${sevD.resp}</b></div>`:''}${ncrTabsBar(id,n,!!mode)}<div class="ntp" data-p="a">
+  const body=`${id?ncrTrack(n):''}${sevD?`<div class="banner" style="background:${sevD.grade==='A'?'var(--badb)':sevD.grade==='B'?'var(--warnb)':'var(--mut)'};border-color:transparent;color:#1d2433">연결 불량 심각도 <span class="bg ${SEV_CLS[sevD.grade]}" style="font-size:13px">${sevD.grade}</span> ${sevD.score}점${sevD.forced.length?' (강제 A: '+esc(sevD.forced.join(', '))+')':''}${sevD.overridden?' (수동 조정: '+esc(sevD.reason)+')':''} → 권장 대응 <b>${sevD.resp}</b></div>`:''}${farLine(n)}${ncrTabsBar(id,n,!!mode)}<div class="ntp" data-p="a">
 <div class="fg">
     <label>NCR 번호<input name="no" value="${esc(n.no)}" placeholder="저장 시 자동 채번"></label>
     <label>발행일 *<input type="date" name="issueDate" value="${esc(n.issueDate)}" data-prev="${esc(n.issueDate)}" oninput="ncrAutoDates('issue')"></label>
@@ -3817,9 +3798,6 @@ function editNcr(id,preset,mode){
   </div>
   <div style="margin-top:10px;font-size:12px;color:var(--sub)">재고 위치별 선별 결과 <button type="button" class="b s" onclick="curContain.push({loc:'',target:'',sorted:'',ng:'',done:''});mfDirty=true;renderContain()">+ 행</button></div>
   <div id="containBox"></div></div>
-  </div>
-<div class="ntp" data-p="f">
-  ${farHTML(n)}
   </div>
 <div class="ntp" data-p="c">
   <div class="sec">유효성 검증</div>
@@ -3947,15 +3925,15 @@ function concCommit(n){
   n.concDocs=curConc.map(r=>r.id);if(!n.concDocs.length)delete n.concDocs;
   curConc.forEach(r=>r.isNew=false);curConcDel=[];
 }
-const NCR_TABS=[['a','① 발행 정보'],['n','② 통보서 내용'],['r','대책서 회신'],['b','D3 봉쇄'],['f','불량 분석 (FAR)'],['c','유효성 검증 · 종결'],['d','진행 기록']];
-const NCR_MODES={issue:{l:'발행 · 통보',tabs:['a','n','d'],t:'발행 정보'},reply:{l:'협력사 회신',tabs:['r','b','f','d'],t:'협력사 회신'},verify:{l:'검증 · 종결',tabs:['c','d'],t:'검증 · 종결'}};
+const NCR_TABS=[['a','① 발행 정보'],['n','② 통보서 내용'],['r','대책서 회신'],['b','D3 봉쇄'],['c','유효성 검증 · 종결'],['d','진행 기록']];
+const NCR_MODES={issue:{l:'발행 · 통보',tabs:['a','n','d'],t:'발행 정보'},reply:{l:'협력사 회신',tabs:['r','b','d'],t:'협력사 회신'},verify:{l:'검증 · 종결',tabs:['c','d'],t:'검증 · 종결'}};
 let ncrModeCur='issue',ncrCurId=null,ncrCurNo='';
 // solo: 목록의 단추(발행 정보 · 회신 · 검증)로 단계를 골라 연 창 — 그 단계만 보이고, 단계 전환 줄은 넣지 않음
 function ncrTabsBar(id,n,solo){
   const fl=id?ncrFlags(n):{},dot={reply:fl.d3Late||fl.replyLate,verify:fl.verifyLate};
   const lg=(n.logs||[]).length;
   const modes=id&&!solo?`<div class="nmodes" id="ncrModes" role="tablist" aria-label="NCR 화면">${Object.entries(NCR_MODES).map(([k,m])=>`<button type="button" data-m="${k}" onclick="ncrMode('${k}')">${m.l}${dot[k]?'<i class="tdot" title="기한 경과"></i>':''}</button>`).join('')}</div>`:'';
-  const dotT={r:fl.replyLate,b:fl.d3Late,f:id&&farState(n)==='지연',c:fl.verifyLate};
+  const dotT={r:fl.replyLate,b:fl.d3Late,c:fl.verifyLate};
   return modes+`<div class="dtabs" id="ncrTabs" role="tablist">${NCR_TABS.map(([k,l])=>`<button type="button" role="tab" data-t="${k}" onclick="ncrTab('${k}')">${l}${k==='d'&&lg?` <span class="mono" style="opacity:.7">${lg}</span>`:''}${dotT[k]?'<i class="tdot" title="기한 경과"></i>':''}</button>`).join('')}</div>`;
 }
 function ncrModeDefault(n,id){
@@ -4088,70 +4066,49 @@ const farOn=n=>!!(n&&n.far&&n.far.reqDate);
 function farState(n){if(!farOn(n))return '';const f=n.far;if(f.replyDate)return f.review==='재분석 요청'?'재분석 요청':'회신';return f.due&&today()>f.due?'지연':'요청'}
 const FAR_CLS={'요청':'inf','지연':'bad','회신':'ok','재분석 요청':'warn'};
 const farBadge=n=>{const st=farState(n);return st?`<span class="bg ${FAR_CLS[st]}" title="불량 분석 요청 (FAR)">FAR ${st}</span>`:''};
-function farFormVals(){const f=$('#mf');if(!f||!f.far_reqDate)return null;
-  return {reqDate:f.far_reqDate.value,due:f.far_due.value,purpose:f.far_purpose.value,items:[...f.querySelectorAll('input[name=far_item]:checked')].map(x=>x.value),
-    sampleQty:f.far_sampleQty.value.trim(),shipDate:f.far_shipDate.value,shipRef:f.far_shipRef.value.trim(),replyDate:f.far_replyDate.value,verdict:f.far_verdict.value,summary:f.far_summary.value.trim(),review:f.far_review.value,note:f.far_note.value.trim()}}
-function farHTML(n){const f=n.far||{},on=farOn(n);
-  return `<details id="farWrap" open style="margin-top:14px"><summary class="sec" style="cursor:pointer;list-style:revert">불량 분석 요청 (FAR) <span class="muted" style="font-weight:normal;font-size:12px">— 선택 · 반품 시료의 고장 분석을 협력사에 요청할 때만 씁니다 (8D·간이 대책서와 함께 사용 가능)</span> ${farBadge(n)}</summary>
-  ${n._farInh?`<div class="banner" style="margin:0 0 10px;background:var(--pri2);border-color:transparent;color:var(--ink)">요청일 · 회신 기한 · 회신일 · 시료 수량 · 분석 결과 요약은 <b>귀책 조사</b>(${esc(n._farInh)})에서 관리합니다. 여기서는 읽기만 됩니다. <a class="lk" onclick="farGoInv('${n._farSrcId}')">귀책 조사 열기</a></div>`:''}
-  <div class="fg">
-    <label>FAR 요청일<input type="date" name="far_reqDate" value="${esc(f.reqDate)}" onchange="farAutoDue()" ${n._farInh?'readonly style="background:var(--bg2,#f1f3f5);color:var(--sub)" title="귀책 조사에서 수정"':''}></label>
-    <label title="비우면 요청일 + ${num(db.settings.farDays)||5}영업일">분석 회신 기한<input type="date" name="far_due" value="${esc(f.due)}" ${n._farInh?'readonly style="background:var(--bg2,#f1f3f5);color:var(--sub)" title="귀책 조사에서 수정"':''}></label>
-    <label>요청 목적<select name="far_purpose">${opts(FAR_PURPOSE,f.purpose||'',true)}</select></label>
-    <label>시료 수량<input name="far_sampleQty" value="${esc(f.sampleQty)}" placeholder="예: 5 EA" ${n._farInh?'readonly style="background:var(--bg2,#f1f3f5);color:var(--sub)" title="귀책 조사에서 수정"':''}></label>
-    <label class="full">요청 분석 항목<span class="checks" style="display:flex;flex-wrap:wrap;gap:4px 14px;padding-top:3px">${FAR_ITEMS.map(x=>`<label style="flex-direction:row;align-items:center;gap:4px;color:var(--ink)"><input type="checkbox" name="far_item" value="${esc(x)}" ${(f.items||[]).includes(x)?'checked':''}>${esc(x)}</label>`).join('')}</span></label>
-    <label>시료 발송일<input type="date" name="far_shipDate" value="${esc(f.shipDate)}"></label>
-    <label>송장 · 반출증 번호<input name="far_shipRef" value="${esc(f.shipRef)}"></label>
-    <label>분석 결과 회신일<input type="date" name="far_replyDate" value="${esc(f.replyDate)}" ${n._farInh?'readonly style="background:var(--bg2,#f1f3f5);color:var(--sub)" title="귀책 조사에서 수정"':''}></label>
-    <label>협력사 분석 판정<select name="far_verdict">${opts(FAR_VERDICT,f.verdict||'',true)}</select></label>
-    <label class="full">분석 결과 요약<textarea name="far_summary" ${n._farInh?'readonly title="귀책 조사에서 수정"':''} style="min-height:52px${n._farInh?';background:var(--bg2,#f1f3f5);color:var(--sub)':''}" placeholder="예: 파단면 관찰 결과 피로 파괴, 열처리 경도 HRC 38 (규격 42~48) 미달">${esc(f.summary)}</textarea></label>
-    <label>당사 검토<select name="far_review">${opts(FAR_REVIEW,f.review||'',true)}</select></label>
-    <label class="full" style="grid-column:span 3">검토 의견 · 비고<input name="far_note" value="${esc(f.note)}" placeholder="예: 경도 측정 성적서 원본 추가 요청"></label>
-  </div>
-  <div class="row" style="margin-top:6px;gap:8px"><button type="button" class="b s" onclick="ncrFarPrint()">FAR 요청서 출력</button><span class="muted" style="font-size:12px">분석 보고서 · 시료 발송 증빙은 ‘조사 · 진행 기록’에 첨부하면 기록과 함께 남습니다. 요청일을 비우면 FAR 없음으로 처리됩니다.</span></div></details>`}
-function farFromInv(d){const iv=d.inv||{};
-  return{reqDate:iv.farReq,due:iv.farDue||'',purpose:'귀책 판정',items:[],sampleQty:iv.sample||'',shipDate:'',shipRef:'',replyDate:iv.farRecv||'',
-    verdict:iv.verdict==='협력사'?'협력사 귀책 인정':iv.verdict==='공동'?'추가 분석 필요':iv.verdict==='사내'?'귀책 불인정':iv.verdict==='원인 불명'?'원인 불명·재현 안 됨':'',
-    summary:iv.farResult||'',review:iv.verdict?'수용':'',note:`불량 귀책 조사에서 이어받음 (${defLabel(d)})`}}
-// FAR 은 귀책 조사가 원본 — 요청일 · 회신 기한 · 회신일 · 시료 · 분석 결과 요약은 귀책 조사에만 입력하고 NCR 은 읽어서 보여 줌.
-// NCR 에만 있는 항목(요청 목적 · 분석 항목 · 발송 · 판정 · 당사 검토)은 NCR 에 그대로 둠.
-const FAR_SHARED=[['reqDate','farReq'],['due','farDue'],['replyDate','farRecv'],['sampleQty','sample'],['summary','farResult']];
-// n(NCR)의 FAR 공통 항목을 연결 불량의 귀책 조사 값으로 맞춤. 귀책 조사가 비어 있고 NCR 에만 값이 있으면 귀책 조사로 옮김(옛 기록 보존).
-// 돌려줌: {far, src, chFar, chInv} — src 가 없으면 null
-function farAlign(far,ids,write=true){
-  const src=invFarSrc(ids);if(!src)return null;
-  const iv=src.inv,f=far&&far.reqDate?{...far}:farFromInv(src);let chFar=!(far&&far.reqDate),chInv=false;
-  FAR_SHARED.forEach(([nk,ik])=>{const a=String(iv[ik]??''),b=String(f[nk]??'');
-    if(!a&&b){if(write){iv[ik]=b;chInv=true}}else if(a!==b){f[nk]=a;chFar=true}});
-  return {far:f,src,chFar,chInv};
+// NCR 창 위쪽의 FAR 요약 (읽기 전용) — 입력 · 요청서 출력은 FAR 화면에서 함
+function farLine(n){
+  const f=n&&n.far;if(!f||!f.reqDate)return '';
+  const bits=[`요청 ${esc(f.reqDate)}`,f.replyDate?`회신 ${esc(f.replyDate)}`:(f.due?`회신 기한 ${esc(f.due)}`:''),f.verdict?`협력사 분석 판정: ${esc(f.verdict)}`:'',f.review?`당사 검토: ${esc(f.review)}`:''].filter(Boolean).join(' · ');
+  return `<div class="banner" id="farLine" style="background:var(--pri2);border-color:transparent;color:var(--ink)">${farBadge(n)||'<b>FAR</b>'} ${bits}${f.src&&db.defects.find(d=>d.id===f.src)?` <a class="lk" onclick="farGoInv('${f.src}')">FAR 열기</a>`:' <span class="muted">(연결 불량이 없는 NCR — 읽기만 됩니다)</span>'}${f.summary?`<div style="margin-top:3px;font-size:12.5px;white-space:pre-wrap">${esc(f.summary)}</div>`:''}</div>`;
 }
-// 저장된 모든 NCR 을 귀책 조사에 맞춤 (화면을 그릴 때 · 저장할 때 호출 — 바뀐 것만 고침)
+// FAR 은 FAR 화면(연결 불량의 귀책 조사)이 원본 — NCR 창에서는 입력하지 않음.
+// n.far 는 연결 불량의 FAR 를 그대로 비춘 값(목록 배지 · 통보서 문구 · 지연 알림용)이고, src 에 원본 불량 id 를 둠.
+const FAR_SHARED=[['reqDate','farReq'],['due','farDue'],['replyDate','farRecv'],['sampleQty','sample'],['summary','farResult'],
+  ['purpose','farPurpose'],['items','farItems'],['shipDate','farShipDate'],['shipRef','farShipRef'],['verdict','farVerdict'],['review','farReview'],['note','farNote']];
+const farEmpty=v=>v==null||v===''||(Array.isArray(v)&&!v.length);
+const farSame=(a,b)=>JSON.stringify(farEmpty(a)?'':a)===JSON.stringify(farEmpty(b)?'':b);
+function farFromInv(d){const iv=d.inv||{},f={src:d.id};FAR_SHARED.forEach(([nk,ik])=>{const v=iv[ik];f[nk]=nk==='items'?(Array.isArray(v)?[...v]:[]):String(v??'')});return f}
+function invFarSrc(ids){return (ids||[]).map(i=>db.defects.find(d=>d.id===i)).filter(d=>d&&d.inv&&d.inv.farReq).sort((a,b)=>(b.inv.farReq||'').localeCompare(a.inv.farReq||''))[0]||null}
+// NCR 의 far 를 연결 불량의 FAR 에 맞춤. 돌려줌: {far, src, chFar, chInv} — 할 일이 없으면 null
+//  · 예전에 NCR 창에서 입력한 값(요청 목적 · 분석 항목 · 발송 · 판정 · 검토 등)은 FAR 화면이 비어 있을 때만 FAR 화면으로 옮김
+//  · 연결 불량에 FAR 가 없고 NCR 에만 있으면(옛 기록) 첫 연결 불량의 FAR 로 옮김. 연결 불량이 없는 NCR 은 그대로 둠
+function farAlign(far,ids,write=true){
+  const ds=(ids||[]).map(i=>db.defects.find(d=>d.id===i)).filter(Boolean),has=!!(far&&far.reqDate);
+  let src=invFarSrc(ids),chInv=false;
+  if(!src){
+    if(!has)return null;
+    if(far.src)return {far:null,src:null,chFar:true,chInv:false};   // FAR 화면에서 지웠거나 그 불량의 연결을 해제함
+    if(!ds.length||!write)return null;                               // 연결 불량이 없는 옛 NCR — 그대로 둠
+    src=ds[0];src.inv=src.inv||{};
+  }
+  const iv=src.inv;
+  // 예전에 FAR 화면 값에서 자동으로 만들었던 항목은 옮기지 않음
+  const der=has&&/^불량 귀책 조사에서 이어받음/.test(far.note||'')?{note:far.note,purpose:'귀책 판정',review:iv.verdict?'수용':'',verdict:({'협력사':'협력사 귀책 인정','공동':'추가 분석 필요','사내':'귀책 불인정','원인 불명':'원인 불명·재현 안 됨'})[iv.verdict]||''}:{};
+  if(has&&write)FAR_SHARED.forEach(([nk,ik])=>{const b=far[nk];if(farEmpty(iv[ik])&&!farEmpty(b)&&!(nk in der&&der[nk]===b)){iv[ik]=Array.isArray(b)?[...b]:b;chInv=true}});
+  const f=farFromInv(src);
+  return {far:f,src,chFar:!has||far.src!==f.src||FAR_SHARED.some(([nk])=>!farSame(far[nk],f[nk])),chInv};
+}
+// 저장된 모든 NCR 을 FAR 화면에 맞춤 (화면을 그릴 때 · 저장할 때 호출 — 바뀐 것만 고침)
 function farSyncAll(){
   if(typeof RO!=='undefined'&&RO)return 0;let n=0;
   (db.ncrs||[]).forEach(x=>{const r=farAlign(x.far,x.defectIds);if(!r)return;
-    if(r.chFar){x.far=r.far;touch(x);n++}if(r.chInv){touch(r.src);n++}});
+    if(r.chFar){x.far=r.far;touch(x);n++}if(r.chInv&&r.src){touch(r.src);n++}});
   return n;
 }
-function invFarSrc(ids){return (ids||[]).map(i=>db.defects.find(d=>d.id===i)).filter(d=>d&&d.inv&&d.inv.farReq).sort((a,b)=>(b.inv.farReq||'').localeCompare(a.inv.farReq||''))[0]||null}
-// NCR 창에서 귀책 조사로 — 쓰던 내용이 있으면 물어봄
-async function farGoInv(did){if(mfDirty&&!await askConfirm({title:'저장하지 않은 내용이 있습니다',msg:'NCR 창을 닫고 귀책 조사를 엽니다. 쓰던 내용은 사라집니다.',ok:'귀책 조사 열기',danger:false}))return;closeModal(true);state.tab='inv';render();editInv(did)}
+// NCR 창에서 FAR 화면으로 — 쓰던 내용이 있으면 물어봄
+async function farGoInv(did){if(mfDirty&&!await askConfirm({title:'저장하지 않은 내용이 있습니다',msg:'NCR 창을 닫고 FAR 화면을 엽니다. 쓰던 내용은 사라집니다.',ok:'FAR 열기',danger:false}))return;closeModal(true);state.tab='inv';render();editInv(did)}
 
-function farAutoDue(){const f=$('#mf');if(f.far_reqDate.value&&!f.far_due.value)f.far_due.value=addBiz(f.far_reqDate.value,num(db.settings.farDays)||5);mfDirty=true}
-function ncrFarPrint(){
-  const f=farFormVals(),fm=$('#mf');if(!f||!f.reqDate){toast('FAR 요청일을 먼저 입력하세요');return}
-  const w=reportWin(),S=db.settings,sid=fm.supplierId.value,sp=supById(sid),no=fm.no.value||'(저장 시 채번)';
-  const att=fm.supAttn?.value||(sp?(ensureContacts(sp),(sp.contacts.find(c=>c.active!==false&&c.role==='품질 담당')||primaryOf(sp)||{}).name):'')||'';
-  const row=(k,v)=>`<tr><th>${k}</th><td class="pre">${esc(v||'')}</td></tr>`;
-  const html=reportFrame(`<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>FAR_${esc(no)}</title><style>body{font-family:'Malgun Gothic','맑은 고딕',sans-serif;font-size:12px;color:#111;margin:24px}
-  h1{font-size:18px;margin:8px 0 2px}table{border-collapse:collapse;width:100%;margin-top:10px}th,td{border:1px solid #888;padding:6px 8px;text-align:left;vertical-align:top}th{background:#eef1f5;width:28%}.pre{white-space:pre-wrap}.s{color:#555}
-  .sign{margin-top:24px;display:flex;justify-content:flex-end;gap:30px}</style></head><body>${logoHead()}
-  <h1>불량 분석 요청서 (Failure Analysis Request)</h1><div class="s">${esc(S.company||'')} ${esc(S.dept||'')} · 발행 ${esc(f.reqDate)} · 관련 NCR ${esc(no)}</div>
-  <table>${row('수신 (To)',`${sp?sp.name:''} ${att}`)}${row('부품 (Part No. / Name)',`${fm.partNo.value} ${fm.partName.value}`)}${row('불량 내용 (Defect)',fm.title.value+(fm.actual?.value?'\n'+fm.actual.value:''))}
-    ${row('요청 목적 (Purpose)',f.purpose)}${row('요청 분석 항목 (Requested analysis)',f.items.join(' / '))}${row('시료 (Samples)',`${f.sampleQty||''}${f.shipDate?` · 발송 ${f.shipDate}`:''}${f.shipRef?` · ${f.shipRef}`:''}`)}
-    ${row('회신 기한 (Reply due)',f.due)}${row('회신 요구사항 (Requirements)','1. 분석 방법·조건과 측정 데이터(원본) 첨부 / Attach method, conditions and raw data\n2. 고장 메커니즘과 귀책 판단 근거 / Failure mechanism and basis of responsibility\n3. 동일 LOT 영향 범위 / Impact on the same lot\n4. 분석 후 시료 반환 여부 회신 / Advise whether samples will be returned')}</table>
-  <div class="sign"><div>담당 ${esc(fm.owner?.value||S.owners[0]||'')}</div><div>승인 ${esc(S.approver||'')}</div></div></body></html>`);
-  reportShow(w,html,`FAR_${no}.html`);
-}
 function typeDays(t,S){S=S||db.settings;return t==='간이 대책서'?num(S.replySimple)||5:num(S.reply8D)||num(S.replyDays)||7}
 let curStock=[],curExcl=new Set(),curContain=[],curVLots=[];
 function renderContain(){
@@ -4203,7 +4160,7 @@ async function descTemplate(){
 function defaultReq(type,due,far,site,esc){
   let b=defaultReq0(type,due);const k=()=>(b.match(/^\d+\./gm)||[]).length+1;
   if(esc&&type!=='단순 통보')b+=`\n${k()}. Outflow cause — why not detected at your outgoing inspection, and detection countermeasure${esc>=2?' (100% inspection or error-proofing before shipment)':''} (유출 원인 · 출하검사 대책${esc>=2?' — 출하 전 전수 또는 자동 검출':''})`;
-  if(far&&far.reqDate){const fd=far.due?`${+far.due.slice(5,7)}/${+far.due.slice(8,10)}`:'';b+=`\n${k()}. Failure analysis report (FAR) for returned samples${far.sampleQty?' ('+far.sampleQty+')':''} : ~ ${fd} 限`}
+  if(far&&far.reqDate&&!far.replyDate){const fd=far.due?`${+far.due.slice(5,7)}/${+far.due.slice(8,10)}`:'';b+=`\n${k()}. Failure analysis report (FAR) for returned samples${far.sampleQty?' ('+far.sampleQty+')':''} : ~ ${fd} 限`}
   if(site)b+=`\n${k()}. On-site audit at your plant will be conducted (현장 감사 예정)`;
   return b;
 }
@@ -4214,7 +4171,9 @@ function defaultReq0(type,due){
 }
 function ncrVerifyDueAuto(n){if(n.reqType==='단순 통보')return '';const S=db.settings,b=n.validity==='적정'&&n.approvedDate?n.approvedDate:n.issueDate;return b?addDays(b,S.verifyDays):''}
 function ncrDue(n){return n.reqType==='단순 통보'?'':n.dueDate||addDays(n.requestDate||n.issueDate||today(),typeDays(n.reqType))}
-function fillReq(){const f=$('#mf');const due=f.dueDate.value||addDays(f.requestDate.value||f.issueDate.value||today(),typeDays(f.reqType.value));f.requirements.value=defaultReq(f.reqType.value,due,farFormVals(),!!(f.siteAudit&&f.siteAudit.value==='요청'),escLevel((curLinks||[]).map(i=>db.defects.find(d=>d.id===i)).filter(Boolean)));mfDirty=true}
+// 지금 열린 NCR 창의 FAR (연결 불량 기준)
+function ncrFarCur(){const pf=((ncrCurId&&db.ncrs.find(x=>x.id===ncrCurId))||{}).far||null,r=farAlign(pf,curLinks,false);return r?r.far:pf}
+function fillReq(){const f=$('#mf');const due=f.dueDate.value||addDays(f.requestDate.value||f.issueDate.value||today(),typeDays(f.reqType.value));f.requirements.value=defaultReq(f.reqType.value,due,ncrFarCur(),!!(f.siteAudit&&f.siteAudit.value==='요청'),escLevel((curLinks||[]).map(i=>db.defects.find(d=>d.id===i)).filter(Boolean)));mfDirty=true}
 async function renderNcrPhotos(){
   const b=$('#ncrPhotoBox');if(!b)return;
   const ids=curLinks.flatMap(i=>db.defects.find(d=>d.id===i)?.photos||[]);
@@ -4279,10 +4238,8 @@ function refreshLinks(){
     +`<div class="row" style="margin-top:8px"><select id="linkSel" style="max-width:520px"><option value="">— 불량 추가 연결 (같은 협력사, NCR 미연결) —</option>${cand.map(d=>`<option value="${d.id}">${esc(d.date)} · ${esc(d.partNo)} ${esc(d.partName)} · ${esc(d.type)} · ${num(d.qty)}개</option>`).join('')}</select><button type="button" class="b s" onclick="const v=$('#linkSel').value;if(v){curLinks.push(v);refreshLinks()}">추가</button></div>`;
 }
 function saveNcr(id){
-  const o=gather(),S=db.settings,farV=farFormVals();Object.keys(o).forEach(k=>{if(k.startsWith('far_'))delete o[k]});
-  {const r=farV&&farAlign(farV,curLinks);if(r){Object.assign(farV,r.far);if(r.chInv)touch(r.src)}}   // 귀책 조사가 원본
-  if(farV){if(farV.reqDate&&!farV.due)farV.due=addBiz(farV.reqDate,num(S.farDays)||5);o.far=farV.reqDate?farV:null;
-    if(farV&&!farV.reqDate&&(farV.replyDate||farV.summary||farV.sampleQty)){ncrTab('f');toast('FAR 요청일을 입력하세요 (비우면 FAR 없음으로 처리)');return null}}
+  const o=gather(),S=db.settings;
+  {const pf=((id&&db.ncrs.find(x=>x.id===id))||{}).far||null,r=farAlign(pf,curLinks);o.far=r?r.far:pf;if(r&&r.chInv&&r.src)touch(r.src)}   // FAR 은 FAR 화면이 원본 — NCR 은 비춘 값만 가짐
   if(!o.issueDate){ncrTab('a');toast('발행일을 입력하세요');return null}
   if(o.notifyYN==='통보 완료'&&!o.notifyDate)o.notifyDate=today();delete o.notifyYN;
   if(o.notifyDate&&o.notifyDate<o.issueDate){ncrTab('a');toast('통보일이 발행일보다 빠릅니다');return null}

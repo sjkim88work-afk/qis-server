@@ -322,24 +322,39 @@ def main(seed_path):
             A.click("#mfoot button.p:has-text('저장')"); A.wait_for_timeout(900)
             ok(A.evaluate("i=>(db.defects.find(d=>d.id===i).logs||[]).filter(l=>/삭제 시험 기록/.test(l.text)).length", did) == 0, "실행 기록 삭제 → 저장 후 사라짐")
             ok(A.evaluate("i=>(db.defects.find(d=>d.id===i).logs||[]).length", did) == n0, "다른 기록은 그대로")
-            # FAR 단일 원본: 귀책 조사 값이 NCR 의 FAR 로 그대로 반영, NCR 전용 항목은 유지, 귀책 조사가 비어 있으면 NCR 값이 귀책 조사로 옮겨짐
+            # FAR 은 FAR 화면 한 곳에서: NCR 의 far 는 연결 불량의 FAR 를 비춘 값 · 옛 NCR 입력값은 FAR 화면으로 옮겨짐 · NCR 창에는 읽기 전용 요약만
             r = A.evaluate("""()=>{
-              const d=db.defects.find(x=>!x.deleted&&!x.ncrId)||db.defects[0];
-              d.inv=Object.assign({},d.inv,{farReq:'2026-11-02',farDue:'2026-11-09',farRecv:'',sample:'',farResult:''});touch(d);
+              const free=db.defects.filter(x=>!x.deleted&&!x.ncrId),d=free[0]||db.defects[0],d2=free[1]||db.defects[1];
+              d.inv=Object.assign({},d.inv,{farReq:'2026-11-02',farDue:'2026-11-09',farRecv:'',sample:'',farResult:'',farPurpose:'',farItems:[],farShipRef:''});touch(d);
               const n={id:uid(),no:'FAR-TEST',issueDate:today(),supplierId:d.supplierId,defectIds:[d.id],
-                far:{reqDate:'2026-10-01',due:'2026-10-08',purpose:'고장 분석',items:['치수'],sampleQty:'5 EA',shipDate:'2026-11-03',shipRef:'A-1',replyDate:'',verdict:'',summary:'',review:'',note:''}};
+                far:{reqDate:'2026-10-01',due:'2026-10-08',purpose:'고장 원인 규명',items:['치수 측정'],sampleQty:'5 EA',shipDate:'2026-11-03',shipRef:'A-1',replyDate:'',verdict:'',summary:'',review:'',note:'불량 귀책 조사에서 이어받음 (x)'}};
               db.ncrs.push(n);touch(n);farSyncAll();
-              const a={req:n.far.reqDate,due:n.far.due,purpose:n.far.purpose,ship:n.far.shipRef,invSample:d.inv.sample};
-              d.inv.farRecv='2026-11-06';d.inv.farResult='경도 미달';touch(d);farSyncAll();
-              const b={reply:n.far.replyDate,sum:n.far.summary};
-              editNcr(n.id);const ro=document.querySelector('#mf [name=far_reqDate]').readOnly&&document.querySelector('#mf [name=far_summary]').readOnly&&!document.querySelector('#mf [name=far_shipRef]').readOnly;
-              const banner=document.querySelector('#farWrap').innerText.includes('귀책 조사');closeModal(true);
-              db.ncrs=db.ncrs.filter(x=>x!==n);return {a,b,ro,banner};}""")
-            ok(r["a"]["req"] == "2026-11-02" and r["a"]["due"] == "2026-11-09", "FAR: 귀책 조사의 요청일 · 기한이 NCR 에 반영")
-            ok(r["a"]["purpose"] == "고장 분석" and r["a"]["ship"] == "A-1", "FAR: NCR 전용 항목은 그대로")
-            ok(r["a"]["invSample"] == "5 EA", "FAR: 귀책 조사에 없던 시료 수량은 NCR 값이 귀책 조사로 옮겨짐")
-            ok(r["b"]["reply"] == "2026-11-06" and r["b"]["sum"] == "경도 미달", "FAR: 귀책 조사 회신을 고치면 NCR 도 같이 바뀜")
-            ok(r["ro"] and r["banner"], "FAR: NCR 창에서 공통 항목은 읽기 전용 · 귀책 조사 안내")
+              const a={req:n.far.reqDate,due:n.far.due,src:n.far.src===d.id,purpose:d.inv.farPurpose,items:(d.inv.farItems||[]).join(),ship:d.inv.farShipRef,sample:d.inv.sample,note:d.inv.farNote||'',mirror:n.far.purpose+'/'+n.far.shipRef};
+              d.inv.farRecv='2026-11-06';d.inv.farResult='경도 미달';d.inv.farVerdict='협력사 귀책 인정';touch(d);farSyncAll();
+              const b={reply:n.far.replyDate,sum:n.far.summary,vd:n.far.verdict,st:farState(n)};
+              editNcr(n.id,null,'reply');const ui={inputs:document.querySelectorAll('#mf [name^=far_]').length,tab:!!document.querySelector('#ncrTabs [data-t=f]'),line:(document.querySelector('#farLine')||{innerText:''}).innerText,print:document.querySelector('#modal').innerText.includes('FAR 요청서 출력')};mfDirty=false;closeModal(true);
+              // 옛 기록: 연결 불량에 FAR 가 없고 NCR 에만 있으면 그 불량의 FAR 로 옮김
+              d2.inv=Object.assign({},d2.inv,{farReq:'',farDue:'',farRecv:''});
+              const m={id:uid(),no:'FAR-OLD',issueDate:today(),supplierId:d2.supplierId,defectIds:[d2.id],far:{reqDate:'2026-09-01',due:'2026-09-08',purpose:'재현 시험',items:[],sampleQty:'2 EA',replyDate:'',summary:''}};
+              db.ncrs.push(m);farSyncAll();const c={req:d2.inv.farReq,purpose:d2.inv.farPurpose,src:m.far.src===d2.id};
+              // FAR 화면에서 FAR 를 지우면 NCR 쪽도 없어짐 · 연결 불량이 없는 NCR 의 FAR 는 그대로
+              d2.inv.farReq='';farSyncAll();c.gone=m.far===null;
+              const z={id:uid(),no:'FAR-NOLINK',issueDate:today(),defectIds:[],far:{reqDate:'2026-08-01',due:'2026-08-08',summary:'남김'}};db.ncrs.push(z);farSyncAll();c.keep=z.far.summary==='남김';
+              // FAR 화면: 옮겨 온 항목을 입력 · 저장
+              state.tab='inv';render();editInv(d.id);const f=document.querySelector('#mf');const scr={purpose:f.inv_farPurpose.value,item:f.querySelector('input[name=inv_farItem][value="치수 측정"]').checked,ship:f.inv_farShipRef.value,vd:f.inv_farVerdict.value};
+              f.inv_farReview.value='재분석 요청';f.querySelector('input[name=inv_farItem][value="외관 관찰"]').checked=true;saveInv(d.id);
+              scr.saved=(d.inv.farItems||[]).join()+'|'+d.inv.farReview+'|'+n.far.review+'|'+farState(n)+'|'+('farItem' in d.inv);
+              db.ncrs=db.ncrs.filter(x=>x!==n&&x!==m&&x!==z);return {a,b,ui,c,scr};}""")
+            ok(r["a"]["req"] == "2026-11-02" and r["a"]["due"] == "2026-11-09" and r["a"]["src"], "FAR: FAR 화면의 요청일 · 기한이 NCR 에 반영")
+            ok(r["a"]["purpose"] == "고장 원인 규명" and r["a"]["items"] == "치수 측정" and r["a"]["ship"] == "A-1" and r["a"]["sample"] == "5 EA", f"FAR: NCR 에만 있던 값이 FAR 화면으로 옮겨짐 ({r['a']})")
+            ok(r["a"]["note"] == "" and r["a"]["mirror"] == "고장 원인 규명/A-1", "FAR: 자동으로 만들었던 비고는 옮기지 않음 · NCR 은 같은 값을 비춤")
+            ok(r["b"]["reply"] == "2026-11-06" and r["b"]["sum"] == "경도 미달" and r["b"]["vd"] == "협력사 귀책 인정" and r["b"]["st"] == "회신", "FAR: FAR 화면 회신을 고치면 NCR 도 같이 바뀜")
+            ok(r["ui"]["inputs"] == 0 and not r["ui"]["tab"] and not r["ui"]["print"], "NCR 협력사 회신 창: FAR 탭 · 입력 칸 · 요청서 출력 없음")
+            ok("FAR 열기" in r["ui"]["line"] and "2026-11-02" in r["ui"]["line"] and "경도 미달" in r["ui"]["line"], "NCR 창: FAR 읽기 전용 요약 · FAR 열기 링크")
+            ok(r["c"]["req"] == "2026-09-01" and r["c"]["purpose"] == "재현 시험" and r["c"]["src"], "FAR: NCR 에만 있던 옛 FAR 는 연결 불량의 FAR 로 옮겨짐")
+            ok(r["c"]["gone"] and r["c"]["keep"], "FAR: FAR 화면에서 지우면 NCR 쪽도 없어짐 · 연결 불량 없는 NCR 의 FAR 는 그대로")
+            ok(r["scr"]["purpose"] == "고장 원인 규명" and r["scr"]["item"] and r["scr"]["ship"] == "A-1" and r["scr"]["vd"] == "협력사 귀책 인정", "FAR 화면: 요청 목적 · 분석 항목 · 송장 · 협력사 분석 판정 입력 칸")
+            ok(r["scr"]["saved"] == "외관 관찰,치수 측정|재분석 요청|재분석 요청|재분석 요청|false", f"FAR 화면 저장: 분석 항목 · 당사 검토 저장, NCR 배지에 반영 ({r['scr']['saved']})")
             # 단순 통보 NCR: 유효성 검증 없이 통보하면 종결
             r = A.evaluate("""() => {
               const n={id:uid(),no:'N-INFO',issueDate:addDays(today(),-40),reqType:'단순 통보',supplierId:db.suppliers[0].id,defectIds:[]};db.ncrs.push(n);
@@ -365,7 +380,7 @@ def main(seed_path):
               row.querySelector('a.lk').click();o.no=!!document.querySelector('#ncrModes');mfDirty=false;closeModal(true);return o}""")
             ok("통보서" not in r["btn"] and r["btn"].startswith("발행 정보"), f"NCR 목록: 통보서 단추 없음 ({r['btn']})")
             ok(not r["issue"]["sw"] and not r["reply"]["sw"] and not r["verify"]["sw"] and not r["no"], "NCR 목록의 단계 단추 · 번호: 단계 전환 줄 없이 그 단계만")
-            ok(r["issue"]["tabs"] == "and" and r["reply"]["tabs"] == "rbfd" and r["verify"]["tabs"] == "cd", f"NCR 단계별 탭 ({r['issue']['tabs']}/{r['reply']['tabs']}/{r['verify']['tabs']})")
+            ok(r["issue"]["tabs"] == "and" and r["reply"]["tabs"] == "rbd" and r["verify"]["tabs"] == "cd", f"NCR 단계별 탭 ({r['issue']['tabs']}/{r['reply']['tabs']}/{r['verify']['tabs']})")
             ok("발행 정보" in r["issue"]["t"] and "협력사 회신" in r["reply"]["t"] and "검증" in r["verify"]["t"], "NCR 창 제목에 단계 이름")
             ok(r["link"], "다른 화면의 NCR 링크(단계 지정 없음): 단계 전환 줄 유지")
             r = A.evaluate("""() => {const n=db.ncrs.find(x=>x.reqType!=='단순 통보')||db.ncrs[0],lab=()=>[...document.querySelector('#mfoot').children].filter(e=>!e.className.includes('mfsp')).map(e=>e.textContent).join(',');
