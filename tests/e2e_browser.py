@@ -557,6 +557,13 @@ def main(seed_path):
             ok(r["order3"].endswith(">다른 날"), "날짜가 다른 기록과는 순서를 바꾸지 않음")
             ok(r["edited"] == '2026-11-10T08:00/true/"2026-11-10"' and r["order4"].startswith("모름>오전>시각>오후>"), f"일시를 고치면 그날은 다시 시간순 · 수정 이력에 전 일시 ({r['order4']})")
             ok(r["tl0"] == "B 기록>A 기록" and r["tlmv"] == 2 and r["tl1"] == "A 기록>B 기록" and r["tlSaved"] == "mvA:1,mvB:0", f"실행 기록: 같은 실행일끼리 ▲▼로 순서 바꿈 · 바로 저장 ({r['tl0']} → {r['tl1']})")
+            # 협력사 품질: 협력사 목록도 접었다 폈다 (월별 입고수량 현황과 같은 방식)
+            r = A.evaluate("""async () => {const wait=ms=>new Promise(r=>setTimeout(r,ms)),o={};mfDirty=false;closeModal(true);delete state.sqOpen;go('sup');await wait(200);
+              const D=()=>[...document.querySelectorAll('#view details.card')],d0=D();o.n=d0.length;o.title=d0[0].querySelector('summary').textContent;o.open0=d0[0].open;o.rows=d0[0].querySelectorAll('tbody tr').length;
+              d0[0].querySelector('summary').click();await wait(150);o.st=state.sqOpen;render();await wait(150);o.open1=D()[0].open;
+              D()[0].querySelector('summary').click();await wait(150);render();await wait(150);o.open2=D()[0].open;return o}""")
+            ok(r["n"] >= 2 and r["title"].startswith("협력사별 품질 현황") and r["open0"] and r["rows"] >= 1, f"협력사 품질: 협력사 목록이 접는 칸 · 처음에는 펴져 있음 ({r['title'][:20]})")
+            ok(r["st"] is False and not r["open1"] and r["open2"], "접으면 다시 그려도 접힌 상태 유지 · 누르면 다시 펴짐")
             # 로그아웃
             A.click("button:has-text('로그아웃')"); A.wait_for_url("**/login")
             ok(True, "로그아웃")
