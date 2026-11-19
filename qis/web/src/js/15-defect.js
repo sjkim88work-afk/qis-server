@@ -483,8 +483,23 @@ const LOG_METHODS=['전화','메일','방문','회의','메신저','공문','기
 const phCache={};
 function tlInit(kind,obj){
   tl={own:JSON.parse(JSON.stringify(obj.logs||[])),kind,obj,edit:null,voiding:null,hist:new Set(),hideAuto:tl.hideAuto,
-    newPh:{},draftPh:[],editPh:null};
+    newPh:{},draftPh:[],editPh:null,other:false};
   curLogs=tl.own;renderLogs();tlLoadThumbs();
+  // 기록은 바로 저장하므로, 창의 ‘저장하지 않은 내용’ 표시(mfDirty)를 기록과 그 밖의 입력으로 나눠서 봄
+  const mf=$('#mf'),lb=$('#logBox');
+  if(mf&&!mf._tlWatch){mf._tlWatch=1;const h=e=>{if(!(e.target.closest&&e.target.closest('#logBox')))tl.other=true};mf.addEventListener('input',h);mf.addEventListener('change',h)}
+  if(lb&&!lb._tlWatch){lb._tlWatch=1;lb.addEventListener('focusin',()=>{if(mfDirty&&!tlDraftHas()&&tl.edit==null)tl.other=true})}
+}
+// 쓰다 만 기록이 있나
+function tlDraftHas(){return ['lgText','lgResult','lgParty'].some(k=>((document.getElementById(k)||{}).value||'').trim())||tl.draftPh.length>0}
+// 실행 기록은 바로 저장 — 추가 · 수정 · 취소 처리 · 삭제를 할 때마다 대상(불량 · NCR)에 반영. 아직 저장하지 않은 새 NCR 은 창을 저장할 때 함께 저장
+function tlPersist(msg){
+  const id=tl.obj&&tl.obj.id,o=id&&(tl.kind==='ncr'?db.ncrs:db.defects).find(x=>x.id===id);
+  if(!o||(typeof RO!=='undefined'&&RO)){mfDirty=true;return false}
+  o.logs=tlCommit().logs;tl.own.forEach(x=>{delete x._new;delete x._dirty});touch(o);save();
+  mfDirty=(tl.kind==='ncr'&&!!tl.other)||tl.edit!=null||tlDraftHas();
+  render();renderLogs();if(msg)toast(msg);
+  return true;
 }
 async function tlLoadThumbs(){
   const ids=[...tl.own,...caseReadonly(tl.kind,tl.obj)].flatMap(l=>l.photos||[]).filter(i=>!phCache[i]&&!tl.newPh[i]);
@@ -525,7 +540,7 @@ function renderLogsInner(b){
   const dd=dt=>{if(!dt)return '';const x=diffDays(today(),dt);return `<span class="bg ${x<0?'bad':x<=2?'warn':'mut'}">${dt} ${x<0?'D+'+(-x):x===0?'오늘':'D-'+x}</span>`};
   const plan=ownCase?`<div class="lgplan" style="background:#f5f9ff;border-color:#cfdcef">이 건은 <a class="lk" onclick="czOpenCase('${ownCase.id}')">RCA ${esc(ownCase.CaseNo)}</a>(으)로 관리 중입니다 · 현재 단계 ${esc(ownCase.Stage)}</div>`:'';
   // ② 실행 기록 쓰기
-  const comp=`<div class="lgc"><div class="ch">✎ 실행 기록 남기기 <span class="muted" style="font-weight:normal">— 실제로 한 일과 결과만 적습니다. 저장 후에는 지울 수 없고 수정 이력이 남습니다.</span></div>
+  const comp=`<div class="lgc"><div class="ch">✎ 실행 기록 남기기 <span class="muted" style="font-weight:normal">— 실제로 한 일과 결과만 적습니다. 저장한 기록을 고치면 수정 이력이 남습니다.</span></div>
     <div class="cg"><label>실행일<input type="date" id="lgDate" value="${today()}" max="${today()}"></label>
       <label>구분<select id="lgKind">${opts(LOG_KINDS,LOG_KINDS[0])}</select></label>
       <label>상대방<input id="lgParty" list="lgParties" placeholder="예: 대성정밀 박OO 과장"></label>
@@ -535,8 +550,8 @@ function renderLogsInner(b){
       <label>결과 · 합의 사항<textarea id="lgResult" placeholder="예: 불량 4개 추가 검출 / 협력사 귀책 인정, 선별비 부담 합의"></textarea></label></div>
     <div class="cf"><label class="b s" style="cursor:pointer">📎 증빙 첨부<input type="file" accept="image/*" multiple style="display:none" onchange="lgAddFiles([...this.files]);this.value=''"></label>
       <span>메일 · 성적서 · 현장 사진 (캡처 후 Ctrl+V 가능)</span>${lgThumbs(tl.draftPh,'lgRmDraft')}
-      <span style="flex:1"></span><button type="button" class="b p" onclick="addLog()">＋ 기록 추가</button></div></div>`;
-  const warn=pend||pendEd?`<div class="lgpend">${pend?`새 기록 ${pend}건`:''}${pend&&pendEd?' · ':''}${pendEd?`수정 ${pendEd}건`:''}이 아직 저장되지 않았습니다. 창 아래 <b>저장</b>을 누르세요.</div>`:'';
+      <span style="flex:1"></span><button type="button" class="b" onclick="lgClear()">취소</button><button type="button" class="b p" onclick="addLog()">저장</button></div></div>`;
+  const warn=pend||pendEd?`<div class="lgpend">${pend?`새 기록 ${pend}건`:''}${pend&&pendEd?' · ':''}${pendEd?`수정 ${pendEd}건`:''}이 아직 저장되지 않았습니다. 창 아래 <b>저장</b>을 누르면 함께 저장됩니다.</div>`:'';
   const head=`<div class="lgh">실행 기록 <span class="bg mut" style="font-weight:normal">직접 기록 ${nOwn}${nAuto?` · 자동 ${nAuto}`:''}</span><span style="flex:1"></span>
     <label><input type="checkbox" ${tl.hideAuto?'checked':''} onchange="tl.hideAuto=this.checked;renderLogs()"> 자동 기록 숨기기</label><button type="button" class="b s" onclick="lgPrint()">기록 출력</button></div>`;
   const item=x=>{
@@ -552,7 +567,7 @@ function renderLogsInner(b){
       <div class="cg2"><label>실행 내용<textarea id="leText">${esc(x.text)}</textarea></label><label>결과 · 합의 사항<textarea id="leResult">${esc(x.result)}</textarea></label></div>
       <div class="cf"><label class="b s" style="cursor:pointer">📎 증빙 추가<input type="file" accept="image/*" multiple style="display:none" onchange="lgAddFiles([...this.files],'edit');this.value=''"></label>${lgThumbs(tl.editPh,'lgRmEdit')}</div>
       ${saved?`<label class="lgreason">수정 사유 *<input id="leReason" placeholder="예: 협력사 회신 메일 확인 후 수량 정정"></label>`:''}
-      <div class="row" style="margin-top:6px;justify-content:flex-end"><button type="button" class="b s" onclick="tl.edit=null;tl.editPh=null;renderLogs(false)">취소</button><button type="button" class="b s p" onclick="saveLog(${x._i})">확인</button></div></li>`;
+      <div class="row" style="margin-top:6px;justify-content:flex-end"><button type="button" class="b s" onclick="tl.edit=null;tl.editPh=null;renderLogs(false)">취소</button><button type="button" class="b s p" onclick="saveLog(${x._i})">저장</button></div></li>`;
     return `<li class="${x.auto?'au':''} ${x._new?'nw':''} ${x.void?'vd':''}"><div class="lh"><b>${esc(x.date)}</b> <span class="bg ${LOG_CLS[x.kind]||'mut'}">${esc(x.kind)}</span>${x.src?` <span class="bg mut" style="font-weight:normal">${esc(x.src)}</span>`:''}${who?` <span style="font-size:12px">${esc(who)}</span>`:''} <span class="muted" style="font-size:11px">${esc(x.by||'')}</span> ${tags}<span style="flex:1"></span>${acts}</div>
       <div class="lt">${nl(x.text)}</div>${x.result?`<div class="lr"><b>결과</b> ${nl(x.result)}</div>`:''}${lgThumbs(x.photos)}
       ${x.void?`<div class="lv">취소 ${esc(loc(x.void.at))} ${esc(x.void.by||'')} — 사유: ${esc(x.void.reason)}</div>`:''}
@@ -564,11 +579,24 @@ function renderLogsInner(b){
 const lgRmDraft=k=>{tl.draftPh.splice(k,1);renderLogs()};
 const lgRmEdit=k=>{tl.editPh.splice(k,1);renderLogs()};
 const lgTogHist=id=>{tl.hist.has(id)?tl.hist.delete(id):tl.hist.add(id);renderLogs()};
-function addLog(){
-  const t=$('#lgText').value.trim();if(!t){toast('실행 내용을 입력하세요');$('#lgText').focus();return}
-  const d=$('#lgDate').value||today();if(d>today()){toast('실행일은 오늘 이후일 수 없습니다. 실제로 한 일만 기록합니다.');return}
+// 쓴 내용을 기록 목록에 넣음 (입력 검사 포함) — 저장은 tlPersist
+function tlPushDraft(){
+  const t=$('#lgText').value.trim();if(!t){toast('실행 내용을 입력하세요');$('#lgText').focus();return false}
+  const d=$('#lgDate').value||today();if(d>today()){toast('실행일은 오늘 이후일 수 없습니다. 실제로 한 일만 기록합니다.');return false}
   tl.own.push({id:uid(),date:d,kind:$('#lgKind').value,party:$('#lgParty').value.trim(),method:$('#lgMethod').value,text:t,result:$('#lgResult').value.trim(),photos:[...tl.draftPh],by:db.settings.owners[0]||'',at:now(),_new:true});
-  tl.draftPh=[];mfDirty=true;renderLogs(false);
+  tl.draftPh=[];return true;
+}
+// 작성 칸의 ‘저장’ — 기록을 바로 저장하고 작성 칸을 비움
+function addLog(){
+  if(!tlPushDraft())return false;
+  renderLogs(false);tlPersist('기록을 저장했습니다');
+  return true;
+}
+// 작성 칸의 ‘취소’ — 쓰던 내용을 지움
+function lgClear(){
+  const had=tlDraftHas();tl.draftPh=[];renderLogs(false);
+  mfDirty=(tl.kind==='ncr'&&!!tl.other)||tl.edit!=null||tl.own.some(x=>x._new||x._dirty);
+  if(had)toast('쓰던 내용을 지웠습니다');
 }
 function lgEdit(i){tl.edit=i;tl.voiding=null;tl.editPh=[...(tl.own[i].photos||[])];renderLogs(false)}
 function saveLog(i){
@@ -580,21 +608,22 @@ function saveLog(i){
   if(!x._new){const r=($('#leReason')?.value||'').trim();if(!r){toast('수정 사유를 입력하세요');$('#leReason')?.focus();return}
     x.hist=[...(x.hist||[]),{at:now(),by:db.settings.owners[0]||'',reason:r,date:x.date,kind:x.kind,party:x.party||'',method:x.method||'',text:x.text,result:x.result||'',photos:[...(x.photos||[])]}];x.editedAt=now();x._dirty=true}
   Object.assign(x,nv);delete x.next;delete x.nextDate;delete x.done;
-  tl.edit=null;tl.editPh=null;mfDirty=true;renderLogs(false);
+  tl.edit=null;tl.editPh=null;renderLogs();tlPersist('기록을 수정했습니다');
 }
 function lgVoid(i){const r=($('#lvReason')?.value||'').trim();if(!r){toast('취소 사유를 입력하세요');$('#lvReason')?.focus();return}
-  tl.own[i].void={at:now(),by:db.settings.owners[0]||'',reason:r};tl.own[i]._dirty=true;tl.voiding=null;mfDirty=true;renderLogs(false)}
-// 기록 삭제 — 저장 전 기록은 바로, 저장된 기록(취소된 것 포함)은 확인 뒤 목록에서 없앰. 창을 저장해야 반영됨
+  tl.own[i].void={at:now(),by:db.settings.owners[0]||'',reason:r};tl.own[i]._dirty=true;tl.voiding=null;renderLogs();tlPersist('기록을 취소 처리했습니다')}
+// 기록 삭제 — 확인 뒤 바로 삭제 (취소 처리된 기록 포함)
 async function delLog(i){const x=tl.own[i];if(!x)return;
   if(!await askConfirm({title:x._new?'저장 전 기록을 삭제할까요?':'이 기록을 삭제할까요?',items:[`${esc(x.date)} · ${esc(x.kind)}${x.void?' · 취소됨':''}`,esc(x.text.slice(0,60))+(x.text.length>60?'…':'')],
-    note:x._new?'':'삭제하면 실행 기록과 기록 출력에서 사라집니다. 창 아래 [저장]을 눌러야 반영됩니다.',ok:'삭제',danger:true}))return;
-  tl.own.splice(i,1);tl.edit=null;tl.voiding=null;if(!x._new)mfDirty=true;renderLogs(false)}
+    note:x._new?'':'삭제하면 실행 기록과 기록 출력에서 바로 사라집니다.',ok:'삭제',danger:true}))return;
+  tl.own.splice(i,1);tl.edit=null;tl.voiding=null;renderLogs();if(!x._new)tlPersist('기록을 삭제했습니다')}
 // 모달 저장 시 호출: 정리된 기록 · 다음 행동을 돌려주고 새 증빙 사진을 저장소에 넣음
 function tlCommit(){
   const logs=tl.own.map(({_new,_dirty,...x})=>x);
   const used=new Set(logs.flatMap(l=>[...(l.photos||[]),...(l.hist||[]).flatMap(h=>h.photos||[])]));
   const recs=Object.values(tl.newPh).filter(r=>used.has(r.id)).map(({isNew,...r})=>r);
-  if(recs.length){photoPut(recs).then(()=>{recs.forEach(r=>{phCache[r.id]=r});photoStr=null}).catch(e=>toast('증빙 사진 저장 실패: '+e.message))}
+  recs.forEach(r=>{phCache[r.id]=r});   // 저장을 기다리지 않고 화면에 바로 보이게
+  if(recs.length){photoPut(recs).then(()=>{photoStr=null}).catch(e=>toast('증빙 사진 저장 실패: '+e.message))}
   tl.newPh={};tl.draftPh=[];
   return {logs};
 }
@@ -632,7 +661,10 @@ function openLog(id){
       ${n?`<a class="bg inf" style="cursor:pointer" onclick="gotoNcr('${n.id}')">${esc(n.no)} · ${ncrStatus(n)}</a>`:`<span class="bg mut">NCR 없음 (${v.resp})</span>`} ${costTotal(d)?`<span class="bg mut">비용 ${won(costTotal(d))}원</span>`:''}${claimStatus(d)?` <span class="bg ${CLAIM_CLS[claimStatus(d)]}">구상 ${claimStatus(d)}</span>`:''}</div></div>
     ${routeHTML(d)}
     <div class="sec">조사 · 진행 기록 <span class="muted" style="font-weight:normal;font-size:12px">— 실제로 한 일과 결과만 남기는 증빙용 기록 · NCR·대책서·구상 진행(자동)이 함께 표시</span></div><div id="logBox"></div>`,
-    [{label:'A3 보고서',fn:()=>a3Report('defect',id)},{label:'불량 정보 수정',fn:async()=>{if(mfDirty&&!await askConfirm({title:'기록을 저장하지 않고 이동할까요?',ok:'이동',danger:false}))return;closeModal(true);editDefect(id)}},{label:'닫기',fn:closeModal},{label:'저장',cls:'p',fn:()=>{const r=tlCommit();d.logs=r.logs;touch(d);save();closeModal(true);render();toast('진행 기록 저장')}}]);
+    [{label:'A3 보고서',fn:()=>a3Report('defect',id)},{label:'불량 정보 수정',fn:async()=>{if(mfDirty&&!await askConfirm({title:'기록을 저장하지 않고 이동할까요?',ok:'이동',danger:false}))return;closeModal(true);editDefect(id)}},{label:'닫기',fn:closeModal},{label:'저장',cls:'p',fn:()=>{
+      if(tl.edit!=null){toast('수정 중인 기록을 먼저 저장하거나 취소하세요');return}
+      if(tlDraftHas()&&!tlPushDraft())return;   // 쓰던 기록이 있으면 함께 저장
+      const r=tlCommit();d.logs=r.logs;touch(d);save();mfDirty=false;closeModal(true);render();toast('진행 기록 저장')}}]);
   tlInit('defect',d);setTimeout(()=>$('#lgText')?.focus(),0);
 }
 async function gotoProgress(id){if(mfDirty&&!await askConfirm({title:'수정 중인 불량 정보를 저장하지 않고 이동할까요?',msg:'먼저 저장하려면 취소 후 저장을 누르세요.',ok:'이동',danger:false}))return;closeModal(true);openLog(id)}

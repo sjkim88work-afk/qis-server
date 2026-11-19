@@ -161,12 +161,13 @@ function issDetailHTML(i){
           <label class="fgl" style="margin-top:8px">수정 사유 <span class="muted" style="font-weight:normal">(선택 — 적으면 기록 아래에 남습니다)</span><input id="ieWhy" placeholder="예: 오타 수정, 협력사 회신 내용 보완"></label>
           <div class="row" style="justify-content:flex-end;gap:8px;margin-top:8px"><button type="button" class="b" onclick="issEditLog('${i.id}',null)">취소</button><button type="button" class="b p" onclick="issSaveLog('${i.id}',${l._k})">수정 저장</button></div></div></li>`;
         return `<li class="${l.void?'void':''}"><span class="mono">${esc(issAt(l.at).slice(5))}</span><span><span class="bg ${ISS_KCLS[l.kind]||'mut'}">${esc(l.kind)}</span></span><div>${l.who?`<div class="muted" style="font-size:12px">${esc(l.who)}</div>`:''}<div>${nl(issTidy(l.text))}</div>${l.void?`<div class="muted" style="font-size:12px">취소 ${esc(issAt(l.void.at))} — ${esc(l.void.reason)}</div>`:''}${ed.length?`<details class="muted" style="font-size:12px;margin-top:4px"><summary style="cursor:pointer">수정 ${ed.length}회 · 최근 ${esc(issAt(ed[ed.length-1].at))}${ed[ed.length-1].by?' '+esc(ed[ed.length-1].by):''}${ed[ed.length-1].reason?' — '+esc(ed[ed.length-1].reason):''}</summary>${ed.slice().reverse().map(e=>`<div style="border-left:2px solid var(--line);padding:2px 0 2px 8px;margin-top:6px"><div>${esc(issAt(e.at))}${e.by?' '+esc(e.by):''} 수정${e.reason?' — '+esc(e.reason):' (사유 없음)'}</div><div>수정 전: ${esc(issAt(e.prev.at).slice(5))} · ${esc(e.prev.kind)}${e.prev.who?' · '+esc(e.prev.who):''}</div><div style="white-space:pre-wrap">${esc(issTidy(e.prev.text))}</div></div>`).join('')}</details>`:''}</div>${can?`<span class="noprint" style="display:flex;flex-direction:column;gap:4px"><button type="button" class="b s" onclick="issEditLog('${i.id}',${l._k})" title="이 기록의 내용 고치기">수정</button><button type="button" class="b s" onclick="issVoid('${i.id}',${l._k})" title="잘못 쓴 기록을 취소선으로 남기고 무효 처리">기록 취소</button></span>`:'<span></span>'}</li>`}).join('')||'<li class="muted">기록이 없습니다</li>'}</ol>
-      ${ro?'':`<div class="isadd noprint"><div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px">
-        <label class="fgl">구분<select id="isK">${opts(ISS_KINDS,'인터뷰')}</select></label>
-        <label class="fgl">일시<input type="datetime-local" id="isAt" value="${nowMin()}"></label>
-        <label class="fgl">상대 · 참석<input id="isWho" placeholder="예: 생산팀 · 생산기술팀"></label></div>
-        <label class="fgl" style="margin-top:8px">내용<textarea id="isTx" placeholder="확인한 사실 · 원인 추정 · 결정 사항"></textarea></label>
-        <div class="row" style="justify-content:flex-end;margin-top:8px"><button class="b p" onclick="issAddLog('${i.id}')">기록 추가</button></div></div>`}
+      ${ro?'':`<div class="lgc isadd noprint"><div class="ch">✎ 기록 남기기 <span class="muted" style="font-weight:normal">— 확인한 사실과 결정 사항을 적습니다. 저장한 기록을 고치면 수정 이력이 남습니다.</span></div>
+        <div class="cg c3">
+        <label>일시<input type="datetime-local" id="isAt" value="${nowMin()}"></label>
+        <label>구분<select id="isK">${opts(ISS_KINDS,'인터뷰')}</select></label>
+        <label>상대방 · 참석<input id="isWho" placeholder="예: 생산팀 · 생산기술팀"></label></div>
+        <label style="margin-top:8px">내용 *<textarea id="isTx" placeholder="확인한 사실 · 원인 추정 · 결정 사항"></textarea></label>
+        <div class="cf"><span style="flex:1"></span><button type="button" class="b" onclick="issClearLog()">취소</button><button type="button" class="b p" onclick="issAddLog('${i.id}')">저장</button></div></div>`}
     </div>
     <div style="flex:1 1 380px;min-width:0;display:flex;flex-direction:column;gap:14px">
       ${ro?'':`<div class="card noprint"><h3 style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap"><span style="white-space:nowrap">처리 방향</span><span class="muted" style="font-weight:normal;font-size:12px;flex:1 1 160px">이슈 내용 · 사진이 넘어갑니다. 여러 번 보낼 수 있습니다. FAR · NCR은 불량 등록 뒤에 합니다</span></h3>
@@ -200,6 +201,8 @@ async function issLb(id,k){const i=issById(id);if(!i)return;try{const rs=await p
 function issAddLog(id){const i=issById(id);if(!i)return false;const t=($('#isTx').value||'').trim();if(!t){toast('내용을 입력하세요');$('#isTx').focus();return false}
   const at=$('#isAt').value||nowMin();if(at.slice(0,10)>today()){toast('기록 일시는 오늘 이후일 수 없습니다');return false}
   issLog(i,$('#isK').value,t,{at,who:($('#isWho').value||'').trim()});$('#isTx').value='';touch(i);save();render();toast('기록했습니다');return true}
+// 기록 작성 칸의 ‘취소’ — 쓰던 내용을 지움
+function issClearLog(){const had=['isTx','isWho'].some(k=>($('#'+k).value||'').trim());$('#isTx').value='';$('#isWho').value='';$('#isAt').value=nowMin();if(state.issEditK==null)mfDirty=false;if(had)toast('쓰던 내용을 지웠습니다')}
 // 상세 창의 ‘저장’ — 쓰던 기록(새 기록 · 수정 중인 기록)을 저장하고 창을 닫음. ‘닫기’는 저장하지 않음
 function issSaveAll(id){
   if(state.issEditK!=null&&$('#ieTx')&&!issSaveLog(id,state.issEditK))return;

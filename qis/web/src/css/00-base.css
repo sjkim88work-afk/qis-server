@@ -57,7 +57,7 @@ tr:hover td{background:#fafbfd}
 .kpi.go{cursor:pointer;transition:box-shadow .15s}.kpi.go:hover{box-shadow:0 0 0 2px var(--pri) inset}
 tr.late>td{background:var(--badb)}
 ol.isl{list-style:none;margin:0;padding:0}ol.isl li{display:grid;grid-template-columns:86px 74px minmax(0,1fr) auto;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);align-items:start;line-height:1.55}ol.isl li.void>div{text-decoration:line-through;opacity:.6}ol.isl .mono{font-size:12.5px;color:var(--sub)}
-.isadd{border:1px solid var(--line);border-radius:8px;padding:12px;margin-top:12px;background:var(--bg)}.isadd textarea{min-height:56px;width:100%}
+.isadd{margin-top:12px}.isadd textarea{min-height:56px;width:100%}   /* 이슈의 기록 작성 칸 — 모양은 실행 기록 작성 칸(.lgc)과 같음 */
 button.isr{font:inherit;text-align:left;padding:10px 12px;border-radius:8px;border:1px solid var(--line);background:var(--card);cursor:pointer;display:flex;justify-content:space-between;gap:8px;align-items:baseline;color:inherit}button.isr.on{border:2px solid var(--pri);background:var(--pri2)}button.isr .muted{font-size:12px}
 .isprev{background:var(--mut);border-radius:8px;padding:12px;margin-top:10px}.isprev ul{margin:6px 0 10px;padding-left:18px;font-size:13px;line-height:1.6}
 a.isf{display:flex;gap:8px;align-items:center;padding:9px 10px;border:1px solid var(--line);border-radius:6px;cursor:pointer;color:inherit;text-decoration:none;font-size:13px}a.isf:hover{background:var(--pri2)}
@@ -112,6 +112,7 @@ ul.logs .lhist{margin-top:6px;border-top:1px dashed var(--line);padding-top:6px;
 .lgc{border:1px solid #cfdcef;background:#f5f9ff;border-radius:8px;padding:10px 12px;margin-top:6px}
 .lgc .ch{display:flex;align-items:center;gap:8px;font-weight:600;font-size:12.5px;color:var(--pri);margin-bottom:8px}
 .lgc .cg,ul.logs .cg{display:grid;grid-template-columns:140px 130px 1fr 120px;gap:8px}
+.lgc .cg.c3{grid-template-columns:repeat(3,minmax(0,1fr))}
 .lgc .cg2,ul.logs .cg2{display:grid;grid-template-columns:3fr 2fr;gap:8px;margin-top:8px}
 .lgc label,ul.logs li.ed label{display:flex;flex-direction:column;gap:3px;font-size:11.5px;color:var(--sub)}
 .lgc .cf label.b{flex-direction:row;color:inherit;font-size:12px}
