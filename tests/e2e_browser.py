@@ -195,7 +195,7 @@ def main(seed_path):
             ok(A.evaluate("i=>!document.querySelector('#modal').classList.contains('on')&&issById(i).logs.filter(x=>x.text==='저장 단추로 쓴 기록').length===1", iid), "이슈 상세 저장 단추: 쓰던 기록 저장 후 창 닫음")
             r = A.evaluate("""() => {const lab=()=>[...document.querySelector('#mfoot').children].map(e=>e.className.includes('mfsp')?'|':e.textContent).join(',');
               editDefect(db.defects[0].id);const d=lab();mfDirty=false;closeModal(true);editNcr(db.ncrs[0].id,null,'issue');const n=lab();mfDirty=false;closeModal(true);return {d,n}}""")
-            ok(r["d"].startswith("삭제,|,") and r["n"].startswith("삭제,|,"), f"불량 · NCR 창: 삭제는 왼쪽 끝에 따로 ({r['d']} / {r['n']})")
+            ok(r["d"] == "삭제,|,취소,저장" and r["n"].startswith("삭제,|,"), f"불량 · NCR 창: 삭제는 왼쪽 끝에 따로 · 불량 창은 취소 · 저장만 ({r['d']} / {r['n']})")
             A.evaluate("i=>issOpen(i)", iid); A.wait_for_timeout(300)
             A.click("#mfoot button:has-text('삭제')"); A.wait_for_timeout(1500)
             ok(A.evaluate("i=>!issById(i)&&state.issId===null", iid), "이슈 삭제 → 목록으로")
