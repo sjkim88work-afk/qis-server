@@ -1211,7 +1211,7 @@ function ncrStatus(n){
   if(!ncrNotified(n))return '미통보';
   if(n.reqType==='단순 통보')return '종결';
   if(n.validity==='적정')return '승인(검증대기)';
-  if(n.replyDate)return n.validity==='보완요청'?'보완요청':'대책서 검토';
+  if(n.replyDate)return n.validity==='보완요청'&&!n.resubPending?'보완요청':'대책서 검토';   // 보완 대책서를 다시 받았으면(resubPending) 다시 검토 단계
   if(n.requestDate)return '대책요청';
   return '발행';
 }
@@ -2928,7 +2928,7 @@ function autoEvents(d,n,lbl){
     if(ic.verifyDate)add(ic.verifyDate,`사내 대책 유효성 검증 — ${ic.verifyResult||'결과 미입력'}`,sl);
     if(d.closed)add(d.closed.date,`수동 종결 — ${d.closed.reason||''}`,sl);if(d.doneDate&&!d.ncrId)add(d.doneDate,'처리 완료',sl);add(d.date,`불량 등록 — ${d.source||''} ${d.type||''} ${num(d.qty).toLocaleString()}개 · 심각도 ${sevOf(d).grade}`,sl);
     const c=d.claim;if(c){if(c.reqDate)add(c.reqDate,`구상 청구 ${won(c.reqAmt)}원`,sl);if(c.agreeDate)add(c.agreeDate,`구상 합의 ${won(c.agreeAmt)}원`,sl);if(c.recvDate)add(c.recvDate,`구상 회수 ${won(c.recvAmt)}원${c.method?' ('+c.method+')':''}`,sl)}}
-  if(n){add(n.issueDate,`${n.no} 발행 — ${n.reqType||'8D 보고서'}${n.basis?' · 근거: '+n.basis:''}`,'NCR');add(n.notifyDate,`협력사 통보${n.notifyMethod?' ('+n.notifyMethod+')':''}`,'NCR');if(n.reqType!=='단순 통보'){add(n.requestDate,`대책 요청 — 회신 기한 ${n.dueDate||'-'}`,'NCR');add(n.d3Date,`D3 봉쇄 회신 접수${n.d3Due&&n.d3Date>n.d3Due?' (기한 초과)':''}${n.cleanPoint?' — 클린 포인트 '+n.cleanPoint:''}`,'NCR');add(n.replyDate,`대책서 회신 접수${n.dueDate&&n.replyDate&&n.replyDate>n.dueDate?' (기한 초과)':''}`,'NCR')}
+  if(n){add(n.issueDate,`${n.no} 발행 — ${n.reqType||'8D 보고서'}${n.basis?' · 근거: '+n.basis:''}`,'NCR');add(n.notifyDate,`협력사 통보${n.notifyMethod?' ('+n.notifyMethod+')':''}`,'NCR');if(n.reqType!=='단순 통보'){add(n.requestDate,`대책 요청 — 회신 기한 ${n.dueDate||'-'}`,'NCR');add(n.d3Date,`D3 봉쇄 회신 접수${n.d3Due&&n.d3Date>n.d3Due?' (기한 초과)':''}${n.cleanPoint?' — 클린 포인트 '+n.cleanPoint:''}`,'NCR');add(n.replyDate,`대책서 회신 접수${n.dueDate&&n.replyDate&&n.replyDate>n.dueDate?' (기한 초과)':''}`,'NCR');(n.resubs||[]).forEach((x,k)=>add(x.date,`보완 대책서 재회신 접수 (${k+1}차)`,'NCR'))}
     (n.evals||[]).filter(evalDone).forEach((e,i)=>add(e.date,`대책서 평가 ${i+1}차 — ${evalScore(e)}점 ${evalVerdict(e)}`,'NCR'));
     if(n.approvedDate)add(n.approvedDate,`대책서 승인 — 연결 불량 완료 처리 · 유효성 검증 기한 ${n.verifyDue||'-'}`,'NCR');
     if(n.verifyDate)add(n.verifyDate,`유효성 검증 — ${n.verifyResult||'결과 미입력'}`,'NCR');
@@ -3729,18 +3729,29 @@ function ncrNudge(id){
 }
 // 대책서 회신일만 오늘로 기록 — 평가 · 파일 첨부는 NCR 회신 화면에서
 async function ncrQuickReply(id){
-  const n=db.ncrs.find(x=>x.id===id);if(!n||n.replyDate)return;
+  const n=db.ncrs.find(x=>x.id===id);if(!n)return;
+  if(n.replyDate){if(ncrStatus(n)==='보완요청')await ncrResubReceive(id);return}
   const r=await askConfirm({title:`${n.no} 대책서 회신을 오늘(${today()}) 접수할까요?`,msg:'회신일만 기록합니다. 대책서 파일 첨부와 평가는 NCR의 ‘협력사 회신’ 화면에서 이어서 합니다.',ok:'회신 접수',danger:false,alt:'회신 화면 열기'});
   if(r==='alt'){editNcr(id,null,'reply');return}if(!r)return;
   n.replyDate=today();touch(n);save();render();
   offerAction(`${n.no} 회신 접수 (${n.replyDate}) — 대책서 승인 기한 ${addDays(n.replyDate,num(db.settings.approveDays)||3)}`,'지금 평가하기',()=>editNcr(id,null,'reply'));
+}
+// 보완요청 · 반려 뒤에 협력사가 다시 낸 대책서의 접수일 기록 — 상태가 ‘대책서 검토’로 돌아가고, 다음 평가(재제출 평가)를 마치면 그 결과로 바뀜
+async function ncrResubReceive(id){
+  const n=db.ncrs.find(x=>x.id===id);if(!n||ncrStatus(n)!=='보완요청')return;
+  const r=await askConfirm({title:`${n.no} 보완 대책서를 오늘(${today()}) 다시 접수할까요?`,msg:'재회신 접수일만 기록합니다. 상태가 ‘대책서 검토’로 바뀝니다. 대책서 파일 첨부와 재제출 평가는 NCR의 ‘협력사 회신’ 화면에서 이어서 합니다.',ok:'재회신 접수',danger:false,alt:'회신 화면 열기'});
+  if(r==='alt'){editNcr(id,null,'reply');return}if(!r)return;
+  const le=latestEval(n);n.resubs=[...(n.resubs||[]),{date:today(),at:now()}];
+  if(le)n.resubPending={date:today(),evalId:le.id||''};else{n.validity='';delete n.resubPending}   // 평가표를 쓰지 않는 건은 타당성을 비워 검토 단계로
+  touch(n);save();render();
+  offerAction(`${n.no} 보완 대책서 재회신 접수 (${today()})`,'지금 평가하기',()=>editNcr(id,null,'reply'));
 }
 function ncrTable(){
   const ns=filteredNcrs();
   return `<div class="muted" style="font-size:12px;margin-bottom:6px">${ns.length}/${db.ncrs.length}건${msState.ncr&&msState.ncr.k?` · <a class="lk" onclick="msState.ncr={k:'',d:1};msSave();$('#ntab').innerHTML=ncrTable()">기본 정렬(최근 발행 순)로</a>`:''}</div><div class="tw"><table><thead><tr>${sth('ncr','no','NCR 번호')}${sth('ncr','issue','발행일')}${sth('ncr','sup','협력사')}${sth('ncr','part','부품')}${sth('ncr','title','제목')}${sth('ncr','status','상태')}${sth('ncr','notify','통보')}${sth('ncr','due','회신 기한')}${sth('ncr','reply','회신일')}${sth('ncr','verify','유효성 기한')}${sth('ncr','links','연결 불량','n')}${sth('ncr','owner','담당')}<th class="noprint"></th></tr></thead><tbody>
   ${ns.map(n=>{const st=ncrStatus(n),fl=ncrFlags(n);return `<tr class="${lateInfo('ncr',n).length?'late':''}"><td><a class="lk" onclick="editNcr('${n.id}',null,'${ncrModeDefault(n,n.id)}')"><b>${esc(n.no)}</b></a></td><td>${esc(n.issueDate)}</td><td>${esc(supName(n.supplierId))}</td><td>${esc(n.partNo)}<br><span class="muted">${esc(n.partName)}</span></td><td>${esc(n.title)}<br><span class="bg ${(n.reqType||'8D 보고서')==='8D 보고서'?'inf':'mut'}">${esc(n.reqType||'8D 보고서')}</span>${n.basis?` <span class="bg inf">${esc(n.basis)}</span>`:''}${n.repeatOf?` <span class="bg bad" title="이전 NCR ${esc(n.repeatOf)}">재발</span>`:''}${n.siteAudit==='요청'?' <span class="bg inf">현장 감사</span>':''}</td><td>${stB(st)}${ncrMini(n)}${farOn(n)?farBadge(n):''}${ncrEsc(n)?'<br>'+escB(n):''}</td>
   <td>${ncrNotifyCell(n)}</td>
-  <td style="white-space:nowrap">${dday(n.dueDate,!!n.replyDate)}${fl.d3Late?`<br><span class="bg bad" title="봉쇄 회신 기한 ${esc(n.d3Due)}">D3 봉쇄 지연</span>`:''}</td><td>${esc(n.replyDate)||(st==='대책요청'&&n.reqType!=='단순 통보'?`<button class="b s noprint" onclick="ncrQuickReply('${n.id}')" title="오늘 날짜로 회신일 기록">회신 접수</button>`:'<span class="muted">-</span>')}${!n.replyDate&&nudgeLogs(n).length?`<br><span class="muted" style="font-size:11.5px">독촉 ${nudgeLogs(n).length}회</span>`:''}${(n.replyDocs||[]).length?` <span class="bg inf" title="협력사 대책서 파일 ${(n.replyDocs||[]).length}개">📎 ${(n.replyDocs||[]).length}</span>`:''}${n.replyDate&&n.dueDate&&n.replyDate>n.dueDate?' <span class="bg warn">지연접수</span>':''}${n.evalVerdict?`<br><span class="bg ${VD_CLS[n.evalVerdict]}" title="대책서 평가 ${(n.evals||[]).length}회차">${n.evalScore}점 ${n.evalVerdict}</span>`:''}</td>
+  <td style="white-space:nowrap">${dday(n.dueDate,!!n.replyDate)}${fl.d3Late?`<br><span class="bg bad" title="봉쇄 회신 기한 ${esc(n.d3Due)}">D3 봉쇄 지연</span>`:''}</td><td>${esc(n.replyDate)||(st==='대책요청'&&n.reqType!=='단순 통보'?`<button class="b s noprint" onclick="ncrQuickReply('${n.id}')" title="오늘 날짜로 회신일 기록">회신 접수</button>`:'<span class="muted">-</span>')}${(n.resubs||[]).length?`<br><span class="muted" style="font-size:11.5px" title="보완 대책서를 다시 받은 날">재회신 ${esc(n.resubs[n.resubs.length-1].date.slice(5))}${n.resubs.length>1?` (${n.resubs.length}회)`:''}</span>`:''}${st==='보완요청'?`<br><button class="b s noprint" style="margin-top:3px" onclick="ncrQuickReply('${n.id}')" title="협력사가 보완해서 다시 낸 대책서의 접수일을 오늘로 기록">재회신 접수</button>`:''}${!n.replyDate&&nudgeLogs(n).length?`<br><span class="muted" style="font-size:11.5px">독촉 ${nudgeLogs(n).length}회</span>`:''}${(n.replyDocs||[]).length?` <span class="bg inf" title="협력사 대책서 파일 ${(n.replyDocs||[]).length}개">📎 ${(n.replyDocs||[]).length}</span>`:''}${n.replyDate&&n.dueDate&&n.replyDate>n.dueDate?' <span class="bg warn">지연접수</span>':''}${n.evalVerdict?`<br><span class="bg ${VD_CLS[n.evalVerdict]}" title="대책서 평가 ${(n.evals||[]).length}회차">${n.evalScore}점 ${n.evalVerdict}</span>`:''}</td>
   <td style="white-space:nowrap">${dday(n.verifyDue,st==='종결')}</td><td class="n">${(n.defectIds||[]).length}</td><td>${esc(n.owner)}</td>
   <td class="noprint" style="white-space:nowrap">${(()=>{const nx=ncrModeDefault(n,n.id),b=(m,l)=>`<button class="b s ${nx===m?'p':''}" onclick="editNcr('${n.id}',null,'${m}')">${l}</button>`;return b('issue','발행 정보')+' '+(n.reqType==='단순 통보'?'':b('reply','회신')+' ')+b('verify','검증')})()}</td></tr>`}).join('')||'<tr><td colspan="13" class="muted" style="text-align:center;padding:30px">조건에 맞는 NCR이 없습니다.</td></tr>'}
   </tbody></table></div>`;
@@ -3851,6 +3862,7 @@ function editNcr(id,preset,mode){
   </div>
 <div class="ntp" data-p="r">
   <div class="sec">대책서 회신 · 판정</div>
+  ${id&&n.resubPending?`<div class="banner" style="margin:0 0 10px;background:var(--pri2);border-color:transparent;color:var(--ink)">보완 대책서 재회신 접수 <b>${esc(n.resubPending.date)}</b> — 아래 대책서 평가에서 <b>+ 재제출 평가</b>를 눌러 다시 평가하세요. 평가를 마치고 저장하면 결과가 반영됩니다.</div>`:''}
   ${id&&ncrEsc(n)?`<div class="banner" style="margin:0 0 10px">대책서 보완요청·반려·검증 무효가 <b>${ncrRejects(n)}회</b>입니다 (기준 ${num(S.escCount)||2}회). 현장 감사나 상위 보고를 검토하세요.</div>`:''}
   <div class="fg">
     <label>대책서 회신일<input type="date" name="replyDate" value="${esc(n.replyDate)}" oninput="if(this.value){const w=$('#evalWrap'),r=$('#wrap8D');if(w)w.open=true;if(r)r.open=true;renderEval()}"></label>
@@ -4361,6 +4373,7 @@ function saveNcr(id){
   n.defectIds=[...curLinks];n.stock=curStock.filter(r=>r.loc||r.stocked||r.ng);concCommit(n);dkCommit('notice',n);dkCommit('reply',n);n.contain=curContain.filter(r=>r.target||r.sorted||r.ng||r.done);n.vlots=curVLots.filter(r=>r.lot||r.date||r.insp||r.ng);n.photoExcl=[...curExcl];
   n.evals=curEvals.map(e=>({...e,score:evalScore(e),verdict:evalVerdict(e)}));
   const le=latestEval(n);if(le){const pv=o.validity,nv=le.verdict==='승인'?'적정':'보완요청';if(pv&&pv!==nv)setTimeout(()=>toast(`대책서 평가 결과(${le.verdict})에 따라 타당성을 ‘${nv}’(으)로 맞췄습니다`),400);n.validity=nv;n.evalScore=le.score;n.evalVerdict=le.verdict}else{delete n.evalScore;delete n.evalVerdict}
+  if(n.resubPending&&(n.validity==='적정'||(le&&(le.id||'')!==(n.resubPending.evalId||''))))delete n.resubPending;   // 재제출분 평가를 마침
   if(n.validity==='적정'){if(!n.approvedDate)n.approvedDate=(le&&le.verdict==='승인'&&le.date)||n.replyDate||today()}else delete n.approvedDate;
   {const auto=ncrVerifyDueAuto(n),prevAuto=n._vdAuto||addDays(n.issueDate,S.verifyDays);if(n.reqType==='단순 통보'&&!n.verifyDate)n.verifyDue='';else if(!n.verifyDue||n.verifyDue===prevAuto)n.verifyDue=auto;n._vdAuto=auto}
   czSyncNcr(n);touch(n);
