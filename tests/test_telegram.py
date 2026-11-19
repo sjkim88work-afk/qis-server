@@ -116,6 +116,17 @@ def test_notice_only_ncr_closes_without_verify():
     assert [x["l"] for x in ncr_late(m, T)] == ["유효성 검증"]
 
 
+def test_resubmitted_reply_goes_back_to_review():
+    # 보완요청 뒤에 보완 대책서를 다시 받으면(resubPending) 상태는 다시 '대책서 검토' (화면의 ncrStatus 와 같아야 함)
+    n = {"reqType": "8D 보고서", "issueDate": d(-30), "notifyDate": d(-29), "requestDate": d(-29), "replyDate": d(-20), "validity": "보완요청"}
+    assert ncr_status(n) == "보완요청"
+    n["resubPending"] = {"date": d(-1), "evalId": "e1"}
+    assert ncr_status(n) == "대책서 검토"
+    del n["resubPending"]
+    n["validity"] = "적정"
+    assert ncr_status(n) == "승인(검증대기)"
+
+
 def test_admin_api_and_token_hidden(env):
     app, cfg = env
     fake = FakeTG()

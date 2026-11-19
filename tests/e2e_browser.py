@@ -498,6 +498,27 @@ def main(seed_path):
             ok(not r["info0"] and r["info1"], "A3 보고서: 단순 통보는 통보(종결) 뒤에 단추가 나옴")
             ok(not r["d0"] and not r["d1"] and r["d2"], "A3 보고서: 대책서 건은 대책 승인(적정) 뒤에 단추가 나옴")
             ok(not r["def0"] and r["def1"], "불량 진행 창의 A3 보고서도 같은 기준")
+            # 보완요청 · 반려 뒤: 목록에 ‘재회신 접수’ 단추 → 다시 검토 단계 → 재제출 평가를 마치면 그 결과로
+            r = A.evaluate("""async () => {
+              mfDirty=false;closeModal(true);const wait=ms=>new Promise(r=>setTimeout(r,ms)),o0=window.askConfirm;window.askConfirm=async()=>true;const o={};
+              const sc=v=>Object.fromEntries(EVAL_SIMPLE.map(it=>[it.k,v]));
+              const n={id:uid(),no:'RESUB-1',issueDate:addDays(today(),-30),supplierId:db.suppliers[0].id,defectIds:[],reqType:'간이 대책서',notifyDate:addDays(today(),-29),requestDate:addDays(today(),-29),dueDate:addDays(today(),-22),replyDate:addDays(today(),-23),
+                validity:'보완요청',evals:[{id:'ev1',type:'간이 대책서',date:addDays(today(),-22),by:'나',sc:sc(0),cm:{},note:''}],evalVerdict:'반려',evalScore:0};db.ncrs.push(n);
+              state.tab='ncr';state.nf.status='';render();await wait(100);
+              const row=()=>[...document.querySelectorAll('#ntab tbody tr')].find(tr=>tr.innerText.includes('RESUB-1'));
+              o.st0=ncrStatus(n);o.btn0=!!row()&&[...row().querySelectorAll('button')].some(b=>b.textContent==='재회신 접수');
+              [...row().querySelectorAll('button')].find(b=>b.textContent==='재회신 접수').click();await wait(300);hideAct();
+              o.st1=ncrStatus(n);o.pend=!!n.resubPending&&n.resubPending.evalId==='ev1';o.resubs=(n.resubs||[]).length;o.reply=n.replyDate===addDays(today(),-23);
+              o.btn1=[...row().querySelectorAll('button')].some(b=>b.textContent==='재회신 접수');o.cell=row().innerText.includes('재회신 '+today().slice(5));
+              editNcr(n.id,null,'reply');await wait(150);o.banner=document.querySelector('#modal').innerText.includes('보완 대책서 재회신 접수');
+              saveNcr(n.id);await wait(200);o.st2=ncrStatus(n);                                   // 평가를 새로 하지 않고 저장 → 그대로 검토 단계
+              editNcr(n.id,null,'reply');await wait(150);addEval();curEvals[curEvals.length-1].sc=sc(1);saveNcr(n.id);await wait(200);
+              o.st3=ncrStatus(n);o.cleared=!n.resubPending;o.val=n.validity;
+              window.askConfirm=o0;db.ncrs=db.ncrs.filter(x=>x!==n);render();return o}""")
+            ok(r["st0"] == "보완요청" and r["btn0"], "NCR 목록: 보완요청 · 반려 건에 ‘재회신 접수’ 단추")
+            ok(r["st1"] == "대책서 검토" and r["pend"] and r["resubs"] == 1 and r["reply"] and not r["btn1"] and r["cell"], f"재회신 접수 → 상태 ‘대책서 검토’, 처음 회신일은 그대로, 목록에 재회신일 표시 ({r['st1']})")
+            ok(r["banner"] and r["st2"] == "대책서 검토", "회신 창에 재제출 평가 안내 · 평가 전에는 검토 단계 유지")
+            ok(r["st3"] == "승인(검증대기)" and r["cleared"] and r["val"] == "적정", f"재제출 평가(승인)를 마치면 그 결과로 바뀜 ({r['st3']})")
             # 로그아웃
             A.click("button:has-text('로그아웃')"); A.wait_for_url("**/login")
             ok(True, "로그아웃")

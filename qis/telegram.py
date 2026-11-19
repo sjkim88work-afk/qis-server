@@ -70,7 +70,8 @@ def ncr_status(n) -> str:
     if n.get("validity") == "적정":
         return "승인(검증대기)"
     if n.get("replyDate"):
-        return "보완요청" if n.get("validity") == "보완요청" else "대책서 검토"
+        # 보완 대책서를 다시 받았으면(resubPending) 다시 검토 단계 — 화면의 ncrStatus 와 같아야 함
+        return "보완요청" if n.get("validity") == "보완요청" and not n.get("resubPending") else "대책서 검토"
     if n.get("requestDate"):
         return "대책요청"
     return "발행"

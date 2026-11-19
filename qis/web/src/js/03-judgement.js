@@ -118,7 +118,7 @@ function ncrStatus(n){
   if(!ncrNotified(n))return '미통보';
   if(n.reqType==='단순 통보')return '종결';
   if(n.validity==='적정')return '승인(검증대기)';
-  if(n.replyDate)return n.validity==='보완요청'?'보완요청':'대책서 검토';
+  if(n.replyDate)return n.validity==='보완요청'&&!n.resubPending?'보완요청':'대책서 검토';   // 보완 대책서를 다시 받았으면(resubPending) 다시 검토 단계
   if(n.requestDate)return '대책요청';
   return '발행';
 }
