@@ -315,7 +315,7 @@ function supDetail(id){
   const ms=lastMonths(to.slice(0,7),12);
   const ns=db.ncrs.filter(n=>n.supplierId===id).sort((a,b)=>(b.issueDate||'').localeCompare(a.issueDate||''));
   const body=`<div class="help">${esc(s.code)} · ${esc(s.items)}</div>${contactTable(s,false)}
-  <div class="grid g2" style="margin-top:10px"><div>${pareto(tm,'개')}</div><div>${barChart(ms.map(x=>x.slice(2).replace('-','.')),[{name:'불량수량',values:ms.map(m=>sum(db.defects.filter(d=>d.supplierId===id&&(d.date||'').startsWith(m)),'qty')),color:'#1f5fbf'}])}</div></div>
+  <div class="grid g2" style="margin-top:10px"><div>${pareto(tm,'개')}</div><div>${barChart(ms.map(x=>x.slice(2).replace('-','.')),[{name:'불량수량',values:ms.map(m=>sum(db.defects.filter(d=>d.supplierId===id&&(d.date||'').startsWith(m)),'qty')),color:'#007A78'}])}</div></div>
   <div class="sec">불량 이력 (${from} ~ ${to}, ${ds.length}건)</div>
   <div class="tw" style="max-height:260px"><table><thead><tr><th>발생일</th><th>부품</th><th>유형</th><th class="n">수량</th><th>처리</th><th>NCR</th></tr></thead><tbody>${ds.map(d=>`<tr><td>${d.date}</td><td>${esc(d.partNo)} ${esc(d.partName)}</td><td>${esc(d.type)}</td><td class="n">${num(d.qty)}</td><td>${esc(d.disposition)}</td><td>${esc(db.ncrs.find(n=>n.id===d.ncrId)?.no||'')}</td></tr>`).join('')}</tbody></table></div>
   <div class="sec">NCR 이력 (전체 ${ns.length}건)</div>

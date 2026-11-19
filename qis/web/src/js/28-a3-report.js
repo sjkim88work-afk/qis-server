@@ -80,15 +80,15 @@ async function a3Report(kind,id){
   const html=`<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>A3_${esc((c&&c.CaseNo)||(n&&n.no)||(d&&d.date)||'')}</title><style>
   @page{size:A3 landscape;margin:9mm}*{box-sizing:border-box}
   body{font-family:'Malgun Gothic','맑은 고딕',sans-serif;font-size:11.5px;color:#111;margin:0;background:#e9edf2}
-  .bar{position:sticky;top:0;z-index:5;background:#14213d;color:#fff;padding:8px 14px;display:flex;gap:10px;align-items:center;font-size:13px}.bar button{font:inherit;padding:5px 14px;border:0;border-radius:5px;cursor:pointer}.bar .pp{background:#fff;color:#14213d;font-weight:bold}
+  .bar{position:sticky;top:0;z-index:5;background:#0B4F4D;color:#fff;padding:8px 14px;display:flex;gap:10px;align-items:center;font-size:13px}.bar button{font:inherit;padding:5px 14px;border:0;border-radius:5px;cursor:pointer}.bar .pp{background:#fff;color:#0B4F4D;font-weight:bold}
   .pg{width:400mm;min-height:277mm;margin:12px auto;background:#fff;padding:9mm 10mm;box-shadow:0 2px 12px rgba(0,0,0,.15)}
-  .hd{display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:center;border-bottom:3px solid #14213d;padding-bottom:6px}
+  .hd{display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:center;border-bottom:3px solid #0B4F4D;padding-bottom:6px}
   .hd img.lg{max-height:40px;max-width:160px}.hd h1{font-size:21px;margin:0}.hd .meta{color:#444;font-size:11.5px;margin-top:3px}
   .sgn{border-collapse:collapse}.sgn td{border:1px solid #444;width:24mm;text-align:center;padding:0}.sgn .r{background:#eef1f5;font-size:9.5px;border-bottom:1px solid #444;padding:2px 3px;white-space:nowrap;font-weight:600}.sgn .nm{height:13mm;display:flex;align-items:center;justify-content:center}.sgn img{max-height:11mm;max-width:18mm}
   .kp{display:flex;gap:8px;margin:7px 0 8px;flex-wrap:wrap}.kp div{border:1px solid #cfd6df;border-radius:5px;padding:4px 10px;background:#f7f9fb}.kp b{font-size:14px;margin-left:4px}.kp .bad b{color:#b42318}
   .cols{display:grid;grid-template-columns:1fr 1fr;gap:10px}.col{display:flex;flex-direction:column;gap:8px}
-  .sx{border:1.5px solid #14213d;border-radius:4px;break-inside:avoid}.sh{background:#14213d;color:#fff;font-weight:bold;padding:4px 8px;font-size:12.5px;display:flex;gap:7px;align-items:center}
-  .sh span{background:#fff;color:#14213d;border-radius:50%;width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;font-size:11px}
+  .sx{border:1.5px solid #0B4F4D;border-radius:4px;break-inside:avoid}.sh{background:#0B4F4D;color:#fff;font-weight:bold;padding:4px 8px;font-size:12.5px;display:flex;gap:7px;align-items:center}
+  .sh span{background:#fff;color:#0B4F4D;border-radius:50%;width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;font-size:11px}
   .sb{padding:6px 9px;line-height:1.55;min-height:16mm;outline:none}.sb:focus{background:#fffbe6}
   .two{display:grid;grid-template-columns:1.25fr 1fr;gap:8px}.ph{display:flex;gap:5px;margin-top:5px}.ph img{height:34mm;max-width:33%;object-fit:cover;border:1px solid #ccc}
   table.at{width:100%;border-collapse:collapse;font-size:11px}table.at th,table.at td{border:1px solid #9aa4b1;padding:3px 5px;text-align:left;vertical-align:top}table.at th{background:#eef1f5;white-space:nowrap}
@@ -167,6 +167,7 @@ if(SRV){
     `<button class="b s noprint" id="hdrPw" onclick="location.href='/account'" title="내 비밀번호 바꾸기">비밀번호</button>`+
     (srvCanAdmin()?`<button class="b s noprint" id="hdrAdm" onclick="window.open('/admin','qisAdmin')" title="사용자 · 변경 이력 · 백업">관리</button>`:'')+
     `<button class="b s noprint" id="hdrOut" onclick="srvLogout()">로그아웃</button>`);
+  if(typeof navFoot==='function')navFoot();
   // 서버가 맡는 기능 (브라우저 저장소 · PC 폴더 · 파일 백업/복원)
   ['resetAll','pickImport','restoreFromFolder','pickRoot','unlinkRoot','pickDir','unlinkDir','photoDirNow','chooseQmsDir','openImport']
     .forEach(n=>{if(typeof window[n]==='function')window[n]=function(){toast('사내 서버 모드에서는 서버가 백업 · 복원합니다 — 관리자 화면을 쓰세요')}});

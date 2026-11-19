@@ -20,7 +20,7 @@ body.mob main{padding:10px 12px 0;max-width:640px;margin:0 auto}
 body.mob #nav{display:block;overflow:visible;position:sticky;top:0;z-index:5;padding:8px 12px;background:var(--card,#fff);border-bottom:1px solid var(--line,#ddd)}
 .mtabs{width:100%;display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:6px;max-width:640px;margin:0 auto}
 .mtabs button{font:inherit;font-size:15px;font-weight:600;padding:11px 8px;border:1px solid var(--line,#ccc);border-radius:10px;background:var(--card,#fff);color:inherit}
-.mtabs button.on{background:var(--pri,#1d4f73);border-color:var(--pri,#1d4f73);color:#fff}
+.mtabs button.on{background:var(--pri,#007A78);border-color:var(--pri,#007A78);color:#fff}
 .mform{display:flex;flex-direction:column;gap:12px}
 .mform label{display:flex;flex-direction:column;gap:5px;font-size:13px;color:var(--sub,#555);font-weight:600}
 .mform input,.mform select,.mform textarea{font:inherit;font-size:16px;padding:11px 12px;border:1px solid var(--line,#ccc);border-radius:10px;background:#fff;color:#16202a;width:100%;box-sizing:border-box}

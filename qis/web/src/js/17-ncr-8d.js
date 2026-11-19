@@ -639,7 +639,7 @@ async function renderNcrPhotos(){
   if(!ids.length){b.innerHTML='<span class="muted" style="font-size:12px">연결된 불량에 사진이 없습니다. 불량 기록에 사진을 첨부하면 여기에 나타납니다.</span>';return}
   let rs=[];try{rs=await photoGetMany(ids)}catch(e){}
   if(!$('#ncrPhotoBox'))return;
-  b.innerHTML=rs.map(p=>`<label style="display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11px;cursor:pointer"><img src="${p.thumb||p.data}" style="width:110px;height:80px;object-fit:cover;border-radius:4px;border:2px solid ${curExcl.has(p.id)?'#ddd':'#1f5fbf'};opacity:${curExcl.has(p.id)?.4:1}"><span><input type="checkbox" ${curExcl.has(p.id)?'':'checked'} onchange="this.checked?curExcl.delete('${p.id}'):curExcl.add('${p.id}');mfDirty=true;renderNcrPhotos()"> ${esc((p.caption||'').slice(0,12))}</span></label>`).join('');
+  b.innerHTML=rs.map(p=>`<label style="display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11px;cursor:pointer"><img src="${p.thumb||p.data}" style="width:110px;height:80px;object-fit:cover;border-radius:4px;border:2px solid ${curExcl.has(p.id)?'#ddd':'#007A78'};opacity:${curExcl.has(p.id)?.4:1}"><span><input type="checkbox" ${curExcl.has(p.id)?'':'checked'} onchange="this.checked?curExcl.delete('${p.id}'):curExcl.add('${p.id}');mfDirty=true;renderNcrPhotos()"> ${esc((p.caption||'').slice(0,12))}</span></label>`).join('');
 }
 function ncrNotify(src){
   const f=$('#mf');mfDirty=true;
