@@ -1231,7 +1231,7 @@ function routeOf(d){
   const go=(sec,f)=>sec==='invWrap'?`editInv('${d.id}','${f||''}')`:sec==='icaWrap'?`editIca('${d.id}')`:`editDefect('${d.id}');setTimeout(()=>{const w=document.getElementById('${sec}');if(w){if(w.tagName==='DETAILS')w.open=true;w.scrollIntoView({block:'start'})}${f?`const e=document.querySelector('#mf [name=${f}]');if(e)e.focus();`:''}},150)`;
   const ncrStep=why=>{if(!d.partNo&&!n){S.push({t:'원인 부품 지정',why:'NCR은 원인 부품 · 협력사 기준으로 발행합니다',done:false,btn:`editDefect('${d.id}')`,bl:'지정',rec:true,warn:true});return}
     S.push({t:`NCR 발행 — ${RESP[g]} 요구`,why,done:!!n,doneT:n?`${n.no} · ${ncrStatus(n)}`:'',btn:n?`editNcr('${n.id}')`:`ncrFromDefect('${d.id}')`,bl:n?'NCR 열기':'NCR 발행',rec:g!=='C'})};
-  const rcaStep=(t,why,rec,need)=>S.push({t,why,done:!!c&&(!need||sc.includes(need)),doneT:c?`RCA ${c.CaseNo} · ${c.Stage}${sc?' · 사내 분석 '+(CZ_RCA_LBL[sc]||sc):''}`:'',btn:c?`czOpenCase('${c.id}','cause')`:`czFromDefect('${d.id}')`,bl:c?'RCA 열기':'RCA 요청',rec});
+  const rcaStep=(t,why,rec,need)=>S.push({t,why,done:!!c&&(!need||sc.includes(need)),doneT:c?`RCA ${c.CaseNo} · ${c.Stage}${sc?' · 사내 분석 '+(CZ_RCA_LBL[sc]||sc):''}`:'',btn:c?`czOpenCase('${c.id}','cause')`:`czFromDefect('${d.id}')`,bl:c?'RCA 열기':'RCA 요청',rec,k:/RCA로 관리$/.test(t)&&c?'rcaOwn':'rca'});
   const icaStep=rec=>{const lv=icaLevel(d),vi=icaVerify(d);S.push({t:`사내 대책 — ${lv}`,why:'불량 목록 후속 조치의 ‘사내 대책’ (A: 8D · B: 간이 대책) · 완료 후 유효성 검증',done:!!ic.doneDate,doneT:`완료 ${ic.doneDate||''}${vi?' · '+vi.label:''}`,btn:go('icaWrap'),bl:'사내 대책',rec})};
   if(d.resp==='협력사'){
     ncrStep(g==='C'?'C등급 — 통보 후 다음 입고 LOT 재발 확인':'협력사에 원인·대책 회신 요구');
@@ -1244,17 +1244,20 @@ function routeOf(d){
     else{icaStep(!big);rcaStep('큰 건은 RCA로 관리 (RCA 워크시트 · 조치 · 단계 게이트)',big?'A등급 · 고객 유출 — RCA 권장':'필요할 때만',big,'');}
   }else if(d.resp==='공동'){
     ncrStep('협력사 몫의 원인 · 대책 회신 요구');if(!c)icaStep(true);else rcaStep('사내 몫 — RCA로 관리','',true,'');
-    S.push({t:'비용 분담 비율 확정',why:'FAR 화면의 협력사 부담 비율 (%)',done:iv.share!==''&&iv.share!=null,doneT:`협력사 ${iv.share}%`,btn:go('invWrap','inv_share'),bl:'입력',rec:true});
+    S.push({t:'비용 분담 비율 확정',why:'FAR 화면의 협력사 부담 비율 (%)',done:iv.share!==''&&iv.share!=null,doneT:`협력사 ${iv.share}%`,btn:go('invWrap','inv_share'),bl:'입력',k:'far',rec:true});
   }else if(d.resp==='고객')S.push({t:'고객 귀책 — 고객 협의 내용을 실행 기록으로 남기기',why:'NCR · RCA 대상 아님',done:false,btn:'',rec:false});
   else{const ii=invInfo(d);
     S.push({t:'원인(추정) 부품 지정',why:'완성품 불량이면 의심 부품을 원인 품번에 넣습니다 (FAR 대상 협력사)',done:!!d.partNo,doneT:`${d.partNo} ${d.partName||''} · ${supName(d.supplierId)||'협력사 미지정'}`,btn:`editDefect('${d.id}')`,bl:'지정',rec:!d.partNo});
-    S.push({t:'FAR 요청 — 협력사에 원인 분석 요청',why:'귀책 인정 요구가 아닌 분석 요청',done:!!iv.farReq,doneT:ii.label,btn:go('invWrap','inv_farReq'),bl:iv.farReq?'FAR 보기':'FAR 요청',rec:!iv.farReq&&!!d.supplierId});
-    S.push({t:'사내 RCA 요청 — 사내 공정 · 취급 원인 분석',why:'재현시험 · 측정 · 분해 분석 → 사내 원인이면 공정 개선 · 내부 8D (간단한 건은 귀책 조사 화면의 사내 분석 메모에 기록해도 됩니다)',done:!!(iv.rca||'').trim()||!!c,doneT:c?`RCA ${c.CaseNo} · ${c.Stage}`:'귀책 조사에 사내 분석 기록됨',btn:c?`czOpenCase('${c.id}','cause')`:`czFromDefect('${d.id}')`,bl:c?'RCA 열기':'RCA 요청',rec:g!=='C'});
-    S.push({t:'귀책 판정 → 협력사: NCR · 사내: 사내 대책 · 공동: 분담',why:`판정·근거가 실패비용 정산 기준 · 기한 ${ntfDue(d)} 지나면 원인 불명 검토`,done:!!iv.verdict,doneT:iv.verdict,btn:go('invWrap','inv_verdict'),bl:'귀책 판정',rec:!!iv.farRecv||!!(iv.rca||'').trim()});}
+    S.push({t:'FAR 요청 — 협력사에 원인 분석 요청',why:'귀책 인정 요구가 아닌 분석 요청',done:!!iv.farReq,doneT:ii.label,btn:go('invWrap','inv_farReq'),bl:iv.farReq?'FAR 보기':'FAR 요청',rec:!iv.farReq&&!!d.supplierId,k:'far'});
+    S.push({t:'사내 RCA 요청 — 사내 공정 · 취급 원인 분석',why:'재현시험 · 측정 · 분해 분석 → 사내 원인이면 공정 개선 · 내부 8D (간단한 건은 귀책 조사 화면의 사내 분석 메모에 기록해도 됩니다)',done:!!(iv.rca||'').trim()||!!c,doneT:c?`RCA ${c.CaseNo} · ${c.Stage}`:'귀책 조사에 사내 분석 기록됨',btn:c?`czOpenCase('${c.id}','cause')`:`czFromDefect('${d.id}')`,bl:c?'RCA 열기':'RCA 요청',rec:g!=='C',k:'rca'});
+    S.push({t:'귀책 판정 → 협력사: NCR · 사내: 사내 대책 · 공동: 분담',why:`판정·근거가 실패비용 정산 기준 · 기한 ${ntfDue(d)} 지나면 원인 불명 검토`,done:!!iv.verdict,doneT:iv.verdict,btn:go('invWrap','inv_verdict'),bl:'귀책 판정',rec:!!iv.farRecv||!!(iv.rca||'').trim(),k:'far'});}
   return S;
 }
-function routeHTML(d){
-  if(!d||!d.id)return '';const S=routeOf(d);if(!S.length)return '';
+// form=true: 불량 등록 창용 — FAR · RCA 는 넣지 않음 (등록 창은 등록만. FAR · RCA 는 불량 목록의 후속 조치 칸과 각 화면에서 시작)
+function routeHTML(d,form){
+  if(!d||!d.id)return '';let S=routeOf(d);
+  if(form)S=S.filter(x=>x.k!=='far'&&x.k!=='rca').map(x=>x.k==='rcaOwn'?{...x,btn:''}:x);
+  if(!S.length)return '';
   return `<div class="route"><div class="rh">다음 단계 <span class="muted">귀책 ‘${esc(d.resp||'미정')}’ · 심각도 ${sevOf(d).grade} 기준</span></div>${S.map(x=>`<div class="ri ${x.done?'dn':x.warn?'wn':x.rec?'rc':''}"><span class="ck">${x.done?'✓':x.warn?'!':x.rec?'●':'○'}</span><div class="tx"><b>${esc(x.t)}</b><br><span class="muted">${x.done?esc(x.doneT):esc(x.why)}</span></div>${x.btn?`<button type="button" class="b s ${x.done?'':'p'}" onclick="routeGo(\`${x.btn}\`)">${x.bl}</button>`:''}</div>`).join('')}</div>`;
 }
 async function routeGo(js){if(mfDirty&&!await askConfirm({title:'저장하지 않고 이동할까요?',msg:'먼저 저장하려면 취소 후 저장을 누르세요.',ok:'이동',danger:false}))return;mfDirty=false;if($('#modal').classList.contains('on')&&!/^czFromDefect/.test(js))closeModal(true);runCall(js)}
@@ -2793,8 +2796,7 @@ function editDefect(id,copy,preset){
     <label class="row" style="flex-direction:row;align-items:center;gap:6px;margin-top:16px"><input type="checkbox" name="closedChk" ${d.closed?'checked':''} onchange="$('#closeRsn').style.display=this.checked?'':'none'"> 수동 종결 (예외)</label>
     <label class="full" id="closeRsn" style="${d.closed?'':'display:none'}">수동 종결 사유 (필수 · 진행 기록에 남습니다)<input name="closedReason" value="${esc(d.closed?.reason)}" placeholder="예: 중복 등록, 고객 특채 확정, 오판정 확인 등"></label>
   </div>
-  <div class="help" style="margin-top:6px">진행 단계는 자동으로 정해집니다 — 귀책 <b>미정</b>이면 FAR·RCA 조사 후 판정, <b>협력사</b>(A·B)는 NCR → 대책서 승인 시 완료, <b>사내</b>는 사내 대책(A: 8D · B: 간이) 완료 시 완료, <b>공동</b>은 분담 비율 입력 후 처리 완료일로 완료, 그 밖(C등급·고객 귀책)은 <b>처리 완료일</b> 입력 시 완료. 유효성 검증은 완료와 별도로 표시됩니다.</div>
-  ${invSummary(d,id)}
+  <div class="help" style="margin-top:6px">진행 단계는 자동으로 정해집니다 — 귀책 <b>미정</b>이면 FAR 화면에서 판정, <b>협력사</b>(A·B)는 NCR → 대책서 승인 시 완료, <b>사내</b>는 사내 대책(A: 8D · B: 간이) 완료 시 완료, <b>공동</b>은 분담 비율 입력 후 처리 완료일로 완료, 그 밖(C등급·고객 귀책)은 <b>처리 완료일</b> 입력 시 완료. 유효성 검증은 완료와 별도로 표시됩니다.</div>
   ${id?(()=>{const n=(d.logs||[]).length,l=lastLog(d),nx=[];return `<div class="banner" style="background:var(--pri2);border-color:#c9d8f2;color:#1d2433;margin-top:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">📝 <b>조사 · 진행 기록 ${n}건</b>${l?` <span class="muted">최근 ${esc(l.date)} ${esc(l.kind)}: ${esc(l.text.slice(0,40))}${l.text.length>40?'…':''}</span>`:' <span class="muted">아직 없음</span>'}${nx.length?` <span class="bg warn">다음 행동: ${esc(nx[0].text)}</span>`:''}<span style="flex:1"></span><button type="button" class="b s p" onclick="gotoProgress('${d.id}')">진행 보기 · 기록 추가</button></div>`})():''}
   ${id?'<div id="routeBox"></div>':''}
   <details id="sevWrap" ${(()=>{try{return localStorage.getItem('qms_sevOpen')==='0'?'':'open'}catch(e){return 'open'}})()} ontoggle="try{localStorage.setItem('qms_sevOpen',this.open?'1':'0')}catch(e){}" style="margin-top:14px"><summary class="sec" style="cursor:pointer;list-style:revert">심각도 평가 <span id="sevSum"></span> <span class="muted" style="font-weight:normal;font-size:12px">유출 단계·반복성은 자동, 영향도·범위는 유형·수량으로 초기값 → 필요 시 조정</span></summary>
@@ -2818,15 +2820,6 @@ function editDefect(id,copy,preset){
   {const el=$('#mf').resp;if(el)el.addEventListener('change',renderSev)}
   ['disposition','qty','partNo','resp'].forEach(k=>{const el=$('#mf')[k];if(el)el.addEventListener('change',()=>{const ae=document.activeElement;if(!$('#costBox')?.contains(ae))renderCostBox()})});
   respChanged(true);
-}
-function invSummary(d,id){
-  const iv=d.inv||{},r=d.resp||'협력사',cs=defCase(d);
-  if(r!=='미정'&&!d.inv)return '';
-  const st=iv.verdict?`<span class="bg ok">판정: ${esc(iv.verdict)}${iv.verdictDate?' · '+esc(iv.verdictDate):''}</span>${VERDICT_RESP[iv.verdict]!==r?` <span class="bg warn">귀책을 ‘${esc(r)}’(으)로 직접 변경함</span>`:''}`:(()=>{const ii=invInfo(d);return `<span class="bg ${ii.cls}">${esc(ii.label)}</span>`})();
-  const facts=[iv.farReq&&`FAR 요청 ${iv.farReq}`,iv.farRecv&&`FAR 회신 ${iv.farRecv}`,cs?`RCA ${cs.CaseNo} · ${cs.Stage}`:(iv.rca||'').trim()&&'사내 분석 메모 있음',iv.share!==''&&iv.share!=null&&iv.verdict==='공동'&&`협력사 부담 ${iv.share}%`].filter(Boolean);
-  return `<div class="sec">귀책 조사 <span class="muted" style="font-weight:normal;font-size:12px">FAR · 사내 분석 · 판정은 ‘FAR’ 탭에서 따로 진행합니다</span></div>
-  <div class="route" style="margin-top:0"><div class="ri"><div class="tx">${st}${facts.length?` <span class="muted">${esc(facts.join(' · '))}</span>`:''}${!iv.verdict&&d.date?`<br><span class="muted" style="font-size:12px">원인 불명 검토 기한 ${esc(ntfDue(d))}</span>`:''}</div>
-  ${id?`<button type="button" class="b s p" onclick="routeGo(&quot;editInv('${id}')&quot;)">귀책 조사 열기</button>`:'<span class="muted" style="font-size:12px">저장하면 귀책 조사를 시작할 수 있습니다</span>'}</div></div>`;
 }
 const FAR_PH_MAX=6;
 function invPhotoIds(d){return [...new Set([...(d.photos||[]),...(d.logs||[]).filter(l=>!l.void).flatMap(l=>l.photos||[])])]}
@@ -3461,7 +3454,7 @@ function setSevF(k,v){curSev[k]=v;curSev._touched[k]=true;mfDirty=true;renderSev
 function renderSev(){
   const b=$('#sevBox');if(!b)return;setTimeout(icaSync,0);
   const d=sevDraft(),v=sevOf(d),S=db.settings;
-  const rb=$('#routeBox');if(rb&&curSev._id){const o=db.defects.find(x=>x.id===curSev._id);if(o)rb.innerHTML=routeHTML({...o,...d,resp:$('#mf').resp.value,id:o.id,ncrId:o.ncrId,caseId:o.caseId})}
+  const rb=$('#routeBox');if(rb&&curSev._id){const o=db.defects.find(x=>x.id===curSev._id);if(o)rb.innerHTML=routeHTML({...o,...d,resp:$('#mf').resp.value,id:o.id,ncrId:o.ncrId,caseId:o.caseId},true)}
   const lv=(k,cur,auto)=>`<div class="row" style="gap:4px">${SEV_F[k][1].map((l,i)=>auto?`<span class="bg ${cur===i+1?'inf':'mut'}" style="${cur===i+1?'font-weight:bold':'opacity:.55'}">${i+1} ${l}</span>`:`<button type="button" class="b s ${cur===i+1?'p':''}" onclick="setSevF('${k}',${i+1})">${i+1} ${l}</button>`).join('')}</div>`;
   const note={impact:curSev._touched.impact?'직접 선택':`유형 ‘${esc(d.type)}’ 기본값`,stage:`발생처 ‘${esc(d.source)}’ 기준 (자동)`,scope:curSev._touched.scope?'직접 선택':'수량·비율 기준 자동',repeat:`동일 협력사·유형 ${S.repeatWindow}일 내 ${v.rp.n}회${v.rp.re?' · 대책 종결 후 재발':''} (자동)`};
   b.innerHTML=`<table class="ct"><tbody>${['impact','stage','scope','repeat'].map(k=>`<tr><td style="width:84px"><b>${SEV_F[k][0]}</b></td><td>${lv(k,v.f[k],k==='stage'||k==='repeat')}</td><td class="muted" style="font-size:11.5px">${note[k]}</td><td class="n" style="width:40px"><b>${v.f[k]}</b></td></tr>`).join('')}

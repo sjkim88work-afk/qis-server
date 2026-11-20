@@ -14,7 +14,7 @@ function routeOf(d){
   const go=(sec,f)=>sec==='invWrap'?`editInv('${d.id}','${f||''}')`:sec==='icaWrap'?`editIca('${d.id}')`:`editDefect('${d.id}');setTimeout(()=>{const w=document.getElementById('${sec}');if(w){if(w.tagName==='DETAILS')w.open=true;w.scrollIntoView({block:'start'})}${f?`const e=document.querySelector('#mf [name=${f}]');if(e)e.focus();`:''}},150)`;
   const ncrStep=why=>{if(!d.partNo&&!n){S.push({t:'원인 부품 지정',why:'NCR은 원인 부품 · 협력사 기준으로 발행합니다',done:false,btn:`editDefect('${d.id}')`,bl:'지정',rec:true,warn:true});return}
     S.push({t:`NCR 발행 — ${RESP[g]} 요구`,why,done:!!n,doneT:n?`${n.no} · ${ncrStatus(n)}`:'',btn:n?`editNcr('${n.id}')`:`ncrFromDefect('${d.id}')`,bl:n?'NCR 열기':'NCR 발행',rec:g!=='C'})};
-  const rcaStep=(t,why,rec,need)=>S.push({t,why,done:!!c&&(!need||sc.includes(need)),doneT:c?`RCA ${c.CaseNo} · ${c.Stage}${sc?' · 사내 분석 '+(CZ_RCA_LBL[sc]||sc):''}`:'',btn:c?`czOpenCase('${c.id}','cause')`:`czFromDefect('${d.id}')`,bl:c?'RCA 열기':'RCA 요청',rec});
+  const rcaStep=(t,why,rec,need)=>S.push({t,why,done:!!c&&(!need||sc.includes(need)),doneT:c?`RCA ${c.CaseNo} · ${c.Stage}${sc?' · 사내 분석 '+(CZ_RCA_LBL[sc]||sc):''}`:'',btn:c?`czOpenCase('${c.id}','cause')`:`czFromDefect('${d.id}')`,bl:c?'RCA 열기':'RCA 요청',rec,k:/RCA로 관리$/.test(t)&&c?'rcaOwn':'rca'});
   const icaStep=rec=>{const lv=icaLevel(d),vi=icaVerify(d);S.push({t:`사내 대책 — ${lv}`,why:'불량 목록 후속 조치의 ‘사내 대책’ (A: 8D · B: 간이 대책) · 완료 후 유효성 검증',done:!!ic.doneDate,doneT:`완료 ${ic.doneDate||''}${vi?' · '+vi.label:''}`,btn:go('icaWrap'),bl:'사내 대책',rec})};
   if(d.resp==='협력사'){
     ncrStep(g==='C'?'C등급 — 통보 후 다음 입고 LOT 재발 확인':'협력사에 원인·대책 회신 요구');
@@ -27,17 +27,20 @@ function routeOf(d){
     else{icaStep(!big);rcaStep('큰 건은 RCA로 관리 (RCA 워크시트 · 조치 · 단계 게이트)',big?'A등급 · 고객 유출 — RCA 권장':'필요할 때만',big,'');}
   }else if(d.resp==='공동'){
     ncrStep('협력사 몫의 원인 · 대책 회신 요구');if(!c)icaStep(true);else rcaStep('사내 몫 — RCA로 관리','',true,'');
-    S.push({t:'비용 분담 비율 확정',why:'FAR 화면의 협력사 부담 비율 (%)',done:iv.share!==''&&iv.share!=null,doneT:`협력사 ${iv.share}%`,btn:go('invWrap','inv_share'),bl:'입력',rec:true});
+    S.push({t:'비용 분담 비율 확정',why:'FAR 화면의 협력사 부담 비율 (%)',done:iv.share!==''&&iv.share!=null,doneT:`협력사 ${iv.share}%`,btn:go('invWrap','inv_share'),bl:'입력',k:'far',rec:true});
   }else if(d.resp==='고객')S.push({t:'고객 귀책 — 고객 협의 내용을 실행 기록으로 남기기',why:'NCR · RCA 대상 아님',done:false,btn:'',rec:false});
   else{const ii=invInfo(d);
     S.push({t:'원인(추정) 부품 지정',why:'완성품 불량이면 의심 부품을 원인 품번에 넣습니다 (FAR 대상 협력사)',done:!!d.partNo,doneT:`${d.partNo} ${d.partName||''} · ${supName(d.supplierId)||'협력사 미지정'}`,btn:`editDefect('${d.id}')`,bl:'지정',rec:!d.partNo});
-    S.push({t:'FAR 요청 — 협력사에 원인 분석 요청',why:'귀책 인정 요구가 아닌 분석 요청',done:!!iv.farReq,doneT:ii.label,btn:go('invWrap','inv_farReq'),bl:iv.farReq?'FAR 보기':'FAR 요청',rec:!iv.farReq&&!!d.supplierId});
-    S.push({t:'사내 RCA 요청 — 사내 공정 · 취급 원인 분석',why:'재현시험 · 측정 · 분해 분석 → 사내 원인이면 공정 개선 · 내부 8D (간단한 건은 귀책 조사 화면의 사내 분석 메모에 기록해도 됩니다)',done:!!(iv.rca||'').trim()||!!c,doneT:c?`RCA ${c.CaseNo} · ${c.Stage}`:'귀책 조사에 사내 분석 기록됨',btn:c?`czOpenCase('${c.id}','cause')`:`czFromDefect('${d.id}')`,bl:c?'RCA 열기':'RCA 요청',rec:g!=='C'});
-    S.push({t:'귀책 판정 → 협력사: NCR · 사내: 사내 대책 · 공동: 분담',why:`판정·근거가 실패비용 정산 기준 · 기한 ${ntfDue(d)} 지나면 원인 불명 검토`,done:!!iv.verdict,doneT:iv.verdict,btn:go('invWrap','inv_verdict'),bl:'귀책 판정',rec:!!iv.farRecv||!!(iv.rca||'').trim()});}
+    S.push({t:'FAR 요청 — 협력사에 원인 분석 요청',why:'귀책 인정 요구가 아닌 분석 요청',done:!!iv.farReq,doneT:ii.label,btn:go('invWrap','inv_farReq'),bl:iv.farReq?'FAR 보기':'FAR 요청',rec:!iv.farReq&&!!d.supplierId,k:'far'});
+    S.push({t:'사내 RCA 요청 — 사내 공정 · 취급 원인 분석',why:'재현시험 · 측정 · 분해 분석 → 사내 원인이면 공정 개선 · 내부 8D (간단한 건은 귀책 조사 화면의 사내 분석 메모에 기록해도 됩니다)',done:!!(iv.rca||'').trim()||!!c,doneT:c?`RCA ${c.CaseNo} · ${c.Stage}`:'귀책 조사에 사내 분석 기록됨',btn:c?`czOpenCase('${c.id}','cause')`:`czFromDefect('${d.id}')`,bl:c?'RCA 열기':'RCA 요청',rec:g!=='C',k:'rca'});
+    S.push({t:'귀책 판정 → 협력사: NCR · 사내: 사내 대책 · 공동: 분담',why:`판정·근거가 실패비용 정산 기준 · 기한 ${ntfDue(d)} 지나면 원인 불명 검토`,done:!!iv.verdict,doneT:iv.verdict,btn:go('invWrap','inv_verdict'),bl:'귀책 판정',rec:!!iv.farRecv||!!(iv.rca||'').trim(),k:'far'});}
   return S;
 }
-function routeHTML(d){
-  if(!d||!d.id)return '';const S=routeOf(d);if(!S.length)return '';
+// form=true: 불량 등록 창용 — FAR · RCA 는 넣지 않음 (등록 창은 등록만. FAR · RCA 는 불량 목록의 후속 조치 칸과 각 화면에서 시작)
+function routeHTML(d,form){
+  if(!d||!d.id)return '';let S=routeOf(d);
+  if(form)S=S.filter(x=>x.k!=='far'&&x.k!=='rca').map(x=>x.k==='rcaOwn'?{...x,btn:''}:x);
+  if(!S.length)return '';
   return `<div class="route"><div class="rh">다음 단계 <span class="muted">귀책 ‘${esc(d.resp||'미정')}’ · 심각도 ${sevOf(d).grade} 기준</span></div>${S.map(x=>`<div class="ri ${x.done?'dn':x.warn?'wn':x.rec?'rc':''}"><span class="ck">${x.done?'✓':x.warn?'!':x.rec?'●':'○'}</span><div class="tx"><b>${esc(x.t)}</b><br><span class="muted">${x.done?esc(x.doneT):esc(x.why)}</span></div>${x.btn?`<button type="button" class="b s ${x.done?'':'p'}" onclick="routeGo(\`${x.btn}\`)">${x.bl}</button>`:''}</div>`).join('')}</div>`;
 }
 async function routeGo(js){if(mfDirty&&!await askConfirm({title:'저장하지 않고 이동할까요?',msg:'먼저 저장하려면 취소 후 저장을 누르세요.',ok:'이동',danger:false}))return;mfDirty=false;if($('#modal').classList.contains('on')&&!/^czFromDefect/.test(js))closeModal(true);runCall(js)}

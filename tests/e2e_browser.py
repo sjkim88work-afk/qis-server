@@ -647,6 +647,22 @@ def main(seed_path):
             ok(r["n"] == 2 and "회의록.pdf" in r["t"] and "성적서.xlsx" in r["t"] and r["ids"] == 2, f"창을 다시 열어도 첨부가 보임 ({r['t'][:40]})")
             A.evaluate("()=>{mfDirty=false;closeModal(true);const k=db.issues.findIndex(x=>x.id==='isfx');const ph=logPhotoIds(db.issues[k].logs);photoDel(ph).catch(()=>{});ph.forEach(x=>db.deleted.push({id:x,at:now()}));removeRec('issues','isfx');save();go('dash')}"); A.wait_for_timeout(600)
             ok(not A._errs, f"이슈 기록 첨부: 화면 오류 없음 {A._errs[:2]}")
+            # 불량 등록 창에는 FAR · RCA 가 없음 (등록만). NCR · 사내 대책 단계는 남음. 불량 진행 창 · 목록의 후속 조치 칸은 그대로
+            r = A.evaluate("""async()=>{const wait=ms=>new Promise(r=>setTimeout(r,ms)),q=s=>document.querySelector(s),out={};
+              const mk=(id,resp,x)=>{const d={id,date:today(),source:'수입검사',partNo:'P-1',supplierId:(db.suppliers[0]||{}).id||'',type:'치수',qty:3,resp,logs:[],photos:[],createdAt:now(),...x};db.defects.push(d);return d};
+              const d1=mk('dnf1','미정',{inv:{farReq:today()}});mk('dnf2','협력사',{});mk('dnf3','사내',{});
+              const look=async id=>{editDefect(id);await wait(350);const m=q('#mbody'),rb=q('#routeBox'),t=m.textContent;
+                const o={sec:[...m.querySelectorAll('.sec')].some(e=>/^귀책 조사/.test(e.textContent.trim())),open:/귀책 조사 열기|저장하면 귀책 조사/.test(t),route:rb?[...rb.querySelectorAll('.ri b')].map(e=>e.textContent).join('|'):'',btn:rb?[...rb.querySelectorAll('button')].map(e=>e.textContent).join('|'):'',help:/FAR 화면에서 판정/.test(t)&&!/FAR·RCA 조사 후 판정/.test(t)};
+                mfDirty=false;closeModal(true);return o};
+              out.a=await look('dnf1');out.b=await look('dnf2');out.c=await look('dnf3');
+              openLog('dnf1');await wait(300);out.log=[...document.querySelectorAll('#mbody .route .ri b')].map(e=>e.textContent).join('|');mfDirty=false;closeModal(true);
+              out.cell=actCell(d1).replace(/<[^>]+>/g,' ');
+              db.defects=db.defects.filter(x=>!/^dnf/.test(x.id));return out}""")
+            ok(not r["a"]["sec"] and not r["a"]["open"] and r["a"]["help"], "불량 등록 창: 귀책 조사(FAR) 블록이 없음 · 안내 문구는 ‘FAR 화면에서 판정’")
+            ok("FAR" not in r["a"]["route"] and "RCA" not in r["a"]["route"] and "FAR" not in r["a"]["btn"] and "RCA" not in r["a"]["btn"], f"불량 등록 창(귀책 미정): 다음 단계에 FAR · RCA 가 없음 ({r['a']['route']})")
+            ok("NCR 발행" in r["b"]["route"] and "NCR 발행" in r["b"]["btn"] and "RCA" not in r["b"]["route"], f"불량 등록 창(협력사): NCR 발행 단계는 남음 ({r['b']['route']})")
+            ok("RCA" not in r["c"]["route"] and "RCA" not in r["c"]["btn"], f"불량 등록 창(사내): RCA 단추가 없음 ({r['c']['route']} / {r['c']['btn']})")
+            ok("FAR 요청" in r["log"] and "RCA" in r["log"] and "FAR" in r["cell"], f"불량 진행 창 · 목록의 후속 조치 칸에는 FAR · RCA 가 그대로 있음 ({r['cell'].strip()[:30]})")
             # 2026-11 디자인 리뉴얼: 좌측 사이드바(창 1400px 이상) · 로그아웃 단추가 항상 있음 · 표 밀도 · 단추 칸 고정 · 좁은 화면 보정
             NAVST = """()=>{const q=s=>document.querySelector(s),v=e=>!!e&&e.offsetParent!==null,o=q('#hdrOut'),n=q('#nav'),r=o?o.getBoundingClientRect():null;
               return {side:getComputedStyle(document.body).display==='grid',mob:document.body.classList.contains('mob'),out:v(o),user:v(q('#srvUser')),
