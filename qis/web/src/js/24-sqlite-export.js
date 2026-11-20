@@ -107,7 +107,7 @@ function phOwners(){
   const nById=new Map(db.ncrs.map(n=>[n.id,n]));
   db.ncrs.forEach(n=>{put(logIds(n),n.no,n.partNo);put(ncrDocIds(n),n.no,n.partNo)});
   db.defects.forEach(d=>{const n=d.ncrId&&nById.get(d.ncrId);put(d.photos,n?n.no:'',d.partNo);put(logIds(d),n?n.no:'',d.partNo)});
-  (db.issues||[]).forEach(i=>put(i.photos,i.no,i.partNo));
+  (db.issues||[]).forEach(i=>{put(i.photos,i.no,i.partNo);put(logIds(i),i.no,i.partNo)});
   return m;
 }
 const phSafe=v=>String(v||'').trim().replace(/[\\/:*?"<>|\s]+/g,'-').replace(/^-+|-+$/g,'');
@@ -236,6 +236,8 @@ function lbShow(){
 function lbMove(k){if(!lbList.length)return;lbIdx=(lbIdx+k+lbList.length)%lbList.length;lbShow()}
 function closeLb(){$('#lb').classList.remove('on');$('#lbimg').src=''}
 document.addEventListener('paste',e=>{
+  const ia=$('#modal').classList.contains('on')&&$('#modal').dataset.iss&&document.activeElement&&document.activeElement.closest&&document.activeElement.closest('.isadd,.ised');
+  if(ia){const fs=[...(e.clipboardData?.files||[])];if(fs.length){e.preventDefault();issFAdd(fs,ia.classList.contains('ised')?'ed':'nw').then(n=>{if(n)toast(`파일 ${n}개 첨부`)})}return}
   const lb=$('#logBox');
   if(lb&&$('#modal').classList.contains('on')&&lb.contains(document.activeElement)){const fs=[...(e.clipboardData?.files||[])].filter(f=>f.type.startsWith('image/'));
     if(fs.length){e.preventDefault();lgAddFiles(fs,tl.edit!=null?'edit':undefined);toast(`증빙 ${fs.length}장 첨부`)}return}

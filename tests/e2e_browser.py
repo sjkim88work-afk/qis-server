@@ -601,6 +601,52 @@ def main(seed_path):
             ok(r["ncr"] and r["ret"] and r["closed2"], "RCA 창에서 NCR 창을 열고 닫으면 RCA 창으로 돌아옴")
             ok(r["i1"] and r["i2"], "이슈 상세에서 RCA 창을 열고 닫으면 이슈 상세로 돌아옴")
             ok(r["deleted"], "RCA 삭제 → 창이 닫힘")
+            # 이슈 기록의 파일 첨부: PDF · 이미지를 붙여 저장 → 기록 아래에 표시 → 수정에서 빼기 · 추가 (이력에 남음) → 새로 열어도 유지
+            import base64 as _b64, tempfile as _tf
+            _fd = _tf.mkdtemp()
+            open(os.path.join(_fd, "회의록.pdf"), "wb").write(b"%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF\n")
+            open(os.path.join(_fd, "현장.png"), "wb").write(_b64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="))
+            open(os.path.join(_fd, "성적서.xlsx"), "wb").write(b"PK\x03\x04 test")
+            A.evaluate("""()=>{const i={id:'isfx',no:'ISS-F',title:'첨부 시험',at:today(),urg:'보통',logs:[],photos:[],defectIds:[],caseIds:[],createdAt:now()};db.issues.push(i);go('issue');issOpen('isfx')}"""); A.wait_for_timeout(300)
+            ok(A.locator("#modal .isadd input[type=file]").count() == 1 and "파일 첨부" in A.inner_text("#modal .isadd"), "이슈 기록 남기기: 파일 첨부 단추가 있음")
+            A.set_input_files("#modal .isadd input[type=file]", [os.path.join(_fd, "회의록.pdf"), os.path.join(_fd, "현장.png")]); A.wait_for_timeout(600)
+            r = A.evaluate("()=>({chips:document.querySelectorAll('#isF .f').length,img:document.querySelectorAll('#isF .f.im img').length,x:document.querySelectorAll('#isF .x').length,name:document.querySelector('#isF').textContent,dirty:mfDirty})")
+            ok(r["chips"] == 2 and r["img"] == 1 and r["x"] == 2 and "회의록.pdf" in r["name"] and r["dirty"], f"고른 파일 2개가 저장 전에 보임 — 이미지는 작은 그림, 문서는 이름 ({r['chips']})")
+            A.click("#modal .isadd button.p:has-text('저장')"); A.wait_for_timeout(300)
+            ok("내용을 입력하세요" in A.inner_text("#toast") and A.evaluate("()=>issF.nw.length") == 2, "내용 없이 파일만으로는 저장 안 됨 — 고른 파일은 그대로")
+            A.fill("#isTx", "회의록 첨부 기록"); A.click("#modal .isadd button.p:has-text('저장')"); A.wait_for_timeout(700)
+            r = A.evaluate("""async()=>{const i=issById('isfx'),l=i.logs.find(x=>x.text==='회의록 첨부 기록'),got=await photoGetMany(l.photos||[]);
+              const li=[...document.querySelectorAll('#modal ol.isl li')].find(e=>e.textContent.includes('회의록 첨부 기록'));
+              return {n:(l.photos||[]).length,stored:got.length,doc:got.filter(g=>g.kind==='doc').map(g=>g.name).join(),shown:li.querySelectorAll('.isfl .f').length,x:li.querySelectorAll('.isfl .x').length,draft:issF.nw.length,left:document.querySelectorAll('#isF .f').length}}""")
+            ok(r["n"] == 2 and r["stored"] == 2 and r["doc"] == "회의록.pdf" and r["shown"] == 2 and r["x"] == 0 and r["draft"] == 0 and r["left"] == 0, f"저장: 기록에 첨부 2개 · 저장소에 있음 · 기록 아래에 표시 ({r})")
+            with A.expect_popup() as pop:
+                A.click("#modal ol.isl .isfl a.o")
+            ok(pop.value is not None, "문서 첨부를 누르면 열림 (PDF 는 새 창)"); pop.value.close()
+            A.click("#modal ol.isl .isfl .f.im img"); A.wait_for_timeout(250)
+            ok(A.evaluate("()=>document.querySelector('#lb').classList.contains('on')"), "이미지 첨부를 누르면 크게 보기"); A.evaluate("()=>closeLb()")
+            # 수정: 이미지 빼고 엑셀 추가
+            A.evaluate("()=>{const i=issById('isfx');issEditLog('isfx',i.logs.findIndex(x=>x.text==='회의록 첨부 기록'))}"); A.wait_for_timeout(300)
+            ok(A.locator("#ieF .f").count() == 2 and A.locator("#ieF .x").count() == 2, "기록 수정: 지금 첨부 2개가 보이고 뺄 수 있음")
+            A.click("#ieF .f.im .x"); A.set_input_files("#modal .ised input[type=file]", [os.path.join(_fd, "성적서.xlsx")]); A.wait_for_timeout(500)
+            A.click("#modal .ised button.p"); A.wait_for_timeout(700)
+            r = A.evaluate("""async()=>{const i=issById('isfx'),l=i.logs.find(x=>x.text==='회의록 첨부 기록'),got=await photoGetMany(l.photos||[]),e=l.edits[l.edits.length-1];
+              const li=[...document.querySelectorAll('#modal ol.isl li')].find(x=>x.textContent.includes('회의록 첨부 기록'));
+              return {names:got.map(g=>g.name).sort().join(),files:e.files,hist:li.querySelector('details').textContent,del:db.deleted.length>0}}""")
+            ok(r["names"] == "성적서.xlsx,회의록.pdf" and r["files"] == {"add": 1, "del": 1} and "첨부 추가 1 · 삭제 1" in r["hist"], f"수정 저장: 이미지 삭제 · 엑셀 추가 — 수정 이력에 남음 ({r['names']})")
+            # 붙여넣기 (캡처 그림) · 취소
+            r = A.evaluate("""async()=>{const wait=ms=>new Promise(r=>setTimeout(r,ms));document.querySelector('#isTx').focus();
+              const bin=atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='),u=new Uint8Array(bin.length);for(let k=0;k<bin.length;k++)u[k]=bin.charCodeAt(k);
+              const dt=new DataTransfer();dt.items.add(new File([u],'capture.png',{type:'image/png'}));
+              document.querySelector('#isTx').dispatchEvent(new ClipboardEvent('paste',{clipboardData:dt,bubbles:true,cancelable:true}));await wait(500);
+              const a=issF.nw.length;issClearLog();return {a,b:issF.nw.length,left:document.querySelectorAll('#isF .f').length}}""")
+            ok(r["a"] == 1 and r["b"] == 0 and r["left"] == 0, f"기록 칸에서 Ctrl+V 로 그림 첨부 · 취소하면 지워짐 ({r})")
+            # 새로 열어도 유지 · 백업 대상에 들어감 · 조회 전용 사용자도 봄
+            A.evaluate("()=>{mfDirty=false;closeModal(true);save()}"); A.wait_for_timeout(900)
+            A.evaluate("()=>{Object.keys(issFC).forEach(k=>delete issFC[k]);issOpen('isfx')}"); A.wait_for_timeout(700)
+            r = A.evaluate("()=>{const li=[...document.querySelectorAll('#modal ol.isl li')].find(x=>x.textContent.includes('회의록 첨부 기록'));return {n:li.querySelectorAll('.isfl .f').length,t:li.querySelector('.isfl').textContent,ids:logPhotoIds(issById('isfx').logs).length}}")
+            ok(r["n"] == 2 and "회의록.pdf" in r["t"] and "성적서.xlsx" in r["t"] and r["ids"] == 2, f"창을 다시 열어도 첨부가 보임 ({r['t'][:40]})")
+            A.evaluate("()=>{mfDirty=false;closeModal(true);const k=db.issues.findIndex(x=>x.id==='isfx');const ph=logPhotoIds(db.issues[k].logs);photoDel(ph).catch(()=>{});ph.forEach(x=>db.deleted.push({id:x,at:now()}));removeRec('issues','isfx');save();go('dash')}"); A.wait_for_timeout(600)
+            ok(not A._errs, f"이슈 기록 첨부: 화면 오류 없음 {A._errs[:2]}")
             # 2026-11 디자인 리뉴얼: 좌측 사이드바(창 1400px 이상) · 로그아웃 단추가 항상 있음 · 표 밀도 · 단추 칸 고정 · 좁은 화면 보정
             NAVST = """()=>{const q=s=>document.querySelector(s),v=e=>!!e&&e.offsetParent!==null,o=q('#hdrOut'),n=q('#nav'),r=o?o.getBoundingClientRect():null;
               return {side:getComputedStyle(document.body).display==='grid',mob:document.body.classList.contains('mob'),out:v(o),user:v(q('#srvUser')),

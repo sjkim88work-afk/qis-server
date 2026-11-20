@@ -86,15 +86,58 @@ function renderIssue(){
 }
 // 이슈 상세 — 불량 · NCR 처럼 창(팝업)으로 엶. 목록은 뒤에 그대로 있음
 function issOpen(id){if(!issById(id))return;state.tab='issue';state.issId=id;state.issRoute=state.issRoute||'defect';render();issShow(id)}
+// 기록의 첨부 파일 — 이미지 · PDF · 엑셀 · 메일 등. 저장소는 사진 · NCR 문서와 같음 (기록의 photos 에 id 를 둠)
+let issF={id:null,nw:[],ed:null};      // nw: 새 기록에 붙일 파일 id · ed: {k,ids,del} 수정 중인 기록
+const issFC={};                         // id → 파일 (새로 고른 파일은 isNew)
+const issFImg=r=>/^image\//i.test(r.mime||'')||/^data:image\//.test(r.thumb||r.data||'');
+function issFReset(id){[...issF.nw,...(issF.ed?issF.ed.ids:[])].forEach(x=>{if(issFC[x]&&issFC[x].isNew)delete issFC[x]});issF={id:id||null,nw:[],ed:null}}
+function issFHTML(ids,rm){
+  return (ids||[]).length?`<div class="isfl">${ids.map((id,k)=>{const r=issFC[id],x=rm?`<a class="x" onclick="issFRm('${rm}',${k})" title="빼기" aria-label="첨부 빼기">✕</a>`:'';
+    if(!r)return `<span class="f ld">📎 불러오는 중</span>`;
+    if(r.gone)return `<span class="f ld" title="이 PC에서 파일을 찾지 못했습니다">📎 파일 없음${x}</span>`;
+    return issFImg(r)?`<span class="f im"><img src="${r.thumb||r.data}" alt="${esc(r.name||'첨부 이미지')}" title="${esc(r.name||'')}" onclick="issFOpen('${id}')">${x}</span>`
+      :`<span class="f"><a class="o" onclick="issFOpen('${id}')" title="${esc(r.name)} — 열기"><span class="dk">${docIcon(r)}</span><b>${esc(r.name)}</b>${r.size?`<span class="muted">${fmtBytes(r.size)}</span>`:''}</a>${x}</span>`}).join('')}</div>`:'';
+}
+async function issFLoad(i){
+  const ids=logPhotoIds(i.logs).filter(x=>!issFC[x]);if(!ids.length)return;
+  try{const rs=await photoGetMany(ids);rs.forEach(r=>{issFC[r.id]=r});ids.forEach(x=>{if(!issFC[x])issFC[x]={id:x,gone:true}})}catch(e){return}
+  document.querySelectorAll('#modal [data-isf]').forEach(b=>{const l=(i.logs||[]).find(x=>x.id===b.dataset.isf);if(l)b.innerHTML=issFHTML(l.photos)});
+  const eb=$('#ieF');if(eb&&issF.ed)eb.innerHTML=issFHTML(issF.ed.ids,'ed');
+}
+async function issFAdd(files,to){
+  const S=db.settings,L=to==='ed'&&issF.ed?issF.ed.ids:issF.nw;let n=0;
+  for(const f of files){
+    if(f.size>20*1048576){toast(`${f.name}: 20MB를 넘는 파일은 첨부할 수 없습니다`);continue}
+    try{let r;
+      if((f.type||'').startsWith('image/')){const im=await readImg(f);r={id:uid(),name:f.name||'붙여넣은 이미지.jpg',mime:'image/jpeg',caption:'',data:shrink(im,num(S.photoMax)||1600,(num(S.photoQ)||80)/100),thumb:shrink(im,320,.7),createdAt:now(),isNew:true}}
+      else{const data=await fileToURL(f);if(!isFileURL(data)){toast(`${f.name}: 파일을 읽지 못했습니다`);continue}
+        r={id:uid(),kind:'doc',name:f.name,mime:f.type||'',size:f.size,data,thumb:'',createdAt:now(),isNew:true}}
+      issFC[r.id]=r;L.push(r.id);n++}catch(e){toast(`${f.name}: 파일을 읽지 못했습니다`)}
+  }
+  if(n){mfDirty=true;issFDraw()}
+  return n;
+}
+function issFRm(to,k){const e=to==='ed'?issF.ed:null,L=e?e.ids:issF.nw,id=L[k];if(id==null)return;L.splice(k,1);
+  if(issFC[id]&&issFC[id].isNew)delete issFC[id];else if(e)e.del.push(id);mfDirty=true;issFDraw()}
+function issFDraw(){const a=$('#isF');if(a)a.innerHTML=issFHTML(issF.nw,'nw');const b=$('#ieF');if(b&&issF.ed)b.innerHTML=issFHTML(issF.ed.ids,'ed')}
+function issFOpen(id){const r=issFC[id];if(!r||r.gone)return;
+  if(!issFImg(r))return docOpenRec(r);
+  const i=issById(issF.id),all=[...new Set([...(i?logPhotoIds(i.logs):[]),...issF.nw,...(issF.ed?issF.ed.ids:[])])].map(x=>issFC[x]).filter(x=>x&&!x.gone&&issFImg(x));
+  const k=all.findIndex(x=>x.id===id);if(k>=0)lbOpen(all.map(x=>({...x,caption:x.caption||x.name||''})),k)}
+// 새로 고른 파일을 저장소에 넣음 (기록 저장과 함께)
+function issFPut(ids){const add=ids.map(x=>issFC[x]).filter(r=>r&&r.isNew);if(!add.length)return;
+  photoPut(add.map(({isNew,...r})=>r)).then(()=>{photoStr=null;if(typeof photoDir!=='undefined'&&photoDir)syncPhotoFiles(false)}).catch(e=>toast('첨부 파일 저장 실패: '+e.message));
+  add.forEach(r=>{r.isNew=false})}
+const issFBtn=to=>`<label class="b s" style="cursor:pointer">📎 파일 첨부<input type="file" multiple accept="${RD_ACCEPT}" style="display:none" onchange="issFAdd([...this.files],'${to}');this.value=''"></label><span class="muted" style="font-size:12px">메일 · 성적서 · 사진 (캡처 후 Ctrl+V 가능)</span>`;
 function issShow(id,keep){
   const i=issById(id),m=$('#modal');if(!i)return;
   // 다시 그릴 때: 쓰던 기록 입력 · 스크롤 위치 유지
   const KEEP=['isK','isAtD','isAtB','isAtT','isWho','isTx','ieK','ieAtD','ieAtB','ieAtT','ieWho','ieTx','ieWhy'];
-  if(!keep||m.dataset.iss!==id)state.issEditK=null;
+  if(!keep||m.dataset.iss!==id){state.issEditK=null;issFReset(id)}
   const old=keep&&m.dataset.iss===id?{v:KEEP.map(k=>$('#'+k)?$('#'+k).value:null),top:$('#mbody').scrollTop}:null;
   openModal(`${i.no} 이슈`,issDetailHTML(i),[...(RO?[]:[{label:'삭제',cls:'d',fn:()=>delIssue(id)},...(i.closedAt?[{label:'다시 열기',fn:()=>issReopen(id)}]:[]),{label:'수정',fn:()=>editIssue(id)}]),{label:'닫기',fn:closeModal},...(RO?[]:[{label:'저장',cls:'p',fn:()=>issSaveAll(id)}])]);
   m.dataset.iss=id;
-  if(old){KEEP.forEach((k,n)=>{if($('#'+k)&&old.v[n]!=null)$('#'+k).value=old.v[n]});dtpSync('isAt');dtpSync('ieAt');$('#mbody').scrollTop=old.top;mfDirty=!!(old.v[KEEP.indexOf('isTx')]||'').trim()||state.issEditK!=null}
+  if(old){KEEP.forEach((k,n)=>{if($('#'+k)&&old.v[n]!=null)$('#'+k).value=old.v[n]});dtpSync('isAt');dtpSync('ieAt');$('#mbody').scrollTop=old.top;mfDirty=!!(old.v[KEEP.indexOf('isTx')]||'').trim()||state.issEditK!=null||issF.nw.length>0}
 }
 // 화면을 다시 그린 뒤: 상세 창이 떠 있으면 갱신, 아무 창도 없으면 '보고 있던 이슈' 표시를 지움
 function issSync(){
@@ -154,7 +197,7 @@ function issDetailHTML(i){
   const dayOf=l=>String(l.at||'').slice(0,10),days={};logs.forEach(l=>{(days[dayOf(l)]=days[dayOf(l)]||[]).push(l._k)});
   const mv=l=>{const D=days[dayOf(l)],n=D.indexOf(l._k);if(ro||D.length<2)return '';
     return `<span class="mv"><button type="button" class="b s" ${n?'':'disabled'} onclick="issMove('${i.id}',${l._k},-1)" title="같은 날 안에서 위로" aria-label="위로">▲</button><button type="button" class="b s" ${n<D.length-1?'':'disabled'} onclick="issMove('${i.id}',${l._k},1)" title="같은 날 안에서 아래로" aria-label="아래로">▼</button></span>`};
-  setTimeout(()=>issPhotos(i),0);
+  setTimeout(()=>{issPhotos(i);issFLoad(i)},0);
   const kv=(k,v,s)=>`<div><div class="muted" style="font-size:12px">${k}</div><div style="font-weight:600;margin-top:2px">${v}</div>${s?`<div style="font-size:12.5px">${s}</div>`:''}</div>`;
   const p=partByNo(i.partNo||'');
   const fol=[...L.ds.map(d=>`<a class="isf" onclick="editDefect('${d.id}')"><span class="bg mut">불량</span><span style="flex:1">${esc(d.date)} ${esc(d.source||'')} · ${esc(d.partNo||'품번 미정')} ${num(d.qty).toLocaleString()}EA</span>${sevBadge(d)} <span class="bg ${defStage(d).cls}">${esc(defStage(d).label)}</span></a>`),
@@ -183,16 +226,17 @@ function issDetailHTML(i){
           <label class="fgl">구분<select id="ieK">${opts(ISS_KINDS.includes(l.kind)?ISS_KINDS:[l.kind,...ISS_KINDS],l.kind)}</select></label></div>
           <label class="fgl" style="margin-top:8px">상대방 · 참석<input id="ieWho" value="${esc(l.who||'')}"></label>
           <label class="fgl" style="margin-top:8px">내용<textarea id="ieTx" style="min-height:120px;width:100%">${esc(l.text)}</textarea></label>
+          <div class="row" style="gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px">${issFBtn('ed')}</div><div id="ieF">${issFHTML(issF.ed?issF.ed.ids:l.photos,'ed')}</div>
           <label class="fgl" style="margin-top:8px">수정 사유 <span class="muted" style="font-weight:normal">(선택 — 적으면 기록 아래에 남습니다)</span><input id="ieWhy" placeholder="예: 오타 수정, 협력사 회신 내용 보완"></label>
           <div class="row" style="justify-content:flex-end;gap:8px;margin-top:8px"><button type="button" class="b" onclick="issEditLog('${i.id}',null)">취소</button><button type="button" class="b p" onclick="issSaveLog('${i.id}',${l._k})">수정 저장</button></div></div></li>`;
-        return `<li class="${l.void?'void':''}"><span class="mono" title="${l.at&&String(l.at).length>10?'':l.band?'정확한 시각 모름 — '+esc(l.band):'시간 모름'}">${esc(issAt(l.at,l.band).slice(5))}</span><span><span class="bg ${ISS_KCLS[l.kind]||'mut'}">${esc(l.kind)}</span></span><div>${l.who?`<div class="muted" style="font-size:12px">${esc(l.who)}</div>`:''}<div>${nl(issTidy(l.text))}</div>${l.void?`<div class="muted" style="font-size:12px">취소 ${esc(issAt(l.void.at))} — ${esc(l.void.reason)}</div>`:''}${ed.length?`<details class="muted" style="font-size:12px;margin-top:4px"><summary style="cursor:pointer">수정 ${ed.length}회 · 최근 ${esc(issAt(ed[ed.length-1].at))}${ed[ed.length-1].by?' '+esc(ed[ed.length-1].by):''}${ed[ed.length-1].reason?' — '+esc(ed[ed.length-1].reason):''}</summary>${ed.slice().reverse().map(e=>`<div style="border-left:2px solid var(--line);padding:2px 0 2px 8px;margin-top:6px"><div>${esc(issAt(e.at))}${e.by?' '+esc(e.by):''} 수정${e.reason?' — '+esc(e.reason):' (사유 없음)'}</div><div>수정 전: ${esc(issAt(e.prev.at,e.prev.band).slice(5))} · ${esc(e.prev.kind)}${e.prev.who?' · '+esc(e.prev.who):''}</div><div style="white-space:pre-wrap">${esc(issTidy(e.prev.text))}</div></div>`).join('')}</details>`:''}</div>${can?`<span class="noprint" style="display:flex;flex-direction:column;gap:4px">${mv(l)}<button type="button" class="b s" onclick="issEditLog('${i.id}',${l._k})" title="이 기록의 내용 고치기">수정</button><button type="button" class="b s" onclick="issVoid('${i.id}',${l._k})" title="잘못 쓴 기록을 취소선으로 남기고 무효 처리">기록 취소</button></span>`:`<span class="noprint">${mv(l)}</span>`}</li>`}).join('')||'<li class="muted">기록이 없습니다</li>'}</ol>
+        return `<li class="${l.void?'void':''}"><span class="mono" title="${l.at&&String(l.at).length>10?'':l.band?'정확한 시각 모름 — '+esc(l.band):'시간 모름'}">${esc(issAt(l.at,l.band).slice(5))}</span><span><span class="bg ${ISS_KCLS[l.kind]||'mut'}">${esc(l.kind)}</span></span><div>${l.who?`<div class="muted" style="font-size:12px">${esc(l.who)}</div>`:''}<div>${nl(issTidy(l.text))}</div><div data-isf="${l.id}">${issFHTML(l.photos)}</div>${l.void?`<div class="muted" style="font-size:12px">취소 ${esc(issAt(l.void.at))} — ${esc(l.void.reason)}</div>`:''}${ed.length?`<details class="muted" style="font-size:12px;margin-top:4px"><summary style="cursor:pointer">수정 ${ed.length}회 · 최근 ${esc(issAt(ed[ed.length-1].at))}${ed[ed.length-1].by?' '+esc(ed[ed.length-1].by):''}${ed[ed.length-1].reason?' — '+esc(ed[ed.length-1].reason):''}</summary>${ed.slice().reverse().map(e=>`<div style="border-left:2px solid var(--line);padding:2px 0 2px 8px;margin-top:6px"><div>${esc(issAt(e.at))}${e.by?' '+esc(e.by):''} 수정${e.reason?' — '+esc(e.reason):' (사유 없음)'}</div><div>수정 전: ${esc(issAt(e.prev.at,e.prev.band).slice(5))} · ${esc(e.prev.kind)}${e.prev.who?' · '+esc(e.prev.who):''}</div><div style="white-space:pre-wrap">${esc(issTidy(e.prev.text))}</div>${e.files?`<div>첨부 ${[e.files.add?`추가 ${e.files.add}`:'',e.files.del?`삭제 ${e.files.del}`:''].filter(Boolean).join(' · ')}</div>`:''}</div>`).join('')}</details>`:''}</div>${can?`<span class="noprint" style="display:flex;flex-direction:column;gap:4px">${mv(l)}<button type="button" class="b s" onclick="issEditLog('${i.id}',${l._k})" title="이 기록의 내용 고치기">수정</button><button type="button" class="b s" onclick="issVoid('${i.id}',${l._k})" title="잘못 쓴 기록을 취소선으로 남기고 무효 처리">기록 취소</button></span>`:`<span class="noprint">${mv(l)}</span>`}</li>`}).join('')||'<li class="muted">기록이 없습니다</li>'}</ol>
       ${ro?'':`<div class="lgc isadd noprint"><div class="ch">✎ 기록 남기기 <span class="muted" style="font-weight:normal">— 확인한 사실과 결정 사항을 적습니다. 저장한 기록을 고치면 수정 이력이 남습니다.</span></div>
         <div class="dtrow">
         <label><span>일시 <span class="muted" style="font-weight:normal">(시간은 선택)</span></span>${dtpHTML('isAt',nowMin(),'')}</label>
         <label>구분<select id="isK">${opts(ISS_KINDS,'인터뷰')}</select></label></div>
         <label style="margin-top:8px">상대방 · 참석<input id="isWho" placeholder="예: 생산팀 · 생산기술팀"></label>
         <label style="margin-top:8px">내용 *<textarea id="isTx" placeholder="확인한 사실 · 원인 추정 · 결정 사항"></textarea></label>
-        <div class="cf"><span style="flex:1"></span><button type="button" class="b" onclick="issClearLog()">취소</button><button type="button" class="b p" onclick="issAddLog('${i.id}')">저장</button></div></div>`}
+        <div class="cf">${issFBtn('nw')}<span style="flex:1"></span><button type="button" class="b" onclick="issClearLog()">취소</button><button type="button" class="b p" onclick="issAddLog('${i.id}')">저장</button></div><div id="isF">${issFHTML(issF.nw,'nw')}</div></div>`}
     </div>
     <div style="flex:1 1 380px;min-width:0;display:flex;flex-direction:column;gap:14px">
       ${ro?'':`<div class="card noprint"><h3 style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap"><span style="white-space:nowrap">처리 방향</span><span class="muted" style="font-weight:normal;font-size:12px;flex:1 1 160px">이슈 내용 · 사진이 넘어갑니다. 여러 번 보낼 수 있습니다. FAR · NCR은 불량 등록 뒤에 합니다</span></h3>
@@ -226,19 +270,22 @@ async function issLb(id,k){const i=issById(id);if(!i)return;try{const rs=await p
 function issAddLog(id){const i=issById(id);if(!i)return false;const t=($('#isTx').value||'').trim();if(!t){toast('내용을 입력하세요');$('#isTx').focus();return false}
   const dv=dtpVal('isAt');if(!dv.at){toast('날짜를 입력하세요');$('#isAtD').focus();return false}
   if(dv.at.slice(0,10)>today()){toast('기록 날짜는 오늘 이후일 수 없습니다');return false}
-  issLog(i,$('#isK').value,t,{at:dv.at,band:dv.band,who:($('#isWho').value||'').trim()});$('#isTx').value='';touch(i);save();render();toast('기록했습니다');return true}
+  const fs=issF.nw.slice();issFPut(fs);issF.nw=[];
+  issLog(i,$('#isK').value,t,{at:dv.at,band:dv.band,who:($('#isWho').value||'').trim(),...(fs.length?{photos:fs}:{})});$('#isTx').value='';touch(i);save();render();toast('기록했습니다');return true}
 // 기록 작성 칸의 ‘취소’ — 쓰던 내용을 지움
-function issClearLog(){const had=['isTx','isWho'].some(k=>($('#'+k).value||'').trim());$('#isTx').value='';$('#isWho').value='';dtpSet('isAt',nowMin(),'');if(state.issEditK==null)mfDirty=false;if(had)toast('쓰던 내용을 지웠습니다')}
+function issClearLog(){const had=['isTx','isWho'].some(k=>($('#'+k).value||'').trim())||issF.nw.length>0;issF.nw.forEach(x=>{delete issFC[x]});issF.nw=[];issFDraw();$('#isTx').value='';$('#isWho').value='';dtpSet('isAt',nowMin(),'');if(state.issEditK==null)mfDirty=false;if(had)toast('쓰던 내용을 지웠습니다')}
 // 상세 창의 ‘저장’ — 쓰던 기록(새 기록 · 수정 중인 기록)을 저장하고 창을 닫음. ‘닫기’는 저장하지 않음
 function issSaveAll(id){
   if(state.issEditK!=null&&$('#ieTx')&&!issSaveLog(id,state.issEditK))return;
-  if($('#isTx')&&($('#isTx').value||'').trim()&&!issAddLog(id))return;
+  if($('#isTx')&&(($('#isTx').value||'').trim()||issF.nw.length)&&!issAddLog(id))return;
   mfDirty=false;closeModal(true);toast('저장했습니다');
 }
 // 기록 수정 — 내용 · 일시 · 구분 · 상대를 고침. 수정 전 내용과 사유(선택)는 기록에 남음
 const ISS_SYS=['분류','종결','다시 열기'];                             // 프로그램이 남긴 기록 — 수정 · 취소 불가
 const issTidy=t=>String(t||'').replace(/[ \t]+\n/g,'\n').replace(/\n{3,}/g,'\n\n').trim();   // 붙여 넣은 메일의 빈 줄 여러 개 → 하나
 function issEditLog(id,k){['ieK','ieAtD','ieAtB','ieAtT','ieWho','ieTx','ieWhy'].forEach(x=>{const e=$('#'+x);if(e)e.removeAttribute('id')});   // 다른 기록의 편집 내용이 넘어오지 않게
+  if(issF.ed)issF.ed.ids.forEach(x=>{if(issFC[x]&&issFC[x].isNew)delete issFC[x]});
+  const l0=k!=null&&issById(id)?issById(id).logs[k]:null;issF.ed=l0?{k,ids:(l0.photos||[]).slice(),del:[]}:null;
   state.issEditK=k;issShow(id,true);if(k!=null){const t=$('#ieTx');if(t){t.focus();t.scrollIntoView({block:'center'})}}}
 function issSaveLog(id,k){
   const i=issById(id),l=i&&i.logs[k];if(!l||l.void||ISS_SYS.includes(l.kind))return false;
@@ -246,9 +293,12 @@ function issSaveLog(id,k){
   if(!o.text){toast('내용을 입력하세요');$('#ieTx').focus();return false}
   if(o.at.slice(0,10)>today()){toast('기록 일시는 오늘 이후일 수 없습니다');return false}
   const prev={kind:l.kind,at:l.at,band:l.band||'',who:l.who||'',text:l.text};
-  state.issEditK=null;
-  if(['kind','at','band','who','text'].every(f=>o[f]===prev[f])){issShow(id,true);return true}   // 바뀐 것 없음
-  (l.edits=l.edits||[]).push({at:nowMin(),by:czMe(),reason:why,prev});if(o.at!==prev.at||o.band!==prev.band){const D=[prev.at,o.at].map(x=>String(x||'').slice(0,10));i.logs.forEach(x=>{if(D.includes(String(x.at||'').slice(0,10)))delete x.ord})}Object.assign(l,o);   // 일시를 고치면 그날의 손으로 정한 순서는 풀리고 다시 시간순
+  const fe=issF.ed&&issF.ed.k===k?issF.ed:null,fAdd=fe?fe.ids.filter(x=>issFC[x]&&issFC[x].isNew).length:0,fDel=fe?fe.del.length:0;
+  state.issEditK=null;issF.ed=null;
+  if(!fAdd&&!fDel&&['kind','at','band','who','text'].every(f=>o[f]===prev[f])){issShow(id,true);return true}   // 바뀐 것 없음
+  if(fe){issFPut(fe.ids);if(fDel){photoDel(fe.del).catch(()=>{});fe.del.forEach(x=>{db.deleted.push({id:x,at:now()});delete issFC[x]});photoStr=null}
+    if(fe.ids.length)l.photos=fe.ids.slice();else delete l.photos}
+  (l.edits=l.edits||[]).push({at:nowMin(),by:czMe(),reason:why,prev,...(fAdd||fDel?{files:{add:fAdd,del:fDel}}:{})});if(o.at!==prev.at||o.band!==prev.band){const D=[prev.at,o.at].map(x=>String(x||'').slice(0,10));i.logs.forEach(x=>{if(D.includes(String(x.at||'').slice(0,10)))delete x.ord})}Object.assign(l,o);   // 일시를 고치면 그날의 손으로 정한 순서는 풀리고 다시 시간순
   touch(i);save();render();toast('기록을 수정했습니다');return true;
 }
 async function issVoid(id,k){const i=issById(id),l=i&&i.logs[k];if(!l)return;
