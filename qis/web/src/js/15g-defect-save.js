@@ -472,11 +472,7 @@ async function delDefect(id) {
   });
   czUnlinkDefectAll(id);
   // 사진 파일
-  if (ph.length) {
-    photoDel(ph).catch(() => {});
-    ph.forEach((i) => db.deleted.push({ id: i, at: now() }));
-    photoStr = null;
-  }
+  attDrop(ph);
   removeRec('defects', id);
   if ($('#modal').classList.contains('on')) closeModal(true);
   save();

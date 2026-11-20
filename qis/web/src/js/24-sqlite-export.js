@@ -677,19 +677,9 @@ async function addPhotoFiles(files) {
     return;
   }
   mfDirty = true;
-  const S = db.settings;
   for (const f of imgs) {
     try {
-      const im = await readImg(f);
-      curPhotos.push({
-        id: uid(),
-        name: f.name || '붙여넣은 이미지.jpg',
-        caption: '',
-        data: shrink(im, num(S.photoMax) || 1600, (num(S.photoQ) || 80) / 100),
-        thumb: shrink(im, 320, 0.7),
-        createdAt: now(),
-        isNew: true,
-      });
+      curPhotos.push(await attImgRec(f));
     } catch (e) {
       toast(e.message);
     }

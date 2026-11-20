@@ -306,8 +306,7 @@ async function issFLoad(i) {
   if (eb && issF.ed) eb.innerHTML = issFHTML(issF.ed.ids, 'ed');
 }
 async function issFAdd(files, to) {
-  const S = db.settings,
-    L = to === 'ed' && issF.ed ? issF.ed.ids : issF.nw;
+  const L = to === 'ed' && issF.ed ? issF.ed.ids : issF.nw;
   let n = 0;
   for (const f of files) {
     if (f.size > 20 * 1048576) {
@@ -315,27 +314,8 @@ async function issFAdd(files, to) {
       continue;
     }
     try {
-      let r;
-      if ((f.type || '').startsWith('image/')) {
-        const im = await readImg(f);
-        r = {
-          id: uid(),
-          name: f.name || '붙여넣은 이미지.jpg',
-          mime: 'image/jpeg',
-          caption: '',
-          data: shrink(im, num(S.photoMax) || 1600, (num(S.photoQ) || 80) / 100),
-          thumb: shrink(im, 320, 0.7),
-          createdAt: now(),
-          isNew: true,
-        };
-      } else {
-        const data = await fileToURL(f);
-        if (!isFileURL(data)) {
-          toast(`${f.name}: 파일을 읽지 못했습니다`);
-          continue;
-        }
-        r = { id: uid(), kind: 'doc', name: f.name, mime: f.type || '', size: f.size, data, thumb: '', createdAt: now(), isNew: true };
-      }
+      const r = (f.type || '').startsWith('image/') ? { ...(await attImgRec(f)), mime: 'image/jpeg' } : await attDocRec(f);
+      if (!r) continue;
       issFC[r.id] = r;
       L.push(r.id);
       n++;
@@ -385,12 +365,10 @@ function issFOpen(id) {
 function issFPut(ids) {
   const add = ids.map((x) => issFC[x]).filter((r) => r && r.isNew);
   if (!add.length) return;
-  photoPut(add.map(({ isNew, ...r }) => r))
-    .then(() => {
-      photoStr = null;
-      if (typeof photoDir !== 'undefined' && photoDir) syncPhotoFiles(false);
-    })
-    .catch((e) => toast('첨부 파일 저장 실패: ' + e.message));
+  attStore(
+    add.map(({ isNew, ...r }) => r),
+    '첨부 파일',
+  );
   add.forEach((r) => {
     r.isNew = false;
   });
@@ -770,11 +748,7 @@ async function delIssue(id) {
       touch(c);
     }
   });
-  if (ph.length) {
-    photoDel(ph).catch(() => {});
-    ph.forEach((x) => db.deleted.push({ id: x, at: now() }));
-    photoStr = null;
-  }
+  attDrop(ph);
   removeRec('issues', id);
   if ($('#modal').classList.contains('on')) closeModal(true);
   if (state.issId === id) state.issId = null;
@@ -922,12 +896,8 @@ function issSaveLog(id, k) {
   if (fe) {
     issFPut(fe.ids);
     if (fDel) {
-      photoDel(fe.del).catch(() => {});
-      fe.del.forEach((x) => {
-        db.deleted.push({ id: x, at: now() });
-        delete issFC[x];
-      });
-      photoStr = null;
+      attDrop(fe.del);
+      fe.del.forEach((x) => delete issFC[x]);
     }
     if (fe.ids.length) l.photos = fe.ids.slice();
     else delete l.photos;
