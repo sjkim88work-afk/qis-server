@@ -46,7 +46,7 @@ def main():
     r = core.ServerRunner(cfg, st).start()
     try:
         with sync_playwright() as p:
-            b = p.chromium.launch()
+            b = p.chromium.launch(executable_path=os.environ.get("QIS_CHROME") or None)
             ctx = b.new_context(viewport={"width": 1400, "height": 900})
             ctx.add_init_script(FAKE_API)
             pg = ctx.new_page()

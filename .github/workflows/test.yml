@@ -1,4 +1,4 @@
-# 서버 시험 — PR · main 변경마다 실행 (약 4분)
+# 서버 시험 — PR · main 변경마다 실행 (약 2분)
 name: test
 on:
   pull_request:
@@ -12,6 +12,7 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: "3.11"
+          cache: pip
       - run: pip install -r requirements.txt pytest httpx
       - run: python -m pytest -q
   browser:
@@ -21,6 +22,12 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: "3.11"
-      - run: pip install -r requirements.txt playwright && python -m playwright install --with-deps chromium
+          cache: pip
+      - run: pip install -r requirements.txt playwright
+      # 실행기에 이미 있는 Chrome 을 씀 (브라우저 내려받기 약 40초 생략). 없으면 Playwright 의 Chromium 을 설치
+      - name: 브라우저 준비
+        run: |
+          if [ -x /usr/bin/google-chrome ]; then echo "QIS_CHROME=/usr/bin/google-chrome" >> "$GITHUB_ENV"
+          else python -m playwright install --with-deps chromium; fi
       - run: python tests/e2e_browser.py tests/sample_backup.json
       - run: python tests/e2e_desktop.py
