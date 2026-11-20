@@ -109,7 +109,11 @@ def setup_users(c, b):
     pg = ctx.new_page()
     pg.goto(URL + "/")
     ok(pg.url.endswith("/login"), "로그인 안 하면 로그인 화면")
-    pg.fill("#u", "kim"); pg.fill("#p", "틀림123a"); pg.click("#b"); pg.wait_for_timeout(500)
+    pg.fill("#u", "kim"); pg.fill("#p", "틀림123a"); pg.click("#b")
+    try:
+        pg.wait_for_function("()=>document.querySelector('#e').innerText.includes('맞지 않습니다')", timeout=8000)      # 비밀번호 확인이 느린 실행기에서도 기다림
+    except Exception:
+        pass
     ok("맞지 않습니다" in pg.inner_text("#e"), "틀린 비밀번호 안내")
     pg.fill("#p", "Qk1m2026a"); pg.click("#b"); pg.wait_for_url("**/account?first=1")
     ok(pg.is_visible("#first"), "처음 로그인 → 비밀번호 변경 화면")
