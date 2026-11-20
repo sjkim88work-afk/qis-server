@@ -172,6 +172,7 @@ python -m qis set host 127.0.0.1         설정 바꾸기 (이 예: 이 PC 안�
 pip install -r requirements.txt pytest httpx playwright
 python -m pytest -q                         # API 시험
 python tests/e2e_browser.py tests/sample_backup.json       # 화면 시험 (두 사람 동시 작업 · 권한 · 끊김 · 만료 · 관리 화면)
+python tests/e2e_browser.py tests/sample_backup.json --only issue,ncr   # 화면 시험 일부만 (이름은 --list · 내용은 tests/e2e_parts/)
 ```
 
 화면(`qis/web/index.html`)은 QIS 단일 파일과 같은 소스입니다. 서버에서 열리면 서버 모드로 동작합니다.

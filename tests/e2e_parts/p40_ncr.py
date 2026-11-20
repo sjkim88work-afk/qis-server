@@ -1,0 +1,118 @@
+"""화면 시험 — NCR: 진행 기록 · 단순 통보 · 단계 단추 · 작성 양식 · A3 · 재회신
+   실행: python tests/e2e_browser.py tests/sample_backup.json --only ncr"""
+import json      # noqa: F401
+import os      # noqa: F401
+import signal      # noqa: F401
+import time      # noqa: F401
+
+from e2e_lib import ROOT, URL, ok, settle, start      # noqa: F401
+
+
+def run(c):
+    A, B, C, tmp, env, b = c.A, c.B, c.C, c.tmp, c.env, c.b
+    # NCR 진행 기록 · 이슈 기록: 같은 작성 칸(취소 · 저장), 바로 저장
+    r = A.evaluate("""async () => {
+      mfDirty=false;closeModal(true);const wait=ms=>window.__settle(ms),o={};
+      const n=db.ncrs[0],n0=(n.logs||[]).length;state.tab='ncr';render();editNcr(n.id,null,'issue');ncrTab('d');await wait(150);
+      o.btn=[...document.querySelectorAll('#modal .lgc .cf button')].map(x=>x.textContent).join();
+      const ev=(el)=>el.dispatchEvent(new Event('input',{bubbles:true}));
+      document.querySelector('#lgText').value='NCR 진행 기록 시험';ev(document.querySelector('#lgText'));addLog();await wait(200);
+      o.saved=(n.logs||[]).length===n0+1&&n.logs.some(l=>l.text==='NCR 진행 기록 시험');o.open=document.querySelector('#modal').classList.contains('on');o.dirty1=mfDirty;
+      const t=document.querySelector('#mf [name=title]');t.value=t.value+' ';ev(t);document.querySelector('#lgText').value='둘째 기록';ev(document.querySelector('#lgText'));addLog();await wait(200);o.dirty2=mfDirty;
+      n.logs=n.logs.filter(l=>!/NCR 진행 기록 시험|둘째 기록/.test(l.text));mfDirty=false;closeModal(true);
+      return o}""")
+    ok(r["btn"] == "취소,저장" and r["saved"] and r["open"], "NCR 진행 기록: 같은 작성 칸 · 저장하면 창을 닫지 않고 바로 저장")
+    ok(not r["dirty1"] and r["dirty2"], "NCR: 기록만 저장했으면 닫을 때 묻지 않음 · 다른 칸을 고쳤으면 물음")
+    # 단순 통보 NCR: 유효성 검증 없이 통보하면 종결
+    r = A.evaluate("""() => {
+      const n={id:uid(),no:'N-INFO',issueDate:addDays(today(),-40),reqType:'단순 통보',supplierId:db.suppliers[0].id,defectIds:[]};db.ncrs.push(n);
+      const s0=ncrStatus(n);n.notifyDate=addDays(today(),-39);n.verifyDue=addDays(today(),-10);
+      const s1=ncrStatus(n),fl=ncrFlags(n),steps=ncrSteps(n).S.map(x=>x.l).join('>'),cd=ncrCloseDate(n)===n.notifyDate,vi=verifyInfo(n)===null;
+      editNcr(n.id,null,'verify');const hint=!document.querySelector('#vfInfo').hidden,dueHidden=document.querySelector('#mf [name=verifyDue]').closest('label').style.display==='none';closeModal(true);
+      n.verifyDate=today();n.verifyResult='무효(재발)';const s2=ncrStatus(n);
+      const m={id:uid(),no:'N-8D',issueDate:addDays(today(),-40),reqType:'8D 보고서',notifyDate:addDays(today(),-39),requestDate:addDays(today(),-39),replyDate:addDays(today(),-30),validity:'적정',verifyDue:addDays(today(),-10)};
+      const s3=ncrStatus(m),late3=ncrFlags(m).verifyLate;
+      db.ncrs=db.ncrs.filter(x=>x!==n);return {s0,s1,late:fl.verifyLate||fl.verifySoon,steps,cd,vi,hint,dueHidden,s2,s3,late3};}""")
+    ok(r["s0"] == "미통보" and r["s1"] == "종결", "단순 통보: 통보하면 유효성 검증 없이 종결")
+    ok(not r["late"] and r["vi"] and r["cd"], "단순 통보: 유효성 검증 지연 · 대기로 세지 않고 종결일은 통보일")
+    ok(r["steps"] == "발행>협력사 통보>종결", "단순 통보: 진행 단계에 검증 단계 없음")
+    ok(r["hint"] and r["dueHidden"], "단순 통보: NCR 창에 검증 불필요 안내 · 검증 기한 칸 숨김")
+    ok(r["s2"] == "검증 무효", "단순 통보: 재발은 무효(재발)로 기록할 수 있음")
+    ok(r["s3"] == "승인(검증대기)" and r["late3"], "8D NCR 은 유효성 검증을 그대로 요구")
+    # NCR 목록의 단계 단추: 그 단계 화면만 열림 (단계 전환 줄 없음) · 통보서 단추 없음
+    r = A.evaluate("""() => {mfDirty=false;closeModal(true);state.tab='ncr';render();
+      const n=db.ncrs.find(x=>x.reqType!=='단순 통보')||db.ncrs[0],row=[...document.querySelectorAll('#ntab tbody tr')][0],btn=[...row.querySelectorAll('td:last-child button')].map(b=>b.textContent.trim()).join(',');
+      const tabs=()=>[...document.querySelectorAll('#ncrTabs [data-t]')].filter(b=>b.style.display!=='none').map(b=>b.dataset.t).join('');
+      const o={btn};for(const m of ['issue','reply','verify']){editNcr(n.id,null,m);o[m]={sw:!!document.querySelector('#ncrModes'),tabs:tabs(),t:document.querySelector('#mt').textContent};mfDirty=false;closeModal(true)}
+      editNcr(n.id);o.link=!!document.querySelector('#ncrModes');mfDirty=false;closeModal(true);
+      row.querySelector('a.lk').click();o.no=!!document.querySelector('#ncrModes');mfDirty=false;closeModal(true);return o}""")
+    ok("통보서" not in r["btn"] and r["btn"].startswith("발행 정보"), f"NCR 목록: 통보서 단추 없음 ({r['btn']})")
+    ok(not r["issue"]["sw"] and not r["reply"]["sw"] and not r["verify"]["sw"] and not r["no"], "NCR 목록의 단계 단추 · 번호: 단계 전환 줄 없이 그 단계만")
+    ok(r["issue"]["tabs"] == "antd" and r["reply"]["tabs"] == "rbd" and r["verify"]["tabs"] == "cd", f"NCR 단계별 탭 ({r['issue']['tabs']}/{r['reply']['tabs']}/{r['verify']['tabs']})")
+    r2 = A.evaluate("""() => {const n=db.ncrs[0];editNcr(n.id,null,'issue');const pane=k=>document.querySelector('#mf [name='+k+']').closest('.ntp').dataset.p,vis=k=>getComputedStyle(document.querySelector('#mf [name='+k+']').closest('.ntp')).display!=='none';
+      const o={p:['notifyYN','notifyDate','notifyMethod'].map(pane).join(''),box:document.querySelector('#noticeBox').closest('.ntp').dataset.p,req:pane('reqType'),a:vis('notifyDate')};
+      ncrTab('t');o.t=vis('notifyDate')&&!vis('reqType');o.lab=[...document.querySelectorAll('#ncrTabs [data-t]')].filter(b=>b.style.display!=='none').map(b=>b.textContent.trim().replace(/\\s*\\d+$/,'')).join('|');
+      const f=document.querySelector('#mf');f.notifyDate.value='2000-01-01';const r=saveNcr(n.id);o.err=r===null&&document.querySelector('#ncrTabs [data-t=t]').getAttribute('aria-selected')==='true';mfDirty=false;closeModal(true);return o}""")
+    ok(r2["p"] == "ttt" and r2["box"] == "t" and r2["req"] == "a" and not r2["a"] and r2["t"], f"NCR 발행 정보: 협력사 통보는 ‘③ 협력사 통보’ 탭에 따로 ({r2['lab']})")
+    ok(r2["lab"].startswith("① 발행 정보|② 통보서 내용|③ 협력사 통보|진행 기록") and r2["err"], "탭 순서 · 통보일 오류는 통보 탭으로 이동")
+    ok("발행 정보" in r["issue"]["t"] and "협력사 회신" in r["reply"]["t"] and "검증" in r["verify"]["t"], "NCR 창 제목에 단계 이름")
+    ok(r["link"], "다른 화면의 NCR 링크(단계 지정 없음): 단계 전환 줄 유지")
+    r = A.evaluate("""() => {const n=db.ncrs.find(x=>x.reqType!=='단순 통보')||db.ncrs[0],lab=()=>[...document.querySelector('#mfoot').children].filter(e=>!e.className.includes('mfsp')).map(e=>e.textContent).join(',');
+      editNcr(n.id,null,'reply');const rp=lab();mfDirty=false;closeModal(true);editNcr(n.id,null,'verify');const vf=lab();mfDirty=false;closeModal(true);return {rp,vf,info:n.reqType==='단순 통보'}}""")
+    ok(r["info"] or r["rp"] == "취소,저장", f"NCR 협력사 회신 창: 아래 단추는 취소 · 저장만 ({r['rp']})")
+    ok("8D 출력" in r["vf"] and "RCA" not in r["vf"], f"NCR 검증 창: 8D 출력 있음 ({r['vf']})")
+    # 조회 권한: 발행 정보 창에서 통보서 출력 (저장 단추는 없음)
+    r = C.evaluate("""async () => {await srvSync();mfDirty=false;closeModal(true);editNcr(db.ncrs[0].id,null,'issue');await new Promise(r=>setTimeout(r,300));
+      const v=[...document.querySelectorAll('#mfoot button')].filter(b=>b.style.display!=='none').map(b=>b.textContent.trim());closeModal(true);return v}""")
+    ok("통보서 출력" in r and not any("저장" in x or "삭제" in x for x in r), f"조회: NCR 발행 정보 창에 통보서 출력만 ({','.join(r)})")
+
+    # 새 NCR: 불량 내용 서술에 작성 양식이 기본으로 들어감
+    r = A.evaluate("""async () => {
+      mfDirty=false;closeModal(true);const wait=ms=>window.__settle(ms),o0=window.askConfirm;window.askConfirm=async()=>'alt';const o={};
+      const src=db.defects.find(x=>x.partNo&&x.resp!=='미정'&&!x.inv)||db.defects[0],d={...src,id:uid(),ncrId:'',caseId:'',issueId:'',resp:'협력사',inv:undefined,fgNo:'81841-BE100',fgName:'CNTR BAL ASSY',fgQty:2,type:'치수',desc:'구멍 지름 큼',containment:'전수 선별',qty:3,inspQty:2160,logs:[],photos:[],costs:[]};db.defects.push(d);
+      await ncrFromDefect(d.id);await wait(250);const v=document.querySelector('#mf [name=defectDesc]').value;o.fromDefect=v;o.dirty=mfDirty;mfDirty=false;closeModal(true);
+      editNcr();await wait(150);const ta=document.querySelector('#mf [name=defectDesc]'),f=document.querySelector('#mf');o.blank=ta.value;
+      f.basis.value='공정 감사';f.basis.onchange();o.audit=ta.value;f.basis.value='불량';f.basis.onchange();o.back=ta.value===o.blank;
+      ta.value='직접 쓴 내용';f.basis.value='공정 감사';f.basis.onchange();o.keep=ta.value;mfDirty=false;closeModal(true);
+      const n=db.ncrs[0],old=n.defectDesc;n.defectDesc='';editNcr(n.id,null,'issue');o.existing=document.querySelector('#mf [name=defectDesc]').value;mfDirty=false;closeModal(true);n.defectDesc=old;
+      window.askConfirm=o0;db.defects=db.defects.filter(x=>x!==d);return o}""")
+    fd = r["fromDefect"].split("\n")
+    ok(len(fd) == 5 and fd[0].startswith("1. 발견 일시/장소 (When/Where) : ") and "완성품 81841-BE100 CNTR BAL ASSY 에서 발견 · 2대" in fd[0], f"불량 → NCR: 작성 양식이 기본으로 들어감 ({fd[0]})")
+    ok(fd[1] == "2. 불량 현상 (What) : 치수 — 구멍 지름 큼" and fd[2].startswith("3. 발생 수량/범위 (How many) : 3 EA / 2,160 EA 중") and fd[3] == "4. 영향 (Impact) : " and fd[4] == "5. 당사 조치 (Containment) : 전수 선별", "양식의 2~5번이 불량 내용으로 채워짐 (요약 줄 중복 없음)")
+    ok(r["blank"].startswith("1. 발견 일시/장소 (When/Where) : \n2. 불량 현상 (What) : ") and r["blank"].count("\n") == 4, "빈 새 NCR 에도 작성 양식이 기본으로")
+    ok(r["audit"] == "" and r["back"] and r["keep"] == "직접 쓴 내용", "발행 근거를 바꾸면 손대지 않은 빈 양식만 지움 · 쓴 내용은 그대로")
+    ok(r["existing"] == "", "기존 NCR 의 빈 서술 칸은 바꾸지 않음")
+    # A3 보고서: 단순 통보 종결 · 대책 승인 뒤에만 출력 단추가 나옴
+    r = A.evaluate("""() => {
+      mfDirty=false;closeModal(true);const lab=()=>[...document.querySelector('#mfoot').children].filter(e=>!e.className.includes('mfsp')).map(e=>e.textContent).join(',');
+      const mk=x=>{const n=Object.assign({id:uid(),issueDate:addDays(today(),-20),supplierId:db.suppliers[0].id,defectIds:[]},x);db.ncrs.push(n);return n},o={},has=(n,m)=>{editNcr(n.id,null,m);const v=lab().includes('A3 보고서');mfDirty=false;closeModal(true);return v};
+      const a=mk({no:'A3-INFO',reqType:'단순 통보'});o.info0=has(a,'issue');a.notifyDate=addDays(today(),-19);o.info1=has(a,'issue');
+      const b=mk({no:'A3-8D',reqType:'8D 보고서',notifyDate:addDays(today(),-19),requestDate:addDays(today(),-19)});o.d0=has(b,'issue')||has(b,'verify');
+      b.replyDate=addDays(today(),-10);b.validity='보완요청';o.d1=has(b,'issue')||has(b,'verify');b.validity='적정';b.approvedDate=addDays(today(),-9);o.d2=has(b,'issue')&&has(b,'verify');
+      const d=db.defects.find(x=>!x.deleted&&!x.ncrId)||db.defects[0],keep={ncrId:d.ncrId};
+      d.ncrId=b.id;b.validity='';openLog(d.id);o.def0=lab().includes('A3 보고서');mfDirty=false;closeModal(true);b.validity='적정';openLog(d.id);o.def1=lab().includes('A3 보고서');mfDirty=false;closeModal(true);
+      d.ncrId=keep.ncrId;db.ncrs=db.ncrs.filter(x=>x!==a&&x!==b);return o}""")
+    ok(not r["info0"] and r["info1"], "A3 보고서: 단순 통보는 통보(종결) 뒤에 단추가 나옴")
+    ok(not r["d0"] and not r["d1"] and r["d2"], "A3 보고서: 대책서 건은 대책 승인(적정) 뒤에 단추가 나옴")
+    ok(not r["def0"] and r["def1"], "불량 진행 창의 A3 보고서도 같은 기준")
+    # 보완요청 · 반려 뒤: 목록에 ‘재회신 접수’ 단추 → 다시 검토 단계 → 재제출 평가를 마치면 그 결과로
+    r = A.evaluate("""async () => {
+      mfDirty=false;closeModal(true);const wait=ms=>window.__settle(ms),o0=window.askConfirm;window.askConfirm=async()=>true;const o={};
+      const sc=v=>Object.fromEntries(EVAL_SIMPLE.map(it=>[it.k,v]));
+      const n={id:uid(),no:'RESUB-1',issueDate:addDays(today(),-30),supplierId:db.suppliers[0].id,defectIds:[],reqType:'간이 대책서',notifyDate:addDays(today(),-29),requestDate:addDays(today(),-29),dueDate:addDays(today(),-22),replyDate:addDays(today(),-23),
+        validity:'보완요청',evals:[{id:'ev1',type:'간이 대책서',date:addDays(today(),-22),by:'나',sc:sc(0),cm:{},note:''}],evalVerdict:'반려',evalScore:0};db.ncrs.push(n);
+      state.tab='ncr';state.nf.status='';render();await wait(100);
+      const row=()=>[...document.querySelectorAll('#ntab tbody tr')].find(tr=>tr.innerText.includes('RESUB-1'));
+      o.st0=ncrStatus(n);o.btn0=!!row()&&[...row().querySelectorAll('button')].some(b=>b.textContent==='재회신 접수');
+      [...row().querySelectorAll('button')].find(b=>b.textContent==='재회신 접수').click();await wait(300);hideAct();
+      o.st1=ncrStatus(n);o.pend=!!n.resubPending&&n.resubPending.evalId==='ev1';o.resubs=(n.resubs||[]).length;o.reply=n.replyDate===addDays(today(),-23);
+      o.btn1=[...row().querySelectorAll('button')].some(b=>b.textContent==='재회신 접수');o.cell=row().innerText.includes('재회신 '+today().slice(5));
+      editNcr(n.id,null,'reply');await wait(150);o.banner=document.querySelector('#modal').innerText.includes('보완 대책서 재회신 접수');
+      saveNcr(n.id);await wait(200);o.st2=ncrStatus(n);                                   // 평가를 새로 하지 않고 저장 → 그대로 검토 단계
+      editNcr(n.id,null,'reply');await wait(150);addEval();curEvals[curEvals.length-1].sc=sc(1);saveNcr(n.id);await wait(200);
+      o.st3=ncrStatus(n);o.cleared=!n.resubPending;o.val=n.validity;
+      window.askConfirm=o0;db.ncrs=db.ncrs.filter(x=>x!==n);render();return o}""")
+    ok(r["st0"] == "보완요청" and r["btn0"], "NCR 목록: 보완요청 · 반려 건에 ‘재회신 접수’ 단추")
+    ok(r["st1"] == "대책서 검토" and r["pend"] and r["resubs"] == 1 and r["reply"] and not r["btn1"] and r["cell"], f"재회신 접수 → 상태 ‘대책서 검토’, 처음 회신일은 그대로, 목록에 재회신일 표시 ({r['st1']})")
+    ok(r["banner"] and r["st2"] == "대책서 검토", "회신 창에 재제출 평가 안내 · 평가 전에는 검토 단계 유지")
+    ok(r["st3"] == "승인(검증대기)" and r["cleared"] and r["val"] == "적정", f"재제출 평가(승인)를 마치면 그 결과로 바뀜 ({r['st3']})")

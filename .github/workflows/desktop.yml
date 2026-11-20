@@ -4,6 +4,7 @@
 name: desktop
 on:
   pull_request:
+    paths-ignore: ["docs/**", "**.md", "tests/e2e_*", "tests/e2e_parts/**"]      # 문서 · 화면 시험만 바꾼 PR 은 빌드하지 않음
   push:
     branches: [main]
     tags: ["v*"]
