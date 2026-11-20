@@ -48,8 +48,11 @@ function renderMobile() {
   document.body.classList.add('mob');
   if (!mob.tab) mob.tab = RO ? 'prog' : 'reg';
   if (RO && (mob.tab === 'reg' || mob.tab === 'iss')) mob.tab = 'prog';
-  $('#nav').innerHTML =
-    `<div class="mtabs">${RO ? '' : `<button class="${mob.tab === 'reg' ? 'on' : ''}" onclick="mobTab('reg')">＋ 불량</button><button class="${mob.tab === 'iss' ? 'on' : ''}" onclick="mobTab('iss')">＋ 이슈</button>`}<button class="${mob.tab === 'prog' ? 'on' : ''}" onclick="mobTab('prog')">진행 현황</button></div>`;
+  $('#nav').innerHTML = `<div class="mtabs">${
+    RO
+      ? ''
+      : `<button class="${mob.tab === 'reg' ? 'on' : ''}" onclick="mobTab('reg')">＋ 불량</button><button class="${mob.tab === 'iss' ? 'on' : ''}" onclick="mobTab('iss')">＋ 이슈</button>`
+  }<button class="${mob.tab === 'prog' ? 'on' : ''}" onclick="mobTab('prog')">진행 현황</button></div>`;
   // 등록 중인 입력은 다른 사용자 변경으로 화면이 다시 그려져도 지우지 않음
   if (mob.tab === 'reg' && $('#mobForm')) {
     const sel = $('#mobForm').supplierId;
@@ -152,7 +155,9 @@ function mobSev() {
     return;
   }
   const v = sevOf(mobRec());
-  b.innerHTML = `예상 심각도 <span class="bg ${SEV_CLS[v.grade]}">${v.grade}</span> ${v.score}점 → ${esc(v.resp)}${v.forced.length ? ` <span class="muted">(${esc(v.forced.join(', '))})</span>` : ''}`;
+  b.innerHTML = `예상 심각도 <span class="bg ${SEV_CLS[v.grade]}">${v.grade}</span> ${v.score}점 → ${esc(v.resp)}${
+    v.forced.length ? ` <span class="muted">(${esc(v.forced.join(', '))})</span>` : ''
+  }`;
 }
 async function mobAddPhotos(inp) {
   const fs = [...inp.files].filter((f) => f.type.startsWith('image/'));
@@ -257,14 +262,20 @@ async function mobSave() {
 function mobIssHTML() {
   const S = db.settings,
     last = mob.lastIss && issById(mob.lastIss);
-  return `${last ? `<div class="mdone"><b>이슈를 등록했습니다</b> · ${esc(last.no)} ${esc(last.title)}<div class="muted" style="margin-top:4px">기록 · 처리 방향(불량 · FAR · NCR · RCA)은 PC의 ‘이슈’ 화면에서 이어서 합니다.</div></div>` : ''}
+  return `${
+    last
+      ? `<div class="mdone"><b>이슈를 등록했습니다</b> · ${esc(last.no)} ${esc(last.title)}<div class="muted" style="margin-top:4px">기록 · 처리 방향(불량 · FAR · NCR · RCA)은 PC의 ‘이슈’ 화면에서 이어서 합니다.</div></div>`
+      : ''
+  }
   <form id="mobIss" class="mform" onsubmit="event.preventDefault();mobIssSave()">
   <div class="mph" id="mobPh"></div>
   <div class="mphb"><label class="b">📷 촬영<input type="file" accept="image/*" capture="environment" hidden onchange="mobAddPhotos(this)"></label><label class="b">🖼 앨범<input type="file" accept="image/*" multiple hidden onchange="mobAddPhotos(this)"></label></div>
   <label>무엇이 *<input name="title" placeholder="예: 래치 스프링 미조립 의심"></label>
   <div class="m2"><label>어디서 *<select name="source">${opts(S.sources, S.sources.find((x) => /공정/.test(x)) || S.sources[0])}</select></label>
   <label>세부 위치<input name="loc" placeholder="예: 조립 2라인"></label></div>
-  <fieldset class="murg"><legend>긴급도 *</legend>${ISS_URG.map((u) => `<label><input type="radio" name="urg" value="${u}" ${u === '높음' ? 'checked' : ''}><span>${u}</span></label>`).join('')}</fieldset>
+  <fieldset class="murg"><legend>긴급도 *</legend>${ISS_URG.map(
+    (u) => `<label><input type="radio" name="urg" value="${u}" ${u === '높음' ? 'checked' : ''}><span>${u}</span></label>`,
+  ).join('')}</fieldset>
   <div class="mchk"><label><input type="checkbox" name="special"> 특별특성 (CC/SC) 관련</label><label><input type="checkbox" name="contain"> 격리 · 보류 했음</label></div>
   <label>메모<textarea name="memo" rows="3" placeholder="수량 · 즉시 조치 · 공유한 사람"></textarea></label>
   <button class="b p mbig" type="submit" id="mobIssBtn">이슈 등록 — 나머지는 PC에서</button>
@@ -393,15 +404,30 @@ function mobProgHTML() {
         ? '<span class="bg warn">오늘</span>'
         : `<span class="bg ${k <= 3 ? 'warn' : 'mut'}">D-${k}</span>`;
   };
-  return `<section class="msec"><h3>오늘 챙길 일 <span class="bg mut">${dashItems.length}</span></h3>${dashItems.length ? `<ul class="act macts">${box.querySelector('ul').innerHTML}</ul>` : '<div class="muted">지연 · 임박 항목이 없습니다.</div>'}</section>
-  <section class="msec"><h3>진행 중 NCR <span class="bg mut">${open.length}</span></h3>${open.length ? open.map((x) => `<button class="mrow" onclick="mobCard('ncr','${x.n.id}')"><span class="mr1"><b>${esc(x.n.no)}</b> ${esc(supName(x.n.supplierId))}</span><span class="mr2">${esc(x.n.partNo || '')} ${esc(x.n.title || '')}</span><span class="mr3">${stB(ncrStatus(x.n))} ${x.cur.l ? `<span class="muted">${esc(x.cur.l)}</span>` : ''} ${dd(x.due)}</span></button>`).join('') : '<div class="muted">진행 중인 NCR이 없습니다.</div>'}</section>
+  return `<section class="msec"><h3>오늘 챙길 일 <span class="bg mut">${dashItems.length}</span></h3>${
+    dashItems.length ? `<ul class="act macts">${box.querySelector('ul').innerHTML}</ul>` : '<div class="muted">지연 · 임박 항목이 없습니다.</div>'
+  }</section>
+  <section class="msec"><h3>진행 중 NCR <span class="bg mut">${open.length}</span></h3>${
+    open.length
+      ? open
+          .map(
+            (x) =>
+              `<button class="mrow" onclick="mobCard('ncr','${x.n.id}')"><span class="mr1"><b>${esc(x.n.no)}</b> ${esc(supName(x.n.supplierId))}</span><span class="mr2">${esc(x.n.partNo || '')} ${esc(x.n.title || '')}</span><span class="mr3">${stB(ncrStatus(x.n))} ${
+                x.cur.l ? `<span class="muted">${esc(x.cur.l)}</span>` : ''
+              } ${dd(x.due)}</span></button>`,
+          )
+          .join('')
+      : '<div class="muted">진행 중인 NCR이 없습니다.</div>'
+  }</section>
   <section class="msec"><h3>최근 2주 불량 <span class="bg mut">${recent.length}</span></h3>${
     recent.length
       ? recent
           .map((d) => {
             const st = defStage(d),
               v = sevOf(d);
-            return `<button class="mrow" onclick="mobCard('defect','${d.id}')"><span class="mr1"><span class="bg ${SEV_CLS[v.grade]}">${v.grade}</span> <b>${esc(d.partNo || d.fgNo || '-')}</b> ${esc(d.type || '')} ${num(d.qty).toLocaleString()}개${(d.photos || []).length ? ' 📷' : ''}</span><span class="mr2">${esc(d.date)} · ${esc(supName(d.supplierId) || d.source || '')}</span><span class="mr3"><span class="bg ${st.cls}">${esc(st.label)}</span></span></button>`;
+            return `<button class="mrow" onclick="mobCard('defect','${d.id}')"><span class="mr1"><span class="bg ${SEV_CLS[v.grade]}">${v.grade}</span> <b>${esc(d.partNo || d.fgNo || '-')}</b> ${esc(d.type || '')} ${num(d.qty).toLocaleString()}개${(d.photos || []).length ? ' 📷' : ''}</span><span class="mr2">${esc(d.date)} · ${esc(
+              supName(d.supplierId) || d.source || '',
+            )}</span><span class="mr3"><span class="bg ${st.cls}">${esc(st.label)}</span></span></button>`;
           })
           .join('')
       : '<div class="muted">최근 2주 동안 등록된 불량이 없습니다.</div>'
@@ -413,16 +439,25 @@ function mobCard(kind, id) {
     const n = db.ncrs.find((x) => x.id === id);
     if (!n) return;
     const ds = (n.defectIds || []).map((i) => db.defects.find((d) => d.id === i)).filter(Boolean);
-    h = `<h3>${esc(n.no)} ${stB(ncrStatus(n))}</h3><div class="mkv"><span>협력사</span><b>${esc(supName(n.supplierId))}</b><span>부품</span><b>${esc(n.partNo || '')} ${esc(n.partName || '')}</b><span>제목</span><b>${esc(n.title || '-')}</b><span>요구 회신</span><b>${esc(n.reqType || '8D 보고서')}${n.repeatOf ? ` · <span class="bg bad">재발</span> ${esc(n.repeatOf)}` : ''}</b><span>회신 기한</span><b>${esc(n.dueDate || '-')}${n.replyDate ? ` · 회신 ${esc(n.replyDate)}` : ''}</b><span>검증 기한</span><b>${esc(n.verifyDue || '-')}</b><span>연결 불량</span><b>${ds.length}건</b></div>${ncrTrack(n)}`;
+    h = `<h3>${esc(n.no)} ${stB(ncrStatus(n))}</h3>
+      <div class="mkv"><span>협력사</span><b>${esc(supName(n.supplierId))}</b><span>부품</span><b>${esc(n.partNo || '')} ${esc(n.partName || '')}</b><span>제목</span><b>${esc(n.title || '-')}</b><span>요구 회신</span><b>${esc(n.reqType || '8D 보고서')}${
+        n.repeatOf ? ` · <span class="bg bad">재발</span> ${esc(n.repeatOf)}` : ''
+      }</b><span>회신 기한</span><b>${esc(n.dueDate || '-')}${
+        n.replyDate ? ` · 회신 ${esc(n.replyDate)}` : ''
+      }</b><span>검증 기한</span><b>${esc(n.verifyDue || '-')}</b><span>연결 불량</span><b>${ds.length}건</b></div>${ncrTrack(n)}`;
   } else if (kind === 'defect') {
     const d = db.defects.find((x) => x.id === id);
     if (!d) return;
     const v = sevOf(d);
-    h = `<h3><span class="bg ${SEV_CLS[v.grade]}">${v.grade}</span> ${esc(d.partNo || d.fgNo || '-')} ${esc(d.partName || d.fgName || '')}</h3><div class="mkv"><span>발생</span><b>${esc(d.date)} · ${esc(d.source || '')}</b><span>협력사</span><b>${esc(supName(d.supplierId) || '-')}</b><span>불량</span><b>${esc(d.type || '')} ${num(d.qty).toLocaleString()}개</b><span>귀책</span><b>${esc(d.resp || '-')}</b><span>진행</span><b>${stageBadges(d)}</b><span>내용</span><b>${esc(d.desc || '-')}</b></div>${(d.photos || []).length ? `<button class="b" onclick="viewDefectPhotos('${d.id}')">📷 사진 ${d.photos.length}장 보기</button>` : ''}`;
+    h = `<h3><span class="bg ${SEV_CLS[v.grade]}">${v.grade}</span> ${esc(d.partNo || d.fgNo || '-')} ${esc(d.partName || d.fgName || '')}</h3>
+      <div class="mkv"><span>발생</span><b>${esc(d.date)} · ${esc(d.source || '')}</b><span>협력사</span><b>${esc(supName(d.supplierId) || '-')}</b><span>불량</span><b>${esc(d.type || '')} ${num(d.qty).toLocaleString()}개</b><span>귀책</span><b>${esc(d.resp || '-')}</b><span>진행</span><b>${stageBadges(d)}</b><span>내용</span><b>${esc(d.desc || '-')}</b></div>${
+        (d.photos || []).length ? `<button class="b" onclick="viewDefectPhotos('${d.id}')">📷 사진 ${d.photos.length}장 보기</button>` : ''
+      }`;
   } else if (kind === 'case') {
     const c = czById('cases', id);
     if (!c) return;
-    h = `<h3>${esc(c.CaseNo || '')} ${esc(c.Title || '')}</h3><div class="mkv"><span>단계</span><b>${esc(c.Stage || '')}</b><span>상태</span><b>${esc(c.Status || '')}</b><span>다음 할 일</span><b>${esc(c.NextAction || '-')}</b><span>재확인</span><b>${esc(c.RecheckDate || '-')}</b></div>`;
+    h = `<h3>${esc(c.CaseNo || '')} ${esc(c.Title || '')}</h3>
+      <div class="mkv"><span>단계</span><b>${esc(c.Stage || '')}</b><span>상태</span><b>${esc(c.Status || '')}</b><span>다음 할 일</span><b>${esc(c.NextAction || '-')}</b><span>재확인</span><b>${esc(c.RecheckDate || '-')}</b></div>`;
   }
   const s = $('#mcard');
   s.innerHTML = `<div class="mcard-in" onclick="event.stopPropagation()">${h}<div class="muted" style="margin-top:10px;font-size:12px">수정 · 처리는 PC 화면에서 합니다</div><button class="b mbig" onclick="mobCardClose()">닫기</button></div>`;
@@ -479,7 +514,9 @@ function renderInner() {
       navG = g;
       return (
         gh +
-        `<button class="${state.tab === k ? 'on' : ''}" onclick="go('${k}')">${l}${n ? ` <span class="bg bad" style="font-size:10.5px">${n}</span>` : ''}</button>`
+        `<button class="${state.tab === k ? 'on' : ''}" onclick="go('${k}')">${l}${
+          n ? ` <span class="bg bad" style="font-size:10.5px">${n}</span>` : ''
+        }</button>`
       );
     })
     .join('');
@@ -570,16 +607,21 @@ function renderBrand() {
       U && U.available
         ? ` <a class="updbadge" href="${esc(U.page || '#')}" target="_blank" rel="noopener" title="새 버전을 내려받을 수 있습니다 (관리 › 버전 · 업데이트)">새 버전 ${esc(U.version)}</a>`
         : '';
-  $('#appTitle').innerHTML =
-    `${esc(S.company ? S.company + ' 품질관리' : 'QIS')} <span style="font:600 11px/1 var(--f-mono,monospace);color:var(--sub);vertical-align:middle">ver ${APP_VER}</span>${upd}`;
+  $('#appTitle').innerHTML = `${esc(
+    S.company ? S.company + ' 품질관리' : 'QIS',
+  )} <span style="font:600 11px/1 var(--f-mono,monospace);color:var(--sub);vertical-align:middle">ver ${APP_VER}</span>${upd}`;
   document.title = (RO ? '[읽기 전용] ' : '') + (S.company ? S.company + ' 품질관리' : 'QIS'); // 설치 앱 창 제목: ‘QIS - 회사 품질관리’
-  $('#printHead').innerHTML =
-    `${S.logo ? `<img src="${S.logo}" alt="">` : ''}<div class="t"><b>${esc(S.company || '품질관리')} — ${esc(tab)}${state.tab === 'dash' ? ' (' + esc(state.dashMonth) + ')' : ''}</b><span>${esc(S.dept)}</span></div><div class="d">출력일 ${today()}</div>`;
+  $('#printHead').innerHTML = `${S.logo ? `<img src="${S.logo}" alt="">` : ''}<div class="t"><b>${esc(S.company || '품질관리')} — ${esc(tab)}${
+    state.tab === 'dash' ? ' (' + esc(state.dashMonth) + ')' : ''
+  }</b><span>${esc(S.dept)}</span></div><div class="d">출력일 ${today()}</div>`;
 }
 function logoHead() {
   const S = db.settings;
   return S.logo || S.company
-    ? `<div style="display:flex;align-items:center;gap:12px;border-bottom:2px solid #0B4F4D;padding-bottom:8px;margin-bottom:12px">${S.logo ? `<img src="${S.logo}" style="max-height:44px;max-width:180px;object-fit:contain">` : ''}<div style="flex:1"><b style="font-size:15px">${esc(S.company)}</b><br><span style="font-size:11px;color:#555">${esc(S.dept)}</span></div><div style="font-size:11px;color:#555">출력일 ${today()}</div></div>`
+    ? `<div style="display:flex;align-items:center;gap:12px;border-bottom:2px solid #0B4F4D;padding-bottom:8px;margin-bottom:12px">${
+        S.logo ? `<img src="${S.logo}" style="max-height:44px;max-width:180px;object-fit:contain">` : ''
+      }<div style="flex:1"><b style="font-size:15px">${esc(S.company)}</b><br><span style="font-size:11px;color:#555">${esc(S.dept)}</span></div>
+        <div style="font-size:11px;color:#555">출력일 ${today()}</div></div>`
     : '';
 }
 async function setLogo(f) {

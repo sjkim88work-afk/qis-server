@@ -27,10 +27,13 @@ const SET_NAV = [
   ['데이터', [['backup', '데이터 · 백업', 'M12 3v12M7 10l5 5 5-5M4 19h16']]],
 ];
 const sv = (t, d, c, blk) =>
-  `<div class="srow${blk ? ' blk' : ''}"><div class="si"><div class="st">${t}</div>${d ? `<div class="sd">${d}</div>` : ''}</div><div class="sc">${c}</div></div>`;
+  `<div class="srow${blk ? ' blk' : ''}"><div class="si"><div class="st">${t}</div>${d ? `<div class="sd">${d}</div>` : ''}</div>
+    <div class="sc">${c}</div></div>`;
 const sg = (h, rows) => `${h ? `<div class="sgh">${h}</div>` : ''}<div class="sgrp">${rows}</div>`;
 const sNum = (k, unit, min, max) =>
-  `<input type="number" class="snum" value="${esc(db.settings[k])}" ${min != null ? `min="${min}"` : ''} ${max != null ? `max="${max}"` : ''} onchange="setS('${k}',this.value,'num',this)">${unit ? `<span class="muted">${unit}</span>` : ''}`;
+  `<input type="number" class="snum" value="${esc(db.settings[k])}" ${min != null ? `min="${min}"` : ''} ${max != null ? `max="${max}"` : ''} onchange="setS('${k}',this.value,'num',this)">${
+    unit ? `<span class="muted">${unit}</span>` : ''
+  }`;
 const sTxt = (k, ph) => `<input class="stxt" value="${esc(db.settings[k])}" placeholder="${esc(ph || '')}" onchange="setS('${k}',this.value,'str')">`;
 const sList = (k, ph) =>
   `<textarea class="slist" placeholder="${esc(ph || '')}" onchange="setS('${k}',this.value,'list')">${esc((db.settings[k] || []).join('\n'))}</textarea>`;
@@ -138,7 +141,12 @@ function renderData() {
     `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="${d}"/></svg>`;
   const nav = SET_NAV.map(
     ([g, items]) =>
-      `<div class="gh">${g}</div>${items.map(([k, l, d]) => `<button class="${tab === k ? 'on' : ''}" onclick="state.setTab='${k}';render();window.scrollTo(0,0)">${ico(d)}<span>${l}</span></button>`).join('')}`,
+      `<div class="gh">${g}</div>${items
+        .map(
+          ([k, l, d]) =>
+            `<button class="${tab === k ? 'on' : ''}" onclick="state.setTab='${k}';render();window.scrollTo(0,0)">${ico(d)}<span>${l}</span></button>`,
+        )
+        .join('')}`,
   ).join('');
   const title = SET_NAV.flatMap((x) => x[1]).find((x) => x[0] === tab)?.[1] || '';
   const btn = (lbl, fn, cls = '') => `<button class="b ${cls}" onclick="${fn}">${lbl}</button>`;
@@ -166,8 +174,12 @@ function renderData() {
       sv(
         '회사 로고',
         'PNG(투명 배경)·SVG 권장. 상단 바, 대시보드 보고서, 부적합 통보서, 8D 보고서에 표시됩니다.',
-        `<div class="logoprev" style="width:200px;height:70px">${S.logo ? `<img src="${S.logo}" alt="로고" style="max-width:180px;max-height:60px">` : '<span class="muted">로고 없음</span>'}</div>
-      <div style="display:flex;flex-direction:column;gap:6px"><label class="b p" style="cursor:pointer;text-align:center">파일 선택<input type="file" accept="image/png,image/jpeg,image/svg+xml,image/gif,image/webp" style="display:none" onchange="setLogo(this.files[0]);this.value=''"></label>${S.logo ? btn('삭제', 'clearLogo()', 'd') : ''}</div>`,
+        `<div class="logoprev" style="width:200px;height:70px">${
+          S.logo ? `<img src="${S.logo}" alt="로고" style="max-width:180px;max-height:60px">` : '<span class="muted">로고 없음</span>'
+        }</div>
+      <div style="display:flex;flex-direction:column;gap:6px"><label class="b p" style="cursor:pointer;text-align:center">파일 선택<input type="file" accept="image/png,image/jpeg,image/svg+xml,image/gif,image/webp" style="display:none" onchange="setLogo(this.files[0]);this.value=''"></label>${
+        S.logo ? btn('삭제', 'clearLogo()', 'd') : ''
+      }</div>`,
       ),
     ) +
     sg(
@@ -178,7 +190,11 @@ function renderData() {
             sv(
               `${esc(nm)} ${nm === S.approver ? '<span class="bg inf">승인자</span>' : '<span class="bg mut">작성자</span>'}`,
               '흰 종이에 서명 → 사진·스캔 → 올리기. 흰 배경은 자동으로 투명 처리됩니다.',
-              `<span class="sigbox">${(S.signs || {})[nm] ? `<img src="${S.signs[nm]}">` : '<span class="muted" style="font-size:11px">서명 없음</span>'}</span><label class="b" style="cursor:pointer">서명 선택<input type="file" accept="image/*" style="display:none" onchange="setSign(${jsq(nm)},this.files[0]);this.value=''"></label>${(S.signs || {})[nm] ? `<button class="b d" onclick="clearSign(${jsq(nm)})">삭제</button>` : ''}`,
+              `<span class="sigbox">${
+                (S.signs || {})[nm] ? `<img src="${S.signs[nm]}">` : '<span class="muted" style="font-size:11px">서명 없음</span>'
+              }</span><label class="b" style="cursor:pointer">서명 선택<input type="file" accept="image/*" style="display:none" onchange="setSign(${jsq(nm)},this.files[0]);this.value=''"></label>${
+                (S.signs || {})[nm] ? `<button class="b d" onclick="clearSign(${jsq(nm)})">삭제</button>` : ''
+              }`,
             ),
           )
           .join('') || sv('서명 대상 없음', '‘일반’에서 담당자 목록이나 위 승인자 이름을 먼저 입력하세요.', '')),
@@ -210,7 +226,11 @@ function renderData() {
       '환율 (부품 단가 → 원화)',
       sv(
         '사용 방법',
-        `해외 부품은 단가를 <b>협력사 통화 그대로</b> 저장하고, 비용 · 구상 · COPQ에서는 아래 환율로 <b>원화로 바꿔</b> 계산합니다. 이미 입력한 비용은 그때 금액 그대로이고, 새로 넣는 비용부터 바뀐 환율이 쓰입니다.${db.settings.fxDate ? `<br>환율 기준일: <b>${esc(db.settings.fxDate)}</b>` : '<br><b style="color:var(--warn)">기본값은 예시입니다 — 회사 기준 환율로 바꾸세요.</b>'}`,
+        `해외 부품은 단가를 <b>협력사 통화 그대로</b> 저장하고, 비용 · 구상 · COPQ에서는 아래 환율로 <b>원화로 바꿔</b> 계산합니다. 이미 입력한 비용은 그때 금액 그대로이고, 새로 넣는 비용부터 바뀐 환율이 쓰입니다.${
+          db.settings.fxDate
+            ? `<br>환율 기준일: <b>${esc(db.settings.fxDate)}</b>`
+            : '<br><b style="color:var(--warn)">기본값은 예시입니다 — 회사 기준 환율로 바꾸세요.</b>'
+        }`,
         '',
         1,
       ) +
@@ -253,7 +273,9 @@ function renderData() {
           sv(
             esc(t),
             '',
-            `<select onchange="setImpact(${jsq(t)},this.value)">${SEV_F.impact[1].map((l, i) => `<option value="${i + 1}" ${impactAuto(t) === i + 1 ? 'selected' : ''}>${i + 1} · ${l}</option>`).join('')}</select>`,
+            `<select onchange="setImpact(${jsq(t)},this.value)">${SEV_F.impact[1]
+              .map((l, i) => `<option value="${i + 1}" ${impactAuto(t) === i + 1 ? 'selected' : ''}>${i + 1} · ${l}</option>`)
+              .join('')}</select>`,
           ),
         )
         .join(''),
@@ -265,7 +287,9 @@ function renderData() {
       return sv(
         `${d.label} 번호`,
         `다음 발행 번호: <b>${esc(genDocNo(k, today()).no)}</b>`,
-        `${sTxt(d.key, d.def)} <select title="일련번호 초기화" onchange="setS('${d.rk}',this.value,'str')">${DOC_RESETS.map(([v, l]) => `<option value="${v}" ${r === v ? 'selected' : ''}>${l}</option>`).join('')}</select>`,
+        `${sTxt(d.key, d.def)} <select title="일련번호 초기화" onchange="setS('${d.rk}',this.value,'str')">${DOC_RESETS.map(
+          ([v, l]) => `<option value="${v}" ${r === v ? 'selected' : ''}>${l}</option>`,
+        ).join('')}</select>`,
       );
     };
     return (
@@ -299,7 +323,11 @@ function renderData() {
           sv(
             '받을 곳 (chat ID)',
             '그룹은 -로 시작하는 숫자',
-            `${inp('chat', c.chat, '예: -1001234567890')} <button class="b s" onclick="tgFindChats()" ${c.token ? '' : 'disabled'}>받을 곳 찾기</button><div id="tgChats" style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap"></div>`,
+            `${inp(
+              'chat',
+              c.chat,
+              '예: -1001234567890',
+            )} <button class="b s" onclick="tgFindChats()" ${c.token ? '' : 'disabled'}>받을 곳 찾기</button><div id="tgChats" style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap"></div>`,
           ) +
           sv('시험 전송', '', `<button class="b s" onclick="tgTest()" ${ok ? '' : 'disabled'}>시험 메시지 보내기</button>`),
       ) +
@@ -431,12 +459,16 @@ function renderData() {
     return h
       ? `<span class="bg ok">사용 중</span> <b>${esc(h.name)}</b>`
       : lz
-        ? `<span class="bg warn">허용 대기</span> <b>${esc(lz.name)}</b> <span class="muted">— ${k === 'photoDir' ? '사진을 저장할 때' : '백업할 때'} 허용 창이 뜹니다</span>`
+        ? `<span class="bg warn">허용 대기</span> <b>${esc(lz.name)}</b> <span class="muted">— ${
+            k === 'photoDir' ? '사진을 저장할 때' : '백업할 때'
+          } 허용 창이 뜹니다</span>`
         : '<span class="bg mut">지정 안 됨</span>';
   }
   function dirBtns(k, extra) {
     const on = !!((k === 'photoDir' ? photoDir : backupDir) || lazyH[k]);
-    return `<span style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">${on ? extra : ''}<button class="b s ${on ? '' : 'p'}" onclick="pickDir('${k}')">${on ? '다른 폴더' : '폴더 지정'}</button>${on ? `<button class="b s" onclick="unlinkDir('${k}')">해제</button>` : ''}</span>`;
+    return `<span style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">${on ? extra : ''}<button class="b s ${on ? '' : 'p'}" onclick="pickDir('${k}')">${on ? '다른 폴더' : '폴더 지정'}</button>${
+      on ? `<button class="b s" onclick="unlinkDir('${k}')">해제</button>` : ''
+    }</span>`;
   }
   setTimeout(() => {
     const e = $('#persistSt');
@@ -482,8 +514,16 @@ function renderData() {
           'QIS 폴더',
           '폴더 하나만 고르면 그 안에 ‘사진·첨부’와 ‘백업’ 폴더를 만들어 각각 저장합니다. 고친 뒤 1분 안에 최신 백업, 하루 한 번 날짜별 백업(사진 포함), QIS.sqlite가 ‘백업’에 쌓입니다. OneDrive 동기화 폴더나 회사 네트워크 드라이브 안에 두면 노트북이 고장 나도 남습니다.',
         ),
-        `${folderTxt}<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">${chip(!!photoDir, !!lazyH.photoDir && !photoDir, '사진·첨부')}${chip(!!backupDir, !!lazyH.backupDir && !backupDir, '백업')}</div>${times ? `<div class="muted" style="font-size:12px;margin-top:6px">${times}</div>` : ''}${!anyDir ? '<div class="muted" style="font-size:12px;margin-top:4px">권장: OneDrive 안에 <b>QIS</b> 폴더를 만들어 지정</div>' : ''}`,
-        `<span style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end"><button class="b s ${rootH ? '' : 'p'}" onclick="pickRoot()">${rootH ? '변경' : '폴더 지정'}</button>${rootH ? '<button class="b s" onclick="unlinkRoot()">해제</button>' : ''}</span>`,
+        `${folderTxt}<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">${chip(
+          !!photoDir,
+          !!lazyH.photoDir && !photoDir,
+          '사진·첨부',
+        )}${chip(!!backupDir, !!lazyH.backupDir && !backupDir, '백업')}</div>${
+          times ? `<div class="muted" style="font-size:12px;margin-top:6px">${times}</div>` : ''
+        }${!anyDir ? '<div class="muted" style="font-size:12px;margin-top:4px">권장: OneDrive 안에 <b>QIS</b> 폴더를 만들어 지정</div>' : ''}`,
+        `<span style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end"><button class="b s ${rootH ? '' : 'p'}" onclick="pickRoot()">${rootH ? '변경' : '폴더 지정'}</button>${
+          rootH ? '<button class="b s" onclick="unlinkRoot()">해제</button>' : ''
+        }</span>`,
       ),
     ) +
     sg(
@@ -491,7 +531,10 @@ function renderData() {
       sv(
         tip('백업', '화면 위 ‘백업’ 버튼과 같습니다. 폴더가 있으면 폴더에, 없으면 내려받기로 받습니다.'),
         `마지막 백업 <b>${db.meta.lastBackup ? loc(db.meta.lastBackup) : '없음'}</b>${backupDue() ? ' <span class="bg warn">백업 필요</span>' : ''}`,
-        `<span style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">${btn('지금 백업', 'exportJSON(true)', 'p')}${btn('백업 폴더에서 복원', 'restoreFromFolder()')}</span>`,
+        `<span style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">${btn('지금 백업', 'exportJSON(true)', 'p')}${btn(
+          '백업 폴더에서 복원',
+          'restoreFromFolder()',
+        )}</span>`,
       ),
     ) +
     sg(
@@ -502,7 +545,9 @@ function renderData() {
           '지금 데이터를 HTML 파일 하나로 만듭니다. 받은 사람은 보기 · 검색 · 출력만 되고 수정 · 저장은 안 됩니다. 파일 안에 데이터가 그대로 들어 있으니 받을 사람을 가려서 보내세요.',
         ),
         '',
-        `<span style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;align-items:center"><label class="row" style="gap:5px;font-size:12.5px" title="협력사 연락처 · 주소 · 단가 · BOM · 기록에 안 쓰인 협력사 · 부품을 빼고, 기록에 쓰인 협력사 · 부품 이름만 남깁니다. 기준정보 탭도 숨깁니다."><input type="checkbox" ${num(db.settings.shareNoMaster) !== 0 ? 'checked' : ''} onchange="db.settings.shareNoMaster=this.checked?1:0;save()"> 기준정보 빼기</label>${btn('사진 포함', 'makeShareFile(true)')}${btn('사진 제외', 'makeShareFile(false)')}</span>`,
+        `<span style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;align-items:center"><label class="row" style="gap:5px;font-size:12.5px" title="협력사 연락처 · 주소 · 단가 · BOM · 기록에 안 쓰인 협력사 · 부품을 빼고, 기록에 쓰인 협력사 · 부품 이름만 남깁니다. 기준정보 탭도 숨깁니다."><input type="checkbox" ${
+          num(db.settings.shareNoMaster) !== 0 ? 'checked' : ''
+        } onchange="db.settings.shareNoMaster=this.checked?1:0;save()"> 기준정보 빼기</label>${btn('사진 포함', 'makeShareFile(true)')}${btn('사진 제외', 'makeShareFile(false)')}</span>`,
       ) +
         sv(
           tip(
@@ -539,7 +584,9 @@ function renderData() {
         sv(
           'QIS.sqlite 자동',
           '자동 백업 때 같은 폴더에 덮어씀',
-          `<label class="row" style="gap:6px"><input type="checkbox" ${num(db.settings.sqliteAuto) ? 'checked' : ''} onchange="db.settings.sqliteAuto=this.checked?1:0;save()"> 함께 만들기</label>`,
+          `<label class="row" style="gap:6px"><input type="checkbox" ${
+            num(db.settings.sqliteAuto) ? 'checked' : ''
+          } onchange="db.settings.sqliteAuto=this.checked?1:0;save()"> 함께 만들기</label>`,
         ),
     ) +
     sg(
@@ -552,7 +599,8 @@ function renderData() {
       sv(
         '원본 데이터',
         dataStore === 'idb' ? '이 PC 브라우저의 대용량 저장소 — 입력하면 바로 저장' : '이 PC 브라우저의 기본 저장소 (약 5MB)',
-        `<span class="muted">협력사 ${cnt[0]} · 부품 ${cnt[1]} · 불량 ${cnt[2]} · NCR ${cnt[3]} · 사진 ${nPh} · 기록 ${((n) => (n < 1048576 ? Math.max(1, Math.round(n / 1024)) + 'KB' : (n / 1048576).toFixed(1) + 'MB'))(JSON.stringify(db).length)}</span>`,
+        `<span class="muted">협력사 ${cnt[0]} · 부품 ${cnt[1]} · 불량 ${cnt[2]} · NCR ${cnt[3]} · 사진 ${nPh} · 기록 ${((n) =>
+          n < 1048576 ? Math.max(1, Math.round(n / 1024)) + 'KB' : (n / 1048576).toFixed(1) + 'MB')(JSON.stringify(db).length)}</span>`,
       ) +
         sv(
           '삭제 방지',

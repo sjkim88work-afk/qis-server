@@ -66,7 +66,9 @@ async function a3Report(kind, id) {
   // 1 배경 (왜 문제인가)
   const bg = T(
     d &&
-      `${d.date} ${d.source || ''}에서 발견${d.fgNo || d.fgName ? ` — 완성품 ${[d.fgNo, d.fgName].filter(Boolean).join(' ')}${fgq ? ` ${fgq.toLocaleString()}대 영향` : ''}` : ''}`,
+      `${d.date} ${d.source || ''}에서 발견${
+        d.fgNo || d.fgName ? ` — 완성품 ${[d.fgNo, d.fgName].filter(Boolean).join(' ')}${fgq ? ` ${fgq.toLocaleString()}대 영향` : ''}` : ''
+      }`,
     c && c.Customer ? `고객사 ${c.Customer}${c.CustomerClaimNo ? ' · 클레임 ' + c.CustomerClaimNo : ''}` : '',
     sev
       ? `심각도 ${sev.grade} (${sev.score}점${sev.forced && sev.forced.length ? ' · ' + sev.forced.join(', ') : ''})${c && c.Tier ? ` · ${c.Tier}` : ''}`
@@ -77,7 +79,9 @@ async function a3Report(kind, id) {
   // 2 현상 (무엇이 · 어디서 · 얼마나)
   const cur = T(
     d &&
-      `불량: ${d.type || ''} ${qty.toLocaleString()}개${d.inspQty ? ` / 로트 ${num(d.inspQty).toLocaleString()}개 (${((qty / num(d.inspQty)) * 100).toFixed(2)}%)` : ''}`,
+      `불량: ${d.type || ''} ${qty.toLocaleString()}개${
+        d.inspQty ? ` / 로트 ${num(d.inspQty).toLocaleString()}개 (${((qty / num(d.inspQty)) * 100).toFixed(2)}%)` : ''
+      }`,
     d && `부품: ${d.partNo || '(조사 중)'} ${d.partName || ''}${sup ? ' · ' + sup : ''}${lotOf(d) ? ' · LOT ' + lotOf(d) : ''}`,
     ds
       .map((x) => x.desc)
@@ -112,7 +116,9 @@ async function a3Report(kind, id) {
         .join('\n')
     : '';
   const respTxt = T(
-    `귀책: ${resp}${iv.verdict ? ` (판정 ${iv.verdictDate || ''}${iv.basis ? ' — ' + iv.basis : ''})` : ''}${resp === '공동' && has(iv.share) ? ` · 협력사 ${iv.share}%` : ''}`,
+    `귀책: ${resp}${iv.verdict ? ` (판정 ${iv.verdictDate || ''}${iv.basis ? ' — ' + iv.basis : ''})` : ''}${
+      resp === '공동' && has(iv.share) ? ` · 협력사 ${iv.share}%` : ''
+    }`,
     iv.farReq
       ? `FAR: 요청 ${iv.farReq}${iv.farRecv ? ` · 회신 ${iv.farRecv}` : ' · 회신 대기'}${iv.farResult ? ' — ' + iv.farResult : ''}`
       : n && n.far && n.far.reqDate
@@ -200,9 +206,13 @@ async function a3Report(kind, id) {
   const costTxt = cost
     ? `${Object.entries(cats)
         .map(([k, v]) => `${k} ${won(v)}`)
-        .join(
-          ' · ',
-        )} = <b>${won(cost)}원</b>${req ? `<br>구상 청구 ${won(req)}원 · 회수 ${won(recv)}원${os ? ` · <span style="color:#b42318">미회수 ${won(os)}원</span>` : ''}` : resp === '미정' ? '<br>귀책 미정 — 정산 대기' : ''}`
+        .join(' · ')} = <b>${won(cost)}원</b>${
+        req
+          ? `<br>구상 청구 ${won(req)}원 · 회수 ${won(recv)}원${os ? ` · <span style="color:#b42318">미회수 ${won(os)}원</span>` : ''}`
+          : resp === '미정'
+            ? '<br>귀책 미정 — 정산 대기'
+            : ''
+      }`
     : '비용 미입력';
   // 경과 (주요 이벤트)
   const ev = [...ds.flatMap((x) => caseEntries('defect', x)), ...(n ? n.logs || [] : [])]
@@ -218,7 +228,9 @@ async function a3Report(kind, id) {
   const tl = (evs.length > 9 ? [...evs.slice(0, 3), ...evs.slice(-6)] : evs)
     .map(
       (e) =>
-        `<tr><td>${esc(e.date.slice(5))}</td><td>${esc(e.text.slice(0, 70))}${e.text.length > 70 ? '…' : ''}${e.result ? ' → ' + esc(e.result.slice(0, 40)) : ''}</td></tr>`,
+        `<tr><td>${esc(e.date.slice(5))}</td><td>${esc(e.text.slice(0, 70))}${e.text.length > 70 ? '…' : ''}${
+          e.result ? ' → ' + esc(e.result.slice(0, 40)) : ''
+        }</td></tr>`,
     )
     .join('');
   // 추세 (같은 부품 · 최근 6개월)
@@ -227,7 +239,12 @@ async function a3Report(kind, id) {
     tr = ms.map((m) => db.defects.filter((x) => pn && x.partNo === pn && (x.date || '').startsWith(m)).reduce((a, x) => a + num(x.qty), 0)),
     mx = Math.max(1, ...tr);
   const spark = pn
-    ? `<svg viewBox="0 0 240 70" style="width:100%;height:70px">${tr.map((v, i) => `<rect x="${i * 40 + 8}" y="${56 - (v / mx) * 46}" width="24" height="${(v / mx) * 46}" fill="${i === 5 ? '#c0392b' : '#9bb3d4'}"/><text x="${i * 40 + 20}" y="68" font-size="8" text-anchor="middle" fill="#555">${ms[i].slice(5)}월</text><text x="${i * 40 + 20}" y="${52 - (v / mx) * 46}" font-size="8" text-anchor="middle">${v || ''}</text>`).join('')}</svg>`
+    ? `<svg viewBox="0 0 240 70" style="width:100%;height:70px">${tr
+        .map(
+          (v, i) =>
+            `<rect x="${i * 40 + 8}" y="${56 - (v / mx) * 46}" width="24" height="${(v / mx) * 46}" fill="${i === 5 ? '#c0392b' : '#9bb3d4'}"/><text x="${i * 40 + 20}" y="68" font-size="8" text-anchor="middle" fill="#555">${ms[i].slice(5)}월</text><text x="${i * 40 + 20}" y="${52 - (v / mx) * 46}" font-size="8" text-anchor="middle">${v || ''}</text>`,
+        )
+        .join('')}</svg>`
     : '';
   let phs = [];
   try {
@@ -239,7 +256,9 @@ async function a3Report(kind, id) {
   const sg = S.signs || {},
     sign = (r, nm) =>
       `<td><div class="r">${r}</div><div class="nm" contenteditable="true">${nm && sg[nm] ? `<img src="${sg[nm]}">` : esc(nm || '')}</div></td>`;
-  const html = `<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>A3_${esc((c && c.CaseNo) || (n && n.no) || (d && d.date) || '')}</title><style>
+  const html = `<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>A3_${esc(
+    (c && c.CaseNo) || (n && n.no) || (d && d.date) || '',
+  )}</title><style>
   @page{size:A3 landscape;margin:9mm}*{box-sizing:border-box}
   body{font-family:'Malgun Gothic','맑은 고딕',sans-serif;font-size:11.5px;color:#111;margin:0;background:#e9edf2}
   .bar{position:sticky;top:0;z-index:5;background:#0B4F4D;color:#fff;padding:8px 14px;display:flex;gap:10px;align-items:center;font-size:13px}.bar button{font:inherit;padding:5px 14px;border:0;border-radius:5px;cursor:pointer}.bar .pp{background:#fff;color:#0B4F4D;font-weight:bold}
@@ -262,16 +281,56 @@ async function a3Report(kind, id) {
   <div class="bar"><span style="flex:1">A3 보고서 — 글자를 눌러 바로 고친 뒤 인쇄하세요 (A3 가로 · 고친 내용은 앱에 저장되지 않음)</span><button class="pp" onclick="window.print()">인쇄 / PDF 저장</button><button onclick="${REPORT_CLOSE}">닫기</button></div>
   <div class="pg">
   <div class="hd">${S.logo ? `<img class="lg" src="${S.logo}">` : `<b>${esc(S.company || '')}</b>`}
-    <div><h1 contenteditable="true">${esc(titleTxt)}</h1><div class="meta">${esc([(c && c.CaseNo) || '', n ? n.no : '', d ? `${d.fgNo || ''} ${d.partNo || ''}`.trim() : '', sup, d && d.model].filter(Boolean).join(' · '))} · 작성 ${today()} · ${esc((c && c.Owner) || (d && d.owner) || S.owners[0] || '')}</div></div>
-    <table class="sgn"><tr>${sign('Prepared by', (c && c.Owner) || (d && d.owner) || S.owners[0])}${sign('Quality Manager', S.approver || '')}${sign('CFO', '')}${sign('CEO', '')}</tr></table></div>
-  <div class="kp"><div>상태<b>${esc(st)}</b></div><div class="${sev && sev.grade === 'A' ? 'bad' : ''}">심각도<b>${sev ? sev.grade : '-'}</b></div><div>불량<b>${qty.toLocaleString()}개</b>${fgq ? ` · 완성품 ${fgq.toLocaleString()}대` : ''}</div><div>귀책<b>${esc(resp || '-')}</b></div><div class="${os ? 'bad' : ''}">실패비용<b>${cost ? won(cost) + '원' : '-'}</b></div>${vdue ? `<div>검증 기한<b>${esc(vdue)}</b></div>` : ''}</div>
+    <div><h1 contenteditable="true">${esc(titleTxt)}</h1><div class="meta">${esc(
+      [(c && c.CaseNo) || '', n ? n.no : '', d ? `${d.fgNo || ''} ${d.partNo || ''}`.trim() : '', sup, d && d.model].filter(Boolean).join(' · '),
+    )} · 작성 ${today()} · ${esc((c && c.Owner) || (d && d.owner) || S.owners[0] || '')}</div></div>
+    <table class="sgn"><tr>${sign('Prepared by', (c && c.Owner) || (d && d.owner) || S.owners[0])}${sign(
+      'Quality Manager',
+      S.approver || '',
+    )}${sign('CFO', '')}${sign('CEO', '')}</tr></table></div>
+  <div class="kp"><div>상태<b>${esc(st)}</b></div>
+    <div class="${sev && sev.grade === 'A' ? 'bad' : ''}">심각도<b>${sev ? sev.grade : '-'}</b></div><div>불량<b>${qty.toLocaleString()}개</b>${
+      fgq ? ` · 완성품 ${fgq.toLocaleString()}대` : ''
+    }</div><div>귀책<b>${esc(resp || '-')}</b></div><div class="${os ? 'bad' : ''}">실패비용<b>${cost ? won(cost) + '원' : '-'}</b></div>${
+      vdue ? `<div>검증 기한<b>${esc(vdue)}</b></div>` : ''
+    }</div>
   <div class="cols"><div class="col">
     ${sec(1, '배경 · 문제 (Background)', pre(bg))}
-    ${sec(2, '현상 파악 (Current condition)', `<div class="two"><div>${pre(cur)}</div><div>${spark ? `<div style="font-size:10px;color:#555">같은 부품 월별 불량 수량 (최근 6개월)</div>${spark}` : ''}</div></div>${phs.length ? `<div class="ph">${phs.map((p) => `<img src="${p.thumb || p.data}" title="${esc(p.caption || '')}">`).join('')}</div>` : ''}`)}
+    ${sec(
+      2,
+      '현상 파악 (Current condition)',
+      `<div class="two"><div>${pre(cur)}</div><div>${
+        spark ? `<div style="font-size:10px;color:#555">같은 부품 월별 불량 수량 (최근 6개월)</div>${spark}` : ''
+      }</div></div>${
+        phs.length ? `<div class="ph">${phs.map((p) => `<img src="${p.thumb || p.data}" title="${esc(p.caption || '')}">`).join('')}</div>` : ''
+      }`,
+    )}
     ${sec(3, '목표 (Target)', pre(goal))}
-    ${sec(4, '원인 분석 (Root cause)', `${occ ? `<b>발생 원인</b> ${pre(occ)}<br>` : ''}${esc2 ? `<b>유출 원인</b> ${pre(esc2)}<br>` : ''}${sys ? `<b>시스템 원인</b> ${pre(sys)}<br>` : ''}${whyTxt ? `<div style="margin-top:4px;color:#333">${pre(whyTxt)}</div>` : ''}${!occ && !esc2 ? '<span class="ng">원인 분석 중</span><br>' : ''}<div style="margin-top:4px;color:#444">${pre(respTxt)}</div>`)}
+    ${sec(
+      4,
+      '원인 분석 (Root cause)',
+      `${occ ? `<b>발생 원인</b> ${pre(occ)}<br>` : ''}${esc2 ? `<b>유출 원인</b> ${pre(esc2)}<br>` : ''}${
+        sys ? `<b>시스템 원인</b> ${pre(sys)}<br>` : ''
+      }${whyTxt ? `<div style="margin-top:4px;color:#333">${pre(whyTxt)}</div>` : ''}${
+        !occ && !esc2 ? '<span class="ng">원인 분석 중</span><br>' : ''
+      }<div style="margin-top:4px;color:#444">${pre(respTxt)}</div>`,
+    )}
   </div><div class="col">
-    ${sec(5, '대책 (Countermeasures)', acts.length ? `<table class="at"><tr><th>구분</th><th>대책</th><th>담당</th><th>기한</th><th>완료</th><th>상태</th></tr>${acts.map((a) => `<tr><td>${esc(a.k)}</td><td>${esc(a.t)}</td><td>${esc(a.o || '')}</td><td>${esc(a.due || '')}</td><td>${esc(a.done || '')}</td><td class="${['완료', '승인', '적용완료'].includes(a.st) ? 'ok' : a.due && !a.done && a.due < today() ? 'ng' : ''}">${esc(a.st || '')}</td></tr>`).join('')}</table>` : '<span class="ng">대책 수립 전</span>')}
+    ${sec(
+      5,
+      '대책 (Countermeasures)',
+      acts.length
+        ? `<table class="at"><tr><th>구분</th><th>대책</th><th>담당</th><th>기한</th><th>완료</th><th>상태</th></tr>${acts
+            .map(
+              (a) =>
+                `<tr><td>${esc(a.k)}</td><td>${esc(a.t)}</td><td>${esc(a.o || '')}</td>
+                  <td>${esc(a.due || '')}</td><td>${esc(a.done || '')}</td><td class="${
+                    ['완료', '승인', '적용완료'].includes(a.st) ? 'ok' : a.due && !a.done && a.due < today() ? 'ng' : ''
+                  }">${esc(a.st || '')}</td></tr>`,
+            )
+            .join('')}</table>`
+        : '<span class="ng">대책 수립 전</span>',
+    )}
     ${sec(6, '효과 확인 (Effect check)', pre(eff))}
     ${sec(7, '표준화 · 후속 (Follow-up)', pre(fol))}
     <div class="two">${sec('₩', '실패비용 · 구상', costTxt)}${sec('⏱', '주요 경과', tl ? `<table class="tl">${tl}</table>` : '기록 없음')}</div>
@@ -419,7 +478,9 @@ if (RO) {
       .querySelector('nav')
       .insertAdjacentHTML(
         'afterend',
-        `<div class="roBar noprint">📖 <b>읽기 전용 사본</b> — ${esc(m.company || '')} ${esc(m.by || '')} · 기준 <b>${esc(loc(m.created) || '-')}</b> · ver ${esc(m.ver || '')}${m.photos != null ? ` · 사진 ${m.photos}장` : ''}${m.noMaster ? ' · 기준정보 제외' : ''} <span class="muted">— 보기 · 검색 · 출력만 됩니다. 고친 내용은 저장되지 않습니다.</span></div>`,
+        `<div class="roBar noprint">📖 <b>읽기 전용 사본</b> — ${esc(m.company || '')} ${esc(m.by || '')} · 기준 <b>${esc(loc(m.created) || '-')}</b> · ver ${esc(m.ver || '')}${
+          m.photos != null ? ` · 사진 ${m.photos}장` : ''
+        }${m.noMaster ? ' · 기준정보 제외' : ''} <span class="muted">— 보기 · 검색 · 출력만 됩니다. 고친 내용은 저장되지 않습니다.</span></div>`,
       );
   ['hdrBk', 'hdrInstall'].forEach((i) => {
     const e = $('#' + i);

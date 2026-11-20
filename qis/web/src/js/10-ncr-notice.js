@@ -79,16 +79,49 @@ async function printNotice(id) {
   <table class="hd"><tr><td class="lg">${S.logo ? `<img src="${S.logo}">` : `<b style="font-size:15pt">${esc(S.company)}</b>`}</td>
     <td class="tt"><div class="en">Non-conformance Report (External)</div><div class="ko">부적합 통보서</div></td>
     <td class="dt">발행일:<span>${esc(n.issueDate)}</span></td></tr></table>
-  <table class="inf"><colgroup><col style="width:17%"><col style="width:33%"><col style="width:14%"><col style="width:36%"></colgroup>${L.map((l, k) => `<tr><td class="k">${l[0]}</td><td class="v mid">${l[0] ? v(l[1]) : ''}</td><td class="k k2">${R[k][0]}</td><td class="v v2${R[k][0] === 'Name' ? ' nm' : ''}">${R[k][0] ? v(R[k][1]) : ''}</td></tr>`).join('')}</table>
+  <table class="inf"><colgroup><col style="width:17%"><col style="width:33%"><col style="width:14%"><col style="width:36%"></colgroup>${L.map(
+    (l, k) =>
+      `<tr><td class="k">${l[0]}</td><td class="v mid">${l[0] ? v(l[1]) : ''}</td><td class="k k2">${R[k][0]}</td>
+        <td class="v v2${R[k][0] === 'Name' ? ' nm' : ''}">${R[k][0] ? v(R[k][1]) : ''}</td></tr>`,
+  ).join('')}</table>
   <table class="mn"><tr><th>NCR No.<br>(부적합 통지 번호)</th><th>Defect Q'ty / Sample Size</th><th>Specification<br>(도면사양)</th><th>Actual<br>(실 제)</th></tr>
-    <tr><td class="no">${esc(n.no)}</td><td class="q">${esc(n.defectQtyText || '')}</td><td class="sp"><div class="cl${String(n.spec || '').length > 40 ? ' sm' : ''}">${nl(n.spec) || 'Specification<br>(도면사양)'}</div></td><td class="ac"><div class="cl${String(n.actual || n.title || '').length > 40 ? ' sm' : ''}">${nl(n.actual || n.title)}</div></td></tr></table>
-  <div class="dd"><div class="t">Defect Description${n.basis === '공정 감사' ? ' — Process Audit Finding (공정 감사 지적)' : n.basis === 'PPM 초과' ? ' — PPM Target Exceeded (PPM 목표 초과)' : ''}</div>${(n.defectDesc || '').trim() ? `<div class="ds">${nl(n.defectDesc.trim())}</div>` : ''}
-    ${phs.length ? `<div class="ph">${phs.map((p) => `<figure><img src="${p.data}">${p.caption ? `<figcaption>${esc(p.caption)}</figcaption>` : ''}</figure>`).join('')}</div>` : `${(n.defectDesc || '').trim() || isSysBasis(n) ? '' : '<div class="nop">(사진 없음 — 불량 기록에 사진을 첨부하면 이 영역에 들어갑니다)</div>'}`}</div>
-  <table class="iv"><tr><td class="sit" rowspan="${inv.length + 2}">Supplied part Situation<br>(공급품 현황) :${n.supplySit ? `<div style="margin-top:2mm;font-size:9pt">${nl(n.supplySit)}</div>` : ''}</td><td colspan="3">Inventory Check<br>재 고 현 황</td></tr>
-    <tr><td class="dg"><svg preserveAspectRatio="none" viewBox="0 0 100 100"><line x1="0" y1="0" x2="100" y2="100" stroke="#000" stroke-width="1" vector-effect="non-scaling-stroke"/></svg></td><td>Quantity Stocked<br>(재고보유수량)</td><td>Check Quality<br>(확인된 불량수량)</td></tr>
-    ${inv.map((r) => `<tr><td>${esc(r.loc)}</td><td class="blu">${esc(r.st) || '-'}</td><td class="red">${esc(r.ng) || '-'}</td></tr>`).join('')}</table>
+    <tr><td class="no">${esc(n.no)}</td><td class="q">${esc(n.defectQtyText || '')}</td><td class="sp"><div class="cl${
+      String(n.spec || '').length > 40 ? ' sm' : ''
+    }">${nl(n.spec) || 'Specification<br>(도면사양)'}</div></td><td class="ac"><div class="cl${
+      String(n.actual || n.title || '').length > 40 ? ' sm' : ''
+    }">${nl(n.actual || n.title)}</div></td></tr></table>
+  <div class="dd"><div class="t">Defect Description${
+    n.basis === '공정 감사' ? ' — Process Audit Finding (공정 감사 지적)' : n.basis === 'PPM 초과' ? ' — PPM Target Exceeded (PPM 목표 초과)' : ''
+  }</div>${(n.defectDesc || '').trim() ? `<div class="ds">${nl(n.defectDesc.trim())}</div>` : ''}
+    ${
+      phs.length
+        ? `<div class="ph">${phs
+            .map((p) => `<figure><img src="${p.data}">${p.caption ? `<figcaption>${esc(p.caption)}</figcaption>` : ''}</figure>`)
+            .join('')}</div>`
+        : `${
+            (n.defectDesc || '').trim() || isSysBasis(n)
+              ? ''
+              : '<div class="nop">(사진 없음 — 불량 기록에 사진을 첨부하면 이 영역에 들어갑니다)</div>'
+          }`
+    }</div>
+  <table class="iv"><tr><td class="sit" rowspan="${inv.length + 2}">Supplied part Situation<br>(공급품 현황) :${
+    n.supplySit ? `<div style="margin-top:2mm;font-size:9pt">${nl(n.supplySit)}</div>` : ''
+  }</td><td colspan="3">Inventory Check<br>재 고 현 황</td></tr>
+    <tr><td class="dg"><svg preserveAspectRatio="none" viewBox="0 0 100 100"><line x1="0" y1="0" x2="100" y2="100" stroke="#000" stroke-width="1" vector-effect="non-scaling-stroke"/></svg></td>
+      <td>Quantity Stocked<br>(재고보유수량)</td><td>Check Quality<br>(확인된 불량수량)</td></tr>
+    ${inv
+      .map((r) => `<tr><td>${esc(r.loc)}</td><td class="blu">${esc(r.st) || '-'}</td><td class="red">${esc(r.ng) || '-'}</td></tr>`)
+      .join('')}</table>
   <table class="rm"><tr><td class="k">Remark</td><td class="v">${nl(remark)}</td></tr></table>
-  <table class="cq"><tr><td class="k">Contact SQE ( ${esc(n.owner || '')} )<br>${n.reqType === '간이 대책서' ? 'Corrective action report must be filed<br>(간이 대책서 작성)' : n.reqType === '단순 통보' ? 'For information only<br>(단순 통보 · 회신 불요)' : '8-D report must be filed<br>(8-D 보고서와 병력 작성)'}</td><td class="v">${[S.issuerPhone && 'Tel. ' + esc(S.issuerPhone), S.issuerEmail && 'E-mail. ' + esc(S.issuerEmail)].filter(Boolean).join('<br>')}</td></tr></table>
+  <table class="cq"><tr><td class="k">Contact SQE ( ${esc(n.owner || '')} )<br>${
+    n.reqType === '간이 대책서'
+      ? 'Corrective action report must be filed<br>(간이 대책서 작성)'
+      : n.reqType === '단순 통보'
+        ? 'For information only<br>(단순 통보 · 회신 불요)'
+        : '8-D report must be filed<br>(8-D 보고서와 병력 작성)'
+  }</td><td class="v">${[S.issuerPhone && 'Tel. ' + esc(S.issuerPhone), S.issuerEmail && 'E-mail. ' + esc(S.issuerEmail)]
+    .filter(Boolean)
+    .join('<br>')}</td></tr></table>
   </div></body></html>`
     .replace('</head>', REPORT_HEAD.replace(/@page\{[^}]*\}/, ''))
     .replace('<body>', '<body>' + REPORT_BAR);

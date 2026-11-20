@@ -110,12 +110,18 @@ function bomImpactHTML(partNo, fgNo, pick) {
   // 처음엔 접어 두고(드롭다운), 누르면 제품 목록 표 — 열고 닫은 상태는 기억
   const open = !!bomImpactHTML.open;
   return `<details class="bomx bomdd" ${open ? 'open' : ''} ontoggle="bomImpactHTML.open=this.open">
-    <summary><b>📦 영향 범위</b> — 이 부품이 들어가는 제품 <b>${fgsU.length}개</b>${models.length ? ` · 차종 <b>${models.map(esc).join(', ')}</b>` : ''} <span class="muted ddh">— 눌러서 제품 목록 보기</span></summary>
-    <div class="tw" style="max-height:240px;margin-top:6px"><table class="sm"><thead><tr><th>차종</th><th>제품 품번</th><th>제품명</th><th>바로 위 품번</th><th class="n">레벨</th><th class="n">제품 1개당</th></tr></thead><tbody>
+    <summary><b>📦 영향 범위</b> — 이 부품이 들어가는 제품 <b>${fgsU.length}개</b>${
+      models.length ? ` · 차종 <b>${models.map(esc).join(', ')}</b>` : ''
+    } <span class="muted ddh">— 눌러서 제품 목록 보기</span></summary>
+    <div class="tw" style="max-height:240px;margin-top:6px"><table class="sm"><thead><tr><th>차종</th>
+      <th>제품 품번</th><th>제품명</th><th>바로 위 품번</th><th class="n">레벨</th><th class="n">제품 1개당</th></tr></thead><tbody>
     ${L.map((r) => {
       const m = bomFg(r.fgNo),
         up = r.parentNo && r.parentNo !== r.fgNo ? r.parentNo : '';
-      return `<tr class="${r.fgNo === fg ? 'on' : ''}${pick ? ' bpick' : ''}" ${pick ? `onclick="bomPickFg(${jsq(r.fgNo)})" title="눌러서 완성품 품번으로 입력"` : ''}><td class="nw">${esc(m.model || '')}</td><td class="nw"><b>${esc(r.fgNo)}</b></td><td>${esc(m.name || '')}</td><td class="nw muted">${esc(up || '(제품에 바로)')}</td><td class="n">${esc(bomLv(r))}</td><td class="n">×${bomQ(bTot(r))}</td></tr>`;
+      return `<tr class="${r.fgNo === fg ? 'on' : ''}${pick ? ' bpick' : ''}" ${
+        pick ? `onclick="bomPickFg(${jsq(r.fgNo)})" title="눌러서 완성품 품번으로 입력"` : ''
+      }><td class="nw">${esc(m.model || '')}</td><td class="nw"><b>${esc(r.fgNo)}</b></td><td>${esc(m.name || '')}</td>
+        <td class="nw muted">${esc(up || '(제품에 바로)')}</td><td class="n">${esc(bomLv(r))}</td><td class="n">×${bomQ(bTot(r))}</td></tr>`;
     }).join('')}
     </tbody></table></div>${pick ? '<div class="muted" style="margin-top:4px">줄을 누르면 완성품 품번으로 입력됩니다.</div>' : ''}
     ${notIn ? `<div style="color:var(--warn);margin-top:6px">⚠ 입력한 완성품(${esc(fg)})의 BOM에는 이 부품이 없습니다. 번호를 확인하세요.</div>` : ''}</details>`;
@@ -170,11 +176,26 @@ function bomTable() {
     else groups.push({ m: x.model || '-', L: [x] });
   });
   const miss = [...ix.byPart.keys()].filter((pn) => !partByNo(pn)).length;
-  const left = `<div class="tw bomL"><table class="mst"><colgroup><col style="width:82px"><col style="width:120px"><col><col style="width:84px"><col style="width:46px"></colgroup>
+  const left = `<div class="tw bomL"><table class="mst">
+    <colgroup><col style="width:82px"><col style="width:120px"><col><col style="width:84px"><col style="width:46px"></colgroup>
     <thead><tr><th>차종</th><th>품번</th><th>품명</th><th>적용일자</th><th class="n">건수</th></tr></thead><tbody>
-    ${groups.map((g) => g.L.map((x, i) => `<tr class="bsel${x.f === msState.bomSel ? ' on' : ''}" data-fg="${esc(x.f)}" onclick="bomSelect(this.dataset.fg)">${i ? '' : `<td rowspan="${g.L.length}" class="bgrp">${esc(g.m)}</td>`}<td class="nw">${esc(x.f)}</td><td class="nw" title="${esc(x.name)}">${esc(x.name)}</td><td class="nw">${esc(x.date)}</td><td class="n">${x.n}</td></tr>`).join('')).join('') || '<tr><td colspan="5" class="muted" style="text-align:center;padding:16px">검색 결과가 없습니다.</td></tr>'}
+    ${
+      groups
+        .map((g) =>
+          g.L.map(
+            (x, i) =>
+              `<tr class="bsel${x.f === msState.bomSel ? ' on' : ''}" data-fg="${esc(x.f)}" onclick="bomSelect(this.dataset.fg)">${
+                i ? '' : `<td rowspan="${g.L.length}" class="bgrp">${esc(g.m)}</td>`
+              }<td class="nw">${esc(x.f)}</td><td class="nw" title="${esc(x.name)}">${esc(x.name)}</td>
+                <td class="nw">${esc(x.date)}</td><td class="n">${x.n}</td></tr>`,
+          ).join(''),
+        )
+        .join('') || '<tr><td colspan="5" class="muted" style="text-align:center;padding:16px">검색 결과가 없습니다.</td></tr>'
+    }
     </tbody></table></div>`;
-  return `<div class="help" style="margin-bottom:6px">제품 <b>${ix.byFg.size}</b>개 · 구성 <b>${db.bom.rows.length}</b>줄 · 부품 <b>${ix.byPart.size}</b>종${miss ? ` · <span style="color:var(--warn)">기준정보에 없는 품번 ${miss}종</span> (생산품 · 반제품은 정상)` : ''} · 가져오기 ${esc(loc(db.bom.updatedAt) || '-')}</div>
+  return `<div class="help" style="margin-bottom:6px">제품 <b>${ix.byFg.size}</b>개 · 구성 <b>${db.bom.rows.length}</b>줄 · 부품 <b>${ix.byPart.size}</b>종${
+    miss ? ` · <span style="color:var(--warn)">기준정보에 없는 품번 ${miss}종</span> (생산품 · 반제품은 정상)` : ''
+  } · 가져오기 ${esc(loc(db.bom.updatedAt) || '-')}</div>
   <div class="bomw">${left}<div id="bomR">${bomTreeHTML(msState.bomSel, w)}</div></div>`;
 }
 function bomSelect(fg) {
@@ -211,14 +232,32 @@ function bomTreeHTML(fg, w) {
     const p = isRoot ? partByNo(fg) : partByNo(r.partNo),
       kids = isRoot ? rs.length : bKids(r),
       col = !isRoot && bomCol.has(fg + '|' + r.seq);
-    return `<tr class="${isRoot ? 'broot' : ''}${!isRoot && hit(r) ? ' bhit' : ''}"><td class="nw" style="padding-left:${8 + lv * 16}px">${kids && !isRoot ? `<a class="btg" onclick="bomToggle(${jsq(fg)},${r.seq})">${col ? '⊞' : '⊟'}</a>` : isRoot ? '<span class="btg">⊟</span>' : '<span class="btg"></span>'}${lv}</td>
-      <td class="nw">${esc(isRoot ? m.type : r.type || '')}</td><td class="nw">${esc(isRoot ? m.proc : r.proc || '')}</td><td class="nw">${esc(isRoot ? m.model : r.pmodel || '')}</td>
+    return `<tr class="${isRoot ? 'broot' : ''}${!isRoot && hit(r) ? ' bhit' : ''}"><td class="nw" style="padding-left:${8 + lv * 16}px">${
+      kids && !isRoot
+        ? `<a class="btg" onclick="bomToggle(${jsq(fg)},${r.seq})">${col ? '⊞' : '⊟'}</a>`
+        : isRoot
+          ? '<span class="btg">⊟</span>'
+          : '<span class="btg"></span>'
+    }${lv}</td>
+      <td class="nw">${esc(isRoot ? m.type : r.type || '')}</td>
+        <td class="nw">${esc(isRoot ? m.proc : r.proc || '')}</td><td class="nw">${esc(isRoot ? m.model : r.pmodel || '')}</td>
       <td class="nw"><b>${esc(isRoot ? fg : r.partNo)}</b></td><td>${esc(isRoot ? m.name : r.partName || p?.name || '')}</td>
-      <td class="nw">${p && p.supplierId ? esc(supName(p.supplierId)) : '<span class="muted">-</span>'}</td><td class="nw">${esc(isRoot ? 'EA' : r.unit || '')}</td>
+      <td class="nw">${
+        p && p.supplierId ? esc(supName(p.supplierId)) : '<span class="muted">-</span>'
+      }</td><td class="nw">${esc(isRoot ? 'EA' : r.unit || '')}</td>
       <td class="n" title="${isRoot ? '' : `제품 1개당 총 ${bomQ(bTot(r))}`}">${isRoot ? '1' : bomQ(r.qty)}</td></tr>`;
   };
-  return `<div class="row" style="margin:0 0 6px;gap:8px;align-items:baseline"><b style="font-size:14px">${esc(fg)}</b><span>${esc(m.name)}</span>${m.model ? `<span class="bg inf">${esc(m.model)}</span>` : ''}${m.type ? `<span class="bg mut">${esc(m.type)}</span>` : ''}<span class="sp" style="flex:1"></span><span class="muted" style="font-size:12px">구성 ${rs.length}줄${rs.some((r) => bKids(r)) ? ` · <a class="lk" onclick="bomFold(${jsq(fg)},1)">모두 접기</a> · <a class="lk" onclick="bomFold(${jsq(fg)},0)">모두 펼치기</a>` : ''}</span></div>
-  <div class="tw bomT"><table class="mst"><colgroup><col style="width:86px"><col style="width:70px"><col style="width:84px"><col style="width:70px"><col style="width:118px"><col><col style="width:130px"><col style="width:62px"><col style="width:52px"></colgroup>
+  return `<div class="row" style="margin:0 0 6px;gap:8px;align-items:baseline"><b style="font-size:14px">${esc(fg)}</b><span>${esc(m.name)}</span>${
+    m.model ? `<span class="bg inf">${esc(m.model)}</span>` : ''
+  }${
+    m.type ? `<span class="bg mut">${esc(m.type)}</span>` : ''
+  }<span class="sp" style="flex:1"></span><span class="muted" style="font-size:12px">구성 ${rs.length}줄${
+    rs.some((r) => bKids(r))
+      ? ` · <a class="lk" onclick="bomFold(${jsq(fg)},1)">모두 접기</a> · <a class="lk" onclick="bomFold(${jsq(fg)},0)">모두 펼치기</a>`
+      : ''
+  }</span></div>
+  <div class="tw bomT"><table class="mst">
+    <colgroup><col style="width:86px"><col style="width:70px"><col style="width:84px"><col style="width:70px"><col style="width:118px"><col><col style="width:130px"><col style="width:62px"><col style="width:52px"></colgroup>
   <thead><tr><th>레벨</th><th>품목유형</th><th>조달구분</th><th>차종</th><th>품번</th><th>품명</th><th>협력사</th><th>소요단위</th><th class="n">U/S</th></tr></thead><tbody>
   ${tr(0, null, true)}${out.map((r) => tr(bomLv(r), r, false)).join('')}</tbody></table></div>`;
 }
@@ -503,21 +542,48 @@ function bomRenderMap() {
     tree = bi.map.level != null;
   const okMap = bi.map.partNo != null;
   $('#bomMap').innerHTML =
-    `<div class="sec">열 연결 확인 <span class="muted" style="font-weight:normal;font-size:12px">${esc(bi.name)} · 제목행 ${bi.hdr + 1}번째 줄 · ${D.metaOnly ? '<b>제품 목록</b> (차종 · 품번 · 품명 · 적용일자 — 구성은 그대로)' : tree ? '<b>다단계</b> (레벨 열 기준)' : '1단계 (모품번 – 자품번)'} · 틀린 열만 바꾸세요</span></div>
-  <div class="fg">${BOM_F.map(([k, l, req]) => `<label>${l}${req ? ' *' : ''}<select onchange="if(this.value==='')delete bi.map.${k};else bi.map.${k}=+this.value;bomRenderMap()"><option value="">(없음)</option>${h.map((c, i) => `<option value="${i}" ${bi.map[k] === i ? 'selected' : ''}>${esc(c || '열 ' + (i + 1))}</option>`).join('')}</select></label>`).join('')}
-   <label class="full">등록 방식<select onchange="bi.mode=this.value"><option value="fg" ${bi.mode === 'fg' ? 'selected' : ''}>올린 제품만 새 내용으로 교체 — 나머지 제품의 BOM은 그대로 (권장)</option><option value="all" ${bi.mode === 'all' ? 'selected' : ''}>전체 교체 — 기존 BOM을 모두 지우고 이 파일로 바꿈</option></select></label></div>
-  <div class="${okMap && fgs.length ? 'help' : 'banner'}" style="margin-top:8px">${!okMap ? '<b>품번</b> 열과 <b>레벨</b>(또는 제품 품번) 열을 고르세요.' : fgs.length ? (D.metaOnly ? `제품 <b>${fgs.length}</b>개의 차종 · 품명 · 적용일자를 등록합니다. 구성(트리)은 바뀌지 않습니다 — 구성은 레벨이 있는 BOM 구성현황 표로 올리세요.` : `제품 <b>${fgs.length}</b>개 (${fgs.slice(0, 4).map(esc).join(', ')}${fgs.length > 4 ? ' …' : ''}) · 구성 <b>${D.rows.length}</b>줄을 읽었습니다.${D.noRoot ? `<br>⚠ 레벨 0(제품) 줄 없이 시작한 ${D.noRoot}줄은 어느 제품인지 몰라 건너뜁니다 — 표를 복사할 때 레벨 0 줄까지 포함하세요.` : ''}`) : '읽은 제품이 없습니다. 레벨 0(제품) 줄이 포함됐는지, 열 연결이 맞는지 확인하세요.'}</div>
+    `<div class="sec">열 연결 확인 <span class="muted" style="font-weight:normal;font-size:12px">${esc(bi.name)} · 제목행 ${bi.hdr + 1}번째 줄 · ${
+      D.metaOnly
+        ? '<b>제품 목록</b> (차종 · 품번 · 품명 · 적용일자 — 구성은 그대로)'
+        : tree
+          ? '<b>다단계</b> (레벨 열 기준)'
+          : '1단계 (모품번 – 자품번)'
+    } · 틀린 열만 바꾸세요</span></div>
+  <div class="fg">${BOM_F.map(
+    ([k, l, req]) =>
+      `<label>${l}${req ? ' *' : ''}<select onchange="if(this.value==='')delete bi.map.${k};else bi.map.${k}=+this.value;bomRenderMap()"><option value="">(없음)</option>${h
+        .map((c, i) => `<option value="${i}" ${bi.map[k] === i ? 'selected' : ''}>${esc(c || '열 ' + (i + 1))}</option>`)
+        .join('')}</select></label>`,
+  ).join('')}
+   <label class="full">등록 방식<select onchange="bi.mode=this.value"><option value="fg" ${bi.mode === 'fg' ? 'selected' : ''}>올린 제품만 새 내용으로 교체 — 나머지 제품의 BOM은 그대로 (권장)</option>
+     <option value="all" ${bi.mode === 'all' ? 'selected' : ''}>전체 교체 — 기존 BOM을 모두 지우고 이 파일로 바꿈</option></select></label></div>
+  <div class="${okMap && fgs.length ? 'help' : 'banner'}" style="margin-top:8px">${
+    !okMap
+      ? '<b>품번</b> 열과 <b>레벨</b>(또는 제품 품번) 열을 고르세요.'
+      : fgs.length
+        ? D.metaOnly
+          ? `제품 <b>${fgs.length}</b>개의 차종 · 품명 · 적용일자를 등록합니다. 구성(트리)은 바뀌지 않습니다 — 구성은 레벨이 있는 BOM 구성현황 표로 올리세요.`
+          : `제품 <b>${fgs.length}</b>개 (${fgs.slice(0, 4).map(esc).join(', ')}${fgs.length > 4 ? ' …' : ''}) · 구성 <b>${D.rows.length}</b>줄을 읽었습니다.${
+              D.noRoot
+                ? `<br>⚠ 레벨 0(제품) 줄 없이 시작한 ${D.noRoot}줄은 어느 제품인지 몰라 건너뜁니다 — 표를 복사할 때 레벨 0 줄까지 포함하세요.`
+                : ''
+            }`
+        : '읽은 제품이 없습니다. 레벨 0(제품) 줄이 포함됐는지, 열 연결이 맞는지 확인하세요.'
+  }</div>
   ${
     D.rows.length
-      ? `<div class="tw" style="max-height:220px;margin-top:6px"><table class="sm mip"><thead><tr><th>제품</th><th>레벨</th><th>상위 품번</th><th>품번</th><th>품명</th><th>유형</th><th>조달</th><th class="n">U/S</th></tr></thead><tbody>${D.rows
+      ? `<div class="tw" style="max-height:220px;margin-top:6px"><table class="sm mip"><thead><tr><th>제품</th>
+        <th>레벨</th><th>상위 품번</th><th>품번</th><th>품명</th><th>유형</th><th>조달</th><th class="n">U/S</th></tr></thead><tbody>${D.rows
           .slice(0, 10)
           .map(
             (r) =>
-              `<tr><td>${esc(r.fgNo)}</td><td style="padding-left:${6 + r.level * 10}px">${r.level}</td><td>${esc(r.parentNo)}</td><td>${esc(r.partNo)}</td><td>${esc(r.partName)}</td><td>${esc(r.type)}</td><td>${esc(r.proc)}</td><td class="n">${bomQ(r.qty)}</td></tr>`,
+              `<tr><td>${esc(r.fgNo)}</td><td style="padding-left:${6 + r.level * 10}px">${r.level}</td><td>${esc(r.parentNo)}</td>
+                <td>${esc(r.partNo)}</td><td>${esc(r.partName)}</td>
+                  <td>${esc(r.type)}</td><td>${esc(r.proc)}</td><td class="n">${bomQ(r.qty)}</td></tr>`,
           )
-          .join(
-            '',
-          )}</tbody></table></div>${D.rows.length > 10 ? `<div class="muted" style="font-size:12px;margin-top:4px">${D.rows.length}줄 중 10줄 미리보기</div>` : ''}`
+          .join('')}</tbody></table></div>${
+          D.rows.length > 10 ? `<div class="muted" style="font-size:12px;margin-top:4px">${D.rows.length}줄 중 10줄 미리보기</div>` : ''
+        }`
       : ''
   }`;
 }

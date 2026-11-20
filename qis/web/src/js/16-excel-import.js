@@ -105,7 +105,9 @@ async function sheetFile(f, st, selId, setName, stName) {
       const cur = names.find((n) => sh[n].length > 1) || names[0];
       $(selId).innerHTML =
         names.length > 1
-          ? `시트 <select onchange="${setName}(${stName}.sheets[this.value],${jsq(f.name)})">${names.map((n) => `<option ${n === cur ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select>`
+          ? `시트 <select onchange="${setName}(${stName}.sheets[this.value],${jsq(f.name)})">${names
+              .map((n) => `<option ${n === cur ? 'selected' : ''}>${esc(n)}</option>`)
+              .join('')}</select>`
           : '';
       set(sh[cur], f.name);
     } else if (/\.xls$/i.test(f.name)) throw new Error('구버전 .xls는 엑셀에서 .xlsx로 저장 후 선택하세요');
@@ -311,7 +313,9 @@ async function impFile(f) {
       imp.sheet = names.find((n) => imp.sheets[n].length > 1) || names[0];
       $('#impSheet').innerHTML =
         names.length > 1
-          ? `시트 <select onchange="imp.sheet=this.value;impSetRows(imp.sheets[this.value],${jsq(f.name)})">${names.map((n) => `<option ${n === imp.sheet ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select>`
+          ? `시트 <select onchange="imp.sheet=this.value;impSetRows(imp.sheets[this.value],${jsq(f.name)})">${names
+              .map((n) => `<option ${n === imp.sheet ? 'selected' : ''}>${esc(n)}</option>`)
+              .join('')}</select>`
           : '';
       impSetRows(imp.sheets[imp.sheet], f.name);
     } else if (/\.xls$/i.test(f.name)) {
@@ -338,7 +342,15 @@ function impRenderMap() {
   const h = imp.rows[imp.hdr];
   $('#impMap').innerHTML =
     `<div class="sec">열 연결 확인 <span class="muted" style="font-weight:normal;font-size:12px">자동 인식 결과입니다. 틀린 열만 바꾸세요. ‘무시’는 등록하지 않습니다.</span></div>
-  <div class="row">${h.map((c, i) => (String(c).trim() === '' && !imp.map[i] ? '' : `<label style="display:flex;flex-direction:column;font-size:11px;color:var(--sub);gap:2px">${esc(c) || '(빈 제목)'}<select onchange="imp.map[${i}]=this.value;impPreview()" style="font-size:12px;${imp.map[i] ? '' : 'color:#999'}"><option value="">무시</option>${IMP_FIELDS.map(([k, l]) => `<option value="${k}" ${imp.map[i] === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>`)).join('')}</div>`;
+  <div class="row">${h
+    .map((c, i) =>
+      String(c).trim() === '' && !imp.map[i]
+        ? ''
+        : `<label style="display:flex;flex-direction:column;font-size:11px;color:var(--sub);gap:2px">${esc(c) || '(빈 제목)'}<select onchange="imp.map[${i}]=this.value;impPreview()" style="font-size:12px;${imp.map[i] ? '' : 'color:#999'}"><option value="">무시</option>${IMP_FIELDS.map(
+            ([k, l]) => `<option value="${k}" ${imp.map[i] === k ? 'selected' : ''}>${l}</option>`,
+          ).join('')}</select></label>`,
+    )
+    .join('')}</div>`;
 }
 function impBuild() {
   const f = $('#mf'),
@@ -428,16 +440,29 @@ function impPreview() {
   if (!imp.map.includes('date') || !imp.map.includes('qty') || !(imp.map.includes('partNo') || imp.map.includes('partName')))
     $('#impPrev').innerHTML = '<div class="banner">필수 열(발생일, 불량수량, 품번 또는 품명)이 연결되지 않았습니다. 위에서 열을 지정하세요.</div>';
   else
-    $('#impPrev').innerHTML =
-      `<div class="row" style="margin-bottom:6px"><span class="bg ok">등록 ${ok.length}건</span>${nErr ? `<span class="bg bad">오류 ${nErr}건 (제외)</span>` : ''}${nDup ? `<span class="bg warn">중복 ${nDup}건${skip ? ' (제외)' : ''}</span>` : ''}${newSups.length ? `<span class="bg inf">새 협력사 ${newSups.length}곳 자동 추가: ${esc(newSups.join(', '))}</span>` : ''}</div>
-  <div class="tw" style="max-height:42vh"><table><thead><tr><th>행</th><th>판정</th><th>발생일</th><th>발생처</th><th>품번</th><th>품명</th><th>협력사</th><th>유형</th><th class="n">수량</th><th>처리</th><th>납품일자</th><th>귀책</th></tr></thead><tbody>
+    $('#impPrev').innerHTML = `<div class="row" style="margin-bottom:6px"><span class="bg ok">등록 ${ok.length}건</span>${
+      nErr ? `<span class="bg bad">오류 ${nErr}건 (제외)</span>` : ''
+    }${nDup ? `<span class="bg warn">중복 ${nDup}건${skip ? ' (제외)' : ''}</span>` : ''}${
+      newSups.length ? `<span class="bg inf">새 협력사 ${newSups.length}곳 자동 추가: ${esc(newSups.join(', '))}</span>` : ''
+    }</div>
+  <div class="tw" style="max-height:42vh"><table><thead><tr><th>행</th><th>판정</th><th>발생일</th><th>발생처</th><th>품번</th>
+    <th>품명</th><th>협력사</th><th>유형</th><th class="n">수량</th><th>처리</th><th>납품일자</th><th>귀책</th></tr></thead><tbody>
   ${rs
     .slice(0, 300)
     .map(
-      (
-        r,
-      ) => `<tr style="${r.err.length || (skip && r.dup) ? 'opacity:.55' : ''}"><td>${r.line}</td><td>${r.err.length ? `<span class="bg bad" title="${esc(r.err.join(', '))}">${esc(r.err[0])}</span>` : r.dup ? `<span class="bg warn">${esc(r.warn[r.warn.length - 1])}</span>` : r.warn.length ? `<span class="bg warn" title="${esc(r.warn.join(', '))}">확인</span>` : '<span class="bg ok">OK</span>'}</td>
-  <td>${esc(r.d.date)}</td><td>${esc(r.d.source)}</td><td>${esc(r.d.partNo)}</td><td>${esc(r.d.partName)}</td><td>${r.newSup ? `${esc(r.newSup)} <span class="bg inf">신규</span>` : esc(supName(r.d.supplierId)) || '<span class="muted">-</span>'}</td><td>${esc(r.d.type)}</td><td class="n">${r.d.qty || ''}</td><td>${esc(r.d.disposition)}</td><td>${esc(r.d.delivDate || r.d.lot)}</td><td>${esc(r.d.resp)}</td></tr>`,
+      (r) => `<tr style="${r.err.length || (skip && r.dup) ? 'opacity:.55' : ''}"><td>${r.line}</td><td>${
+        r.err.length
+          ? `<span class="bg bad" title="${esc(r.err.join(', '))}">${esc(r.err[0])}</span>`
+          : r.dup
+            ? `<span class="bg warn">${esc(r.warn[r.warn.length - 1])}</span>`
+            : r.warn.length
+              ? `<span class="bg warn" title="${esc(r.warn.join(', '))}">확인</span>`
+              : '<span class="bg ok">OK</span>'
+      }</td>
+  <td>${esc(r.d.date)}</td><td>${esc(r.d.source)}</td><td>${esc(r.d.partNo)}</td><td>${esc(r.d.partName)}</td><td>${
+    r.newSup ? `${esc(r.newSup)} <span class="bg inf">신규</span>` : esc(supName(r.d.supplierId)) || '<span class="muted">-</span>'
+  }</td><td>${esc(r.d.type)}</td><td class="n">${r.d.qty || ''}</td><td>${esc(r.d.disposition)}</td>
+    <td>${esc(r.d.delivDate || r.d.lot)}</td><td>${esc(r.d.resp)}</td></tr>`,
     )
     .join('')}
   ${rs.length > 300 ? `<tr><td colspan="12" class="muted">… 외 ${rs.length - 300}행 (미리보기 생략, 등록은 전체 처리)</td></tr>` : ''}</tbody></table></div>`;

@@ -35,7 +35,9 @@ function routeOf(d) {
       ? `editInv('${d.id}','${f || ''}')`
       : sec === 'icaWrap'
         ? `editIca('${d.id}')`
-        : `editDefect('${d.id}');setTimeout(()=>{const w=document.getElementById('${sec}');if(w){if(w.tagName==='DETAILS')w.open=true;w.scrollIntoView({block:'start'})}${f ? `const e=document.querySelector('#mf [name=${f}]');if(e)e.focus();` : ''}},150)`;
+        : `editDefect('${d.id}');setTimeout(()=>{const w=document.getElementById('${sec}');if(w){if(w.tagName==='DETAILS')w.open=true;w.scrollIntoView({block:'start'})}${
+            f ? `const e=document.querySelector('#mf [name=${f}]');if(e)e.focus();` : ''
+          }},150)`;
   const ncrStep = (why) => {
     if (!d.partNo && !n) {
       S.push({
@@ -185,7 +187,14 @@ function routeHTML(d, form) {
   let S = routeOf(d);
   if (form) S = S.filter((x) => x.k !== 'far' && x.k !== 'rca').map((x) => (x.k === 'rcaOwn' ? { ...x, btn: '' } : x));
   if (!S.length) return '';
-  return `<div class="route"><div class="rh">다음 단계 <span class="muted">귀책 ‘${esc(d.resp || '미정')}’ · 심각도 ${sevOf(d).grade} 기준</span></div>${S.map((x) => `<div class="ri ${x.done ? 'dn' : x.warn ? 'wn' : x.rec ? 'rc' : ''}"><span class="ck">${x.done ? '✓' : x.warn ? '!' : x.rec ? '●' : '○'}</span><div class="tx"><b>${esc(x.t)}</b><br><span class="muted">${x.done ? esc(x.doneT) : esc(x.why)}</span></div>${x.btn ? `<button type="button" class="b s ${x.done ? '' : 'p'}" onclick="routeGo(\`${x.btn}\`)">${x.bl}</button>` : ''}</div>`).join('')}</div>`;
+  return `<div class="route"><div class="rh">다음 단계 <span class="muted">귀책 ‘${esc(d.resp || '미정')}’ · 심각도 ${sevOf(d).grade} 기준</span></div>${S.map(
+    (x) =>
+      `<div class="ri ${x.done ? 'dn' : x.warn ? 'wn' : x.rec ? 'rc' : ''}"><span class="ck">${
+        x.done ? '✓' : x.warn ? '!' : x.rec ? '●' : '○'
+      }</span><div class="tx"><b>${esc(x.t)}</b><br><span class="muted">${x.done ? esc(x.doneT) : esc(x.why)}</span></div>${
+        x.btn ? `<button type="button" class="b s ${x.done ? '' : 'p'}" onclick="routeGo(\`${x.btn}\`)">${x.bl}</button>` : ''
+      }</div>`,
+  ).join('')}</div>`;
 }
 async function routeGo(js) {
   if (
@@ -350,7 +359,11 @@ function lockSev() {
 }
 const sevBadge = (d, short) => {
   const v = sevOf(d);
-  return `<span class="bg ${SEV_CLS[v.grade]}" title="${esc(`${v.score}점${v.forced.length ? ' · 강제 A: ' + v.forced.join(', ') : ''}${v.overridden ? ' · 수동 조정(' + v.auto + '→' + v.grade + '): ' + v.reason : ''}${v.locked ? ' · 완료/NCR 발행 시점 등급 고정' : ''}`)}">${v.grade}${short ? '' : ' ' + v.score}${v.overridden ? '*' : ''}</span>`;
+  return `<span class="bg ${SEV_CLS[v.grade]}" title="${esc(
+    `${v.score}점${v.forced.length ? ' · 강제 A: ' + v.forced.join(', ') : ''}${
+      v.overridden ? ' · 수동 조정(' + v.auto + '→' + v.grade + '): ' + v.reason : ''
+    }${v.locked ? ' · 완료/NCR 발행 시점 등급 고정' : ''}`,
+  )}">${v.grade}${short ? '' : ' ' + v.score}${v.overridden ? '*' : ''}</span>`;
 };
 function ncrReasons(d) {
   if (d.closed || (d.resp && d.resp !== '협력사' && d.resp !== '공동')) return [];
@@ -500,7 +513,9 @@ function stageBadges(d) {
     n = d.ncrId ? db.ncrs.find((x) => x.id === d.ncrId) : null,
     v = s.done ? (n ? verifyInfo(n) : icaVerify(d)) : null,
     vd = n ? n.verifyDue : d.ica && d.ica.verifyDue;
-  return `<span class="bg ${s.cls}">${esc(s.label)}</span>${v ? `<br><span class="bg ${v.cls}" style="font-size:10.5px" title="유효성 검증 기한 ${esc(vd || '-')}">${esc(v.label)}</span>` : ''}`;
+  return `<span class="bg ${s.cls}">${esc(s.label)}</span>${
+    v ? `<br><span class="bg ${v.cls}" style="font-size:10.5px" title="유효성 검증 기한 ${esc(vd || '-')}">${esc(v.label)}</span>` : ''
+  }`;
 }
 function ncrSteps(n) {
   const t = today(),
@@ -543,7 +558,9 @@ function ncrTrack(n) {
   const r = ncrSteps(n);
   return `<div class="qtrack${r.closed ? ' closed' : ''}${r.bad ? ' bad' : ''}" style="grid-template-columns:repeat(${r.S.length},minmax(0,1fr))">${r.S.map(
     (x) =>
-      `<div class="${x.state}${x.late ? ' late' : ''}${x.skip ? ' skip' : ''}">${x.l}<b>${x.d ? (x.due && !x.done ? '기한 ' : '') + esc(String(x.d).slice(5)) : '–'}${
+      `<div class="${x.state}${x.late ? ' late' : ''}${x.skip ? ' skip' : ''}">${x.l}<b>${
+        x.d ? (x.due && !x.done ? '기한 ' : '') + esc(String(x.d).slice(5)) : '–'
+      }${
         x.state === 'cur' && x.due && !x.done
           ? (() => {
               const k = diffDays(today(), x.due);
@@ -728,7 +745,9 @@ function basisTpl(f) {
     })();
     return [
       `1. 대상 기간 : ${f.ppmFrom.value || ''} ~ ${f.ppmTo.value || ''}`,
-      `2. 기간 PPM 실적 / 목표 : ${f.ppmVal.value ? Number(f.ppmVal.value).toLocaleString() : ''} PPM / ${f.ppmTarget.value ? Number(f.ppmTarget.value).toLocaleString() : ''} PPM`,
+      `2. 기간 PPM 실적 / 목표 : ${f.ppmVal.value ? Number(f.ppmVal.value).toLocaleString() : ''} PPM / ${
+        f.ppmTarget.value ? Number(f.ppmTarget.value).toLocaleString() : ''
+      } PPM`,
       `3. 월별 실적 :\n${f.ppmDetail.value || ''}`,
       `4. 주요 불량 유형 : ${top}`,
       `5. 요구 사항 : PPM 개선 대책서(8D) 및 월별 개선 목표 제출`,

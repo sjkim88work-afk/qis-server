@@ -96,7 +96,9 @@ function actCell(d) {
   )
     line(
       'RCA',
-      `<button class="b s noprint" onclick="czFromDefect('${d.id}')" title="${r === '협력사' ? '수입검사에서 왜 못 걸렀는지 사내 유출 원인 분석' : '사내 원인분석 요청'}">${r === '협력사' ? '유출 RCA' : 'RCA 요청'}</button>`,
+      `<button class="b s noprint" onclick="czFromDefect('${d.id}')" title="${
+        r === '협력사' ? '수입검사에서 왜 못 걸렀는지 사내 유출 원인 분석' : '사내 원인분석 요청'
+      }">${r === '협력사' ? '유출 RCA' : 'RCA 요청'}</button>`,
     );
   // 사내 대책 (RCA가 없을 때)
   if (!c && ['사내', '공동'].includes(r)) {
@@ -130,16 +132,43 @@ function defectTable() {
   const gc = { A: 0, B: 0, C: 0 };
   ds.forEach((d) => gc[sevOf(d).grade]++);
   return `<div class="row" style="margin-bottom:8px"><span>심각도 <span class="bg svA">A ${gc.A}</span> <span class="bg svB">B ${gc.B}</span> <span class="bg svC">C ${gc.C}</span> · </span><span><b>${ds.length.toLocaleString()}</b>건 · 수량 <b>${sum(ds, 'qty').toLocaleString()}</b> · 비용 <b>${won(sum(ds, costTotal))}</b>원</span></div>
-  <div class="tw"><table><thead><tr><th>발생일</th><th>발생처</th><th>심각도</th><th>부품</th><th>사진</th><th>차종</th><th>협력사</th><th>유형</th><th class="n">수량</th><th>처리</th><th>귀책</th><th class="n">비용(원)</th><th>후속 조치</th><th>담당</th><th>상태</th><th class="noprint"></th></tr></thead><tbody>
+  <div class="tw"><table><thead><tr><th>발생일</th><th>발생처</th><th>심각도</th><th>부품</th><th>사진</th><th>차종</th><th>협력사</th><th>유형</th>
+    <th class="n">수량</th><th>처리</th><th>귀책</th><th class="n">비용(원)</th>
+      <th>후속 조치</th><th>담당</th><th>상태</th><th class="noprint"></th></tr></thead><tbody>
   ${
     ds
       .map(
         (d) =>
-          `<tr><td style="white-space:nowrap">${esc(d.date)}</td><td>${esc(d.source)}</td><td>${sevBadge(d)}</td><td>${d.partNo || d.partName ? `<b>${esc(d.partNo)}</b><br><span class="muted">${esc(d.partName)}</span>` : invOpen(d) ? '<span class="bg warn">원인 부품 조사 중</span>' : '<span class="muted">원인 부품 없음</span>'}${d.fgNo || d.fgName ? `<br><span class="muted" style="font-size:11px" title="발견 품목 (완성품)">▸ 발견: ${esc(d.fgNo || d.fgName)}${d.fgQty ? ` (${num(d.fgQty)})` : ''}</span>` : ''}</td><td>${photoBadge(d)}</td><td>${esc(d.model)}</td><td>${esc(supName(d.supplierId))}</td><td>${esc(d.type)}</td><td class="n">${num(d.qty).toLocaleString()}</td><td>${esc(d.disposition)}</td><td>${esc(d.resp)}${d.resp === '공동' && d.inv && d.inv.share !== '' && d.inv.share != null ? `<br><span class="muted" style="font-size:11px">협력사 ${num(d.inv.share)}%</span>` : ''}</td><td class="n" style="white-space:nowrap">${costTotal(d) ? `<a class="lk" onclick="openCost('${d.id}')">${won(costTotal(d))}</a>` : needCost(d) ? `<a class="bg warn" style="cursor:pointer" onclick="openCost('${d.id}')">입력</a>` : `<a class="lk muted" onclick="openCost('${d.id}')">0</a>`}${claimStatus(d) ? `<br><span class="bg ${CLAIM_CLS[claimStatus(d)]}" style="font-size:11px">${claimStatus(d)}</span>` : ''}</td><td class="actc">${actCell(d)}</td><td>${esc(d.owner)}</td><td class="stc">${stageBadges(d)}<br>${(() => {
-            const n = (d.logs || []).length,
-              l = lastLog(d);
-            return `<a class="bg lgchip ${n ? 'inf' : 'mut'}" onclick="openLog('${d.id}')" title="${n ? esc(l.date + ' ' + l.kind + ': ' + l.text.slice(0, 80)) : '진행 기록 추가'}">📝 ${n || '+'}</a>`;
-          })()}</td><td class="noprint" style="white-space:nowrap"><button class="b s" onclick="editDefect('${d.id}')">상세</button></td></tr>`,
+          `<tr><td style="white-space:nowrap">${esc(d.date)}</td><td>${esc(d.source)}</td><td>${sevBadge(d)}</td><td>${
+            d.partNo || d.partName
+              ? `<b>${esc(d.partNo)}</b><br><span class="muted">${esc(d.partName)}</span>`
+              : invOpen(d)
+                ? '<span class="bg warn">원인 부품 조사 중</span>'
+                : '<span class="muted">원인 부품 없음</span>'
+          }${
+            d.fgNo || d.fgName
+              ? `<br><span class="muted" style="font-size:11px" title="발견 품목 (완성품)">▸ 발견: ${esc(d.fgNo || d.fgName)}${d.fgQty ? ` (${num(d.fgQty)})` : ''}</span>`
+              : ''
+          }</td><td>${photoBadge(d)}</td><td>${esc(d.model)}</td><td>${esc(supName(d.supplierId))}</td>
+            <td>${esc(d.type)}</td><td class="n">${num(d.qty).toLocaleString()}</td><td>${esc(d.disposition)}</td><td>${esc(d.resp)}${
+              d.resp === '공동' && d.inv && d.inv.share !== '' && d.inv.share != null
+                ? `<br><span class="muted" style="font-size:11px">협력사 ${num(d.inv.share)}%</span>`
+                : ''
+            }</td><td class="n" style="white-space:nowrap">${
+              costTotal(d)
+                ? `<a class="lk" onclick="openCost('${d.id}')">${won(costTotal(d))}</a>`
+                : needCost(d)
+                  ? `<a class="bg warn" style="cursor:pointer" onclick="openCost('${d.id}')">입력</a>`
+                  : `<a class="lk muted" onclick="openCost('${d.id}')">0</a>`
+            }${
+              claimStatus(d) ? `<br><span class="bg ${CLAIM_CLS[claimStatus(d)]}" style="font-size:11px">${claimStatus(d)}</span>` : ''
+            }</td><td class="actc">${actCell(d)}</td><td>${esc(d.owner)}</td><td class="stc">${stageBadges(d)}<br>${(() => {
+              const n = (d.logs || []).length,
+                l = lastLog(d);
+              return `<a class="bg lgchip ${n ? 'inf' : 'mut'}" onclick="openLog('${d.id}')" title="${
+                n ? esc(l.date + ' ' + l.kind + ': ' + l.text.slice(0, 80)) : '진행 기록 추가'
+              }">📝 ${n || '+'}</a>`;
+            })()}</td><td class="noprint" style="white-space:nowrap"><button class="b s" onclick="editDefect('${d.id}')">상세</button></td></tr>`,
       )
       .join('') || '<tr><td colspan="16" class="muted" style="text-align:center;padding:30px">조건에 맞는 불량이 없습니다.</td></tr>'
   }
@@ -154,7 +183,9 @@ function renderDefect() {
     <span class="muted">기간</span><input type="date" value="${f.from}" onchange="state.df.from=this.value;refreshDT()"> ~ <input type="date" value="${f.to}" onchange="state.df.to=this.value;refreshDT()">
     <select onchange="state.df.sup=this.value;refreshDT()">${supOpts(f.sup, '전체 협력사')}</select>
     <select onchange="state.df.type=this.value;refreshDT()"><option value="">전체 유형</option>${opts(S.defectTypes, f.type)}</select>
-    <select onchange="state.df.sev=this.value;refreshDT()"><option value="">전체 심각도</option>${['A', 'B', 'C'].map((g) => `<option value="${g}" ${f.sev === g ? 'selected' : ''}>${g} (${RESP[g]})</option>`).join('')}</select>
+    <select onchange="state.df.sev=this.value;refreshDT()"><option value="">전체 심각도</option>${['A', 'B', 'C']
+      .map((g) => `<option value="${g}" ${f.sev === g ? 'selected' : ''}>${g} (${RESP[g]})</option>`)
+      .join('')}</select>
     <select onchange="state.df.status=this.value;refreshDT()">${[
       ['', '전체 단계'],
       ['open', '미완료 전체'],
@@ -218,7 +249,13 @@ function editDefect(id, copy, preset) {
     id = null;
   }
   const iss = d.issueId && issById(d.issueId);
-  const body = `${iss ? `<div class="banner" style="background:var(--pri2);border-color:#c9d8f2;color:#1d2433;margin-bottom:10px">이슈 <b>${esc(iss.no)}</b> ${esc(iss.title)}${id ? '' : ' — 이슈 내용 · 사진을 채웠습니다. 불량 유형 · 처리를 확인하고 저장하세요'}</div>` : ''}<div class="fgrp"><div class="gh">발생 정보</div><div class="fg fg4">
+  const body = `${
+    iss
+      ? `<div class="banner" style="background:var(--pri2);border-color:#c9d8f2;color:#1d2433;margin-bottom:10px">이슈 <b>${esc(iss.no)}</b> ${esc(iss.title)}${
+          id ? '' : ' — 이슈 내용 · 사진을 채웠습니다. 불량 유형 · 처리를 확인하고 저장하세요'
+        }</div>`
+      : ''
+  }<div class="fgrp"><div class="gh">발생 정보</div><div class="fg fg4">
     <label>발생일 *<input type="date" name="date" value="${esc(d.date)}"></label>
     <label>발생처<select name="source" onchange="srcLayout();rcvHint();setTimeout(escShow)">${opts(S.sources, d.source)}</select></label>
     <label>차종<input name="model" value="${esc(d.model)}"></label>
@@ -233,14 +270,18 @@ function editDefect(id, copy, preset) {
     <label><span class="lt" id="lbPn">원인·의심 품번</span><input name="partNo" data-combo="dparts" value="${esc(d.partNo)}" oninput="onPartNo(this.value)" autocomplete="off" placeholder="번호·품명·협력사로 검색"></label>
     <label><span class="lt" id="lbPm">원인·의심 품명</span><input name="partName" value="${esc(d.partName)}"></label>
     <label>협력사<span class="row" style="flex-wrap:nowrap"><select name="supplierId" style="flex:1">${supOpts(d.supplierId)}</select><button type="button" class="b s" onclick="quickSup()" title="협력사 빠른 추가">+</button></span></label>
-    <label><span class="lt" id="lbDv">납품일자</span><input type="date" name="delivDate" value="${esc(d.delivDate)}">${d.lot && !d.delivDate ? `<input type="hidden" name="lot" value="${esc(d.lot)}"><span style="font-size:11px">기존 LOT: ${esc(d.lot)}</span>` : ''}</label>
+    <label><span class="lt" id="lbDv">납품일자</span><input type="date" name="delivDate" value="${esc(d.delivDate)}">${
+      d.lot && !d.delivDate ? `<input type="hidden" name="lot" value="${esc(d.lot)}"><span style="font-size:11px">기존 LOT: ${esc(d.lot)}</span>` : ''
+    }</label>
   </div></div>
   <div id="bomBox"></div><div id="rcvBox"></div>
   <div class="fgrp"><div class="gh">불량</div><div class="fg fg4">
     <label>불량유형<select name="type">${opts(S.defectTypes, d.type)}</select></label>
     <label><span class="lt" id="lbQty">불량수량</span><input type="number" min="0" name="qty" value="${esc(d.qty)}"></label>
     <label><span class="lt" id="lbInsp">입고수량 (로트)</span><input type="number" min="0" name="inspQty" value="${esc(d.inspQty)}"></label>
-    <label>진행 단계 (자동)<span style="padding:4px 0">${id ? stageBadges(db.defects.find((x) => x.id === id)).replace('<br>', ' ') : '<span class="bg warn">처리 대기</span>'}</span></label>
+    <label>진행 단계 (자동)<span style="padding:4px 0">${
+      id ? stageBadges(db.defects.find((x) => x.id === id)).replace('<br>', ' ') : '<span class="bg warn">처리 대기</span>'
+    }</span></label>
   </div></div>
   <div class="fg">
     <label style="grid-column:span 2" title="NCR 통보서의 Specification(도면사양) 칸으로 들어갑니다">도면 규격 (Specification)<textarea name="spec" style="min-height:44px" placeholder="예: Ø12.0 ±0.05 / 작동력 3 ~ 5 N / 스크래치 없을 것">${esc(d.spec)}</textarea></label>
@@ -249,7 +290,9 @@ function editDefect(id, copy, preset) {
     <label class="full">임시조치 (봉쇄 · 재고 처리)<textarea name="containment">${esc(d.containment)}</textarea></label>
     <label>처리<select name="disposition">${opts(S.dispositions, d.disposition, true)}</select></label>
     <label>귀책<select name="resp" onchange="respChanged()">${opts(RESP_OPTS, d.resp)}</select></label>
-    <label id="escRow" title="공정 · 출하 · 고객에서 발견된 협력사 귀책 불량 — 샘플링 한계면 사내 RCA 없이 협력사 8D에 유출 원인 · 출하검사 대책 요구">수입검사 검출 판정<select name="escJudge"><option value="">판정 전</option>${ESC_JUDGE.map((x, i) => `<option value="${x}" ${d.escJudge === x ? 'selected' : ''}>${'①②③'[i]} ${x}</option>`).join('')}</select></label>
+    <label id="escRow" title="공정 · 출하 · 고객에서 발견된 협력사 귀책 불량 — 샘플링 한계면 사내 RCA 없이 협력사 8D에 유출 원인 · 출하검사 대책 요구">수입검사 검출 판정<select name="escJudge"><option value="">판정 전</option>${ESC_JUDGE.map(
+      (x, i) => `<option value="${x}" ${d.escJudge === x ? 'selected' : ''}>${'①②③'[i]} ${x}</option>`,
+    ).join('')}</select></label>
     <label>처리 완료일 <span style="font-size:11px">(NCR 없는 건)</span><input type="date" name="doneDate" value="${esc(d.doneDate)}"></label>
     <label class="row" style="flex-direction:row;align-items:center;gap:6px;margin-top:16px"><input type="checkbox" name="closedChk" ${d.closed ? 'checked' : ''} onchange="$('#closeRsn').style.display=this.checked?'':'none'"> 수동 종결 (예외)</label>
     <label class="full" id="closeRsn" style="${d.closed ? '' : 'display:none'}">수동 종결 사유 (필수 · 진행 기록에 남습니다)<input name="closedReason" value="${esc(d.closed?.reason)}" placeholder="예: 중복 등록, 고객 특채 확정, 오판정 확인 등"></label>
@@ -261,7 +304,13 @@ function editDefect(id, copy, preset) {
           const n = (d.logs || []).length,
             l = lastLog(d),
             nx = [];
-          return `<div class="banner" style="background:var(--pri2);border-color:#c9d8f2;color:#1d2433;margin-top:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">📝 <b>조사 · 진행 기록 ${n}건</b>${l ? ` <span class="muted">최근 ${esc(l.date)} ${esc(l.kind)}: ${esc(l.text.slice(0, 40))}${l.text.length > 40 ? '…' : ''}</span>` : ' <span class="muted">아직 없음</span>'}${nx.length ? ` <span class="bg warn">다음 행동: ${esc(nx[0].text)}</span>` : ''}<span style="flex:1"></span><button type="button" class="b s p" onclick="gotoProgress('${d.id}')">진행 보기 · 기록 추가</button></div>`;
+          return `<div class="banner" style="background:var(--pri2);border-color:#c9d8f2;color:#1d2433;margin-top:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">📝 <b>조사 · 진행 기록 ${n}건</b>${
+            l
+              ? ` <span class="muted">최근 ${esc(l.date)} ${esc(l.kind)}: ${esc(l.text.slice(0, 40))}${l.text.length > 40 ? '…' : ''}</span>`
+              : ' <span class="muted">아직 없음</span>'
+          }${
+            nx.length ? ` <span class="bg warn">다음 행동: ${esc(nx[0].text)}</span>` : ''
+          }<span style="flex:1"></span><button type="button" class="b s p" onclick="gotoProgress('${d.id}')">진행 보기 · 기록 추가</button></div>`;
         })()
       : ''
   }
@@ -274,7 +323,9 @@ function editDefect(id, copy, preset) {
     }
   })()} ontoggle="try{localStorage.setItem('qms_sevOpen',this.open?'1':'0')}catch(e){}" style="margin-top:14px"><summary class="sec" style="cursor:pointer;list-style:revert">심각도 평가 <span id="sevSum"></span> <span class="muted" style="font-weight:normal;font-size:12px">유출 단계·반복성은 자동, 영향도·범위는 유형·수량으로 초기값 → 필요 시 조정</span></summary>
   <div id="sevBox"></div></details>
-  <details id="costWrap" ${(d.costs || []).length || d.claim ? 'open' : ''} style="margin-top:14px"><summary class="sec" style="cursor:pointer;list-style:revert">비용 · 구상 <span class="muted" style="font-weight:normal;font-size:12px">— 처리가 끝난 뒤 입력해도 됩니다 (불량 목록의 비용 칸·COPQ 탭에서도 입력 가능)</span></summary><div id="costBox"></div></details>
+  <details id="costWrap" ${
+    (d.costs || []).length || d.claim ? 'open' : ''
+  } style="margin-top:14px"><summary class="sec" style="cursor:pointer;list-style:revert">비용 · 구상 <span class="muted" style="font-weight:normal;font-size:12px">— 처리가 끝난 뒤 입력해도 됩니다 (불량 목록의 비용 칸·COPQ 탭에서도 입력 가능)</span></summary><div id="costBox"></div></details>
   <div class="sec">사진 <span class="muted" style="font-weight:normal;font-size:12px">클릭해서 선택 · 파일을 끌어다 놓기 · 캡처 후 Ctrl+V 붙여넣기 (자동으로 축소·압축 저장)</span></div>
   <div id="photoBox"></div>
 `;
@@ -432,19 +483,27 @@ function renderInv() {
     `<button class="b s ${f.status === k ? 'p' : ''}" onclick="state.ivf.status='${k}';render()">${l} <span class="mono" style="opacity:.75">${n}</span></button>`;
   return `<div class="kpis">
     <div class="kpi ${open.length ? 'warn' : ''}"><div class="l">조사 중</div><div class="v">${open.length}</div><div class="s">귀책 미정 · 판정 전</div></div>
-    <div class="kpi ${pre.length ? 'warn' : ''}"><div class="l">FAR 요청 전</div><div class="v">${pre.length}</div><div class="s">협력사 분석 요청 필요</div></div>
-    <div class="kpi ${late.length ? 'bad' : ''}"><div class="l">FAR 회신 지연</div><div class="v">${late.length}</div><div class="s">요청 + ${num(db.settings.farDays) || 5}영업일 기준</div></div>
+    <div class="kpi ${pre.length ? 'warn' : ''}"><div class="l">FAR 요청 전</div>
+      <div class="v">${pre.length}</div><div class="s">협력사 분석 요청 필요</div></div>
+    <div class="kpi ${late.length ? 'bad' : ''}"><div class="l">FAR 회신 지연</div>
+      <div class="v">${late.length}</div><div class="s">요청 + ${num(db.settings.farDays) || 5}영업일 기준</div></div>
     <div class="kpi"><div class="l">판정 대기</div><div class="v">${judge.length}</div><div class="s">FAR 회신 접수됨</div></div>
-    <div class="kpi ${ntf.length ? 'bad' : ''}"><div class="l">원인 불명 검토 기한 경과</div><div class="v">${ntf.length}</div><div class="s">등록 + ${num(db.settings.ntfDays) || 30}일</div></div>
+    <div class="kpi ${ntf.length ? 'bad' : ''}"><div class="l">원인 불명 검토 기한 경과</div>
+      <div class="v">${ntf.length}</div><div class="s">등록 + ${num(db.settings.ntfDays) || 30}일</div></div>
     <div class="kpi"><div class="l">이번 달 판정</div><div class="v">${doneM.length}</div><div class="s">${m}</div></div></div>
-  <div class="card noprint"><div class="row">${chip('open', '조사 중', open.length)}${chip('late', '기한 경과', all.filter((d) => invOpen(d) && (invInfo(d).late || (d.date && today() > ntfDue(d)))).length)}${chip('done', '판정 완료', all.filter((d) => d.inv && d.inv.verdict).length)}${chip('all', '전체', all.length)}
+  <div class="card noprint"><div class="row">${chip('open', '조사 중', open.length)}${chip(
+    'late',
+    '기한 경과',
+    all.filter((d) => invOpen(d) && (invInfo(d).late || (d.date && today() > ntfDue(d)))).length,
+  )}${chip('done', '판정 완료', all.filter((d) => d.inv && d.inv.verdict).length)}${chip('all', '전체', all.length)}
     <input type="search" placeholder="검색 (부품·품명·유형·협력사·판정)" value="${esc(f.q)}" oninput="state.ivf.q=this.value;$('#ivtab').innerHTML=invTable()" style="flex:1;min-width:200px;max-width:360px"></div>
     <div class="help" style="margin-top:8px">귀책이 ‘미정’인 불량이 여기 모입니다. 격리·선별 후 협력사에 FAR(원인 분석)을 요청하고, 사내 분석(간단하면 메모, 큰 건은 RCA)을 함께 진행한 뒤 판정합니다. 판정하면 불량의 귀책이 바뀌고 협력사는 NCR, 사내는 사내 대책·RCA로 넘어갑니다.</div></div>
   <div class="card" id="ivtab">${invTable()}</div>`;
 }
 function invTable() {
   const rows = invRows();
-  return `<div class="tw"><table><thead><tr><th>등록일</th><th>불량</th><th>협력사</th><th class="n">수량</th><th>상태</th><th>FAR 요청</th><th>FAR 회신</th><th>사내 분석</th><th>판정</th><th>검토 기한</th><th class="noprint"></th></tr></thead><tbody>
+  return `<div class="tw"><table><thead><tr><th>등록일</th><th>불량</th><th>협력사</th><th class="n">수량</th><th>상태</th>
+    <th>FAR 요청</th><th>FAR 회신</th><th>사내 분석</th><th>판정</th><th>검토 기한</th><th class="noprint"></th></tr></thead><tbody>
   ${
     rows
       .map((d) => {
@@ -457,11 +516,31 @@ function invTable() {
     <td><a class="lk" onclick="editInv('${d.id}')"><b>${esc(d.partNo || d.fgNo || '-')}</b></a> ${esc(d.partName || d.fgName || '')}<br><span class="muted">${esc(d.type || '')}${d.source ? ' · ' + esc(d.source) : ''}</span> ${sevBadge(d, true)}</td>
     <td>${esc(supName(d.supplierId)) || '<span class="muted">미지정</span>'}</td>
     <td class="n">${num(d.qty).toLocaleString()}</td>
-    <td>${iv.verdict ? `<span class="bg ok">판정 완료</span>` : opn ? `<span class="bg ${ii.cls}">${esc(ii.label)}</span>` : '<span class="bg mut">조사 종료</span>'}</td>
-    <td style="white-space:nowrap">${iv.farReq ? esc(iv.farReq) : '<span class="muted">-</span>'}${iv.farReq && !iv.farRecv && iv.farDue ? '<br>' + dday(iv.farDue, false) : ''}</td>
+    <td>${
+      iv.verdict
+        ? `<span class="bg ok">판정 완료</span>`
+        : opn
+          ? `<span class="bg ${ii.cls}">${esc(ii.label)}</span>`
+          : '<span class="bg mut">조사 종료</span>'
+    }</td>
+    <td style="white-space:nowrap">${iv.farReq ? esc(iv.farReq) : '<span class="muted">-</span>'}${
+      iv.farReq && !iv.farRecv && iv.farDue ? '<br>' + dday(iv.farDue, false) : ''
+    }</td>
     <td style="white-space:nowrap">${iv.farRecv ? esc(iv.farRecv) : '<span class="muted">-</span>'}</td>
-    <td>${cs ? `<a class="lk" onclick="czOpenCase('${cs.id}','cause')">RCA ${esc(cs.CaseNo)}</a><br><span class="muted">${esc(cs.Stage || '')}</span>` : (iv.rca || '').trim() ? '<span class="bg inf">메모</span>' : '<span class="muted">-</span>'}</td>
-    <td>${iv.verdict ? `<b>${esc(iv.verdict)}</b>${iv.verdict === '공동' && iv.share !== '' && iv.share != null ? ` <span class="muted">${esc(iv.share)}%</span>` : ''}<br><span class="muted mono">${esc(iv.verdictDate || '')}</span>` : '<span class="muted">-</span>'}</td>
+    <td>${
+      cs
+        ? `<a class="lk" onclick="czOpenCase('${cs.id}','cause')">RCA ${esc(cs.CaseNo)}</a><br><span class="muted">${esc(cs.Stage || '')}</span>`
+        : (iv.rca || '').trim()
+          ? '<span class="bg inf">메모</span>'
+          : '<span class="muted">-</span>'
+    }</td>
+    <td>${
+      iv.verdict
+        ? `<b>${esc(iv.verdict)}</b>${
+            iv.verdict === '공동' && iv.share !== '' && iv.share != null ? ` <span class="muted">${esc(iv.share)}%</span>` : ''
+          }<br><span class="muted mono">${esc(iv.verdictDate || '')}</span>`
+        : '<span class="muted">-</span>'
+    }</td>
     <td style="white-space:nowrap">${opn && d.date ? dday(ntfDue(d), false) : '<span class="muted">-</span>'}</td>
     <td class="noprint" style="white-space:nowrap">${(() => {
       const nx = invStageDefault(d),
@@ -470,7 +549,11 @@ function invTable() {
     })()} <button class="b s" onclick="editDefect('${d.id}')">불량</button></td></tr>`;
       })
       .join('') ||
-    `<tr><td colspan="11" class="muted" style="text-align:center;padding:30px">${state.ivf.status === 'open' ? '진행 중인 귀책 조사가 없습니다. 불량 등록에서 귀책을 ‘미정’으로 두면 여기에 나타납니다.' : '조건에 맞는 건이 없습니다.'}</td></tr>`
+    `<tr><td colspan="11" class="muted" style="text-align:center;padding:30px">${
+      state.ivf.status === 'open'
+        ? '진행 중인 귀책 조사가 없습니다. 불량 등록에서 귀책을 ‘미정’으로 두면 여기에 나타납니다.'
+        : '조건에 맞는 건이 없습니다.'
+    }</td></tr>`
   }
   </tbody></table></div>`;
 }
@@ -489,7 +572,9 @@ function invSteps(d) {
   if (cur < 0) cur = S.length;
   return `<div class="qtrack${iv.verdict ? ' closed' : ''}" style="grid-template-columns:repeat(5,minmax(0,1fr))">${S.map((x, i) => {
     const late = !x.done && x.due && t > x.due;
-    return `<div class="${x.done || i < cur ? 'past' : i === cur ? 'cur' : ''}${late ? ' late' : ''}">${x.l}<b>${x.d ? (x.due && !x.done ? '기한 ' : '') + esc(x.txt ? String(x.d) : String(x.d).slice(5)) : '–'}${late ? ' 초과' : ''}</b></div>`;
+    return `<div class="${x.done || i < cur ? 'past' : i === cur ? 'cur' : ''}${late ? ' late' : ''}">${x.l}<b>${
+      x.d ? (x.due && !x.done ? '기한 ' : '') + esc(x.txt ? String(x.d) : String(x.d).slice(5)) : '–'
+    }${late ? ' 초과' : ''}</b></div>`;
   }).join('')}</div>`;
 }
 let invCurId = '';
@@ -514,14 +599,18 @@ function editInv(id, focus, stage) {
     stg = INV_STG[stage] ? stage : invStageDefault(d, focus),
     sh = (k) => (stg === k ? '' : 'style="display:none"');
   const reqSum = iv.farReq
-    ? `FAR 요청 ${esc(iv.farReq)}${iv.farDue ? ` · 회신 기한 ${esc(iv.farDue)}` : ''}${iv.farPurpose ? ` · ${esc(iv.farPurpose)}` : ''}${iv.sample ? ` · 시료 ${esc(iv.sample)}` : ''}`
+    ? `FAR 요청 ${esc(iv.farReq)}${iv.farDue ? ` · 회신 기한 ${esc(iv.farDue)}` : ''}${iv.farPurpose ? ` · ${esc(iv.farPurpose)}` : ''}${
+        iv.sample ? ` · 시료 ${esc(iv.sample)}` : ''
+      }`
     : '';
   const repSum = iv.farRecv
     ? `FAR 회신 ${esc(iv.farRecv)}${iv.farVerdict ? ` · 협력사 분석 판정: ${esc(iv.farVerdict)}` : ''}${iv.farReview ? ` · 당사 검토: ${esc(iv.farReview)}` : ''}`
     : '';
   const body = `${invSteps(d)}
   <div class="route" style="margin-top:0;margin-bottom:6px"><div class="ri"><div class="tx"><b>${esc(d.partNo || d.fgNo || '')} ${esc(d.partName || d.fgName || '')}</b> ${sevBadge(d)}<br>
-    <span class="muted">${esc(d.date)} · ${esc(d.source || '')} · ${esc(d.type || '')} · ${num(d.qty).toLocaleString()}EA · ${esc(supName(d.supplierId)) || '협력사 미지정'}</span>${d.desc ? `<br><span style="font-size:12.5px">${esc(d.desc)}</span>` : ''}</div>
+    <span class="muted">${esc(d.date)} · ${esc(d.source || '')} · ${esc(d.type || '')} · ${num(d.qty).toLocaleString()}EA · ${esc(supName(d.supplierId)) || '협력사 미지정'}</span>${
+      d.desc ? `<br><span style="font-size:12.5px">${esc(d.desc)}</span>` : ''
+    }</div>
     <button type="button" class="b s" onclick="routeGo(&quot;editDefect('${id}')&quot;)">불량 열기</button></div></div>
   <div class="ivs" data-s="req" ${sh('req')}>
   <div class="sec">FAR 요청 <span class="muted" style="font-weight:normal;font-size:12px">협력사에 원인 분석을 요청합니다. 귀책 인정 요구가 아닙니다</span></div>
@@ -529,7 +618,12 @@ function editInv(id, focus, stage) {
     <label>FAR 요청일<input type="date" name="inv_farReq" value="${esc(iv.farReq)}" oninput="invAuto()"></label>
     <label>FAR 회신 기한 <span style="font-size:11px">(요청 + ${num(S.farDays) || 5}영업일)</span><input type="date" name="inv_farDue" value="${esc(iv.farDue)}"></label>
     <label>요청 목적<select name="inv_farPurpose">${opts(FAR_PURPOSE, iv.farPurpose || '', true)}</select></label>
-    <label class="full">요청 분석 항목<span class="checks" style="display:flex;flex-wrap:wrap;gap:4px 14px;padding-top:3px">${FAR_ITEMS.map((x) => `<label style="flex-direction:row;align-items:center;gap:4px;color:var(--ink)"><input type="checkbox" name="inv_farItem" value="${esc(x)}" ${(iv.farItems || []).includes(x) ? 'checked' : ''}>${esc(x)}</label>`).join('')}</span></label>
+    <label class="full">요청 분석 항목<span class="checks" style="display:flex;flex-wrap:wrap;gap:4px 14px;padding-top:3px">${FAR_ITEMS.map(
+      (x) =>
+        `<label style="flex-direction:row;align-items:center;gap:4px;color:var(--ink)"><input type="checkbox" name="inv_farItem" value="${esc(x)}" ${
+          (iv.farItems || []).includes(x) ? 'checked' : ''
+        }>${esc(x)}</label>`,
+    ).join('')}</span></label>
     <label>시료 (수량 · 송부 방법)<input name="inv_sample" value="${esc(iv.sample)}" placeholder="예: 3EA 택배 송부"></label>
     <label>시료 발송일<input type="date" name="inv_farShipDate" value="${esc(iv.farShipDate)}"></label>
     <label>송장 · 반출증 번호<input name="inv_farShipRef" value="${esc(iv.farShipRef)}"></label>
@@ -539,7 +633,11 @@ function editInv(id, focus, stage) {
   <div id="invPhBox" class="row" style="gap:8px;margin-top:6px"></div>
   </div>
   <div class="ivs" data-s="reply" ${sh('reply')}>
-  ${reqSum ? `<div class="banner" style="margin:8px 0 0;background:var(--pri2);border-color:transparent;color:var(--ink)">${reqSum}</div>` : '<div class="banner" style="margin:8px 0 0">FAR 요청일이 없습니다. 목록의 ‘요청’에서 FAR 요청을 먼저 입력하세요.</div>'}
+  ${
+    reqSum
+      ? `<div class="banner" style="margin:8px 0 0;background:var(--pri2);border-color:transparent;color:var(--ink)">${reqSum}</div>`
+      : '<div class="banner" style="margin:8px 0 0">FAR 요청일이 없습니다. 목록의 ‘요청’에서 FAR 요청을 먼저 입력하세요.</div>'
+  }
   <div class="sec">FAR 회신 <span class="muted" style="font-weight:normal;font-size:12px">협력사 분석 결과와 당사 검토</span></div>
   <div class="fg">
     <label>FAR 회신일<input type="date" name="inv_farRecv" value="${esc(iv.farRecv)}"></label>
@@ -550,20 +648,38 @@ function editInv(id, focus, stage) {
   </div>
   </div>
   <div class="ivs" data-s="judge" ${sh('judge')}>
-  ${d.resp !== '미정' && !iv.verdict ? `<div class="banner" style="margin:8px 0 0">이 불량의 귀책은 현재 <b>${esc(d.resp || '협력사')}</b>입니다. 판정을 입력하면 판정 결과로 바뀝니다.</div>` : ''}
-  ${reqSum || repSum ? `<div class="banner" style="margin:8px 0 0;background:var(--pri2);border-color:transparent;color:var(--ink)">${[reqSum, repSum].filter(Boolean).join('<br>')}${iv.farResult ? `<div style="margin-top:3px;font-size:12.5px;white-space:pre-wrap">${esc(iv.farResult)}</div>` : ''}</div>` : ''}
+  ${
+    d.resp !== '미정' && !iv.verdict
+      ? `<div class="banner" style="margin:8px 0 0">이 불량의 귀책은 현재 <b>${esc(d.resp || '협력사')}</b>입니다. 판정을 입력하면 판정 결과로 바뀝니다.</div>`
+      : ''
+  }
+  ${
+    reqSum || repSum
+      ? `<div class="banner" style="margin:8px 0 0;background:var(--pri2);border-color:transparent;color:var(--ink)">${[reqSum, repSum]
+          .filter(Boolean)
+          .join('<br>')}${iv.farResult ? `<div style="margin-top:3px;font-size:12.5px;white-space:pre-wrap">${esc(iv.farResult)}</div>` : ''}</div>`
+      : ''
+  }
   <div class="sec">사내 분석 <span class="muted" style="font-weight:normal;font-size:12px">재현시험 · 측정 · 분해 분석</span></div>
   ${
     cs
-      ? `<div class="route" style="margin-top:0"><div class="ri dn"><span class="ck">✓</span><div class="tx"><b>RCA ${esc(cs.CaseNo)}</b> · ${esc(cs.Stage || '')} · ${esc(cs.Status || '')}<br><span class="muted">${czCauseSum(cs) ? 'RCA 결론 — ' + esc(czCauseSum(cs).slice(0, 140)) : '사내 분석은 RCA 원인분석에서 관리합니다. RCA의 ‘귀책 판정 반영’으로 판정할 수 있습니다.'}</span></div><button type="button" class="b s" onclick="routeGo(&quot;czOpenCase('${cs.id}','cause')&quot;)">RCA 열기</button></div></div>
-    ${(iv.rca || '').trim() ? `<div class="help" style="margin-top:6px">RCA 연결 전 메모: ${esc(iv.rca)}</div>` : ''}<input type="hidden" name="inv_rca" value="${esc(iv.rca)}">`
+      ? `<div class="route" style="margin-top:0"><div class="ri dn"><span class="ck">✓</span><div class="tx"><b>RCA ${esc(cs.CaseNo)}</b> · ${esc(cs.Stage || '')} · ${esc(cs.Status || '')}<br><span class="muted">${
+          czCauseSum(cs)
+            ? 'RCA 결론 — ' + esc(czCauseSum(cs).slice(0, 140))
+            : '사내 분석은 RCA 원인분석에서 관리합니다. RCA의 ‘귀책 판정 반영’으로 판정할 수 있습니다.'
+        }</span></div><button type="button" class="b s" onclick="routeGo(&quot;czOpenCase('${cs.id}','cause')&quot;)">RCA 열기</button></div></div>
+    ${
+      (iv.rca || '').trim() ? `<div class="help" style="margin-top:6px">RCA 연결 전 메모: ${esc(iv.rca)}</div>` : ''
+    }<input type="hidden" name="inv_rca" value="${esc(iv.rca)}">`
       : `<div class="fg"><label class="full">사내 분석 메모 <span><button type="button" class="b s" onclick="routeGo(&quot;czFromDefect('${id}')&quot;)">RCA 요청</button> <span class="muted">큰 건은 RCA로 관리 (A등급 · 고객 유출 권장)</span></span><textarea name="inv_rca" placeholder="예: 동일 LOT 재현시험 3/3 재현, 조립 토크 정상 범위 확인">${esc(iv.rca)}</textarea></label></div>`
   }
   <div class="sec">귀책 판정 <span class="muted" style="font-weight:normal;font-size:12px">원인 불명 검토 기한 ${esc(d.date ? ntfDue(d) : '-')}</span></div>
   <div class="fg">
     <label>귀책 판정<select name="inv_verdict" onchange="invVerdictI()">${opts(VERDICTS, iv.verdict, true)}</select></label>
     <label>판정일<input type="date" name="inv_verdictDate" value="${esc(iv.verdictDate)}"></label>
-    <label id="shareL" style="${iv.verdict === '공동' ? '' : 'display:none'}">협력사 부담 비율 (%)<input type="number" min="0" max="100" name="inv_share" value="${esc(iv.share)}" placeholder="합의 비율"></label>
+    <label id="shareL" style="${
+      iv.verdict === '공동' ? '' : 'display:none'
+    }">협력사 부담 비율 (%)<input type="number" min="0" max="100" name="inv_share" value="${esc(iv.share)}" placeholder="합의 비율"></label>
     <label class="full">판정 근거 · 비용 처리 <span style="font-size:11px">(FAR·RCA 결론 요약, 원인 불명: 사내 부담 / 협의 비율 등)</span><input name="inv_basis" value="${esc(iv.basis)}"></label>
   </div>
   <div class="help" style="margin-top:6px" id="invNext">판정하면 불량의 귀책이 바뀝니다 — <b>협력사</b>: 원인 부품 지정 후 NCR 발행 · <b>사내</b>: 사내 대책·RCA · <b>공동</b>: 분담 비율로 구상 · <b>원인 불명</b>: 완료 처리 (재발 시 재조사).</div>
@@ -643,7 +759,9 @@ function saveInv(id, keep) {
   if (!keep && iv.verdict && iv.verdict !== prev) setTimeout(() => offerNcrAfterVerdict([id], iv.verdict), 350);
   toast(
     iv.verdict
-      ? `귀책 판정: ${iv.verdict} → ${iv.verdict === '협력사' ? 'NCR 발행 단계' : iv.verdict === '사내' ? '사내 대책 단계' : iv.verdict === '공동' ? '분담·NCR 단계' : '완료 처리'}`
+      ? `귀책 판정: ${iv.verdict} → ${
+          iv.verdict === '협력사' ? 'NCR 발행 단계' : iv.verdict === '사내' ? '사내 대책 단계' : iv.verdict === '공동' ? '분담·NCR 단계' : '완료 처리'
+        }`
       : '귀책 조사를 저장했습니다',
   );
   return true;
@@ -656,9 +774,15 @@ function editIca(id) {
   const cs = defCase(d),
     lv = icaLevel(d);
   const body = `<div class="route" style="margin-top:0;margin-bottom:6px"><div class="ri"><div class="tx"><b>${esc(d.partNo || d.fgNo || '')} ${esc(d.partName || d.fgName || '')}</b> ${sevBadge(d)} <span class="bg mut">귀책 ${esc(d.resp || '-')}</span><br>
-    <span class="muted">${esc(d.date)} · ${esc(d.source || '')} · ${esc(d.type || '')} · ${num(d.qty).toLocaleString()}EA</span>${d.desc ? `<br><span style="font-size:12.5px">${esc(d.desc)}</span>` : ''}</div>
+    <span class="muted">${esc(d.date)} · ${esc(d.source || '')} · ${esc(d.type || '')} · ${num(d.qty).toLocaleString()}EA</span>${
+      d.desc ? `<br><span style="font-size:12.5px">${esc(d.desc)}</span>` : ''
+    }</div>
     <button type="button" class="b s" onclick="routeGo(&quot;editDefect('${id}')&quot;)">불량 열기</button></div></div>
-  ${cs ? '' : `<div class="help" style="margin:8px 0 0">간단한 건은 여기서 사내 대책을 기록하고, 원인분석·조치·단계 관리가 필요한 큰 건(A등급 · 고객 유출)은 <a class="lk" onclick="routeGo(&quot;czFromDefect('${id}')&quot;)">RCA로 관리</a>하세요.</div>`}
+  ${
+    cs
+      ? ''
+      : `<div class="help" style="margin:8px 0 0">간단한 건은 여기서 사내 대책을 기록하고, 원인분석·조치·단계 관리가 필요한 큰 건(A등급 · 고객 유출)은 <a class="lk" onclick="routeGo(&quot;czFromDefect('${id}')&quot;)">RCA로 관리</a>하세요.</div>`
+  }
   ${icaSection(d, true)}`;
   const btns = cs
     ? [{ label: '닫기', fn: closeModal }]
@@ -719,7 +843,11 @@ function icaSection(d, force) {
   };
   const cs = defCase(d);
   if (cs)
-    return `<div id="icaWrap" style="${force || d.resp === '사내' ? '' : 'display:none'}"><div class="banner" style="margin-top:14px;background:var(--pri2);border-color:#c9d8f2;color:#1d2433">사내 대책은 <a class="lk" onclick="czOpenCase('${cs.id}','cause')">RCA ${esc(cs.CaseNo)}</a>에서 관리합니다 (현재 ${esc(cs.Stage)}). 원인분석 워크시트 · 조치 · 단계 게이트를 거쳐 종결하면 이 불량도 완료됩니다.${icaStarted(d.ica) ? ' 이 칸에 먼저 적어 둔 사내 대책 내용은 그대로 보관됩니다.' : ''}</div></div>`;
+    return `<div id="icaWrap" style="${
+      force || d.resp === '사내' ? '' : 'display:none'
+    }"><div class="banner" style="margin-top:14px;background:var(--pri2);border-color:#c9d8f2;color:#1d2433">사내 대책은 <a class="lk" onclick="czOpenCase('${cs.id}','cause')">RCA ${esc(cs.CaseNo)}</a>에서 관리합니다 (현재 ${esc(cs.Stage)}). 원인분석 워크시트 · 조치 · 단계 게이트를 거쳐 종결하면 이 불량도 완료됩니다.${
+      icaStarted(d.ica) ? ' 이 칸에 먼저 적어 둔 사내 대책 내용은 그대로 보관됩니다.' : ''
+    }</div></div>`;
   return `<div id="icaWrap" style="${force || d.resp === '사내' ? '' : 'display:none'}">
   <div class="sec">사내 대책 (RCA → 대책) <span class="muted" style="font-weight:normal;font-size:12px">심각도 기준 권장: <b id="icaAuto">${auto}</b> — A: 8D · B: 간이 대책 · C: 기록만</span></div>
   <div class="fg">
@@ -730,8 +858,13 @@ function icaSection(d, force) {
     <label>검증일<input type="date" name="ica_verifyDate" value="${esc(c.verifyDate)}"></label>
     <label>검증 결과<select name="ica_verifyResult">${opts(['유효', '무효(재발)'], c.verifyResult, true)}</select></label>
   </div>
-  <div id="icaD">${ICA_KEYS.map((k) => `<label class="full" data-ik="${k}" style="display:block;margin-top:6px"><span class="il" data-o="${lbl8[k]}">${lbl8[k]}</span><textarea name="ica_${k}" style="min-height:44px">${esc(c[k])}</textarea></label>`).join('')}</div>
-  <div class="row" id="icaStd" style="margin-top:8px;gap:12px;font-size:13px"><b>표준화 반영 확인</b>${ICA_STD.map(([k, l]) => `<label class="row" style="gap:4px"><input type="checkbox" name="ica_std_${k}" ${c.std && c.std[k] ? 'checked' : ''}> ${l}</label>`).join('')}
+  <div id="icaD">${ICA_KEYS.map(
+    (k) =>
+      `<label class="full" data-ik="${k}" style="display:block;margin-top:6px"><span class="il" data-o="${lbl8[k]}">${lbl8[k]}</span><textarea name="ica_${k}" style="min-height:44px">${esc(c[k])}</textarea></label>`,
+  ).join('')}</div>
+  <div class="row" id="icaStd" style="margin-top:8px;gap:12px;font-size:13px"><b>표준화 반영 확인</b>${ICA_STD.map(
+    ([k, l]) => `<label class="row" style="gap:4px"><input type="checkbox" name="ica_std_${k}" ${c.std && c.std[k] ? 'checked' : ''}> ${l}</label>`,
+  ).join('')}
     ${d.id ? `<span style="flex:1"></span><button type="button" class="b s" onclick="icaPrint('${d.id}')">사내 대책서 출력</button>` : ''}</div>
   </div>`;
 }
@@ -770,13 +903,24 @@ async function printIca(id, w0) {
     reportFrame(`<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>사내 대책서 — ${esc(defLabel(d))}</title><style>body{font-family:'Malgun Gothic',sans-serif;font-size:12px;margin:24px;color:#111}table{width:100%;border-collapse:collapse;margin-bottom:12px}td,th{border:1px solid #555;padding:6px;vertical-align:top;text-align:left}th{background:#eef1f6;width:20%}h1{font-size:18px;margin:6px 0 10px}.pg{display:grid;grid-template-columns:1fr 1fr;gap:8px}.pg img{width:100%;max-height:60mm;object-fit:contain}figure{margin:0}</style></head><body>
   ${logoHead()}<h1>사내 대책서 (${esc(lv === '8D' ? '8D' : '간이 대책')})</h1>
   <table><tr><th>발생일 / 발생처</th><td>${esc(d.date)} / ${esc(d.source)}</td><th>담당</th><td>${esc(d.owner)}</td></tr>
-  ${d.fgNo || d.fgName ? `<tr><th>발견 품목 (완성품)</th><td colspan="3">${esc(d.fgNo)} ${esc(d.fgName)}${d.fgQty ? ` · ${num(d.fgQty)} EA` : ''}</td></tr>` : ''}
+  ${
+    d.fgNo || d.fgName
+      ? `<tr><th>발견 품목 (완성품)</th><td colspan="3">${esc(d.fgNo)} ${esc(d.fgName)}${d.fgQty ? ` · ${num(d.fgQty)} EA` : ''}</td></tr>`
+      : ''
+  }
   <tr><th>원인 부품</th><td>${esc(d.partNo)} ${esc(d.partName)}</td><th>불량유형 / 수량</th><td>${esc(d.type)} / ${num(d.qty).toLocaleString()} EA</td></tr>
   <tr><th>불량 현상</th><td colspan="3">${nl(d.desc)}</td></tr>
-  ${iv.verdict ? `<tr><th>귀책 판정</th><td colspan="3">${esc(iv.verdict)} (${esc(iv.verdictDate)})${iv.basis ? ' — ' + esc(iv.basis) : ''}</td></tr>` : ''}
+  ${
+    iv.verdict
+      ? `<tr><th>귀책 판정</th><td colspan="3">${esc(iv.verdict)} (${esc(iv.verdictDate)})${iv.basis ? ' — ' + esc(iv.basis) : ''}</td></tr>`
+      : ''
+  }
   ${iv.rca ? `<tr><th>사내 RCA</th><td colspan="3">${nl(iv.rca)}</td></tr>` : ''}
-  <tr><th>대책 기한 / 완료일</th><td>${esc(c.due)} / ${esc(c.doneDate)}</td><th>유효성 검증</th><td>${esc(c.verifyDue)} / ${esc(c.verifyDate)} ${esc(c.verifyResult)}${vi ? ` (${esc(vi.label)})` : ''}</td></tr></table>
-  <table>${keys.map((k) => `<tr><th>${simple ? SL[k] : (D8.find((x) => x[0] === k) || [k, k])[1]}</th><td style="height:46px">${nl(c[k])}</td></tr>`).join('')}
+  <tr><th>대책 기한 / 완료일</th><td>${esc(c.due)} / ${esc(c.doneDate)}</td><th>유효성 검증</th>
+    <td>${esc(c.verifyDue)} / ${esc(c.verifyDate)} ${esc(c.verifyResult)}${vi ? ` (${esc(vi.label)})` : ''}</td></tr></table>
+  <table>${keys
+    .map((k) => `<tr><th>${simple ? SL[k] : (D8.find((x) => x[0] === k) || [k, k])[1]}</th><td style="height:46px">${nl(c[k])}</td></tr>`)
+    .join('')}
   <tr><th>표준화 반영</th><td>${ICA_STD.map(([k, l]) => `${c.std && c.std[k] ? '☑' : '☐'} ${l}`).join(' &nbsp; ')}</td></tr></table>
   ${phs.length ? `<div class="pg">${phs.map((p) => `<figure><img src="${p.data}"></figure>`).join('')}</div>` : ''}
   </body></html>`);
@@ -804,10 +948,18 @@ async function printFar(id, w0) {
   .pg{display:grid;grid-template-columns:1fr 1fr;gap:8px}.pg figure{margin:0;border:1px solid #ccc;padding:4px;break-inside:avoid}.pg img{width:100%;max-height:62mm;object-fit:contain}.pg figcaption{font-size:10.5px;color:#444;text-align:center}
   .sig{margin-top:18px;display:flex;justify-content:space-between;color:#333}</style></head><body>
   ${logoHead()}<h1>불량 원인 분석 요청서</h1><div class="sub">Failure Analysis Report (FAR) Request</div>
-  <table class="two"><tr><th>수신</th><td>${esc(sp?.name || '-')}${att ? ` · ${esc(att.name)}` : ''}</td><th>발신</th><td>${esc(S.company)} ${esc(S.dept)} · ${esc(d.owner || '')}</td></tr>
+  <table class="two"><tr><th>수신</th><td>${esc(sp?.name || '-')}${att ? ` · ${esc(att.name)}` : ''}</td>
+    <th>발신</th><td>${esc(S.company)} ${esc(S.dept)} · ${esc(d.owner || '')}</td></tr>
   <tr><th>요청일</th><td>${esc(iv.farReq || today())}</td><th>회신 기한</th><td><b style="color:#b42318">${esc(due)}</b></td></tr></table>
   <table>${row('발생일 / 발생처', `${esc(d.date)} / ${esc(d.source)}`)}
-  ${d.fgNo || d.fgName ? row('발견 품목 (완성품)', `${esc(d.fgNo)} ${esc(d.fgName)}${d.fgQty !== '' && d.fgQty != null ? ` · ${num(d.fgQty).toLocaleString()} EA` : ''}`) : ''}
+  ${
+    d.fgNo || d.fgName
+      ? row(
+          '발견 품목 (완성품)',
+          `${esc(d.fgNo)} ${esc(d.fgName)}${d.fgQty !== '' && d.fgQty != null ? ` · ${num(d.fgQty).toLocaleString()} EA` : ''}`,
+        )
+      : ''
+  }
   ${row('대상 부품 (추정)', d.partNo || d.partName ? `${esc(d.partNo)} ${esc(d.partName)}` : '조사 중')}
   ${row('불량 유형 / 수량', `${esc(d.type)} / ${num(d.qty).toLocaleString()} EA${d.inspQty ? ` (로트 ${num(d.inspQty).toLocaleString()} EA 중)` : ''}`)}
   ${row('LOT / 납품일자', esc(lotOf(d)))}
@@ -815,15 +967,31 @@ async function printFar(id, w0) {
   ${row('당사 임시조치', nl(d.containment))}
   ${iv.farPurpose ? row('요청 목적', esc(iv.farPurpose)) : ''}
   ${(iv.farItems || []).length ? row('요청 분석 항목', esc(iv.farItems.join(' / '))) : ''}
-  ${iv.sample || iv.farShipDate || iv.farShipRef ? row('불량 샘플', esc([iv.sample, iv.farShipDate && '발송 ' + iv.farShipDate, iv.farShipRef].filter(Boolean).join(' · '))) : ''}</table>
+  ${
+    iv.sample || iv.farShipDate || iv.farShipRef
+      ? row('불량 샘플', esc([iv.sample, iv.farShipDate && '발송 ' + iv.farShipDate, iv.farShipRef].filter(Boolean).join(' · ')))
+      : ''
+  }</table>
   <b>요청 사항</b><ol class="req">
     <li>불량 원인 분석 보고서(FAR)를 <b>${esc(due)}</b>까지 회신 바랍니다 — 발생 원인 · 유출 원인, 분석 근거(측정 데이터 · 시험 결과 · 사진) 포함.</li>
     <li>동일 LOT 및 의심 LOT의 재고(사내 · 운송 중)를 즉시 확인 · 격리하고 결과를 함께 회신 바랍니다.</li>
     <li>분석 방법 · 조건과 측정 데이터 원본을 첨부하고, 분석 후 시료 반환 여부를 알려 주시기 바랍니다.</li>
     <li>분석 결과 귀사 부품의 문제로 확인될 경우, 별도 부적합 통보(NCR)에 따라 대책서를 요청드립니다.</li></ol>
-  ${iv.costNotice ? `<div class="ntc">※ 본 건의 원인이 귀사 부품으로 확인될 경우, 선별 · 재작업 · 폐기 · 물류 등 당사에 발생한 비용을 청구할 수 있음을 알려드립니다. 비용 내역은 원인 확정 후 별도 통보드립니다.</div>` : ''}
-  ${phs.length ? `<b>불량 사진</b><div class="pg">${phs.map((p) => `<figure><img src="${p.data}">${p.caption ? `<figcaption>${esc(p.caption)}</figcaption>` : ''}</figure>`).join('')}</div>` : ''}
-  <div class="sig"><span>${esc(S.issuerPhone ? 'Tel. ' + S.issuerPhone : '')} ${esc(S.issuerEmail ? 'E-mail. ' + S.issuerEmail : '')}</span><span>${esc(S.company)} 품질 담당 ${esc(d.owner || '')}</span></div>
+  ${
+    iv.costNotice
+      ? `<div class="ntc">※ 본 건의 원인이 귀사 부품으로 확인될 경우, 선별 · 재작업 · 폐기 · 물류 등 당사에 발생한 비용을 청구할 수 있음을 알려드립니다. 비용 내역은 원인 확정 후 별도 통보드립니다.</div>`
+      : ''
+  }
+  ${
+    phs.length
+      ? `<b>불량 사진</b><div class="pg">${phs
+          .map((p) => `<figure><img src="${p.data}">${p.caption ? `<figcaption>${esc(p.caption)}</figcaption>` : ''}</figure>`)
+          .join('')}</div>`
+      : ''
+  }
+  <div class="sig"><span>${esc(S.issuerPhone ? 'Tel. ' + S.issuerPhone : '')} ${esc(
+    S.issuerEmail ? 'E-mail. ' + S.issuerEmail : '',
+  )}</span><span>${esc(S.company)} 품질 담당 ${esc(d.owner || '')}</span></div>
   </body></html>`);
   reportShow(w, html, `FAR요청_${d.date}_${(d.partNo || d.fgNo || '').replace(/[^\w가-힣-]/g, '')}.html`);
 }
@@ -909,7 +1077,9 @@ function autoEvents(d, n, lbl) {
     if (iv.verdict)
       add(
         iv.verdictDate,
-        `귀책 판정 — ${iv.verdict}${iv.verdict === '공동' && iv.share !== '' && iv.share != null ? ` (협력사 ${iv.share}%)` : ''}${iv.basis ? ' · ' + iv.basis : ''}`,
+        `귀책 판정 — ${iv.verdict}${
+          iv.verdict === '공동' && iv.share !== '' && iv.share != null ? ` (협력사 ${iv.share}%)` : ''
+        }${iv.basis ? ' · ' + iv.basis : ''}`,
         sl,
       );
     if (ic.doneDate) add(ic.doneDate, `사내 대책 완료 (${icaLevel(d)}) — 유효성 검증 기한 ${ic.verifyDue || '-'}`, sl);
@@ -1092,7 +1262,11 @@ function lgThumbs(ids, editable) {
     ? `<div class="lgph">${ids
         .map((id, k) => {
           const r = phRec(id);
-          return `<span class="t">${r ? `<img src="${r.thumb || r.data}" onclick="lgViewPh('${id}')" title="${esc(r.caption || r.name || '')}">` : '<span class="ld">📎</span>'}${editable ? `<a onclick="${editable}(${k})" title="빼기">✕</a>` : ''}</span>`;
+          return `<span class="t">${
+            r
+              ? `<img src="${r.thumb || r.data}" onclick="lgViewPh('${id}')" title="${esc(r.caption || r.name || '')}">`
+              : '<span class="ld">📎</span>'
+          }${editable ? `<a onclick="${editable}(${k})" title="빼기">✕</a>` : ''}</span>`;
         })
         .join('')}</div>`
     : '';
@@ -1211,23 +1385,47 @@ function renderLogsInner(b) {
       own && !ed && !vo && x.void
         ? mv(x) + del
         : own && !ed && !vo
-          ? `${mv(x)}<a class="lk" style="font-size:11px" onclick="lgEdit(${x._i})">수정</a> ${x._new ? '' : `<a class="lk" style="font-size:11px;color:var(--bad)" onclick="tl.voiding=${x._i};renderLogs()">취소 처리</a> `}${del}`
+          ? `${mv(x)}<a class="lk" style="font-size:11px" onclick="lgEdit(${x._i})">수정</a> ${
+              x._new ? '' : `<a class="lk" style="font-size:11px;color:var(--bad)" onclick="tl.voiding=${x._i};renderLogs()">취소 처리</a> `
+            }${del}`
           : x.ro && !x.auto
             ? '<span class="muted" style="font-size:11px">원본에서 수정</span>'
             : '';
     if (ed)
       return `<li class="ed"><div class="lh"><b>기록 수정</b>${saved ? ' <span class="muted" style="font-size:11.5px">— 원문은 이력으로 보존됩니다</span>' : ''}</div>
-      <div class="cg" style="margin-top:6px"><label>실행일<input type="date" id="leDate" value="${esc(x.date)}" max="${today()}"></label><label>구분<select id="leKind">${opts(LOG_KINDS.includes(x.kind) ? LOG_KINDS : [x.kind, ...LOG_KINDS], x.kind)}</select></label>
+      <div class="cg" style="margin-top:6px"><label>실행일<input type="date" id="leDate" value="${esc(x.date)}" max="${today()}"></label><label>구분<select id="leKind">${opts(
+        LOG_KINDS.includes(x.kind) ? LOG_KINDS : [x.kind, ...LOG_KINDS],
+        x.kind,
+      )}</select></label>
         <label>상대방<input id="leParty" list="lgParties" value="${esc(x.party)}"></label><label>방법<select id="leMethod">${opts(LOG_METHODS, x.method || '', true)}</select></label></div>
       <div class="cg2"><label>실행 내용<textarea id="leText">${esc(x.text)}</textarea></label><label>결과 · 합의 사항<textarea id="leResult">${esc(x.result)}</textarea></label></div>
       <div class="cf"><label class="b s" style="cursor:pointer">📎 증빙 추가<input type="file" accept="image/*" multiple style="display:none" onchange="lgAddFiles([...this.files],'edit');this.value=''"></label>${lgThumbs(tl.editPh, 'lgRmEdit')}</div>
       ${saved ? `<label class="lgreason">수정 사유 *<input id="leReason" placeholder="예: 협력사 회신 메일 확인 후 수량 정정"></label>` : ''}
       <div class="row" style="margin-top:6px;justify-content:flex-end"><button type="button" class="b s" onclick="tl.edit=null;tl.editPh=null;renderLogs(false)">취소</button><button type="button" class="b s p" onclick="saveLog(${x._i})">저장</button></div></li>`;
-    return `<li class="${x.auto ? 'au' : ''} ${x._new ? 'nw' : ''} ${x.void ? 'vd' : ''}"><div class="lh"><b>${esc(x.date)}</b> <span class="bg ${LOG_CLS[x.kind] || 'mut'}">${esc(x.kind)}</span>${x.src ? ` <span class="bg mut" style="font-weight:normal">${esc(x.src)}</span>` : ''}${who ? ` <span style="font-size:12px">${esc(who)}</span>` : ''} <span class="muted" style="font-size:11px">${esc(x.by || '')}</span> ${tags}<span style="flex:1"></span>${acts}</div>
+    return `<li class="${x.auto ? 'au' : ''} ${x._new ? 'nw' : ''} ${x.void ? 'vd' : ''}"><div class="lh"><b>${esc(x.date)}</b> <span class="bg ${LOG_CLS[x.kind] || 'mut'}">${esc(x.kind)}</span>${
+      x.src ? ` <span class="bg mut" style="font-weight:normal">${esc(x.src)}</span>` : ''
+    }${
+      who ? ` <span style="font-size:12px">${esc(who)}</span>` : ''
+    } <span class="muted" style="font-size:11px">${esc(x.by || '')}</span> ${tags}<span style="flex:1"></span>${acts}</div>
       <div class="lt">${nl(x.text)}</div>${x.result ? `<div class="lr"><b>결과</b> ${nl(x.result)}</div>` : ''}${lgThumbs(x.photos)}
       ${x.void ? `<div class="lv">취소 ${esc(loc(x.void.at))} ${esc(x.void.by || '')} — 사유: ${esc(x.void.reason)}</div>` : ''}
-      ${vo ? `<div class="lgreason" style="margin-top:6px">취소 사유 *<div class="row" style="gap:6px"><input id="lvReason" placeholder="예: 다른 건 기록을 잘못 입력" style="flex:1"><button type="button" class="b s" onclick="tl.voiding=null;renderLogs(false)">그만두기</button><button type="button" class="b s" style="color:var(--bad);border-color:#f0c4bf" onclick="lgVoid(${x._i})">취소 처리</button></div><span class="muted">취소 처리한 기록은 취소선과 사유가 남습니다. 아예 없애려면 '삭제'를 누르세요.</span></div>` : ''}
-      ${hist.length && tl.hist.has(x.id) ? `<div class="lhist">${hist.map((h, k) => `<div><b>${k + 1}차 원문</b> <span class="muted">${esc(loc(h.at))} 수정 · ${esc(h.by || '')} · 사유: ${esc(h.reason || '-')}</span><br>${esc(h.date)} · ${esc(h.kind)}${h.party ? ' · ' + esc(h.party) : ''}${h.method ? ' · ' + esc(h.method) : ''}<br>${nl(h.text)}${h.result ? `<br>결과: ${nl(h.result)}` : ''}</div>`).join('')}</div>` : ''}</li>`;
+      ${
+        vo
+          ? `<div class="lgreason" style="margin-top:6px">취소 사유 *<div class="row" style="gap:6px"><input id="lvReason" placeholder="예: 다른 건 기록을 잘못 입력" style="flex:1"><button type="button" class="b s" onclick="tl.voiding=null;renderLogs(false)">그만두기</button><button type="button" class="b s" style="color:var(--bad);border-color:#f0c4bf" onclick="lgVoid(${x._i})">취소 처리</button></div><span class="muted">취소 처리한 기록은 취소선과 사유가 남습니다. 아예 없애려면 '삭제'를 누르세요.</span></div>`
+          : ''
+      }
+      ${
+        hist.length && tl.hist.has(x.id)
+          ? `<div class="lhist">${hist
+              .map(
+                (h, k) =>
+                  `<div><b>${k + 1}차 원문</b> <span class="muted">${esc(loc(h.at))} 수정 · ${esc(h.by || '')} · 사유: ${esc(h.reason || '-')}</span><br>${esc(h.date)} · ${esc(h.kind)}${h.party ? ' · ' + esc(h.party) : ''}${h.method ? ' · ' + esc(h.method) : ''}<br>${nl(h.text)}${
+                    h.result ? `<br>결과: ${nl(h.result)}` : ''
+                  }</div>`,
+              )
+              .join('')}</div>`
+          : ''
+      }</li>`;
   };
   b.innerHTML =
     plan +
@@ -1472,15 +1670,23 @@ async function lgPrint() {
   tr.au td{color:#555;background:#fafafa}tr.vd td{color:#888;text-decoration:line-through}tr.vd td.nt{text-decoration:none}.pre{white-space:pre-wrap}
   .ph{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}.ph div{border:1px solid #ccc;padding:4px;break-inside:avoid}.ph img{width:100%;max-height:220px;object-fit:contain}
   h3{font-size:13px;margin:16px 0 4px}</style></head><body>${logoHead()}
-  <h1>조사 · 진행 실행 기록</h1><div class="s">${esc(title)} · 출력 ${loc(now())} · 출력자 ${esc(db.settings.owners[0] || '')}${unsaved ? ` · <b>저장 전 기록 ${unsaved}건 제외</b>` : ''}</div>
+  <h1>조사 · 진행 실행 기록</h1><div class="s">${esc(title)} · 출력 ${loc(now())} · 출력자 ${esc(db.settings.owners[0] || '')}${
+    unsaved ? ` · <b>저장 전 기록 ${unsaved}건 제외</b>` : ''
+  }</div>
   <table><tr><th>실행일</th><th>구분</th><th>상대방 · 방법</th><th>실행 내용</th><th>결과 · 합의</th><th>증빙</th><th>작성</th><th>비고</th></tr>
   ${L.map(
-    (
-      l,
-    ) => `<tr class="${l.auto ? 'au' : ''} ${l.void ? 'vd' : ''}"><td>${esc(l.date)}</td><td>${esc(l.auto ? '시스템' : l.kind)}${l.src && !l.auto ? '<br>' + esc(l.src) : ''}</td><td>${esc([l.party, l.method].filter(Boolean).join(' · '))}</td>
+    (l) => `<tr class="${l.auto ? 'au' : ''} ${l.void ? 'vd' : ''}"><td>${esc(l.date)}</td><td>${esc(l.auto ? '시스템' : l.kind)}${
+      l.src && !l.auto ? '<br>' + esc(l.src) : ''
+    }</td><td>${esc([l.party, l.method].filter(Boolean).join(' · '))}</td>
     <td class="pre">${esc(l.text)}</td><td class="pre">${esc(l.result || '')}</td><td>${(l.photos || []).map((id) => '#' + pn[id]).join(' ')}</td>
     <td>${l.auto ? '자동' : `${esc(l.by || '')}<br>${esc(loc(l.at || ''))}`}</td>
-    <td class="nt">${[lgLate(l) ? '사후 기록' : '', (l.hist || []).length ? `수정 ${l.hist.length}회` : '', l.void ? `취소 (${esc(l.void.reason)})` : ''].filter(Boolean).join('<br>')}</td></tr>`,
+    <td class="nt">${[
+      lgLate(l) ? '사후 기록' : '',
+      (l.hist || []).length ? `수정 ${l.hist.length}회` : '',
+      l.void ? `취소 (${esc(l.void.reason)})` : '',
+    ]
+      .filter(Boolean)
+      .join('<br>')}</td></tr>`,
   ).join('')}</table>
   ${
     L.some((l) => (l.hist || []).length)
@@ -1490,13 +1696,23 @@ async function lgPrint() {
           .flatMap((l) =>
             l.hist.map(
               (h) =>
-                `<tr><td>${esc(l.date)} ${esc(l.kind)}</td><td>${esc(loc(h.at))} ${esc(h.by || '')}</td><td>${esc(h.reason || '')}</td><td class="pre">${esc(h.date)} · ${esc(h.kind)}${h.party ? ' · ' + esc(h.party) : ''}\n${esc(h.text)}${h.result ? '\n결과: ' + esc(h.result) : ''}</td></tr>`,
+                `<tr><td>${esc(l.date)} ${esc(l.kind)}</td><td>${esc(loc(h.at))} ${esc(h.by || '')}</td>
+                  <td>${esc(h.reason || '')}</td>
+                    <td class="pre">${esc(h.date)} · ${esc(h.kind)}${h.party ? ' · ' + esc(h.party) : ''}\n${esc(h.text)}${
+                      h.result ? '\n결과: ' + esc(h.result) : ''
+                    }</td></tr>`,
             ),
           )
           .join('')}</table>`
       : ''
   }
-  ${ids.length ? `<h3>증빙 자료</h3><div class="ph">${ids.map((id) => (P[id] ? `<div><img src="${P[id].data}"><br><b>#${pn[id]}</b> ${esc(P[id].caption || P[id].name || '')}</div>` : '')).join('')}</div>` : ''}
+  ${
+    ids.length
+      ? `<h3>증빙 자료</h3><div class="ph">${ids
+          .map((id) => (P[id] ? `<div><img src="${P[id].data}"><br><b>#${pn[id]}</b> ${esc(P[id].caption || P[id].name || '')}</div>` : ''))
+          .join('')}</div>`
+      : ''
+  }
   <p class="s" style="margin-top:12px">‘작성’은 기록을 입력한 시각이며 실행일과 2일 이상 차이 나면 ‘사후 기록’으로 표시됩니다. 수정된 기록은 원문과 사유가 위 이력에 남고, 취소된 기록은 지우지 않고 취소선으로 표시합니다.</p>
   </body></html>`);
   reportShow(w, html, `실행기록_${isN ? o.no : o.date}.html`);
@@ -1511,9 +1727,16 @@ function openLog(id) {
     `<div class="psum">
     <div><span class="muted">현상</span> ${nl(d.desc || '-')}</div><div><span class="muted">임시조치</span> ${nl(d.containment || '-')}</div>
     <div class="row" style="gap:6px;margin-top:4px">${sevBadge(d)} <span class="bg mut">${esc(d.type || '')} ${num(d.qty).toLocaleString()}개</span> <span class="bg mut">처리 ${esc(d.disposition || '-')}</span> <span class="bg mut">귀책 ${esc(d.resp || '-')}</span> ${stageBadges(d).replace('<br>', ' ')}
-      ${n ? `<a class="bg inf" style="cursor:pointer" onclick="gotoNcr('${n.id}')">${esc(n.no)} · ${ncrStatus(n)}</a>` : `<span class="bg mut">NCR 없음 (${v.resp})</span>`} ${costTotal(d) ? `<span class="bg mut">비용 ${won(costTotal(d))}원</span>` : ''}${claimStatus(d) ? ` <span class="bg ${CLAIM_CLS[claimStatus(d)]}">구상 ${claimStatus(d)}</span>` : ''}</div></div>
+      ${
+        n
+          ? `<a class="bg inf" style="cursor:pointer" onclick="gotoNcr('${n.id}')">${esc(n.no)} · ${ncrStatus(n)}</a>`
+          : `<span class="bg mut">NCR 없음 (${v.resp})</span>`
+      } ${costTotal(d) ? `<span class="bg mut">비용 ${won(costTotal(d))}원</span>` : ''}${
+        claimStatus(d) ? ` <span class="bg ${CLAIM_CLS[claimStatus(d)]}">구상 ${claimStatus(d)}</span>` : ''
+      }</div></div>
     ${routeHTML(d)}
-    <div class="sec">조사 · 진행 기록 <span class="muted" style="font-weight:normal;font-size:12px">— 실제로 한 일과 결과만 남기는 증빙용 기록 · NCR·대책서·구상 진행(자동)이 함께 표시</span></div><div id="logBox"></div>`,
+    <div class="sec">조사 · 진행 기록 <span class="muted" style="font-weight:normal;font-size:12px">— 실제로 한 일과 결과만 남기는 증빙용 기록 · NCR·대책서·구상 진행(자동)이 함께 표시</span></div>
+      <div id="logBox"></div>`,
     [
       ...(a3ReadyDefect(d) ? [{ label: 'A3 보고서', fn: () => a3Report('defect', id) }] : []),
       {
@@ -1723,21 +1946,48 @@ function renderCostBox() {
     <b id="cbAmt">${won(bq * bp)}</b><span class="muted">원</span>
     <span style="flex:1"></span>
     <select id="cbCat" style="width:auto">${opts(COST_CATS, defCat)}</select><button type="button" class="b s p" onclick="addBaseCost()">비용 내역에 추가</button>
-    <div class="muted" style="flex-basis:100%;font-size:11.5px">${ptp ? (ptCur === 'KRW' ? `부품 마스터 단가 ${won(ptp)}원` : `부품 마스터 단가 ${fmtPrice(part)} × ${fxRate(ptCur).toLocaleString('ko-KR')}원 = ${won(ptp)}원`) : part && part.price && ptCur !== 'KRW' ? `부품 단가 ${fmtPrice(part)} — ${ptCur} 환율이 설정에 없어 원화로 바꾸지 못했습니다` : '부품 마스터에 단가가 없습니다 — 직접 입력하세요'} · 불량 수량 ${qty ? qty.toLocaleString() + '개' : '미입력'} 기준 기본값이며, 바꾸면 이 불량에 따로 저장됩니다.</div>
+    <div class="muted" style="flex-basis:100%;font-size:11.5px">${
+      ptp
+        ? ptCur === 'KRW'
+          ? `부품 마스터 단가 ${won(ptp)}원`
+          : `부품 마스터 단가 ${fmtPrice(part)} × ${fxRate(ptCur).toLocaleString('ko-KR')}원 = ${won(ptp)}원`
+        : part && part.price && ptCur !== 'KRW'
+          ? `부품 단가 ${fmtPrice(part)} — ${ptCur} 환율이 설정에 없어 원화로 바꾸지 못했습니다`
+          : '부품 마스터에 단가가 없습니다 — 직접 입력하세요'
+    } · 불량 수량 ${qty ? qty.toLocaleString() + '개' : '미입력'} 기준 기본값이며, 바꾸면 이 불량에 따로 저장됩니다.</div>
   </div>
   <div style="font-size:12px;color:var(--sub);margin:4px 0">비용 내역 — 발생할 때마다 한 줄씩 추가합니다. COPQ는 <b>비용 발생일</b>이 속한 달로 집계됩니다.</div>
-  <table class="ct"><thead><tr><th>비용 발생일</th><th>항목</th><th class="n">수량</th><th class="n">단가(원)</th><th class="n">금액(원)</th><th>산출 근거</th><th>메모</th><th></th></tr></thead><tbody>${rows || '<tr><td colspan="8" class="muted" style="text-align:center;padding:10px">아직 입력된 비용이 없습니다.</td></tr>'}</tbody>
-  <tfoot><tr><td colspan="4" style="text-align:right"><b>합계</b></td><td class="n"><b id="costTot">${won(curCosts.reduce((a, x) => a + num(x.amt), 0))}</b></td><td colspan="3"></td></tr></tfoot></table>
+  <table class="ct"><thead><tr><th>비용 발생일</th><th>항목</th><th class="n">수량</th><th class="n">단가(원)</th>
+    <th class="n">금액(원)</th><th>산출 근거</th><th>메모</th><th></th></tr></thead><tbody>${
+      rows || '<tr><td colspan="8" class="muted" style="text-align:center;padding:10px">아직 입력된 비용이 없습니다.</td></tr>'
+    }</tbody>
+  <tfoot><tr><td colspan="4" style="text-align:right"><b>합계</b></td><td class="n"><b id="costTot">${won(
+    curCosts.reduce((a, x) => a + num(x.amt), 0),
+  )}</b></td><td colspan="3"></td></tr></tfoot></table>
   <div class="row" style="margin-top:8px;gap:6px">
     <button type="button" class="b s" onclick="addCost({})">+ 비용 추가</button>
     <span class="muted" style="font-size:12px;margin-left:8px">인건비 계산</span>
     <input id="lbH" type="number" step="0.5" min="0" placeholder="시간" style="width:70px"><span class="muted">h ×</span><input id="lbN" type="number" min="1" value="1" style="width:56px"><span class="muted">명 × ${won(S.laborRate)}원</span>
     <button type="button" class="b s" onclick="addLabor()">${disp === '재작업' ? '재작업비' : '선별비'}로 추가</button>
   </div>
-  <div class="sec" style="margin-top:14px">협력사 구상 (회수) <span id="clmSt">${claimBadge()}</span><span class="muted" style="font-weight:normal;font-size:12px">${resp === '협력사' ? '' : resp === '공동' ? `공동 귀책 — 협력사 부담 ${shr}% 만큼 청구` : resp === '미정' ? '귀책 미정 — 판정 후 청구합니다 (비용은 지금부터 쌓아 두세요)' : '귀책이 협력사일 때 청구합니다'}</span></div>
+  <div class="sec" style="margin-top:14px">협력사 구상 (회수) <span id="clmSt">${claimBadge()}</span><span class="muted" style="font-weight:normal;font-size:12px">${
+    resp === '협력사'
+      ? ''
+      : resp === '공동'
+        ? `공동 귀책 — 협력사 부담 ${shr}% 만큼 청구`
+        : resp === '미정'
+          ? '귀책 미정 — 판정 후 청구합니다 (비용은 지금부터 쌓아 두세요)'
+          : '귀책이 협력사일 때 청구합니다'
+  }</span></div>
   <div class="fg">
     <label>청구일<input type="date" value="${esc(c.reqDate)}" onchange="setClaim('reqDate',this.value)"></label>
-    <label>청구액 (원) <a class="lk" style="font-size:11px" onclick="setClaim('reqAmt',Math.round(curCosts.reduce((a,x)=>a+num(x.amt),0)*${shr}/100));renderCostBox()">${shr < 100 ? `비용 합계 × ${shr}% 넣기` : '비용 합계 넣기'}</a>${bq && bp ? ` · <a class="lk" style="font-size:11px" onclick="setClaim('reqAmt',Math.round(baseQty()*basePrice()*${shr}/100));renderCostBox()">수량×단가${shr < 100 ? ` × ${shr}%` : ''} 넣기</a>` : ''}<input type="number" min="0" value="${esc(c.reqAmt)}" oninput="setClaim('reqAmt',this.value)"></label>
+    <label>청구액 (원) <a class="lk" style="font-size:11px" onclick="setClaim('reqAmt',Math.round(curCosts.reduce((a,x)=>a+num(x.amt),0)*${shr}/100));renderCostBox()">${
+      shr < 100 ? `비용 합계 × ${shr}% 넣기` : '비용 합계 넣기'
+    }</a>${
+      bq && bp
+        ? ` · <a class="lk" style="font-size:11px" onclick="setClaim('reqAmt',Math.round(baseQty()*basePrice()*${shr}/100));renderCostBox()">수량×단가${shr < 100 ? ` × ${shr}%` : ''} 넣기</a>`
+        : ''
+    }<input type="number" min="0" value="${esc(c.reqAmt)}" oninput="setClaim('reqAmt',this.value)"></label>
     <label>합의액 (원)<input type="number" min="0" value="${esc(c.agreeAmt)}" oninput="setClaim('agreeAmt',this.value)"></label>
     <label>합의일<input type="date" value="${esc(c.agreeDate)}" onchange="setClaim('agreeDate',this.value)"></label>
     <label>회수일<input type="date" value="${esc(c.recvDate)}" onchange="setClaim('recvDate',this.value)"></label>
@@ -1869,22 +2119,55 @@ function renderSev() {
     if (o) rb.innerHTML = routeHTML({ ...o, ...d, resp: $('#mf').resp.value, id: o.id, ncrId: o.ncrId, caseId: o.caseId }, true);
   }
   const lv = (k, cur, auto) =>
-    `<div class="row" style="gap:4px">${SEV_F[k][1].map((l, i) => (auto ? `<span class="bg ${cur === i + 1 ? 'inf' : 'mut'}" style="${cur === i + 1 ? 'font-weight:bold' : 'opacity:.55'}">${i + 1} ${l}</span>` : `<button type="button" class="b s ${cur === i + 1 ? 'p' : ''}" onclick="setSevF('${k}',${i + 1})">${i + 1} ${l}</button>`)).join('')}</div>`;
+    `<div class="row" style="gap:4px">${SEV_F[k][1]
+      .map((l, i) =>
+        auto
+          ? `<span class="bg ${cur === i + 1 ? 'inf' : 'mut'}" style="${cur === i + 1 ? 'font-weight:bold' : 'opacity:.55'}">${i + 1} ${l}</span>`
+          : `<button type="button" class="b s ${cur === i + 1 ? 'p' : ''}" onclick="setSevF('${k}',${i + 1})">${i + 1} ${l}</button>`,
+      )
+      .join('')}</div>`;
   const note = {
     impact: curSev._touched.impact ? '직접 선택' : `유형 ‘${esc(d.type)}’ 기본값`,
     stage: `발생처 ‘${esc(d.source)}’ 기준 (자동)`,
     scope: curSev._touched.scope ? '직접 선택' : '수량·비율 기준 자동',
     repeat: `동일 협력사·유형 ${S.repeatWindow}일 내 ${v.rp.n}회${v.rp.re ? ' · 대책 종결 후 재발' : ''} (자동)`,
   };
-  b.innerHTML = `<table class="ct"><tbody>${['impact', 'stage', 'scope', 'repeat'].map((k) => `<tr><td style="width:84px"><b>${SEV_F[k][0]}</b></td><td>${lv(k, v.f[k], k === 'stage' || k === 'repeat')}</td><td class="muted" style="font-size:11.5px">${note[k]}</td><td class="n" style="width:40px"><b>${v.f[k]}</b></td></tr>`).join('')}
+  b.innerHTML = `<table class="ct"><tbody>${['impact', 'stage', 'scope', 'repeat']
+    .map(
+      (k) =>
+        `<tr><td style="width:84px"><b>${SEV_F[k][0]}</b></td><td>${lv(
+          k,
+          v.f[k],
+          k === 'stage' || k === 'repeat',
+        )}</td><td class="muted" style="font-size:11.5px">${note[k]}</td><td class="n" style="width:40px"><b>${v.f[k]}</b></td></tr>`,
+    )
+    .join('')}
     <tr><td><b>특별특성</b></td><td colspan="2"><label class="row" style="gap:6px;font-size:12.5px"><input type="checkbox" ${curSev.special ? 'checked' : ''} onchange="curSev.special=this.checked;mfDirty=true;renderSev()"> CC/SC(특별특성) 항목의 불량 — 점수와 관계없이 A</label></td><td></td></tr></tbody>
     <tfoot><tr><td colspan="4" style="background:#f7f8fa;padding:8px">
       <div class="row" style="gap:10px"><span>합계 <b style="font-size:16px">${v.score}</b>점</span>
-      <span>자동 판정 <span class="bg ${SEV_CLS[v.auto]}" style="font-size:13px;padding:2px 10px">${v.auto}</span>${v.forced.length ? ` <span class="muted" style="font-size:12px">강제 A: ${esc(v.forced.join(', '))}</span>` : ` <span class="muted" style="font-size:12px">(A ≥ ${S.sevA} · B ≥ ${S.sevB} · C 그 미만)</span>`}</span>
+      <span>자동 판정 <span class="bg ${SEV_CLS[v.auto]}" style="font-size:13px;padding:2px 10px">${v.auto}</span>${
+        v.forced.length
+          ? ` <span class="muted" style="font-size:12px">강제 A: ${esc(v.forced.join(', '))}</span>`
+          : ` <span class="muted" style="font-size:12px">(A ≥ ${S.sevA} · B ≥ ${S.sevB} · C 그 미만)</span>`
+      }</span>
       <span style="flex:1"></span>
-      <label class="fgl" style="flex-direction:row;align-items:center;gap:4px">수동 조정<select onchange="curSev.override=this.value;mfDirty=true;renderSev()"><option value="">자동 판정 사용</option>${['A', 'B', 'C'].map((g) => `<option ${curSev.override === g ? 'selected' : ''}>${g}</option>`).join('')}</select></label>
-      ${curSev.override ? `<input value="${esc(curSev.reason)}" placeholder="조정 사유 (필수)" style="width:220px;${curSev.reason ? '' : 'border-color:#e7a29a'}" oninput="curSev.reason=this.value;mfDirty=true">` : ''}</div>
-      <div style="margin-top:6px">최종 등급 <span class="bg ${SEV_CLS[v.grade]}" style="font-size:14px;padding:3px 14px">${v.grade}</span> → 대응 수준 <b>${v.resp}</b>${v.grade === 'C' ? ' <span class="muted" style="font-size:12px">(NCR 발행 시 회신 불요 통보)</span>' : ''}</div>
+      <label class="fgl" style="flex-direction:row;align-items:center;gap:4px">수동 조정<select onchange="curSev.override=this.value;mfDirty=true;renderSev()"><option value="">자동 판정 사용</option>${[
+        'A',
+        'B',
+        'C',
+      ]
+        .map((g) => `<option ${curSev.override === g ? 'selected' : ''}>${g}</option>`)
+        .join('')}</select></label>
+      ${
+        curSev.override
+          ? `<input value="${esc(curSev.reason)}" placeholder="조정 사유 (필수)" style="width:220px;${
+              curSev.reason ? '' : 'border-color:#e7a29a'
+            }" oninput="curSev.reason=this.value;mfDirty=true">`
+          : ''
+      }</div>
+      <div style="margin-top:6px">최종 등급 <span class="bg ${SEV_CLS[v.grade]}" style="font-size:14px;padding:3px 14px">${v.grade}</span> → 대응 수준 <b>${v.resp}</b>${
+        v.grade === 'C' ? ' <span class="muted" style="font-size:12px">(NCR 발행 시 회신 불요 통보)</span>' : ''
+      }</div>
     </td></tr></tfoot></table>`;
   const ss = $('#sevSum');
   if (ss)
@@ -2168,7 +2451,9 @@ function delDefectDialog(d, L) {
         opt(
           'ncr',
           `NCR ${qi(n.no)} · ${esc(ncrStatus(n))} · ${esc(n.reqType || '8D 보고서')}`,
-          `NCR도 삭제 <span class="muted">— 통보·대책서·평가 기록${L.ncr.logs ? ` · 진행 기록 ${L.ncr.logs}건` : ''}${L.ncr.photos ? ` · 사진 ${L.ncr.photos}장` : ''}${(n.concDocs || []).length ? ` · 특채 문서 ${n.concDocs.length}건` : ''}</span>`,
+          `NCR도 삭제 <span class="muted">— 통보·대책서·평가 기록${L.ncr.logs ? ` · 진행 기록 ${L.ncr.logs}건` : ''}${
+            L.ncr.photos ? ` · 사진 ${L.ncr.photos}장` : ''
+          }${(n.concDocs || []).length ? ` · 특채 문서 ${n.concDocs.length}건` : ''}</span>`,
           L.ncr.others > 0,
           `다른 불량 ${L.ncr.others}건도 이 NCR에 연결되어 있어 삭제할 수 없습니다. 연결만 해제됩니다.`,
         ),

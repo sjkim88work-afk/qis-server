@@ -112,7 +112,9 @@ function renderDash() {
     ) +
     li(replyLate.filter(own), (x) => {
       const nu = nudgeLogs(x.n);
-      return `<li><span class="bg bad">회신지연</span> <a class="lk" onclick="editNcr('${x.n.id}')">${esc(x.n.no)}</a> ${esc(supName(x.n.supplierId))} — 기한 ${x.n.dueDate} (D+${diffDays(x.n.dueDate, today())})${nu.length ? ` · <span class="muted">독촉 ${nu.length}회, 최근 ${esc(nu[nu.length - 1].date)}</span>` : ''} <button class="b s noprint" onclick="ncrNudge('${x.n.id}')">독촉</button> <button class="b s noprint" onclick="ncrQuickReply('${x.n.id}')">회신 접수(오늘)</button></li>`;
+      return `<li><span class="bg bad">회신지연</span> <a class="lk" onclick="editNcr('${x.n.id}')">${esc(x.n.no)}</a> ${esc(supName(x.n.supplierId))} — 기한 ${x.n.dueDate} (D+${diffDays(x.n.dueDate, today())})${
+        nu.length ? ` · <span class="muted">독촉 ${nu.length}회, 최근 ${esc(nu[nu.length - 1].date)}</span>` : ''
+      } <button class="b s noprint" onclick="ncrNudge('${x.n.id}')">독촉</button> <button class="b s noprint" onclick="ncrQuickReply('${x.n.id}')">회신 접수(오늘)</button></li>`;
     }) +
     li(
       verLate.filter(own),
@@ -177,7 +179,11 @@ function renderDash() {
     li(
       ppmScarRecs(),
       (r) =>
-        `<li><span class="bg warn">PPM 초과 · SCAR 권고</span> <b>${esc(r.s.name)}</b> — ${r.rows.map((x) => `${x.m.slice(5)}월 ${ppmTxt(x.ppm)}`).join(' · ')} PPM (기준 ${num(db.settings.ppmScar).toLocaleString()}) <button class="b s" onclick="ppmScarIssue('${r.s.id}')">NCR(8D) 발행</button></li>`,
+        `<li><span class="bg warn">PPM 초과 · SCAR 권고</span> <b>${esc(r.s.name)}</b> — ${r.rows
+          .map((x) => `${x.m.slice(5)}월 ${ppmTxt(x.ppm)}`)
+          .join(' · ')} PPM (기준 ${num(
+          db.settings.ppmScar,
+        ).toLocaleString()}) <button class="b s" onclick="ppmScarIssue('${r.s.id}')">NCR(8D) 발행</button></li>`,
     ) +
     li(
       recs.filter(ownD),
@@ -185,7 +191,9 @@ function renderDash() {
         `<li><span class="bg warn">NCR 권고</span> <a class="lk" onclick="editDefect('${d.id}')">${esc(defLabel(d))}</a> ${esc(supName(d.supplierId))} — ${esc(ncrReasons(d).join(', '))} <button class="b s" onclick="ncrFromDefect('${d.id}')">NCR 발행</button></li>`,
     ) +
     (db.defects.filter((d) => d.resp === '미정' && costTotal(d) > 0 && !d.closed).length
-      ? `<li><span class="bg warn">정산 대기</span> 귀책 미정 불량의 실패비용 ${db.defects.filter((d) => d.resp === '미정' && costTotal(d) > 0 && !d.closed).length}건 (${won(
+      ? `<li><span class="bg warn">정산 대기</span> 귀책 미정 불량의 실패비용 ${
+          db.defects.filter((d) => d.resp === '미정' && costTotal(d) > 0 && !d.closed).length
+        }건 (${won(
           sum(
             db.defects.filter((d) => d.resp === '미정' && costTotal(d) > 0 && !d.closed),
             costTotal,
@@ -205,7 +213,11 @@ function renderDash() {
     ) +
     li(oldOpen.filter(ownD), (d) => {
       const l = lastLog(d);
-      return `<li><span class="bg mut">7일+ 미완료</span> <a class="lk" onclick="editDefect('${d.id}')">${esc(defLabel(d))}</a> ${esc(supName(d.supplierId))} <a class="lk muted" style="font-size:12px" onclick="openLog('${d.id}')">${l ? `· 최근 기록 ${esc(l.date)} (${diffDays(l.date, today())}일 전): ${esc(l.text.slice(0, 30))}${l.text.length > 30 ? '…' : ''}` : '· 진행 기록 없음 — 기록 추가'}</a></li>`;
+      return `<li><span class="bg mut">7일+ 미완료</span> <a class="lk" onclick="editDefect('${d.id}')">${esc(defLabel(d))}</a> ${esc(supName(d.supplierId))} <a class="lk muted" style="font-size:12px" onclick="openLog('${d.id}')">${
+        l
+          ? `· 최근 기록 ${esc(l.date)} (${diffDays(l.date, today())}일 전): ${esc(l.text.slice(0, 30))}${l.text.length > 30 ? '…' : ''}`
+          : '· 진행 기록 없음 — 기록 추가'
+      }</a></li>`;
     });
   if (inFrame)
     banner =
@@ -214,19 +226,34 @@ function renderDash() {
   return `${banner}
   <div class="row noprint" style="margin-bottom:12px"><b>기준월</b><input type="month" value="${m}" onchange="state.dashMonth=this.value||today().slice(0,7);render()"><span class="sp" style="flex:1"></span><button class="b" onclick="editDefect()">+ 불량 등록</button><button class="b" onclick="weekReport()" title="오늘까지 최근 7일 — 신규 불량 · NCR · RCA · 지연 · 다음 주 기한">주간 보고 (최근 7일)</button><button class="b p" onclick="dashReport()">월간 보고 인쇄 / PDF</button></div>
   <div class="kpis">
-    <div class="kpi ${kGo('defM')}"><div class="l">${m} 불량 건수</div><div class="v">${ds.length.toLocaleString()}</div><div class="s">${delta(ds.length, pds.length)}</div></div>
-    <div class="kpi ${kGo('defM')}"><div class="l">불량 수량</div><div class="v">${qty.toLocaleString()}</div><div class="s">${delta(qty, pqty)}</div></div>
-    <div class="kpi ${kGo('copq')}"><div class="l">실패비용 (COPQ)</div><div class="v">${fmtShort(cost)}</div><div class="s">회수 ${won(rec)}원 (${cost ? Math.round((rec / cost) * 100) : 0}%)</div></div>
-    <div class="kpi ${open.length ? 'warn' : 'ok'} ${kGo('ncrOpen')}"><div class="l">미종결 NCR</div><div class="v">${open.length}</div><div class="s">전체 ${db.ncrs.length}건</div></div>
-    <div class="kpi ${replyLate.length ? 'bad' : 'ok'} ${kGo('replyLate')}"><div class="l">대책서 회신 지연</div><div class="v">${replyLate.length}</div><div class="s">회신 기한 (8D ${num(db.settings.reply8D) || 7}일 · 간이 ${num(db.settings.replySimple) || 5}일) 기준</div></div>
-    <div class="kpi ${verLate.length ? 'bad' : 'ok'} ${kGo('verifyLate')}"><div class="l">유효성 검증 지연</div><div class="v">${verLate.length}</div><div class="s">승인 후 D+${db.settings.verifyDays} 기준</div></div>
-    <div class="kpi ${farLate.length ? 'bad' : invs.length ? 'warn' : 'ok'} ${kGo('inv')}"><div class="l">귀책 조사 중</div><div class="v">${invs.length}</div><div class="s">FAR 지연 ${farLate.length} · 사내 대책 ${icas.length}</div></div>
-    <div class="kpi ${recs.length ? 'warn' : 'ok'} ${kGo('ncrRec')}"><div class="l">NCR 미발행 (A·B등급)</div><div class="v">${recs.length}</div><div class="s">최근 90일</div></div>
-    <div class="kpi ${gA ? 'bad' : 'ok'} ${kGo('sevA')}"><div class="l">${m} 심각도 A</div><div class="v">${gA}</div><div class="s">B ${gB} · C ${ds.length - gA - gB}</div></div>
+    <div class="kpi ${kGo('defM')}"><div class="l">${m} 불량 건수</div>
+      <div class="v">${ds.length.toLocaleString()}</div><div class="s">${delta(ds.length, pds.length)}</div></div>
+    <div class="kpi ${kGo('defM')}"><div class="l">불량 수량</div>
+      <div class="v">${qty.toLocaleString()}</div><div class="s">${delta(qty, pqty)}</div></div>
+    <div class="kpi ${kGo('copq')}"><div class="l">실패비용 (COPQ)</div><div class="v">${fmtShort(cost)}</div><div class="s">회수 ${won(rec)}원 (${
+      cost ? Math.round((rec / cost) * 100) : 0
+    }%)</div></div>
+    <div class="kpi ${open.length ? 'warn' : 'ok'} ${kGo('ncrOpen')}"><div class="l">미종결 NCR</div>
+      <div class="v">${open.length}</div><div class="s">전체 ${db.ncrs.length}건</div></div>
+    <div class="kpi ${replyLate.length ? 'bad' : 'ok'} ${kGo('replyLate')}"><div class="l">대책서 회신 지연</div><div class="v">${replyLate.length}</div>
+      <div class="s">회신 기한 (8D ${num(db.settings.reply8D) || 7}일 · 간이 ${num(db.settings.replySimple) || 5}일) 기준</div></div>
+    <div class="kpi ${verLate.length ? 'bad' : 'ok'} ${kGo('verifyLate')}"><div class="l">유효성 검증 지연</div>
+      <div class="v">${verLate.length}</div><div class="s">승인 후 D+${db.settings.verifyDays} 기준</div></div>
+    <div class="kpi ${
+      farLate.length ? 'bad' : invs.length ? 'warn' : 'ok'
+    } ${kGo('inv')}"><div class="l">귀책 조사 중</div><div class="v">${invs.length}</div>
+      <div class="s">FAR 지연 ${farLate.length} · 사내 대책 ${icas.length}</div></div>
+    <div class="kpi ${recs.length ? 'warn' : 'ok'} ${kGo('ncrRec')}"><div class="l">NCR 미발행 (A·B등급)</div>
+      <div class="v">${recs.length}</div><div class="s">최근 90일</div></div>
+    <div class="kpi ${gA ? 'bad' : 'ok'} ${kGo('sevA')}"><div class="l">${m} 심각도 A</div>
+      <div class="v">${gA}</div><div class="s">B ${gB} · C ${ds.length - gA - gB}</div></div>
     ${(() => {
       const P = progCases(),
         L = P.filter((c) => c.late.length);
-      return `<div class="kpi ${L.length ? 'bad' : 'ok'} ${kGo('late')}"><div class="l">지연 중인 건 (오늘)</div><div class="v">${L.length}</div><div class="s">RCA ${L.filter((c) => c.kind === 'rca').length} · NCR ${L.filter((c) => c.kind === 'ncr').length} · 불량 ${L.filter((c) => c.kind === 'defect').length} — 미종결 + 기한 경과</div></div>`;
+      return `<div class="kpi ${L.length ? 'bad' : 'ok'} ${kGo('late')}"><div class="l">지연 중인 건 (오늘)</div>
+        <div class="v">${L.length}</div><div class="s">RCA ${
+          L.filter((c) => c.kind === 'rca').length
+        } · NCR ${L.filter((c) => c.kind === 'ncr').length} · 불량 ${L.filter((c) => c.kind === 'defect').length} — 미종결 + 기한 경과</div></div>`;
     })()}
   </div>
   ${progCard()}
@@ -235,7 +262,19 @@ function renderDash() {
     const it = (dashItems = actions.match(/<li[\s\S]*?<\/li>/g) || []),
       all = !!state.dashAll,
       k = all ? it.length : 6;
-    return `<div class="card"><h3>오늘 챙길 일 ${it.length ? `<span class="bg mut">${it.length}</span>` : ''}<span class="sp"></span>${it.length > 6 ? `<button class="b s noprint" onclick="state.dashAll=!state.dashAll;render()">${all ? '6건만 보기' : `전체 ${it.length}건 보기`}</button>` : ''}</h3>${it.length ? `<ul class="act">${it.slice(0, k).join('')}</ul>${it.length > k ? `<div class="muted" style="font-size:12px">외 ${it.length - k}건 — <a class="lk" onclick="state.dashAll=true;render()">모두 펼치기</a></div>` : ''}` : '<div class="muted">지연·임박 항목이 없습니다.</div>'}</div>`;
+    return `<div class="card"><h3>오늘 챙길 일 ${it.length ? `<span class="bg mut">${it.length}</span>` : ''}<span class="sp"></span>${
+      it.length > 6
+        ? `<button class="b s noprint" onclick="state.dashAll=!state.dashAll;render()">${all ? '6건만 보기' : `전체 ${it.length}건 보기`}</button>`
+        : ''
+    }</h3>${
+      it.length
+        ? `<ul class="act">${it.slice(0, k).join('')}</ul>${
+            it.length > k
+              ? `<div class="muted" style="font-size:12px">외 ${it.length - k}건 — <a class="lk" onclick="state.dashAll=true;render()">모두 펼치기</a></div>`
+              : ''
+          }`
+        : '<div class="muted">지연·임박 항목이 없습니다.</div>'
+    }</div>`;
   })()}
   <div class="grid g2">
     <div class="card"><h3>월별 불량 건수 (최근 12개월)</h3>${barChart(
@@ -276,7 +315,8 @@ function renderDash() {
                 cm[c] = (cm[c] || 0) + 1;
               }
             });
-            return `<div class="card"><h3>${m} 발견 품목(완성품)별 건수</h3>${pareto(fm, '건')}</div><div class="card"><h3>${m} 완성품 불량의 원인 부품</h3>${pareto(cm, '건')}</div>`;
+            return `<div class="card"><h3>${m} 발견 품목(완성품)별 건수</h3>${pareto(fm, '건')}</div>
+              <div class="card"><h3>${m} 완성품 불량의 원인 부품</h3>${pareto(cm, '건')}</div>`;
           })()
         : ''
     }

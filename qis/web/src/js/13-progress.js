@@ -159,7 +159,9 @@ function lateInfo(kind, o) {
 }
 const lateBadge = (L) =>
   L && L.length
-    ? `<span class="bg bad" title="${esc(L.map((x) => `${x.l} 기한 ${x.d} (D+${x.n})`).join('\n'))}">지연 D+${L[0].n}${L.length > 1 ? ` · ${L.length}건` : ''}</span>`
+    ? `<span class="bg bad" title="${esc(
+        L.map((x) => `${x.l} 기한 ${x.d} (D+${x.n})`).join('\n'),
+      )}">지연 D+${L[0].n}${L.length > 1 ? ` · ${L.length}건` : ''}</span>`
     : '';
 const lateTxt = (L) => L.map((x) => `${x.l} ${x.d} (D+${x.n})`).join(' · ');
 const openCase = (kind, id) => (kind === 'ncr' ? editNcr(id) : kind === 'rca' ? czOpenCase(id) : openLog(id));
@@ -189,32 +191,60 @@ function renderProg() {
     od = all.filter((c) => c.late.length),
     soon = all.filter((c) => c.next && c.next.nextDate >= today() && diffDays(today(), c.next.nextDate) <= 3);
   return `<div class="kpis">
-    <div class="kpi"><div class="l">진행 중 RCA</div><div class="v">${all.filter((c) => c.kind === 'rca').length}</div><div class="s">사내 원인분석 · 내부 8D</div></div>
+    <div class="kpi"><div class="l">진행 중 RCA</div><div class="v">${
+      all.filter((c) => c.kind === 'rca').length
+    }</div><div class="s">사내 원인분석 · 내부 8D</div></div>
     <div class="kpi"><div class="l">진행 중 NCR</div><div class="v">${all.filter((c) => c.kind === 'ncr').length}</div><div class="s">미종결</div></div>
-    <div class="kpi"><div class="l">진행 중 불량 (NCR 없음)</div><div class="v">${all.filter((c) => c.kind === 'defect').length}</div><div class="s">처리 대기 · 처리 중 · NCR 발행 필요</div></div>
-    <div class="kpi ${all.filter((c) => c.stale >= 14).length ? 'warn' : 'ok'}"><div class="l">14일 이상 정체</div><div class="v">${all.filter((c) => c.stale >= 14).length}</div><div class="s">마지막 기록·진행 기준</div></div>
-    <div class="kpi go ${od.length ? 'bad' : 'ok'}" onclick="state.pf.late=state.pf.late?'':'1';render()" title="누르면 지연 건만 보기"><div class="l">지연 (기한 초과)</div><div class="v">${od.length}</div><div class="s">회신·검증·FAR·조치·목표 종결일 · 3일 내 ${soon.length}</div></div>
+    <div class="kpi"><div class="l">진행 중 불량 (NCR 없음)</div><div class="v">${
+      all.filter((c) => c.kind === 'defect').length
+    }</div><div class="s">처리 대기 · 처리 중 · NCR 발행 필요</div></div>
+    <div class="kpi ${
+      all.filter((c) => c.stale >= 14).length ? 'warn' : 'ok'
+    }"><div class="l">14일 이상 정체</div><div class="v">${all.filter((c) => c.stale >= 14).length}</div><div class="s">마지막 기록·진행 기준</div></div>
+    <div class="kpi go ${od.length ? 'bad' : 'ok'}" onclick="state.pf.late=state.pf.late?'':'1';render()" title="누르면 지연 건만 보기"><div class="l">지연 (기한 초과)</div>
+      <div class="v">${od.length}</div><div class="s">회신·검증·FAR·조치·목표 종결일 · 3일 내 ${soon.length}</div></div>
   </div>
   <div class="card"><h3>진행 중인 건 <span class="bg mut">${C.length}</span> <span class="muted" style="font-weight:normal;font-size:12px">RCA로 관리 중인 불량 · NCR은 RCA 한 줄로 표시</span></h3>
     <div class="row noprint" style="margin-bottom:8px">
-      <select onchange="state.pf.kind=this.value;render()"><option value="">RCA + NCR + 불량</option><option value="rca" ${f.kind === 'rca' ? 'selected' : ''}>RCA만</option><option value="ncr" ${f.kind === 'ncr' ? 'selected' : ''}>NCR만</option><option value="defect" ${f.kind === 'defect' ? 'selected' : ''}>불량만 (NCR 없음)</option></select>
+      <select onchange="state.pf.kind=this.value;render()"><option value="">RCA + NCR + 불량</option>
+        <option value="rca" ${f.kind === 'rca' ? 'selected' : ''}>RCA만</option>
+        <option value="ncr" ${f.kind === 'ncr' ? 'selected' : ''}>NCR만</option>
+          <option value="defect" ${f.kind === 'defect' ? 'selected' : ''}>불량만 (NCR 없음)</option></select>
       <select onchange="state.pf.sup=this.value;render()">${supOpts(f.sup, '전체 협력사')}</select>
-      <select onchange="state.pf.owner=this.value;render()"><option value="">전체 담당</option>${owners.map((o) => `<option ${o === f.owner ? 'selected' : ''}>${esc(o)}</option>`).join('')}</select>
-      <select onchange="state.pf.late=this.value;render()"><option value="">지연 전체</option><option value="1" ${f.late ? 'selected' : ''}>지연만</option></select>
-      <select onchange="state.pf.stale=this.value;render()"><option value="">정체 기간 전체</option>${[7, 14, 30].map((d) => `<option value="${d}" ${+f.stale === d ? 'selected' : ''}>${d}일 이상 정체</option>`).join('')}</select>
-      <span style="flex:1"></span><span class="muted">정렬</span><select onchange="state.pf.sort=this.value;render()"><option value="stale" ${f.sort === 'stale' ? 'selected' : ''}>오래 정체된 순</option><option value="next" ${f.sort === 'next' ? 'selected' : ''}>기한 순</option><option value="grade" ${f.sort === 'grade' ? 'selected' : ''}>심각도 순</option></select></div>
-    <div class="tw"><table><thead><tr><th>구분</th><th>건</th><th>협력사</th><th>심각도</th><th>상태</th><th>마지막 진행</th><th>최근 기록</th><th>다음 기한</th><th>담당</th></tr></thead><tbody>
+      <select onchange="state.pf.owner=this.value;render()"><option value="">전체 담당</option>${owners
+        .map((o) => `<option ${o === f.owner ? 'selected' : ''}>${esc(o)}</option>`)
+        .join('')}</select>
+      <select onchange="state.pf.late=this.value;render()"><option value="">지연 전체</option>
+        <option value="1" ${f.late ? 'selected' : ''}>지연만</option></select>
+      <select onchange="state.pf.stale=this.value;render()"><option value="">정체 기간 전체</option>${[7, 14, 30]
+        .map((d) => `<option value="${d}" ${+f.stale === d ? 'selected' : ''}>${d}일 이상 정체</option>`)
+        .join('')}</select>
+      <span style="flex:1"></span><span class="muted">정렬</span><select onchange="state.pf.sort=this.value;render()"><option value="stale" ${f.sort === 'stale' ? 'selected' : ''}>오래 정체된 순</option>
+        <option value="next" ${f.sort === 'next' ? 'selected' : ''}>기한 순</option>
+          <option value="grade" ${f.sort === 'grade' ? 'selected' : ''}>심각도 순</option></select></div>
+    <div class="tw"><table><thead><tr><th>구분</th><th>건</th><th>협력사</th><th>심각도</th>
+      <th>상태</th><th>마지막 진행</th><th>최근 기록</th><th>다음 기한</th><th>담당</th></tr></thead><tbody>
     ${
       C.map(
         (
           c,
         ) => `<tr class="${c.late.length ? 'late' : ''}" style="cursor:pointer" onclick="if(!event.target.closest('a,input,button'))openCase('${c.kind}','${c.id}')">
-      <td><span class="bg ${c.kind === 'ncr' ? 'inf' : c.kind === 'rca' ? 'warn' : 'mut'}">${c.kind === 'ncr' ? 'NCR' : c.kind === 'rca' ? 'RCA' : '불량'}</span></td>
+      <td><span class="bg ${c.kind === 'ncr' ? 'inf' : c.kind === 'rca' ? 'warn' : 'mut'}">${
+        c.kind === 'ncr' ? 'NCR' : c.kind === 'rca' ? 'RCA' : '불량'
+      }</span></td>
       <td><a class="lk" onclick="openCase('${c.kind}','${c.id}')"><b>${esc(c.title)}</b></a><br><span class="muted" style="font-size:11.5px">${esc(c.sub)}</span></td>
       <td>${esc(c.sup)}</td><td>${c.grade ? `<span class="bg ${SEV_CLS[c.grade]}">${c.grade}</span>` : ''}</td>
-      <td>${c.kind === 'rca' ? `<span class="bg inf">${esc(c.status)}</span>` : stB(c.status)}${c.kind === 'ncr' ? ' ' + farBadge(c.obj) : ''} ${lateBadge(c.late)}</td>
+      <td>${c.kind === 'rca' ? `<span class="bg inf">${esc(c.status)}</span>` : stB(c.status)}${
+        c.kind === 'ncr' ? ' ' + farBadge(c.obj) : ''
+      } ${lateBadge(c.late)}</td>
       <td style="white-space:nowrap">${c.last || '-'}<br>${staleBadge(c.stale)}</td>
-      <td style="max-width:300px">${c.kind === 'rca' ? `<span class="muted" style="font-size:11.5px">RCA · ${esc(c.sub)}</span>` : c.lastM ? `<span class="muted" style="font-size:11.5px">${esc(c.lastM.date)} ${esc(c.lastM.kind)}</span><br>${esc(c.lastM.text.slice(0, 70))}${c.lastM.text.length > 70 ? '…' : ''}` : '<span class="muted">직접 쓴 기록 없음</span>'}</td>
+      <td style="max-width:300px">${
+        c.kind === 'rca'
+          ? `<span class="muted" style="font-size:11.5px">RCA · ${esc(c.sub)}</span>`
+          : c.lastM
+            ? `<span class="muted" style="font-size:11.5px">${esc(c.lastM.date)} ${esc(c.lastM.kind)}</span><br>${esc(c.lastM.text.slice(0, 70))}${c.lastM.text.length > 70 ? '…' : ''}`
+            : '<span class="muted">직접 쓴 기록 없음</span>'
+      }</td>
       <td>${c.next ? `${esc(c.next.next)}<br>${nxBadge(c.next.nextDate)}` : '<span class="muted">-</span>'}</td><td>${esc(c.owner)}</td></tr>`,
       ).join('') || '<tr><td colspan="9" class="muted" style="text-align:center;padding:24px">조건에 맞는 진행 중인 건이 없습니다.</td></tr>'
     }
@@ -231,7 +261,24 @@ function progCard() {
   if (!C.length) return '';
   const line = (c) =>
     `<li>${nxBadge(c.next.nextDate)} <a class="lk" onclick="openCase('${c.kind}','${c.id}')">${esc(c.title)}</a> <span class="muted" style="font-size:12px">${esc(c.next.next)} · ${esc(c.sup)}</span></li>`;
-  return `<div class="card"><h3>진행 현황 <span class="bg inf">RCA ${C.filter((c) => c.kind === 'rca').length} · NCR ${C.filter((c) => c.kind === 'ncr').length} · 불량 ${C.filter((c) => c.kind === 'defect').length}</span>${od.length ? ` <span class="bg bad">기한 초과 ${od.length}</span>` : ''}${C.filter((c) => c.stale >= 14).length ? ` <span class="bg warn">14일+ 정체 ${C.filter((c) => c.stale >= 14).length}</span>` : ''}<span class="sp"></span><button class="b s" onclick="go('prog')">전체 보기</button></h3>
-    <div class="grid g2" style="gap:16px"><div><div class="muted" style="font-size:12px;margin-bottom:4px">기한 임박 · 초과 (3일 이내)</div>${due.length ? `<ul class="todo">${due.slice(0, 6).map(line).join('')}</ul>` : '<div class="muted" style="font-size:12px">임박한 기한 없음</div>'}</div>
-    <div><div class="muted" style="font-size:12px;margin-bottom:4px">오래 정체된 건</div>${st.length ? `<ul class="todo">${st.map((c) => `<li>${staleBadge(c.stale)} <a class="lk" onclick="openCase('${c.kind}','${c.id}')">${esc(c.title)}</a> <span class="muted" style="font-size:12px">${esc(c.sup)} · ${c.lastM ? esc(c.lastM.text.slice(0, 30)) + (c.lastM.text.length > 30 ? '…' : '') : '직접 기록 없음'}</span></li>`).join('')}</ul>` : '<div class="muted" style="font-size:12px">14일 이상 정체된 건 없음</div>'}</div></div></div>`;
+  return `<div class="card"><h3>진행 현황 <span class="bg inf">RCA ${C.filter((c) => c.kind === 'rca').length} · NCR ${
+    C.filter((c) => c.kind === 'ncr').length
+  } · 불량 ${C.filter((c) => c.kind === 'defect').length}</span>${od.length ? ` <span class="bg bad">기한 초과 ${od.length}</span>` : ''}${
+    C.filter((c) => c.stale >= 14).length ? ` <span class="bg warn">14일+ 정체 ${C.filter((c) => c.stale >= 14).length}</span>` : ''
+  }<span class="sp"></span><button class="b s" onclick="go('prog')">전체 보기</button></h3>
+    <div class="grid g2" style="gap:16px"><div><div class="muted" style="font-size:12px;margin-bottom:4px">기한 임박 · 초과 (3일 이내)</div>${
+      due.length ? `<ul class="todo">${due.slice(0, 6).map(line).join('')}</ul>` : '<div class="muted" style="font-size:12px">임박한 기한 없음</div>'
+    }</div>
+    <div><div class="muted" style="font-size:12px;margin-bottom:4px">오래 정체된 건</div>${
+      st.length
+        ? `<ul class="todo">${st
+            .map(
+              (c) =>
+                `<li>${staleBadge(c.stale)} <a class="lk" onclick="openCase('${c.kind}','${c.id}')">${esc(c.title)}</a> <span class="muted" style="font-size:12px">${esc(c.sup)} · ${
+                  c.lastM ? esc(c.lastM.text.slice(0, 30)) + (c.lastM.text.length > 30 ? '…' : '') : '직접 기록 없음'
+                }</span></li>`,
+            )
+            .join('')}</ul>`
+        : '<div class="muted" style="font-size:12px">14일 이상 정체된 건 없음</div>'
+    }</div></div></div>`;
 }

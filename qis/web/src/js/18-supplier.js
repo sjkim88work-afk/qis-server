@@ -57,8 +57,59 @@ function renderSup() {
     <span style="flex:1"></span><button class="b" onclick="exportSupCSV()">엑셀 내보내기</button></div>
     <div class="help" style="margin-top:8px">불량건수·A등급·PPM은 협력사 귀책·공동 귀책분만 집계합니다 (사내·고객 귀책과 귀책 조사 중·원인 불명 건은 제외). PPM = 불량수량 ÷ 기간 입고수량 × 1,000,000. 등급: A ≤ ${S.gradeA} / B ≤ ${S.gradeB} / C ≤ ${S.gradeC} / D 초과 (설정에서 변경). 입고수량이 없으면 PPM·등급은 '-'로 표시됩니다.</div></div>
   <details class="card" ${state.sqOpen !== false ? 'open' : ''} ontoggle="state.sqOpen=this.open"><summary style="cursor:pointer;font-weight:bold;font-size:14px">협력사별 품질 현황 <span class="muted" style="font-weight:normal;font-size:12px">— ${st.length}개사 · 협력사 이름을 누르면 상세 · 제목 줄을 누르면 정렬</span></summary>
-  <div class="tw" style="margin-top:10px"><table><thead><tr>${sth('supq', 'name', '협력사')}${sth('supq', 'items', '주요 품목')}${sth('supq', 'cnt', '불량건수', 'n')}${sth('supq', 'nA', 'A등급', 'n')}${sth('supq', 'qty', '불량수량', 'n')}${sth('supq', 'rcv', '입고수량', 'n')}${sth('supq', 'ppm', 'PPM', 'n')}${sth('supq', 'grade', '등급')}${sth('supq', 'ncr', 'NCR', 'n')}${sth('supq', 'open', '미종결', 'n')}${sth('supq', 'late', '회신지연', 'n')}${sth('supq', 'avgReply', '평균 회신(일)', 'n')}${sth('supq', 'avgEval', '대책서 평균', 'n', '기간 내 NCR의 최종 대책서 평가 평균')}${sth('supq', 'firstPass', '1차 승인율', 'n', '1차 제출에서 바로 승인된 비율')}${sth('supq', 'escN', '에스컬레이션', 'n', '보완요청·반려·검증 무효가 기준 횟수 이상인 NCR 수')}${sth('supq', 'pen', '감점', 'n', '기간 내 NCR의 협력사 평가 감점 합계')}${sth('supq', 'cost', 'COPQ(원)', 'n')}${sth('supq', 'rec', '회수(원)', 'n')}${sth('supq', 'os', '미회수(원)', 'n', '현재 기준 미회수 잔액')}</tr></thead><tbody>
-  ${st.map((x) => `<tr><td><a class="lk" onclick="supDetail('${x.s.id}')"><b>${esc(x.s.name)}</b></a> <span class="muted">${esc(x.s.code)}</span></td><td>${esc(x.s.items)}</td><td class="n">${x.cnt}</td><td class="n">${x.nA ? `<span class="bg bad">${x.nA}</span>` : ''}</td><td class="n">${x.qty.toLocaleString()}</td><td class="n">${x.rcv ? x.rcv.toLocaleString() : '-'}</td><td class="n">${x.ppm == null ? '-' : Math.round(x.ppm).toLocaleString()}</td><td><span class="bg ${gc[x.grade]}">${x.grade}</span></td><td class="n">${x.ncr}</td><td class="n">${x.open || ''}</td><td class="n">${x.late ? `<span class="bg bad">${x.late}</span>` : ''}</td><td class="n">${x.avgReply == null ? '-' : x.avgReply.toFixed(1)}</td><td class="n">${x.avgEval == null ? '-' : `<span class="bg ${x.avgEval >= db.settings.evalPass ? 'ok' : x.avgEval >= db.settings.evalCond ? 'warn' : 'bad'}">${Math.round(x.avgEval)}점</span>`}</td><td class="n">${x.firstPass == null ? '-' : Math.round(x.firstPass * 100) + '%'}</td><td class="n">${x.escN ? `<span class="bg bad">${x.escN}</span>` : ''}</td><td class="n">${x.pen ? `<span class="bg warn">${x.pen}</span>` : ''}</td><td class="n">${won(x.cost)}</td><td class="n">${won(x.rec)}</td><td class="n">${x.os ? `<span class="bg bad">${won(x.os)}</span>` : ''}</td></tr>`).join('') || '<tr><td colspan="19" class="muted" style="text-align:center;padding:30px">협력사를 먼저 등록하세요 (기준정보 탭).</td></tr>'}
+  <div class="tw" style="margin-top:10px"><table><thead>
+    <tr>${sth('supq', 'name', '협력사')}${sth('supq', 'items', '주요 품목')}${sth('supq', 'cnt', '불량건수', 'n')}${sth('supq', 'nA', 'A등급', 'n')}${sth('supq', 'qty', '불량수량', 'n')}${sth('supq', 'rcv', '입고수량', 'n')}${sth('supq', 'ppm', 'PPM', 'n')}${sth('supq', 'grade', '등급')}${sth('supq', 'ncr', 'NCR', 'n')}${sth('supq', 'open', '미종결', 'n')}${sth('supq', 'late', '회신지연', 'n')}${sth(
+      'supq',
+      'avgReply',
+      '평균 회신(일)',
+      'n',
+    )}${sth('supq', 'avgEval', '대책서 평균', 'n', '기간 내 NCR의 최종 대책서 평가 평균')}${sth(
+      'supq',
+      'firstPass',
+      '1차 승인율',
+      'n',
+      '1차 제출에서 바로 승인된 비율',
+    )}${sth('supq', 'escN', '에스컬레이션', 'n', '보완요청·반려·검증 무효가 기준 횟수 이상인 NCR 수')}${sth(
+      'supq',
+      'pen',
+      '감점',
+      'n',
+      '기간 내 NCR의 협력사 평가 감점 합계',
+    )}${sth('supq', 'cost', 'COPQ(원)', 'n')}${sth('supq', 'rec', '회수(원)', 'n')}${sth(
+      'supq',
+      'os',
+      '미회수(원)',
+      'n',
+      '현재 기준 미회수 잔액',
+    )}</tr></thead><tbody>
+  ${
+    st
+      .map(
+        (x) =>
+          `<tr><td><a class="lk" onclick="supDetail('${x.s.id}')"><b>${esc(x.s.name)}</b></a> <span class="muted">${esc(x.s.code)}</span></td>
+            <td>${esc(x.s.items)}</td><td class="n">${x.cnt}</td><td class="n">${
+              x.nA ? `<span class="bg bad">${x.nA}</span>` : ''
+            }</td><td class="n">${x.qty.toLocaleString()}</td><td class="n">${x.rcv ? x.rcv.toLocaleString() : '-'}</td><td class="n">${
+              x.ppm == null ? '-' : Math.round(x.ppm).toLocaleString()
+            }</td><td><span class="bg ${gc[x.grade]}">${x.grade}</span></td>
+            <td class="n">${x.ncr}</td><td class="n">${x.open || ''}</td><td class="n">${
+              x.late ? `<span class="bg bad">${x.late}</span>` : ''
+            }</td><td class="n">${x.avgReply == null ? '-' : x.avgReply.toFixed(1)}</td><td class="n">${
+              x.avgEval == null
+                ? '-'
+                : `<span class="bg ${
+                    x.avgEval >= db.settings.evalPass ? 'ok' : x.avgEval >= db.settings.evalCond ? 'warn' : 'bad'
+                  }">${Math.round(x.avgEval)}점</span>`
+            }</td><td class="n">${x.firstPass == null ? '-' : Math.round(x.firstPass * 100) + '%'}</td><td class="n">${
+              x.escN ? `<span class="bg bad">${x.escN}</span>` : ''
+            }</td><td class="n">${
+              x.pen ? `<span class="bg warn">${x.pen}</span>` : ''
+            }</td><td class="n">${won(x.cost)}</td><td class="n">${won(x.rec)}</td><td class="n">${
+              x.os ? `<span class="bg bad">${won(x.os)}</span>` : ''
+            }</td></tr>`,
+      )
+      .join('') || '<tr><td colspan="19" class="muted" style="text-align:center;padding:30px">협력사를 먼저 등록하세요 (기준정보 탭).</td></tr>'
+  }
   </tbody></table></div></details>
   ${rcvOverview()}
   ${rcvLinesCard()}`;
@@ -81,16 +132,27 @@ function rcvOverview() {
       ...Object.fromEntries(ms.map((m, i) => ['m' + (i + 1), (x) => x.row[i] || ''])),
     });
   return `<details class="card" ${state.rcvOpen ? 'open' : ''} ontoggle="state.rcvOpen=this.open"><summary style="cursor:pointer;font-weight:bold;font-size:14px">월별 입고수량 현황 <span class="muted" style="font-weight:normal;font-size:12px">— 가져오기 결과 확인용 · 칸을 누르면 그 달 직접 수정</span></summary>
-  <div class="row" style="margin:10px 0"><b>연도</b><select onchange="state.rcvYear=this.value;state.rcvOpen=true;render()">${yrs.map((x) => `<option ${x === y ? 'selected' : ''}>${x}</option>`).join('')}</select></div>
-  <div class="tw"><table><thead><tr>${sth('rcvq', 'name', '협력사')}${ms.map((m, i) => sth('rcvq', 'm' + (i + 1), `${+m.slice(5)}월`, 'n')).join('')}${sth('rcvq', 'tot', '합계', 'n')}</tr></thead><tbody>
+  <div class="row" style="margin:10px 0"><b>연도</b><select onchange="state.rcvYear=this.value;state.rcvOpen=true;render()">${yrs
+    .map((x) => `<option ${x === y ? 'selected' : ''}>${x}</option>`)
+    .join('')}</select></div>
+  <div class="tw"><table><thead><tr>${sth('rcvq', 'name', '협력사')}${ms
+    .map((m, i) => sth('rcvq', 'm' + (i + 1), `${+m.slice(5)}월`, 'n'))
+    .join('')}${sth('rcvq', 'tot', '합계', 'n')}</tr></thead><tbody>
   ${
     rows
       .map(({ s, row }) => {
-        return `<tr><td style="white-space:nowrap">${esc(s.name)}</td>${row.map((q, i) => `<td class="n"><a class="lk" style="color:${q ? 'inherit' : '#c4cad4'}" onclick="editReceipts('${ms[i]}')">${q ? q.toLocaleString() : '-'}</a></td>`).join('')}<td class="n"><b>${row.reduce((a, b) => a + b, 0).toLocaleString()}</b></td></tr>`;
+        return `<tr><td style="white-space:nowrap">${esc(s.name)}</td>${row
+          .map(
+            (q, i) =>
+              `<td class="n"><a class="lk" style="color:${q ? 'inherit' : '#c4cad4'}" onclick="editReceipts('${ms[i]}')">${q ? q.toLocaleString() : '-'}</a></td>`,
+          )
+          .join('')}<td class="n"><b>${row.reduce((a, b) => a + b, 0).toLocaleString()}</b></td></tr>`;
       })
       .join('') || '<tr><td class="muted" colspan="14">협력사가 없습니다.</td></tr>'
   }
-  <tr style="background:#f7f8fa;font-weight:bold"><td>합계</td>${colT.map((q) => `<td class="n">${q ? q.toLocaleString() : ''}</td>`).join('')}<td class="n">${colT.reduce((a, b) => a + b, 0).toLocaleString()}</td></tr>
+  <tr style="background:#f7f8fa;font-weight:bold"><td>합계</td>${colT
+    .map((q) => `<td class="n">${q ? q.toLocaleString() : ''}</td>`)
+    .join('')}<td class="n">${colT.reduce((a, b) => a + b, 0).toLocaleString()}</td></tr>
   </tbody></table></div></details>`;
 }
 /* ---- 입고 내역 (MES 거래명세서현황) — 줄 단위: 거래명세서 · 순번 · 입고일자 · 검사번호 · 품번 · 입고량 · 판정 ---- */
@@ -290,25 +352,56 @@ function rlRender() {
   const cols = RL_F.filter(([f]) => rl.map[f] != null && !['mgrOk', 'mgrDate', 'plant', 'supCode'].includes(f));
   $('#rlMap').innerHTML =
     `<div class="sec">열 연결 확인 <span class="muted" style="font-weight:normal;font-size:12px">${esc(rl.name)} · 제목행 ${rl.hdr + 1}번째 줄 · 틀린 열만 바꾸세요</span></div>
-  <div class="fg">${RL_F.map(([k, l, req]) => `<label>${l}${req ? ' *' : ''}<select onchange="if(this.value==='')delete rl.map.${k};else rl.map.${k}=+this.value;rlRender()"><option value="">(없음)</option>${h.map((c, i) => `<option value="${i}" ${rl.map[k] === i ? 'selected' : ''}>${esc(c || '열 ' + (i + 1))}</option>`).join('')}</select></label>`).join('')}</div>
+  <div class="fg">${RL_F.map(
+    ([k, l, req]) =>
+      `<label>${l}${req ? ' *' : ''}<select onchange="if(this.value==='')delete rl.map.${k};else rl.map.${k}=+this.value;rlRender()"><option value="">(없음)</option>${h
+        .map((c, i) => `<option value="${i}" ${rl.map[k] === i ? 'selected' : ''}>${esc(c || '열 ' + (i + 1))}</option>`)
+        .join('')}</select></label>`,
+  ).join('')}</div>
   <div class="${!need.length && L.length ? 'help' : 'banner'}" style="margin-top:8px">${
     need.length
       ? `<b>${need.map((f) => f[1]).join(' · ')}</b> 열을 고르세요.`
       : L.length
-        ? `<b>${L.length}</b>줄 — 신규 <b>${nNew}</b> · 갱신 <b>${L.length - nNew}</b> · 대상 월 ${months.map(esc).join(', ')}${ng ? ` · <span style="color:var(--bad)">불합격 ${ng}줄</span>` : ''}${skip.nodate || skip.noqty ? ` · 날짜 · 수량 없는 ${skip.nodate + skip.noqty}줄 건너뜀` : ''}
-    ${noSup.length ? `<br>⚠ 기준정보에서 찾지 못한 협력사 ${noSup.length}곳: ${noSup.slice(0, 6).map(esc).join(', ')}${noSup.length > 6 ? ' …' : ''} — ${rl.addSup ? '새로 추가해서 등록합니다.' : '이 줄들은 건너뜁니다 (위의 ‘새로 추가’를 체크하거나, 협력사 기준정보에 약어 · 코드를 넣으세요).'}` : ''}
+        ? `<b>${L.length}</b>줄 — 신규 <b>${nNew}</b> · 갱신 <b>${L.length - nNew}</b> · 대상 월 ${months.map(esc).join(', ')}${
+            ng ? ` · <span style="color:var(--bad)">불합격 ${ng}줄</span>` : ''
+          }${skip.nodate || skip.noqty ? ` · 날짜 · 수량 없는 ${skip.nodate + skip.noqty}줄 건너뜀` : ''}
+    ${
+      noSup.length
+        ? `<br>⚠ 기준정보에서 찾지 못한 협력사 ${noSup.length}곳: ${noSup.slice(0, 6).map(esc).join(', ')}${noSup.length > 6 ? ' …' : ''} — ${
+            rl.addSup
+              ? '새로 추가해서 등록합니다.'
+              : '이 줄들은 건너뜁니다 (위의 ‘새로 추가’를 체크하거나, 협력사 기준정보에 약어 · 코드를 넣으세요).'
+          }`
+        : ''
+    }
     <br>등록하면 이 협력사 · 월의 입고수량은 입고 내역 합계로 바뀝니다 (직접 입력한 월 합계 대신).`
         : '읽은 줄이 없습니다. 열 연결을 확인하세요.'
   }</div>
   ${
     L.length
-      ? `<div class="tw" style="max-height:240px;margin-top:6px"><table class="sm mip"><thead><tr><th>상태</th>${cols.map(([, l]) => `<th>${esc(l)}</th>`).join('')}</tr></thead><tbody>${L.slice(
-          0,
-          12,
-        )
+      ? `<div class="tw" style="max-height:240px;margin-top:6px"><table class="sm mip"><thead><tr><th>상태</th>${cols
+          .map(([, l]) => `<th>${esc(l)}</th>`)
+          .join('')}</tr></thead><tbody>${L.slice(0, 12)
           .map(
             (o) =>
-              `<tr><td><span class="bg ${o._st === '신규' ? 'ok' : 'inf'}">${o._st}</span></td>${cols.map(([f]) => `<td>${f === 'sup' ? (o.supplierId ? esc(supName(o.supplierId)) : `<span style="color:var(--bad)">${esc(o._sup)} ?</span>`) : f === 'qty' ? o.qty.toLocaleString() : f === 'verdict' ? `<span class="bg ${o.verdict === '불합격' ? 'bad' : o.verdict === '합격' ? 'ok' : 'mut'}">${esc(o.verdict || '-')}</span>` : esc(o[f])}</td>`).join('')}</tr>`,
+              `<tr><td><span class="bg ${o._st === '신규' ? 'ok' : 'inf'}">${o._st}</span></td>${cols
+                .map(
+                  ([f]) =>
+                    `<td>${
+                      f === 'sup'
+                        ? o.supplierId
+                          ? esc(supName(o.supplierId))
+                          : `<span style="color:var(--bad)">${esc(o._sup)} ?</span>`
+                        : f === 'qty'
+                          ? o.qty.toLocaleString()
+                          : f === 'verdict'
+                            ? `<span class="bg ${
+                                o.verdict === '불합격' ? 'bad' : o.verdict === '합격' ? 'ok' : 'mut'
+                              }">${esc(o.verdict || '-')}</span>`
+                            : esc(o[f])
+                    }</td>`,
+                )
+                .join('')}</tr>`,
           )
           .join(
             '',
@@ -373,7 +466,8 @@ async function rlApply() {
 function rcvLinesCard() {
   const all = db.receipts.filter(isLine);
   if (!all.length)
-    return `<div class="card noprint"><h3>입고 내역 (거래명세서 · 수입검사)</h3><div class="muted">아직 입고 내역이 없습니다. 위의 <b>입고 내역 가져오기 (MES 거래명세서)</b>로 거래명세서현황을 올리면 줄마다 입고 · 판정이 저장되고, 월별 입고수량과 PPM이 자동으로 계산됩니다. 불량 등록 때 입고 건(검사번호)을 골라 연결할 수도 있습니다.</div></div>`;
+    return `<div class="card noprint"><h3>입고 내역 (거래명세서 · 수입검사)</h3>
+      <div class="muted">아직 입고 내역이 없습니다. 위의 <b>입고 내역 가져오기 (MES 거래명세서)</b>로 거래명세서현황을 올리면 줄마다 입고 · 판정이 저장되고, 월별 입고수량과 PPM이 자동으로 계산됩니다. 불량 등록 때 입고 건(검사번호)을 골라 연결할 수도 있습니다.</div></div>`;
   const f = state.rl || (state.rl = { m: '', sup: '', v: '', q: '' });
   const months = [...new Set(all.map((r) => r.month))].sort().reverse();
   if (!f.m || (f.m !== 'all' && !months.includes(f.m))) f.m = months[0];
@@ -400,26 +494,47 @@ function rcvLinesCard() {
   });
   const tq = L.reduce((a, r) => a + num(r.qty), 0),
     ng = L.filter((r) => r.verdict === '불합격').length;
-  return `<details class="card" ${state.rlOpen !== false ? 'open' : ''} ontoggle="state.rlOpen=this.open"><summary style="cursor:pointer;font-weight:bold;font-size:14px">입고 내역 (거래명세서 · 수입검사) <span class="muted" style="font-weight:normal;font-size:12px">— ${L.length.toLocaleString()}줄 · 입고량 ${tq.toLocaleString()}${ng ? ` · <span style="color:var(--bad)">불합격 ${ng}</span>` : ''}</span></summary>
-  <div class="row" style="margin:10px 0;gap:6px"><select onchange="state.rl.m=this.value;render()"><option value="all" ${f.m === 'all' ? 'selected' : ''}>전체 기간</option>${months.map((m) => `<option ${m === f.m ? 'selected' : ''}>${m}</option>`).join('')}</select>
-    <select onchange="state.rl.sup=this.value;render()"><option value="">전체 협력사</option>${sups.map((s) => `<option value="${s.id}" ${s.id === f.sup ? 'selected' : ''}>${esc(s.name)}</option>`).join('')}</select>
-    <select onchange="state.rl.v=this.value;render()"><option value="">전체 판정</option>${['합격', '불합격', '특채'].map((v) => `<option ${v === f.v ? 'selected' : ''}>${v}</option>`).join('')}</select>
+  return `<details class="card" ${state.rlOpen !== false ? 'open' : ''} ontoggle="state.rlOpen=this.open"><summary style="cursor:pointer;font-weight:bold;font-size:14px">입고 내역 (거래명세서 · 수입검사) <span class="muted" style="font-weight:normal;font-size:12px">— ${L.length.toLocaleString()}줄 · 입고량 ${tq.toLocaleString()}${
+    ng ? ` · <span style="color:var(--bad)">불합격 ${ng}</span>` : ''
+  }</span></summary>
+  <div class="row" style="margin:10px 0;gap:6px"><select onchange="state.rl.m=this.value;render()"><option value="all" ${f.m === 'all' ? 'selected' : ''}>전체 기간</option>${months
+    .map((m) => `<option ${m === f.m ? 'selected' : ''}>${m}</option>`)
+    .join('')}</select>
+    <select onchange="state.rl.sup=this.value;render()"><option value="">전체 협력사</option>${sups
+      .map((s) => `<option value="${s.id}" ${s.id === f.sup ? 'selected' : ''}>${esc(s.name)}</option>`)
+      .join('')}</select>
+    <select onchange="state.rl.v=this.value;render()"><option value="">전체 판정</option>${['합격', '불합격', '특채']
+      .map((v) => `<option ${v === f.v ? 'selected' : ''}>${v}</option>`)
+      .join('')}</select>
     <input placeholder="검색 (품번 · 품명 · 거래명세서 · 검사번호 · 차종)" value="${esc(f.q)}" oninput="state.rl.q=this.value;deb(()=>{const y=window.scrollY;render();window.scrollTo(0,y)})" style="flex:1;min-width:200px">
     <button class="b s" onclick="exportRcvLinesCSV()">엑셀</button></div>
-  <div class="tw" style="max-height:480px"><table class="mst" style="min-width:1100px"><colgroup><col style="width:92px"><col style="width:150px"><col style="width:132px"><col style="width:96px"><col style="width:64px"><col style="width:120px"><col><col style="width:84px"><col style="width:64px"><col style="width:70px"><col style="width:120px"></colgroup>
-  <thead><tr><th>입고일자</th><th>협력사</th><th>거래명세서-순번</th><th>검사번호</th><th>차종</th><th>품번</th><th>품명</th><th class="n">입고량</th><th>판정</th><th>검사자</th><th></th></tr></thead><tbody>
+  <div class="tw" style="max-height:480px"><table class="mst" style="min-width:1100px">
+    <colgroup><col style="width:92px"><col style="width:150px"><col style="width:132px"><col style="width:96px"><col style="width:64px"><col style="width:120px"><col><col style="width:84px"><col style="width:64px"><col style="width:70px"><col style="width:120px"></colgroup>
+  <thead><tr><th>입고일자</th><th>협력사</th><th>거래명세서-순번</th><th>검사번호</th><th>차종</th><th>품번</th>
+    <th>품명</th><th class="n">입고량</th><th>판정</th><th>검사자</th><th></th></tr></thead><tbody>
   ${
     L.slice(0, 500)
       .map(
-        (
-          r,
-        ) => `<tr${r.verdict === '불합격' ? ' style="background:#fdf2f2"' : ''}><td class="nw">${esc(r.date)}</td><td class="nw" title="${esc(supName(r.supplierId))}">${esc(supName(r.supplierId))}</td><td class="nw">${esc(r.docNo)}${r.seq ? `-${esc(r.seq)}` : ''}</td><td class="nw">${esc(r.inspNo)}</td><td class="nw">${esc(r.model)}</td><td class="nw"><b>${esc(r.partNo)}</b></td><td>${esc(r.partName)}</td>
-    <td class="n">${num(r.qty).toLocaleString()}</td><td><span class="bg ${r.verdict === '불합격' ? 'bad' : r.verdict === '합격' ? 'ok' : 'mut'}">${esc(r.verdict || '-')}</span></td><td class="nw">${esc(r.inspector)}</td>
-    <td class="noprint">${dCnt.get(r.id) ? `<a class="bg warn" style="cursor:pointer" onclick="state.df={...state.df,q:${jsq(r.partNo)},from:'',to:''};go('defect')">불량 ${dCnt.get(r.id)}</a> ` : ''}<button class="b s ${r.verdict === '불합격' ? 'p' : ''}" onclick="rcvDefect('${r.id}')">불량 등록</button></td></tr>`,
+        (r) => `<tr${
+          r.verdict === '불합격' ? ' style="background:#fdf2f2"' : ''
+        }><td class="nw">${esc(r.date)}</td><td class="nw" title="${esc(supName(r.supplierId))}">${esc(supName(r.supplierId))}</td>
+          <td class="nw">${esc(r.docNo)}${r.seq ? `-${esc(r.seq)}` : ''}</td>
+          <td class="nw">${esc(r.inspNo)}</td><td class="nw">${esc(r.model)}</td>
+            <td class="nw"><b>${esc(r.partNo)}</b></td><td>${esc(r.partName)}</td>
+    <td class="n">${num(r.qty).toLocaleString()}</td><td><span class="bg ${
+      r.verdict === '불합격' ? 'bad' : r.verdict === '합격' ? 'ok' : 'mut'
+    }">${esc(r.verdict || '-')}</span></td><td class="nw">${esc(r.inspector)}</td>
+    <td class="noprint">${
+      dCnt.get(r.id)
+        ? `<a class="bg warn" style="cursor:pointer" onclick="state.df={...state.df,q:${jsq(r.partNo)},from:'',to:''};go('defect')">불량 ${dCnt.get(r.id)}</a> `
+        : ''
+    }<button class="b s ${r.verdict === '불합격' ? 'p' : ''}" onclick="rcvDefect('${r.id}')">불량 등록</button></td></tr>`,
       )
       .join('') || '<tr><td colspan="11" class="muted" style="text-align:center;padding:20px">조건에 맞는 입고 내역이 없습니다.</td></tr>'
   }
-  </tbody></table></div>${L.length > 500 ? `<div class="muted" style="font-size:12px;margin-top:4px">${L.length}줄 중 500줄 표시 — 기간 · 협력사로 좁히세요.</div>` : ''}</details>`;
+  </tbody></table></div>${
+    L.length > 500 ? `<div class="muted" style="font-size:12px;margin-top:4px">${L.length}줄 중 500줄 표시 — 기간 · 협력사로 좁히세요.</div>` : ''
+  }</details>`;
 }
 function exportRcvLinesCSV() {
   const L = db.receipts.filter(isLine).sort((a, b) => (a.date || '').localeCompare(b.date || ''));
@@ -514,8 +629,12 @@ function rcvHint() {
         .slice(0, 8)
     : [];
   const lab = (r) =>
-    `${esc(r.date)} · ${esc(r.docNo)}${r.seq ? '-' + esc(r.seq) : ''}${r.inspNo ? ` · 검사 ${esc(r.inspNo)}` : ''} · ${num(r.qty).toLocaleString()}${esc(r.unit || '')}${r.verdict ? ` · ${esc(r.verdict)}` : ''}`;
-  const hid = `<input type="hidden" name="rcvId" value="${esc(curRcvId || '')}">${linked ? `<input type="hidden" name="lot" value="${esc((linked.docNo || '') + (linked.seq ? '-' + linked.seq : ''))}">` : ''}`;
+    `${esc(r.date)} · ${esc(r.docNo)}${r.seq ? '-' + esc(r.seq) : ''}${
+      r.inspNo ? ` · 검사 ${esc(r.inspNo)}` : ''
+    } · ${num(r.qty).toLocaleString()}${esc(r.unit || '')}${r.verdict ? ` · ${esc(r.verdict)}` : ''}`;
+  const hid = `<input type="hidden" name="rcvId" value="${esc(curRcvId || '')}">${
+    linked ? `<input type="hidden" name="lot" value="${esc((linked.docNo || '') + (linked.seq ? '-' + linked.seq : ''))}">` : ''
+  }`;
   if (linked) {
     b.innerHTML = `${hid}<div class="bomx"><b>🚚 연결된 입고</b> ${lab(linked)} — ${esc(supName(linked.supplierId))} <a class="lk" onclick="curRcvId='';rcvHint();mfDirty=true">연결 해제</a></div>`;
     return;
@@ -525,7 +644,9 @@ function rcvHint() {
     return;
   }
   const src = f.source ? f.source.value : '';
-  b.innerHTML = `${hid}<div class="bomx"><b>🚚 이 품번의 최근 입고</b> <span class="muted">— ${src === '수입검사' ? '검사한 입고 건을 고르면' : '관련 입고 건을 고르면'} 납품일자 · 입고수량이 채워지고 거래명세서 · 검사번호가 연결됩니다</span>
+  b.innerHTML = `${hid}<div class="bomx"><b>🚚 이 품번의 최근 입고</b> <span class="muted">— ${
+    src === '수입검사' ? '검사한 입고 건을 고르면' : '관련 입고 건을 고르면'
+  } 납품일자 · 입고수량이 채워지고 거래명세서 · 검사번호가 연결됩니다</span>
     <div class="bomc">${L.map((r) => `<span class="bchip" onclick="rcvPick('${r.id}')">${lab(r)}</span>`).join('')}</div></div>`;
 }
 /* ---- 입고수량 파일 가져오기 ---- */
@@ -614,8 +735,11 @@ function openRcvImport() {
    협력사명이 없고 품번만 있으면 부품 기준정보의 협력사로 연결합니다.</div>
   <div class="fg" style="margin-top:10px">
     <label>월이 없을 때 적용할 월<input type="month" name="defMonth" value="${lastMonths(today().slice(0, 7), 2)[0]}" onchange="riPreview()"></label>
-    <label>‘1월’처럼 연도가 없는 열의 연도<select name="year" onchange="ri.year=this.value;if(ri.rows.length)riSet(ri.rows,ri.name)">${yrs.map((y) => `<option>${y}</option>`).join('')}</select></label>
-    <label>이미 값이 있는 달<select name="mode" onchange="riPreview()"><option value="replace">파일 값으로 덮어쓰기</option><option value="add">기존 값에 더하기</option></select></label>
+    <label>‘1월’처럼 연도가 없는 열의 연도<select name="year" onchange="ri.year=this.value;if(ri.rows.length)riSet(ri.rows,ri.name)">${yrs
+      .map((y) => `<option>${y}</option>`)
+      .join('')}</select></label>
+    <label>이미 값이 있는 달<select name="mode" onchange="riPreview()"><option value="replace">파일 값으로 덮어쓰기</option>
+      <option value="add">기존 값에 더하기</option></select></label>
     <label class="row" style="flex-direction:row;align-items:center;gap:6px;margin-top:16px"><input type="checkbox" name="addSup" onchange="riPreview()"> 미등록 협력사 자동 추가</label>
   </div>
   <div class="row" style="margin-top:10px"><label class="b p" style="cursor:pointer">파일 선택 (.xlsx / .csv)<input type="file" accept=".xlsx,.csv,.txt" style="display:none" onchange="riFile(this.files[0]);this.value=''"></label>
@@ -658,9 +782,20 @@ function riSet(rows, name) {
 function riRenderMap() {
   const h = ri.rows[ri.hdr],
     wide = ri.map.some((k) => k.startsWith('m:'));
-  $('#riMap').innerHTML =
-    `<div class="sec">열 연결 확인 <span class="muted" style="font-weight:normal;font-size:12px">${wide ? '가로형(월별 열)으로 인식했습니다' : '자동 인식 결과 · 틀린 열만 바꾸세요'}</span></div>
-  <div class="row">${h.map((c, i) => (String(c).trim() === '' && !ri.map[i] ? '' : `<label style="display:flex;flex-direction:column;font-size:11px;color:var(--sub);gap:2px">${esc(c) || '(빈 제목)'}<select onchange="ri.map[${i}]=this.value;riPreview()" style="font-size:12px;${ri.map[i] ? '' : 'color:#999'}"><option value="">무시</option>${RCV_FIELDS.map(([k, l]) => `<option value="${k}" ${ri.map[i] === k ? 'selected' : ''}>${l}</option>`).join('')}${ri.map[i].startsWith('m:') ? `<option value="${ri.map[i]}" selected>${ri.map[i].slice(2)} 수량</option>` : ''}</select></label>`)).join('')}</div>`;
+  $('#riMap').innerHTML = `<div class="sec">열 연결 확인 <span class="muted" style="font-weight:normal;font-size:12px">${
+    wide ? '가로형(월별 열)으로 인식했습니다' : '자동 인식 결과 · 틀린 열만 바꾸세요'
+  }</span></div>
+  <div class="row">${h
+    .map((c, i) =>
+      String(c).trim() === '' && !ri.map[i]
+        ? ''
+        : `<label style="display:flex;flex-direction:column;font-size:11px;color:var(--sub);gap:2px">${esc(c) || '(빈 제목)'}<select onchange="ri.map[${i}]=this.value;riPreview()" style="font-size:12px;${ri.map[i] ? '' : 'color:#999'}"><option value="">무시</option>${RCV_FIELDS.map(
+            ([k, l]) => `<option value="${k}" ${ri.map[i] === k ? 'selected' : ''}>${l}</option>`,
+          ).join('')}${
+            ri.map[i].startsWith('m:') ? `<option value="${ri.map[i]}" selected>${ri.map[i].slice(2)} 수량</option>` : ''
+          }</select></label>`,
+    )
+    .join('')}</div>`;
 }
 function riBuild() {
   const f = $('#mf'),
@@ -779,12 +914,25 @@ function riPreview() {
       }
       o.after = after;
       o.st = st;
-      return `<tr style="${st.includes('제외') ? 'opacity:.55' : ''}"><td>${esc(o.label)}</td><td>${o.m}</td><td class="n">${o.qty.toLocaleString()}${o.rows > 1 ? ` <span class="muted" style="font-size:11px">(${o.rows}행 합산)</span>` : ''}</td><td class="n">${o.sp ? cur(o.sp.id, o.m).toLocaleString() : '-'}</td><td class="n"><b>${after === '' ? '-' : after.toLocaleString()}</b></td><td><span class="bg ${cls}">${st}</span></td></tr>`;
+      return `<tr style="${st.includes('제외') ? 'opacity:.55' : ''}"><td>${esc(o.label)}</td><td>${o.m}</td><td class="n">${o.qty.toLocaleString()}${
+        o.rows > 1 ? ` <span class="muted" style="font-size:11px">(${o.rows}행 합산)</span>` : ''
+      }</td><td class="n">${o.sp ? cur(o.sp.id, o.m).toLocaleString() : '-'}</td><td class="n"><b>${
+        after === '' ? '-' : after.toLocaleString()
+      }</b></td><td><span class="bg ${cls}">${st}</span></td></tr>`;
     })
     .join('');
   $('#riPrev').innerHTML =
-    `<div class="row" style="margin-bottom:6px"><span class="bg ok">신규 ${nNew}</span><span class="bg warn">변경 ${nChg}</span><span class="bg mut">동일 ${nSame}</span>${nLine ? `<span class="bg mut" title="입고 내역(거래명세서)이 있는 달은 내역 합계를 씁니다">입고 내역 있는 달 ${nLine}건 제외</span>` : ''}${nSkip ? `<span class="bg bad">미등록 협력사 ${nSkip}건 제외</span>` : ''}${B.bad.length ? `<span class="bg bad">월 인식 실패 ${B.bad.length}행 (${B.bad.slice(0, 5).join(', ')}${B.bad.length > 5 ? '…' : ''}행)</span>` : ''}<span class="muted" style="font-size:12px">원본 ${B.used}건 → 협력사·월 ${B.list.length}개</span></div>
-  <div class="tw" style="max-height:42vh"><table><thead><tr><th>협력사</th><th>월</th><th class="n">파일 수량</th><th class="n">기존</th><th class="n">반영 후</th><th>구분</th></tr></thead><tbody>${rowsH || '<tr><td colspan="6" class="muted">반영할 데이터가 없습니다.</td></tr>'}</tbody></table></div>`;
+    `<div class="row" style="margin-bottom:6px"><span class="bg ok">신규 ${nNew}</span><span class="bg warn">변경 ${nChg}</span><span class="bg mut">동일 ${nSame}</span>${
+      nLine ? `<span class="bg mut" title="입고 내역(거래명세서)이 있는 달은 내역 합계를 씁니다">입고 내역 있는 달 ${nLine}건 제외</span>` : ''
+    }${nSkip ? `<span class="bg bad">미등록 협력사 ${nSkip}건 제외</span>` : ''}${
+      B.bad.length
+        ? `<span class="bg bad">월 인식 실패 ${B.bad.length}행 (${B.bad.slice(0, 5).join(', ')}${B.bad.length > 5 ? '…' : ''}행)</span>`
+        : ''
+    }<span class="muted" style="font-size:12px">원본 ${B.used}건 → 협력사·월 ${B.list.length}개</span></div>
+  <div class="tw" style="max-height:42vh"><table><thead><tr><th>협력사</th><th>월</th>
+    <th class="n">파일 수량</th><th class="n">기존</th><th class="n">반영 후</th><th>구분</th></tr></thead><tbody>${
+      rowsH || '<tr><td colspan="6" class="muted">반영할 데이터가 없습니다.</td></tr>'
+    }</tbody></table></div>`;
   const n = nNew + nChg;
   const b = $('#mfoot .p');
   b.disabled = !n;
@@ -867,7 +1015,14 @@ function contactTable(s, withInactive) {
     .filter((c) => withInactive || c.active !== false)
     .sort((a, b) => b.primary - a.primary || (a.active === false) - (b.active === false));
   if (!L.length) return '<div class="muted" style="margin:6px 0">등록된 연락처 없음</div>';
-  return `<div class="tw" style="max-height:none;margin-top:8px"><table><thead><tr><th>역할</th><th>이름</th><th>부서/직급</th><th>전화</th><th>휴대폰</th><th>이메일</th><th>비고</th></tr></thead><tbody>${L.map((c) => `<tr style="${c.active === false ? 'opacity:.55' : ''}"><td>${c.primary ? '★ ' : ''}${esc(c.role)}</td><td><b>${esc(c.name)}</b>${c.active === false ? ` <span class="bg mut">${esc(c.until)} 종료</span>` : ''}</td><td>${esc(c.dept)}</td><td>${telLink(c.phone)}</td><td>${telLink(c.mobile)}</td><td>${mailLink(c.email)}</td><td>${esc(c.note)}</td></tr>`).join('')}</tbody></table></div>`;
+  return `<div class="tw" style="max-height:none;margin-top:8px"><table><thead><tr><th>역할</th>
+    <th>이름</th><th>부서/직급</th><th>전화</th><th>휴대폰</th><th>이메일</th><th>비고</th></tr></thead><tbody>${L.map(
+      (c) =>
+        `<tr style="${c.active === false ? 'opacity:.55' : ''}"><td>${c.primary ? '★ ' : ''}${esc(c.role)}</td><td><b>${esc(c.name)}</b>${
+          c.active === false ? ` <span class="bg mut">${esc(c.until)} 종료</span>` : ''
+        }</td><td>${esc(c.dept)}</td><td>${telLink(c.phone)}</td>
+        <td>${telLink(c.mobile)}</td><td>${mailLink(c.email)}</td><td>${esc(c.note)}</td></tr>`,
+    ).join('')}</tbody></table></div>`;
 }
 function contactCard(id) {
   const s = supById(id);
@@ -875,7 +1030,16 @@ function contactCard(id) {
   const log = [...s.contactLog].sort((a, b) => (b.ts || b.at || '').localeCompare(a.ts || a.at || '')).slice(0, 30);
   openModal(
     `${s.name} 연락처`,
-    `${contactTable(s, true)}<div class="sec">최근 변경 이력</div>${log.length ? `<ul class="act">${log.map((l) => `<li><span class="muted">${esc(l.at)}</span> ${esc(l.text)}${l.reason ? ` <span class="muted">— ${esc(l.reason)}</span>` : ''}</li>`).join('')}</ul>` : '<div class="muted">이력 없음</div>'}`,
+    `${contactTable(s, true)}<div class="sec">최근 변경 이력</div>${
+      log.length
+        ? `<ul class="act">${log
+            .map(
+              (l) =>
+                `<li><span class="muted">${esc(l.at)}</span> ${esc(l.text)}${l.reason ? ` <span class="muted">— ${esc(l.reason)}</span>` : ''}</li>`,
+            )
+            .join('')}</ul>`
+        : '<div class="muted">이력 없음</div>'
+    }`,
     [
       { label: '수정', fn: () => editSup(id) },
       { label: '닫기', cls: 'p', fn: closeModal },
@@ -960,9 +1124,20 @@ function supDetail(id) {
     ],
   )}</div></div>
   <div class="sec">불량 이력 (${from} ~ ${to}, ${ds.length}건)</div>
-  <div class="tw" style="max-height:260px"><table><thead><tr><th>발생일</th><th>부품</th><th>유형</th><th class="n">수량</th><th>처리</th><th>NCR</th></tr></thead><tbody>${ds.map((d) => `<tr><td>${d.date}</td><td>${esc(d.partNo)} ${esc(d.partName)}</td><td>${esc(d.type)}</td><td class="n">${num(d.qty)}</td><td>${esc(d.disposition)}</td><td>${esc(db.ncrs.find((n) => n.id === d.ncrId)?.no || '')}</td></tr>`).join('')}</tbody></table></div>
+  <div class="tw" style="max-height:260px"><table><thead><tr><th>발생일</th><th>부품</th>
+    <th>유형</th><th class="n">수량</th><th>처리</th><th>NCR</th></tr></thead><tbody>${ds
+      .map(
+        (d) =>
+          `<tr><td>${d.date}</td><td>${esc(d.partNo)} ${esc(d.partName)}</td>
+          <td>${esc(d.type)}</td><td class="n">${num(d.qty)}</td><td>${esc(d.disposition)}</td><td>${esc(
+            db.ncrs.find((n) => n.id === d.ncrId)?.no || '',
+          )}</td></tr>`,
+      )
+      .join('')}</tbody></table></div>
   <div class="sec">NCR 이력 (전체 ${ns.length}건)</div>
-  <div class="tw" style="max-height:220px"><table><tbody>${ns.map((n) => `<tr><td>${esc(n.no)}</td><td>${esc(n.issueDate)}</td><td>${esc(n.title)}</td><td>${stB(ncrStatus(n))}</td></tr>`).join('')}</tbody></table></div>`;
+  <div class="tw" style="max-height:220px"><table><tbody>${ns
+    .map((n) => `<tr><td>${esc(n.no)}</td><td>${esc(n.issueDate)}</td><td>${esc(n.title)}</td><td>${stB(ncrStatus(n))}</td></tr>`)
+    .join('')}</tbody></table></div>`;
   openModal(`${s.name} 품질 이력`, body, [
     { label: '협력사 정보 수정', fn: () => editSup(id) },
     { label: '닫기', cls: 'p', fn: closeModal },
@@ -995,8 +1170,10 @@ function editReceipts(month) {
       .map((s) => {
         const r = db.receipts.find((r) => !isLine(r) && r.supplierId === s.id && r.month === month);
         if (rcvHasLines(s.id, month))
-          return `<tr><td>${esc(s.name)}</td><td class="muted">${esc(s.items)}</td><td class="n" title="입고 내역(거래명세서)으로 계산 — 협력사 품질 탭의 입고 내역에서 확인">${rcvSum(s.id, month).toLocaleString()} <span class="bg inf">내역</span></td></tr>`;
-        return `<tr><td>${esc(s.name)}</td><td class="muted">${esc(s.items)}</td><td class="n"><input type="number" min="0" name="r_${s.id}" value="${r ? r.qty : ''}" style="width:140px;text-align:right"></td></tr>`;
+          return `<tr><td>${esc(s.name)}</td><td class="muted">${esc(s.items)}</td>
+            <td class="n" title="입고 내역(거래명세서)으로 계산 — 협력사 품질 탭의 입고 내역에서 확인">${rcvSum(s.id, month).toLocaleString()} <span class="bg inf">내역</span></td></tr>`;
+        return `<tr><td>${esc(s.name)}</td><td class="muted">${esc(s.items)}</td>
+          <td class="n"><input type="number" min="0" name="r_${s.id}" value="${r ? r.qty : ''}" style="width:140px;text-align:right"></td></tr>`;
       })
       .join('') || '<tr><td class="muted">협력사가 없습니다.</td></tr>'
   }

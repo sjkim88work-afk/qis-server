@@ -665,7 +665,14 @@ function treeHTML(a, isFTA) {
 const WS = {
   '5why': (a) => {
     const chain = (k, title, first) =>
-      `<table class="mini"><tr><th colspan="2">${title}</th><th>답 (확인된 사실)</th></tr>${a[k].map((v, i) => `<tr><td style="width:58px"><b>Why ${i + 1}</b></td><td class="muted" style="width:38%">${i === 0 ? esc(first) : '왜 「' + esc(a[k][i - 1] || '앞의 답') + '」인가?'}</td><td>${IN(a, k + '.' + i, v)}</td></tr>`).join('')}</table>`;
+      `<table class="mini"><tr><th colspan="2">${title}</th><th>답 (확인된 사실)</th></tr>${a[k]
+        .map(
+          (v, i) =>
+            `<tr><td style="width:58px"><b>Why ${i + 1}</b></td><td class="muted" style="width:38%">${
+              i === 0 ? esc(first) : '왜 「' + esc(a[k][i - 1] || '앞의 답') + '」인가?'
+            }</td><td>${IN(a, k + '.' + i, v)}</td></tr>`,
+        )
+        .join('')}</table>`;
     return `<div class="fld" style="margin-bottom:10px"><label>문제 정의</label>${IN(a, 'problem', a.problem, 'placeholder="무엇이 · 어디서 · 얼마나"')}</div>
       <div class="two">${chain('occ', '발생 — 왜 만들어졌나', '왜 이 불량이 만들어졌는가?')}${chain('esc', '유출 — 왜 못 걸렀나', '왜 검출되지 않고 넘어갔는가?')}</div>
       <div class="fld"><label>근거 자료 (측정 데이터 · 사진 · 재현 시험)</label>${IN(a, 'evidence', a.evidence)}</div>`;
@@ -682,38 +689,91 @@ const WS = {
       ['much2', '얼마나', '빈도·추세는?'],
     ];
     const r = a.rows || {};
-    return `<table class="mini"><tr><th style="width:52px"></th><th style="width:15%">질문</th><th>IS (나타난 것)</th><th>IS NOT (나타날 수 있었는데 안 나타난 것)</th><th>차이점</th><th>가능 원인</th></tr>
-      ${R.map(([k, g, q]) => `<tr><td><b>${g}</b></td><td class="muted">${q}</td>${['is', 'isnot', 'diff', 'cause'].map((f) => `<td>${IN(a, `rows.${k}.${f}`, (r[k] || {})[f])}</td>`).join('')}</tr>`).join('')}</table>
+    return `<table class="mini"><tr><th style="width:52px"></th><th style="width:15%">질문</th>
+      <th>IS (나타난 것)</th><th>IS NOT (나타날 수 있었는데 안 나타난 것)</th><th>차이점</th><th>가능 원인</th></tr>
+      ${R.map(
+        ([k, g, q]) =>
+          `<tr><td><b>${g}</b></td><td class="muted">${q}</td>${['is', 'isnot', 'diff', 'cause']
+            .map((f) => `<td>${IN(a, `rows.${k}.${f}`, (r[k] || {})[f])}</td>`)
+            .join('')}</tr>`,
+      ).join('')}</table>
       <div class="sec-t" style="font-size:13px;margin-top:12px">원인 후보 검증</div>
-      <table class="mini"><tr><th style="width:36px">순위</th><th>가능 원인</th><th>근거 (차이점)</th><th>검증 방법</th><th style="width:104px">결과</th><th style="width:36px"></th></tr>
+      <table class="mini"><tr><th style="width:36px">순위</th><th>가능 원인</th><th>근거 (차이점)</th>
+        <th>검증 방법</th><th style="width:104px">결과</th><th style="width:36px"></th></tr>
       ${a.cands
         .map(
           (x, i) =>
-            `<tr><td>${i + 1}</td><td>${IN(a, `cands.${i}.cause`, x.cause)}</td><td>${IN(a, `cands.${i}.basis`, x.basis)}</td><td>${IN(a, `cands.${i}.method`, x.method)}</td><td>${SE(
-              a,
-              `cands.${i}.result`,
-              [
-                ['', '미검증'],
-                ['○', '○ 원인'],
-                ['×', '× 기각'],
-              ],
-              x.result,
-            )}</td><td>${XB(a, 'cands', i)}</td></tr>`,
+            `<tr><td>${i + 1}</td><td>${IN(a, `cands.${i}.cause`, x.cause)}</td>
+              <td>${IN(a, `cands.${i}.basis`, x.basis)}</td><td>${IN(a, `cands.${i}.method`, x.method)}</td><td>${SE(
+                a,
+                `cands.${i}.result`,
+                [
+                  ['', '미검증'],
+                  ['○', '○ 원인'],
+                  ['×', '× 기각'],
+                ],
+                x.result,
+              )}</td><td>${XB(a, 'cands', i)}</td></tr>`,
         )
         .join('')}</table>${RB(a, 'cand', '+ 후보 추가')}`;
   },
-  timeline: (
+  timeline: (a) => `<div class="fld" style="margin-bottom:10px;max-width:420px"><label>분석 기간</label>${IN(
     a,
-  ) => `<div class="fld" style="margin-bottom:10px;max-width:420px"><label>분석 기간</label>${IN(a, 'period', a.period, 'placeholder="예: 10/01 ~ 10/15"')}</div>
-    <table class="mini"><tr><th style="width:130px">일시</th><th>사건 · 작업</th><th style="width:16%">담당 · 설비</th><th style="width:90px">상태</th><th style="width:18%">비고</th><th style="width:36px"></th></tr>
-    ${a.rows.map((x, i) => `<tr><td>${IN(a, `rows.${i}.t`, x.t)}</td><td>${IN(a, `rows.${i}.ev`, x.ev)}</td><td>${IN(a, `rows.${i}.who`, x.who)}</td><td>${SE(a, `rows.${i}.st`, ['정상', '이상', '불량'], x.st, x.st === '불량' ? 'style="color:var(--red)"' : x.st === '이상' ? 'style="color:var(--amb)"' : '')}</td><td>${IN(a, `rows.${i}.note`, x.note)}</td><td>${XB(a, 'rows', i)}</td></tr>`).join('')}</table>${RB(a, 'tl', '+ 사건 추가')}
+    'period',
+    a.period,
+    'placeholder="예: 10/01 ~ 10/15"',
+  )}</div>
+    <table class="mini"><tr><th style="width:130px">일시</th><th>사건 · 작업</th><th style="width:16%">담당 · 설비</th>
+      <th style="width:90px">상태</th><th style="width:18%">비고</th><th style="width:36px"></th></tr>
+    ${a.rows
+      .map(
+        (x, i) =>
+          `<tr><td>${IN(a, `rows.${i}.t`, x.t)}</td><td>${IN(a, `rows.${i}.ev`, x.ev)}</td><td>${IN(a, `rows.${i}.who`, x.who)}</td><td>${SE(
+            a,
+            `rows.${i}.st`,
+            ['정상', '이상', '불량'],
+            x.st,
+            x.st === '불량' ? 'style="color:var(--red)"' : x.st === '이상' ? 'style="color:var(--amb)"' : '',
+          )}</td><td>${IN(a, `rows.${i}.note`, x.note)}</td><td>${XB(a, 'rows', i)}</td></tr>`,
+      )
+      .join('')}</table>${RB(a, 'tl', '+ 사건 추가')}
     <div class="sec-t" style="font-size:13px;margin-top:14px">정상 → 이상 경계에서 찾은 변화점</div>
-    <table class="mini"><tr><th style="width:130px">변화 시점</th><th>변화 내용</th><th style="width:90px">4M+1E</th><th style="width:76px">영향도</th><th>가능 원인</th><th style="width:36px"></th></tr>
-    ${a.changes.map((x, i) => `<tr><td>${IN(a, `changes.${i}.t`, x.t)}</td><td>${IN(a, `changes.${i}.what`, x.what)}</td><td>${SE(a, `changes.${i}.m4`, ['', '사람', '설비', '자재', '방법', '환경'], x.m4)}</td><td>${SE(a, `changes.${i}.impact`, ['', '상', '중', '하'], x.impact)}</td><td>${IN(a, `changes.${i}.cause`, x.cause)}</td><td>${XB(a, 'changes', i)}</td></tr>`).join('')}</table>${RB(a, 'tlc', '+ 변화점 추가')}`,
-  change: (
-    a,
-  ) => `<table class="mini"><tr><th style="width:56px">구분</th><th style="width:17%">항목</th><th>변화 전</th><th>변화 후</th><th style="width:76px">영향도</th><th>확인 결과</th><th style="width:36px"></th></tr>
-    ${a.items.map((x, i) => `<tr><td><b>${esc(x.cat)}</b></td><td>${IN(a, `items.${i}.item`, x.item)}</td><td>${IN(a, `items.${i}.before`, x.before)}</td><td>${IN(a, `items.${i}.after`, x.after, 'placeholder="변화 없으면 \'변화 없음\'"')}</td><td>${SE(a, `items.${i}.impact`, ['', '상', '중', '하'], x.impact)}</td><td>${IN(a, `items.${i}.check`, x.check, 'placeholder="○ 원인 / × 기각 + 근거"')}</td><td>${XB(a, 'items', i)}</td></tr>`).join('')}</table>
+    <table class="mini"><tr><th style="width:130px">변화 시점</th><th>변화 내용</th><th style="width:90px">4M+1E</th>
+      <th style="width:76px">영향도</th><th>가능 원인</th><th style="width:36px"></th></tr>
+    ${a.changes
+      .map(
+        (x, i) =>
+          `<tr><td>${IN(a, `changes.${i}.t`, x.t)}</td><td>${IN(a, `changes.${i}.what`, x.what)}</td><td>${SE(
+            a,
+            `changes.${i}.m4`,
+            ['', '사람', '설비', '자재', '방법', '환경'],
+            x.m4,
+          )}</td><td>${SE(
+            a,
+            `changes.${i}.impact`,
+            ['', '상', '중', '하'],
+            x.impact,
+          )}</td><td>${IN(a, `changes.${i}.cause`, x.cause)}</td><td>${XB(a, 'changes', i)}</td></tr>`,
+      )
+      .join('')}</table>${RB(a, 'tlc', '+ 변화점 추가')}`,
+  change: (a) => `<table class="mini"><tr><th style="width:56px">구분</th><th style="width:17%">항목</th>
+    <th>변화 전</th><th>변화 후</th><th style="width:76px">영향도</th><th>확인 결과</th><th style="width:36px"></th></tr>
+    ${a.items
+      .map(
+        (x, i) =>
+          `<tr><td><b>${esc(x.cat)}</b></td><td>${IN(a, `items.${i}.item`, x.item)}</td><td>${IN(a, `items.${i}.before`, x.before)}</td><td>${IN(
+            a,
+            `items.${i}.after`,
+            x.after,
+            'placeholder="변화 없으면 \'변화 없음\'"',
+          )}</td><td>${SE(a, `items.${i}.impact`, ['', '상', '중', '하'], x.impact)}</td><td>${IN(
+            a,
+            `items.${i}.check`,
+            x.check,
+            'placeholder="○ 원인 / × 기각 + 근거"',
+          )}</td><td>${XB(a, 'items', i)}</td></tr>`,
+      )
+      .join('')}</table>
     <div class="bar">${['사람', '설비', '자재', '방법', '환경'].map((k) => RB(a, 'chg', `+ ${k}`, `data-cat="${k}"`)).join('')}</div>`,
   fishbone: (a) => {
     const cats = ['사람', '설비', '자재', '방법', '측정', '환경'];
@@ -752,13 +812,24 @@ const WS = {
         ],
         a.gate,
       )}</div>
-      <div class="fld"><label>최상위 발생 확률 (계산)</label><div class="calc"><span class="calcv">${fmtP(p)}</span>${p === null ? ' <span class="muted">기본원인 확률을 모두 넣으면 계산</span>' : ''}</div></div></div>
-      <div>${treeHTML(a, true) || '<div class="muted" style="margin-bottom:8px">아래 버튼으로 첫 원인을 추가하세요.</div>'}</div>${RB(a, 'node', '+ Top 아래 원인 추가', 'data-parent="TOP"')}`;
+      <div class="fld"><label>최상위 발생 확률 (계산)</label><div class="calc"><span class="calcv">${fmtP(p)}</span>${
+        p === null ? ' <span class="muted">기본원인 확률을 모두 넣으면 계산</span>' : ''
+      }</div></div></div>
+      <div>${treeHTML(a, true) || '<div class="muted" style="margin-bottom:8px">아래 버튼으로 첫 원인을 추가하세요.</div>'}</div>${RB(
+        a,
+        'node',
+        '+ Top 아래 원인 추가',
+        'data-parent="TOP"',
+      )}`;
   },
-  logic: (
-    a,
-  ) => `<div class="grid" style="margin-bottom:12px"><div class="fld w2"><label>문제</label>${IN(a, 'problem', a.problem)}</div><div class="fld w2"><label>분해 기준</label>${SE(a, 'basis', ['4M+1E', '공정 단계', '제품 구성요소', '기타'], a.basis)}</div></div>
-    <div>${treeHTML(a, false) || '<div class="muted" style="margin-bottom:8px">아래 버튼으로 1차 가지를 추가하세요.</div>'}</div>${RB(a, 'node', '+ 1차 가지 추가', 'data-parent="TOP"')}
+  logic: (a) => `<div class="grid" style="margin-bottom:12px"><div class="fld w2"><label>문제</label>${IN(a, 'problem', a.problem)}</div>
+    <div class="fld w2"><label>분해 기준</label>${SE(a, 'basis', ['4M+1E', '공정 단계', '제품 구성요소', '기타'], a.basis)}</div></div>
+    <div>${treeHTML(a, false) || '<div class="muted" style="margin-bottom:8px">아래 버튼으로 1차 가지를 추가하세요.</div>'}</div>${RB(
+      a,
+      'node',
+      '+ 1차 가지 추가',
+      'data-parent="TOP"',
+    )}
     <div class="checks" style="margin-top:12px"><label><input type="checkbox" data-scope="ana" data-aid="${a.id}" data-path="mece1" ${a.mece1 ? 'checked' : ''}>같은 수준의 가지끼리 겹치지 않는다 (ME)</label><label><input type="checkbox" data-scope="ana" data-aid="${a.id}" data-path="mece2" ${a.mece2 ? 'checked' : ''}>가지를 합치면 빠짐이 없다 (CE)</label></div>`,
   cem: (a) => {
     const tot = (x) => a.ys.reduce((s, y, j) => s + num(x.s[j]) * num(y.w), 0);
@@ -770,8 +841,27 @@ const WS = {
         rank[i] = t > 0 ? r + 1 : '';
       });
     return `<div class="muted" style="margin-bottom:6px">관계 강도: 9 강 · 3 중 · 1 약 · 0 없음</div>
-      <div style="overflow:auto"><table class="mini"><tr><th style="min-width:180px">원인 후보 (X)</th>${a.ys.map((y, j) => `<th style="width:124px">${IN(a, `ys.${j}.name`, y.name)}<div style="display:flex;gap:4px;margin-top:4px;align-items:center"><span class="muted" style="font-weight:400">중요도</span>${SE(a, `ys.${j}.w`, ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'], y.w)}${a.ys.length > 1 ? XB(a, 'ys', j) : ''}</div></th>`).join('')}<th style="width:60px">총점</th><th style="width:44px">순위</th><th style="width:36px"></th></tr>
-      ${a.xs.map((x, i) => `<tr><td>${IN(a, `xs.${i}.name`, x.name)}</td>${a.ys.map((y, j) => `<td>${SE(a, `xs.${i}.s.${j}`, ['', '0', '1', '3', '9'], x.s[j])}</td>`).join('')}<td class="num"><b>${tot(x)}</b></td><td class="num">${rank[i] === 1 ? '<span class="calcv">1</span>' : rank[i]}</td><td>${XB(a, 'xs', i)}</td></tr>`).join('')}</table></div>
+      <div style="overflow:auto"><table class="mini"><tr><th style="min-width:180px">원인 후보 (X)</th>${a.ys
+        .map(
+          (y, j) =>
+            `<th style="width:124px">${IN(a, `ys.${j}.name`, y.name)}<div style="display:flex;gap:4px;margin-top:4px;align-items:center"><span class="muted" style="font-weight:400">중요도</span>${SE(
+              a,
+              `ys.${j}.w`,
+              ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'],
+              y.w,
+            )}${a.ys.length > 1 ? XB(a, 'ys', j) : ''}</div></th>`,
+        )
+        .join('')}<th style="width:60px">총점</th><th style="width:44px">순위</th><th style="width:36px"></th></tr>
+      ${a.xs
+        .map(
+          (x, i) =>
+            `<tr><td>${IN(a, `xs.${i}.name`, x.name)}</td>${a.ys
+              .map((y, j) => `<td>${SE(a, `xs.${i}.s.${j}`, ['', '0', '1', '3', '9'], x.s[j])}</td>`)
+              .join('')}<td class="num"><b>${tot(x)}</b></td><td class="num">${
+              rank[i] === 1 ? '<span class="calcv">1</span>' : rank[i]
+            }</td><td>${XB(a, 'xs', i)}</td></tr>`,
+        )
+        .join('')}</table></div>
       <div class="bar">${RB(a, 'x', '+ 원인 후보')}${a.ys.length < 5 ? RB(a, 'y', '+ 결과 항목 (Y)') : ''}</div>`;
   },
   eta: (a) => {
@@ -785,12 +875,37 @@ const WS = {
     });
     paths.push({ label: '고객 유출', p: carry, out: true });
     const ok = has(a.pie) && a.sfs.length && a.sfs.every((s) => has(s.pf));
-    return `<div class="grid" style="margin-bottom:12px"><div class="fld w2"><label>초기 사건</label>${IN(a, 'ie', a.ie, 'placeholder="예: 그리스 도포량 부족 발생"')}</div><div class="fld"><label>발생률 (%)</label>${IN(a, 'pie', a.pie, 'placeholder="예: 2"')}</div></div>
-      <table class="mini"><tr><th style="width:44px">순서</th><th>방어 단계 (검출 기회)</th><th style="width:150px">놓칠 확률 (%)</th><th style="width:36px"></th></tr>
-      ${a.sfs.map((s, i) => `<tr><td>${i + 1}</td><td>${IN(a, `sfs.${i}.name`, s.name)}</td><td>${IN(a, `sfs.${i}.pf`, s.pf, 'placeholder="예: 30"')}</td><td>${XB(a, 'sfs', i)}</td></tr>`).join('')}</table>${RB(a, 'sf', '+ 방어 단계')}
-      <div class="sec-t" style="font-size:13px;margin-top:14px">경로별 결과 ${ok ? '' : '<span class="muted" style="font-weight:400">발생률과 놓칠 확률을 모두 넣으면 계산됩니다</span>'}</div>
+    return `<div class="grid" style="margin-bottom:12px"><div class="fld w2"><label>초기 사건</label>${IN(
+      a,
+      'ie',
+      a.ie,
+      'placeholder="예: 그리스 도포량 부족 발생"',
+    )}</div><div class="fld"><label>발생률 (%)</label>${IN(a, 'pie', a.pie, 'placeholder="예: 2"')}</div></div>
+      <table class="mini"><tr><th style="width:44px">순서</th><th>방어 단계 (검출 기회)</th>
+        <th style="width:150px">놓칠 확률 (%)</th><th style="width:36px"></th></tr>
+      ${a.sfs
+        .map(
+          (s, i) =>
+            `<tr><td>${i + 1}</td><td>${IN(a, `sfs.${i}.name`, s.name)}</td><td>${IN(
+              a,
+              `sfs.${i}.pf`,
+              s.pf,
+              'placeholder="예: 30"',
+            )}</td><td>${XB(a, 'sfs', i)}</td></tr>`,
+        )
+        .join('')}</table>${RB(a, 'sf', '+ 방어 단계')}
+      <div class="sec-t" style="font-size:13px;margin-top:14px">경로별 결과 ${
+        ok ? '' : '<span class="muted" style="font-weight:400">발생률과 놓칠 확률을 모두 넣으면 계산됩니다</span>'
+      }</div>
       <table class="mini"><tr><th>경로</th><th style="width:150px">전체 대비 확률</th><th style="width:160px">발생 건 중 비율</th></tr>
-      ${paths.map((x) => `<tr${x.out ? ' style="color:var(--red);font-weight:600"' : ''}><td>${esc(x.label)}</td><td>${ok ? fmtP(x.p) : '-'}</td><td>${ok && P0 > 0 ? fmtP(x.p / P0) : '-'}</td></tr>`).join('')}</table>`;
+      ${paths
+        .map(
+          (x) =>
+            `<tr${
+              x.out ? ' style="color:var(--red);font-weight:600"' : ''
+            }><td>${esc(x.label)}</td><td>${ok ? fmtP(x.p) : '-'}</td><td>${ok && P0 > 0 ? fmtP(x.p / P0) : '-'}</td></tr>`,
+        )
+        .join('')}</table>`;
   },
 };
 function wsHTML(c, a) {
@@ -799,14 +914,28 @@ function wsHTML(c, a) {
   const body = (WS[a.tool] || (() => ''))(a);
   const concl =
     a.tool === '5why'
-      ? `<div class="concl bar" style="margin-bottom:0">${B('anaApply', '발생 줄기 마지막 답 → 발생 원인', 'data-src="occ" data-to="CauseOccur"')}${B('anaApply', '유출 줄기 마지막 답 → 유출 원인', 'data-src="esc" data-to="CauseEscape"')}</div>`
+      ? `<div class="concl bar" style="margin-bottom:0">${B('anaApply', '발생 줄기 마지막 답 → 발생 원인', 'data-src="occ" data-to="CauseOccur"')}${B(
+          'anaApply',
+          '유출 줄기 마지막 답 → 유출 원인',
+          'data-src="esc" data-to="CauseEscape"',
+        )}</div>`
       : `<div class="concl"><div class="fld"><label>이 도구로 얻은 결론</label>${TA(a, 'concl', a.concl, 'placeholder="검증으로 확인된 원인만 씁니다"')}</div>
-       <div class="bar" style="margin:8px 0 0">${B('anaApply', '→ 발생 원인에 추가', 'data-src="concl" data-to="CauseOccur"')}${B('anaApply', '→ 유출 원인에 추가', 'data-src="concl" data-to="CauseEscape"')}${B('anaApply', '→ 시스템 원인에 추가', 'data-src="concl" data-to="CauseSystem"')}</div></div>`;
+       <div class="bar" style="margin:8px 0 0">${B('anaApply', '→ 발생 원인에 추가', 'data-src="concl" data-to="CauseOccur"')}${B(
+         'anaApply',
+         '→ 유출 원인에 추가',
+         'data-src="concl" data-to="CauseEscape"',
+       )}${B('anaApply', '→ 시스템 원인에 추가', 'data-src="concl" data-to="CauseSystem"')}</div></div>`;
   return `<div class="ws" id="ws_${a.id}">
     <div class="ws-h"><b>${esc(t.name)}</b><span class="muted">${esc(t.lv || '')} · ${esc(a.created)}</span><span style="flex:1"></span>
       ${a.collapsed ? '' : B('anaToggle', a.hideHow ? '작성 방법 보기' : '작성 방법 접기', 'data-k="hideHow"')}
       ${B('anaToggle', a.collapsed ? '펼치기' : '접기', 'data-k="collapsed"')}${B('anaDel', '삭제', '', 'btn sm danger')}</div>
-    ${a.collapsed ? '' : `<div class="ws-b">${a.hideHow ? '' : `<div class="how"><ol>${t.how.map((h) => `<li>${esc(h)}</li>`).join('')}</ol></div>`}${body}${concl}</div>`}
+    ${
+      a.collapsed
+        ? ''
+        : `<div class="ws-b">${
+            a.hideHow ? '' : `<div class="how"><ol>${t.how.map((h) => `<li>${esc(h)}</li>`).join('')}</ol></div>`
+          }${body}${concl}</div>`
+    }
   </div>`;
 }
 function causeHTML(c, tab, missSet) {
@@ -815,19 +944,42 @@ function causeHTML(c, tab, missSet) {
   const scopeF = tab.fields.find((f) => f.key === 'RcaScope'),
     restF = tab.fields.filter((f) => f.key !== 'RcaScope');
   const skipRca = c.RcaScope === '없음';
-  const head = `<div class="grid" style="margin-bottom:12px">${czField(c, scopeF, missSet)}${czNeedEsc(c) ? `<div class="fld w2"><label>유출 대책 빠른 등록</label><button class="btn" data-act="escActs">＋ 수입검사기준 개정 · 검사 강화 조치 등록</button><div class="hint">RCA 조치에 유출대책 · 문서개정 2건을 추가합니다</div></div>` : ''}</div>`;
+  const head = `<div class="grid" style="margin-bottom:12px">${czField(c, scopeF, missSet)}${
+    czNeedEsc(c)
+      ? `<div class="fld w2"><label>유출 대책 빠른 등록</label><button class="btn" data-act="escActs">＋ 수입검사기준 개정 · 검사 강화 조치 등록</button><div class="hint">RCA 조치에 유출대책 · 문서개정 2건을 추가합니다</div></div>`
+      : ''
+  }</div>`;
   if (skipRca)
     return (
       head +
-      `<div class="note">사내 분석 대상이 ‘없음’입니다. 원인은 협력사 대책서(NCR)로 받습니다. 사내에서 볼 부분이 생기면 위에서 대상을 바꾸십시오.</div><div class="grid">${restF.map((fd) => czField(c, fd, missSet)).join('')}</div>`
+      `<div class="note">사내 분석 대상이 ‘없음’입니다. 원인은 협력사 대책서(NCR)로 받습니다. 사내에서 볼 부분이 생기면 위에서 대상을 바꾸십시오.</div><div class="grid">${restF
+        .map((fd) => czField(c, fd, missSet))
+        .join('')}</div>`
     );
   tab = { ...tab, fields: restF };
   return (
     head +
-    `<div class="sec-t">분석 도구 고르기 <span class="muted" style="font-weight:400">상황을 누르거나 도구 카드를 누르면 워크시트가 추가됩니다${rec.length ? ` · <span style="color:var(--grn)">권장</span> 표시는 ${czNeedEsc(c) && !czNeedOcc(c) ? '유출 분석' : esc(c.Tier)} 기준` : ''}</span></div>
-    <div class="guide">${GUIDE.map(([s, k]) => `<span class="chip" data-act="addAna" data-tool="${k}">${esc(s)} → <b>${esc(toolOf(k).name)}</b></span>`).join('')}</div>
-    <div class="tools">${TOOLS.map((t) => `<div class="tool" data-act="addAna" data-tool="${t.key}">${rec.includes(t.key) ? '<span class="rec">권장</span>' : ''}<div class="nm">${esc(t.name)}<span class="lv">${t.lv}</span></div><div class="wh">${esc(t.when)}</div></div>`).join('')}</div>
-    ${list.length ? `<div class="sec-t">워크시트 ${list.length}개</div>` + list.map((a) => wsHTML(c, a)).join('') : czNcrOk(c) ? '' : '<div class="note">아직 작성한 워크시트가 없습니다. 위에서 상황이나 도구를 고르십시오. 원인분석 단계를 넘기려면 워크시트가 1개 이상 필요합니다' + (c.NcrId ? ' (연결 NCR 대책서가 승인되면 불필요)' : '') + '.</div>'}
+    `<div class="sec-t">분석 도구 고르기 <span class="muted" style="font-weight:400">상황을 누르거나 도구 카드를 누르면 워크시트가 추가됩니다${
+      rec.length ? ` · <span style="color:var(--grn)">권장</span> 표시는 ${czNeedEsc(c) && !czNeedOcc(c) ? '유출 분석' : esc(c.Tier)} 기준` : ''
+    }</span></div>
+    <div class="guide">${GUIDE.map(
+      ([s, k]) => `<span class="chip" data-act="addAna" data-tool="${k}">${esc(s)} → <b>${esc(toolOf(k).name)}</b></span>`,
+    ).join('')}</div>
+    <div class="tools">${TOOLS.map(
+      (t) =>
+        `<div class="tool" data-act="addAna" data-tool="${t.key}">${
+          rec.includes(t.key) ? '<span class="rec">권장</span>' : ''
+        }<div class="nm">${esc(t.name)}<span class="lv">${t.lv}</span></div><div class="wh">${esc(t.when)}</div></div>`,
+    ).join('')}</div>
+    ${
+      list.length
+        ? `<div class="sec-t">워크시트 ${list.length}개</div>` + list.map((a) => wsHTML(c, a)).join('')
+        : czNcrOk(c)
+          ? ''
+          : '<div class="note">아직 작성한 워크시트가 없습니다. 위에서 상황이나 도구를 고르십시오. 원인분석 단계를 넘기려면 워크시트가 1개 이상 필요합니다' +
+            (c.NcrId ? ' (연결 NCR 대책서가 승인되면 불필요)' : '') +
+            '.</div>'
+    }
     <div class="sec-t" style="margin-top:18px">원인 결론 <span class="muted" style="font-weight:400">워크시트 결론을 버튼으로 옮기거나 직접 씁니다</span></div>
     <div class="grid">${tab.fields.map((fd) => czField(c, fd, missSet)).join('')}</div>`
   );
@@ -1150,7 +1302,14 @@ function czRender() {
     ['cases', 'RCA 목록', 0],
     ['actions', '조치', k.lateActs],
   ];
-  const bar = `<div class="cz"><div class="bar noprint"><div class="seg">${seg.map(([x, l, n]) => `<a class="${v === x ? 'on' : ''}" data-act="czNav" data-v="${x}">${l}${n ? ` <span class="bg bad" style="font-size:10.5px">${n}</span>` : ''}</a>`).join('')}</div><span class="grow"></span><button class="btn pri" data-act="newCase">+ 새 RCA</button></div>`;
+  const bar = `<div class="cz"><div class="bar noprint"><div class="seg">${seg
+    .map(
+      ([x, l, n]) =>
+        `<a class="${v === x ? 'on' : ''}" data-act="czNav" data-v="${x}">${l}${
+          n ? ` <span class="bg bad" style="font-size:10.5px">${n}</span>` : ''
+        }</a>`,
+    )
+    .join('')}</div><span class="grow"></span><button class="btn pri" data-act="newCase">+ 새 RCA</button></div>`;
   if (v === 'prog') return bar + '</div>' + renderProg();
   const body = v === 'cases' ? czViewCases() : v === 'actions' ? czViewActions() : czViewToday();
   return bar + body + '</div>';
@@ -1179,9 +1338,12 @@ function czViewToday() {
     .sort((a, b) => a.next.nextDate.localeCompare(b.next.nextDate));
   const jd = db.defects.filter((d) => invOpen(d) && !czOwns(d, 'defect') && invInfo(d).k === 'judge');
   const pItem = (c) =>
-    `<div class="list-item"><span class="bg ${c.kind === 'ncr' ? 'inf' : 'mut'}">${c.kind === 'ncr' ? 'NCR' : '불량'}</span><div class="grow"><div class="t" onclick="openCase('${c.kind}','${c.id}')">${esc(c.title)}</div><div class="d">${esc(c.next.next)} · ${esc(c.sup)}</div></div><span style="min-width:84px;text-align:right">${czDate(c.next.nextDate)}</span></div>`;
+    `<div class="list-item"><span class="bg ${c.kind === 'ncr' ? 'inf' : 'mut'}">${c.kind === 'ncr' ? 'NCR' : '불량'}</span><div class="grow"><div class="t" onclick="openCase('${c.kind}','${c.id}')">${esc(c.title)}</div>
+      <div class="d">${esc(c.next.next)} · ${esc(c.sup)}</div>
+        </div><span style="min-width:84px;text-align:right">${czDate(c.next.nextDate)}</span></div>`;
   const caseItem = (c) => `<div class="list-item"><span class="badge ${czTierCls(c.Tier)}">${esc(c.Tier || '-')}</span>
-    <div class="grow"><div class="t" data-act="open" data-id="${c.id}">${esc(c.CaseNo)} · ${esc(c.Title || '(제목 없음)')}</div><div class="d">${esc(c.Stage)} · ${esc(c.NextAction || '다음 행동 미입력')}</div></div>
+    <div class="grow"><div class="t" data-act="open" data-id="${c.id}">${esc(c.CaseNo)} · ${esc(c.Title || '(제목 없음)')}</div>
+      <div class="d">${esc(c.Stage)} · ${esc(c.NextAction || '다음 행동 미입력')}</div></div>
     ${czBall(c.Ball)} <span style="min-width:84px;text-align:right">${czDate(c.RecheckDate)}</span><button class="btn sm" data-act="bump" data-id="${c.id}" title="재확인일을 오늘+2일로">+2일</button></div>`;
   const actItem = (a) => {
     const c = czById('cases', a.CaseId);
@@ -1193,14 +1355,37 @@ function czViewToday() {
     <div class="kpis">
       <div class="kpi" data-act="czNav" data-v="cases"><div class="l">진행 중 RCA</div><div class="v">${k.open}</div></div>
       <div class="kpi ${k.mine ? 'bad' : 'ok'}"><div class="l">오늘 내가 볼 RCA</div><div class="v">${k.mine}</div></div>
-      <div class="kpi ${k.lateActs ? 'bad' : 'ok'}" data-act="czNav" data-v="actions"><div class="l">기한 지난 조치</div><div class="v">${k.lateActs}</div></div>
-      <div class="kpi ${pd.filter((c) => c.next.nextDate < t).length ? 'bad' : 'ok'}" data-act="czNav" data-v="prog"><div class="l">협력사 · 불량 기한 초과</div><div class="v">${pd.filter((c) => c.next.nextDate < t).length}</div></div></div>
+      <div class="kpi ${k.lateActs ? 'bad' : 'ok'}" data-act="czNav" data-v="actions"><div class="l">기한 지난 조치</div>
+        <div class="v">${k.lateActs}</div></div>
+      <div class="kpi ${
+        pd.filter((c) => c.next.nextDate < t).length ? 'bad' : 'ok'
+      }" data-act="czNav" data-v="prog"><div class="l">협력사 · 불량 기한 초과</div><div class="v">${
+        pd.filter((c) => c.next.nextDate < t).length
+      }</div></div></div>
     <div class="two"><div>
-      <div class="card"><h3>공이 나에게 있음 <span class="muted">${mine.length}건</span></h3>${mine.length ? mine.map(caseItem).join('') : '<div class="empty">오늘 확인할 RCA가 없습니다.</div>'}</div>
-      <div class="card"><h3>회신 독촉 필요 <span class="muted">공이 밖에 있고 재확인일 도래 · ${chase.length}건</span></h3>${chase.length ? chase.map(caseItem).join('') : '<div class="empty">독촉할 RCA가 없습니다.</div>'}</div></div>
-      <div><div class="card"><h3>협력사 · 불량 기한 <span class="muted">NCR 회신 · 유효성 · FAR · 사내 대책 · 3일 이내 ${pd.length}건</span></h3>${pd.length ? pd.map(pItem).join('') : '<div class="empty">임박한 기한이 없습니다.</div>'}</div>
-      <div class="card"><h3>기한 임박 · 초과 조치 <span class="muted">RCA 조치 · 3일 이내 ${due.length}건</span></h3>${due.length ? due.map(actItem).join('') : '<div class="empty">임박한 조치가 없습니다.</div>'}</div>
-      ${jd.length ? `<div class="card"><h3>귀책 판정 대기 <span class="muted">FAR 회신 · RCA 결과가 나온 귀책 미정 건 · ${jd.length}건</span></h3>${jd.map((d) => `<div class="list-item"><div class="grow"><div class="t" onclick="editDefect('${d.id}')">${esc(defLabel(d))}</div><div class="d">${esc(supName(d.supplierId))} · FAR 회신 ${esc(d.inv.farRecv || '-')}</div></div></div>`).join('')}</div>` : ''}</div></div>
+      <div class="card"><h3>공이 나에게 있음 <span class="muted">${mine.length}건</span></h3>${
+        mine.length ? mine.map(caseItem).join('') : '<div class="empty">오늘 확인할 RCA가 없습니다.</div>'
+      }</div>
+      <div class="card"><h3>회신 독촉 필요 <span class="muted">공이 밖에 있고 재확인일 도래 · ${chase.length}건</span></h3>${
+        chase.length ? chase.map(caseItem).join('') : '<div class="empty">독촉할 RCA가 없습니다.</div>'
+      }</div></div>
+      <div><div class="card"><h3>협력사 · 불량 기한 <span class="muted">NCR 회신 · 유효성 · FAR · 사내 대책 · 3일 이내 ${pd.length}건</span></h3>${
+        pd.length ? pd.map(pItem).join('') : '<div class="empty">임박한 기한이 없습니다.</div>'
+      }</div>
+      <div class="card"><h3>기한 임박 · 초과 조치 <span class="muted">RCA 조치 · 3일 이내 ${due.length}건</span></h3>${
+        due.length ? due.map(actItem).join('') : '<div class="empty">임박한 조치가 없습니다.</div>'
+      }</div>
+      ${
+        jd.length
+          ? `<div class="card"><h3>귀책 판정 대기 <span class="muted">FAR 회신 · RCA 결과가 나온 귀책 미정 건 · ${jd.length}건</span></h3>${jd
+              .map(
+                (d) =>
+                  `<div class="list-item"><div class="grow"><div class="t" onclick="editDefect('${d.id}')">${esc(defLabel(d))}</div>
+                    <div class="d">${esc(supName(d.supplierId))} · FAR 회신 ${esc(d.inv.farRecv || '-')}</div></div></div>`,
+              )
+              .join('')}</div>`
+          : ''
+      }</div></div>
     ${db.cases.length ? '' : czStartCard()}`;
 }
 function czViewCases() {
@@ -1231,9 +1416,17 @@ function czViewCases() {
       .join('')}</select>`;
   return `<h1>RCA · 사내 8D</h1><p class="sub">사내 원인분석(RCA)과 내부 8D 목록입니다. 불량·NCR과 연결해 두면 비용·협력사 대책서 진행이 함께 보입니다.</p>
     <div class="bar"><input type="text" placeholder="번호 · 제목 · 부품 · 협력사 검색" value="${esc(f.q)}" data-act="filtq" style="max-width:280px">
-      ${sel('status', ['미종결', '진행중', '보류', '종결', '취소'], '상태 전체')}${sel('stage', CZ_STAGES, '단계 전체')}${sel('tier', ['TIER 3', 'TIER 2', 'TIER 1', 'TIER 0'], 'TIER 전체')}${sel('ball', CZ_OPT.Ball, '공 전체')}<select data-act="filt" data-k="late" style="width:auto"><option value="">지연 전체</option><option value="1" ${f.late ? 'selected' : ''}>지연만</option></select>
-      <span class="grow"></span><span class="muted" style="font-size:12px">SharePoint 이전용 CSV</span>${['cases', 'actions', 'parts', 'suppliers'].map((l) => `<button class="btn sm" data-act="csv" data-list="${l}">${l[0].toUpperCase() + l.slice(1)}</button>`).join('')}</div>
-    <div class="tw"><table class="t"><thead><tr><th>RCA 번호</th><th>제목</th><th>부품</th><th>협력사</th><th>연결</th><th>TIER</th><th>단계</th><th>상태</th><th>공</th><th>다음 행동</th><th>재확인일</th><th>목표 종결</th><th class="num">경과일</th></tr></thead>
+      ${sel('status', ['미종결', '진행중', '보류', '종결', '취소'], '상태 전체')}${sel('stage', CZ_STAGES, '단계 전체')}${sel(
+        'tier',
+        ['TIER 3', 'TIER 2', 'TIER 1', 'TIER 0'],
+        'TIER 전체',
+      )}${sel('ball', CZ_OPT.Ball, '공 전체')}<select data-act="filt" data-k="late" style="width:auto"><option value="">지연 전체</option>
+        <option value="1" ${f.late ? 'selected' : ''}>지연만</option></select>
+      <span class="grow"></span><span class="muted" style="font-size:12px">SharePoint 이전용 CSV</span>${['cases', 'actions', 'parts', 'suppliers']
+        .map((l) => `<button class="btn sm" data-act="csv" data-list="${l}">${l[0].toUpperCase() + l.slice(1)}</button>`)
+        .join('')}</div>
+    <div class="tw"><table class="t"><thead><tr><th>RCA 번호</th><th>제목</th><th>부품</th><th>협력사</th><th>연결</th><th>TIER</th>
+      <th>단계</th><th>상태</th><th>공</th><th>다음 행동</th><th>재확인일</th><th>목표 종결</th><th class="num">경과일</th></tr></thead>
     <tbody>${
       rows.length
         ? rows
@@ -1245,8 +1438,13 @@ function czViewCases() {
               return `<tr class="click${lt.length ? ' late' : ''}" data-act="open" data-id="${c.id}">
       <td class="mono">${esc(c.CaseNo)}</td><td>${esc(c.Title)}</td><td>${czPartLabel(c)}</td><td>${czSup(c.SupplierId)}</td>
       <td style="white-space:nowrap">${n ? `<span class="bg inf">${esc(n.no)}</span> ` : ''}${nd ? `<span class="bg mut">불량 ${nd}</span>` : ''}</td>
-      <td><span class="badge ${czTierCls(c.Tier)}">${esc(c.Tier || '-')}</span></td><td>${esc(c.Stage)}</td><td><span class="badge ${czStCls(c.Status)}">${esc(c.Status)}</span></td><td>${czBall(c.Ball)}</td>
-      <td style="max-width:240px">${esc(c.NextAction)}</td><td>${czDate(c.RecheckDate, closed)}</td><td style="white-space:nowrap">${closed ? `<span class="muted">${esc(c.CloseDate || '')}</span>` : czDate(czTarget(c))}${lateBadge(lt) ? '<br>' + lateBadge(lt) : ''}</td><td class="num">${has(c.Created) ? diffDays(c.Created, closed && has(c.CloseDate) ? c.CloseDate : t) : ''}</td></tr>`;
+      <td><span class="badge ${czTierCls(c.Tier)}">${esc(c.Tier || '-')}</span></td><td>${esc(c.Stage)}</td>
+        <td><span class="badge ${czStCls(c.Status)}">${esc(c.Status)}</span></td><td>${czBall(c.Ball)}</td>
+      <td style="max-width:240px">${esc(c.NextAction)}</td><td>${czDate(c.RecheckDate, closed)}</td><td style="white-space:nowrap">${
+        closed ? `<span class="muted">${esc(c.CloseDate || '')}</span>` : czDate(czTarget(c))
+      }${lateBadge(lt) ? '<br>' + lateBadge(lt) : ''}</td><td class="num">${
+        has(c.Created) ? diffDays(c.Created, closed && has(c.CloseDate) ? c.CloseDate : t) : ''
+      }</td></tr>`;
             })
             .join('')
         : '<tr><td colspan="13" class="empty">조건에 맞는 RCA가 없습니다.</td></tr>'
@@ -1256,12 +1454,14 @@ function czField(c, fd, missSet) {
   if (fd.showIf && !fd.showIf(c)) return '';
   const ds = (c.DefectIds || []).map((i) => db.defects.find((d) => d.id === i)).filter(Boolean);
   if (ds.length && fd.key === 'DefectQty')
-    return `<div class="fld"><label>${esc(fd.label)}</label><div class="calc"><b>${num(c.DefectQty).toLocaleString()}</b> <span class="muted">연결 불량 ${ds.length}건 합계</span></div><div class="hint">불량 관리에서 수정하면 자동 반영</div></div>`;
+    return `<div class="fld"><label>${esc(fd.label)}</label><div class="calc"><b>${num(c.DefectQty).toLocaleString()}</b> <span class="muted">연결 불량 ${ds.length}건 합계</span></div>
+      <div class="hint">불량 관리에서 수정하면 자동 반영</div></div>`;
   if (ds.length && fd.key === 'Disposition') {
     const dp = ds.map((d) => d.disposition || '미정'),
       u = [...new Set(dp)];
     if (u.length === 1 && CZ_OPT.Disposition.includes(u[0]) && u[0] !== '미정')
-      return `<div class="fld ${missSet.has(fd.key) ? 'miss' : ''}"><label>${esc(fd.label)}</label><div class="calc"><b>${esc(u[0])}</b></div><div class="hint">연결 불량의 ‘처리’ — 불량 관리에서 수정</div></div>`;
+      return `<div class="fld ${missSet.has(fd.key) ? 'miss' : ''}"><label>${esc(fd.label)}</label><div class="calc"><b>${esc(u[0])}</b></div>
+        <div class="hint">연결 불량의 ‘처리’ — 불량 관리에서 수정</div></div>`;
     fd = Object.assign({}, fd, {
       hint:
         '연결 불량 처리: ' +
@@ -1293,7 +1493,9 @@ function czField(c, fd, missSet) {
       const p = czPart(c);
       inp = `<input type="text" ${attr} data-combo="parts" autocomplete="off" value="${p ? esc(p.partNo) : ''}" placeholder="번호·품명·협력사로 검색">`;
       if (p)
-        inp += `<div class="hint">${esc(p.name)}${p.model ? ' · ' + esc(p.model) : ''}${p.safety && p.safety !== '해당없음' ? ` · <b style="color:var(--red)">${esc(p.safety)}</b>` : ''}</div>`;
+        inp += `<div class="hint">${esc(p.name)}${p.model ? ' · ' + esc(p.model) : ''}${
+          p.safety && p.safety !== '해당없음' ? ` · <b style="color:var(--red)">${esc(p.safety)}</b>` : ''
+        }</div>`;
       break;
     }
     case 'supplier':
@@ -1325,13 +1527,23 @@ function czField(c, fd, missSet) {
           : '<span class="muted">발행일 입력 시 계산</span>';
       if (fd.key === 'FARTotal') {
         const s = czFar(c);
-        t = `<b>${s}</b> / 30 · ${s >= 24 ? '<span style="color:var(--grn)">합격</span>' : s >= 15 ? '<span style="color:var(--amb)">조건부</span>' : '<span style="color:var(--red)">불합격</span>'}`;
+        t = `<b>${s}</b> / 30 · ${
+          s >= 24
+            ? '<span style="color:var(--grn)">합격</span>'
+            : s >= 15
+              ? '<span style="color:var(--amb)">조건부</span>'
+              : '<span style="color:var(--red)">불합격</span>'
+        }`;
       }
       inp = `<div class="calc">${t}</div>`;
       break;
     }
   }
-  return `<div class="fld ${fd.w === 2 ? 'w2' : fd.w === 4 ? 'w4' : ''} ${missSet.has(fd.key) ? 'miss' : ''}"><label for="${id}">${esc(fd.label)}</label>${inp}${fd.hint ? `<div class="hint">${esc(typeof fd.hint === 'function' ? fd.hint(c) : fd.hint)}</div>` : ''}</div>`;
+  return `<div class="fld ${
+    fd.w === 2 ? 'w2' : fd.w === 4 ? 'w4' : ''
+  } ${missSet.has(fd.key) ? 'miss' : ''}"><label for="${id}">${esc(fd.label)}</label>${inp}${
+    fd.hint ? `<div class="hint">${esc(typeof fd.hint === 'function' ? fd.hint(c) : fd.hint)}</div>` : ''
+  }</div>`;
 }
 /* 연결된 불량 · NCR */
 function czLinkHTML(c) {
@@ -1350,16 +1562,43 @@ function czLinkHTML(c) {
   return `<div class="lkbox"><div class="sec-t" style="margin-bottom:6px">연결된 불량 · NCR <span class="muted" style="font-weight:400">비용·구상은 불량 기록에서, 대책서 회신·평가는 NCR에서 관리합니다</span></div>
     <div class="row" style="gap:8px;margin-bottom:6px"><b style="font-size:12.5px">NCR</b>${
       n
-        ? `<a class="bg inf" style="cursor:pointer" onclick="editNcr('${n.id}')">${esc(n.no)}</a> ${stB(ncrStatus(n))} <span class="muted" style="font-size:12px">${esc(n.reqType || '')} · 회신 기한 ${esc(n.dueDate || '-')}${n.replyDate ? ' · 회신 ' + esc(n.replyDate) : ''}${n.evalVerdict ? ` · 평가 ${n.evalScore}점 ${esc(n.evalVerdict)}` : ''}</span> ${farBadge(n)}${farOn(n) && n.far.verdict ? ` <span class="muted" style="font-size:12px">FAR 판정: ${esc(n.far.verdict)}</span>` : ''} <button class="btn sm" data-act="unlinkNcr">연결 해제</button>`
-        : `<span class="muted" style="font-size:12px">없음</span>${candN.length ? `<select id="czLinkN"><option value="">— 기존 NCR 연결 —</option>${candN.map((x) => `<option value="${x.id}">${esc(x.no)} · ${esc(x.issueDate)} · ${esc(x.title)}</option>`).join('')}</select><button class="btn sm" data-act="linkNcr">연결</button>` : ''}${ds.length ? `<button class="btn sm pri" data-act="issueNcr">연결 불량으로 NCR 발행</button>` : ''}`
+        ? `<a class="bg inf" style="cursor:pointer" onclick="editNcr('${n.id}')">${esc(n.no)}</a> ${stB(ncrStatus(n))} <span class="muted" style="font-size:12px">${esc(n.reqType || '')} · 회신 기한 ${esc(n.dueDate || '-')}${
+            n.replyDate ? ' · 회신 ' + esc(n.replyDate) : ''
+          }${n.evalVerdict ? ` · 평가 ${n.evalScore}점 ${esc(n.evalVerdict)}` : ''}</span> ${farBadge(n)}${
+            farOn(n) && n.far.verdict ? ` <span class="muted" style="font-size:12px">FAR 판정: ${esc(n.far.verdict)}</span>` : ''
+          } <button class="btn sm" data-act="unlinkNcr">연결 해제</button>`
+        : `<span class="muted" style="font-size:12px">없음</span>${
+            candN.length
+              ? `<select id="czLinkN"><option value="">— 기존 NCR 연결 —</option>${candN
+                  .map((x) => `<option value="${x.id}">${esc(x.no)} · ${esc(x.issueDate)} · ${esc(x.title)}</option>`)
+                  .join('')}</select><button class="btn sm" data-act="linkNcr">연결</button>`
+              : ''
+          }${ds.length ? `<button class="btn sm pri" data-act="issueNcr">연결 불량으로 NCR 발행</button>` : ''}`
     }</div>
     ${
       ds.length
-        ? `<table><tbody>${ds.map((d) => `<tr><td style="white-space:nowrap">${esc(d.date)}</td><td>${esc(d.partNo)} ${esc(d.partName)}</td><td>${esc(d.type)}</td><td class="num" style="text-align:right">${num(d.qty).toLocaleString()}개</td><td>${sevBadge(d)}</td><td>${stageBadges(d).replace('<br>', ' ')}</td><td style="text-align:right;white-space:nowrap">${costTotal(d) ? won(costTotal(d)) + '원' : ''}</td><td style="white-space:nowrap"><button class="btn sm" onclick="openLog('${d.id}')">진행 보기</button> <button class="btn sm" data-act="unlinkDef" data-did="${d.id}">해제</button></td></tr>`).join('')}</tbody></table>
-      <div class="muted" style="font-size:12px;margin-top:4px">불량 ${ds.length}건 · 수량 ${sum(ds, 'qty').toLocaleString()}개${cost ? ` · 실패비용 ${won(cost)}원` : ''}${os ? ` · <span style="color:var(--red)">구상 미회수 ${won(os)}원</span>` : ''}</div>`
+        ? `<table><tbody>${ds
+            .map(
+              (d) =>
+                `<tr><td style="white-space:nowrap">${esc(d.date)}</td><td>${esc(d.partNo)} ${esc(d.partName)}</td><td>${esc(d.type)}</td>
+                  <td class="num" style="text-align:right">${num(d.qty).toLocaleString()}개</td><td>${sevBadge(d)}</td>
+                    <td>${stageBadges(d).replace('<br>', ' ')}</td><td style="text-align:right;white-space:nowrap">${
+                      costTotal(d) ? won(costTotal(d)) + '원' : ''
+                    }</td><td style="white-space:nowrap"><button class="btn sm" onclick="openLog('${d.id}')">진행 보기</button> <button class="btn sm" data-act="unlinkDef" data-did="${d.id}">해제</button></td></tr>`,
+            )
+            .join('')}</tbody></table>
+      <div class="muted" style="font-size:12px;margin-top:4px">불량 ${ds.length}건 · 수량 ${sum(ds, 'qty').toLocaleString()}개${cost ? ` · 실패비용 ${won(cost)}원` : ''}${
+        os ? ` · <span style="color:var(--red)">구상 미회수 ${won(os)}원</span>` : ''
+      }</div>`
         : '<div class="muted" style="font-size:12px">연결된 불량 없음</div>'
     }
-    ${candD.length ? `<div class="row" style="margin-top:6px;gap:6px"><select id="czLinkD"><option value="">— 불량 추가 연결${c.SupplierId ? ' (같은 협력사)' : ''} —</option>${candD.map((d) => `<option value="${d.id}">${esc(d.date)} · ${esc(d.partNo)} ${esc(d.partName)} · ${esc(d.type)} · ${num(d.qty)}개</option>`).join('')}</select><button class="btn sm" data-act="linkDef">추가</button></div>` : ''}</div>`;
+    ${
+      candD.length
+        ? `<div class="row" style="margin-top:6px;gap:6px"><select id="czLinkD"><option value="">— 불량 추가 연결${c.SupplierId ? ' (같은 협력사)' : ''} —</option>${candD
+            .map((d) => `<option value="${d.id}">${esc(d.date)} · ${esc(d.partNo)} ${esc(d.partName)} · ${esc(d.type)} · ${num(d.qty)}개</option>`)
+            .join('')}</select><button class="btn sm" data-act="linkDef">추가</button></div>`
+        : ''
+    }</div>`;
 }
 function czCaseHTML(c) {
   const p = czPath(c),
@@ -1379,7 +1618,13 @@ function czCaseHTML(c) {
     const d = inP && i <= ci ? czStageDate(c, s) : '',
       stay = i === ci && !closed && d ? Math.max(0, diffDays(d, today())) : null;
     const sub = stay != null ? `${d.slice(5)} · ${stay}일째` : d ? d.slice(5) : isN && missing.length ? '남은 조건' : '';
-    return `<div class="stg ${cls}${isN ? ' nx' : ''}${far}" ${isN ? `data-act="showGate" title="누르면 ${esc(s)} 단계로 가기 위해 남은 조건을 봅니다"` : `title="${inP ? (d ? `${esc(s)} 시작 ${d}` : '') : '이 TIER에서는 건너뜀'}"`}>${i < ci && inP ? '✓ ' : ''}${s}${isN && missing.length ? `<span class="gc">${missing.length}</span>` : ''}${sub ? `<small>${sub}</small>` : ''}</div>`;
+    return `<div class="stg ${cls}${isN ? ' nx' : ''}${far}" ${
+      isN
+        ? `data-act="showGate" title="누르면 ${esc(s)} 단계로 가기 위해 남은 조건을 봅니다"`
+        : `title="${inP ? (d ? `${esc(s)} 시작 ${d}` : '') : '이 TIER에서는 건너뜀'}"`
+    }>${i < ci && inP ? '✓ ' : ''}${s}${
+      isN && missing.length ? `<span class="gc">${missing.length}</span>` : ''
+    }${sub ? `<small>${sub}</small>` : ''}</div>`;
   }).join('');
   const tabs = CZ_TABS.filter((t) => !t.showTab || t.showTab(c)),
     tab = tabs.find((t) => t.id === czUi.tab) || tabs[0];
@@ -1402,24 +1647,36 @@ function czCaseHTML(c) {
       ? (() => {
           const t = czTarget(c),
             k = diffDays(today(), t);
-          return `<span class="bg ${k < 0 ? 'bad' : k <= 7 ? 'warn' : 'mut'}" title="${has(c.TargetClose) ? '직접 입력한 목표 종결일' : `등록일 + ${esc(c.Tier || 'TIER')} 기준 ${czDays(c)}일 (기본 탭에서 바꿀 수 있음)`}">목표 종결 ${t} ${k < 0 ? 'D+' + -k : k === 0 ? '오늘' : 'D-' + k}</span>`;
+          return `<span class="bg ${k < 0 ? 'bad' : k <= 7 ? 'warn' : 'mut'}" title="${
+            has(c.TargetClose) ? '직접 입력한 목표 종결일' : `등록일 + ${esc(c.Tier || 'TIER')} 기준 ${czDays(c)}일 (기본 탭에서 바꿀 수 있음)`
+          }">목표 종결 ${t} ${k < 0 ? 'D+' + -k : k === 0 ? '오늘' : 'D-' + k}</span>`;
         })()
       : ''
   }
       <h2>${esc(c.Title || '(제목 없음)')}</h2><select data-scope="case" data-f="Status">${czOptHTML(CZ_OPT.Status, c.Status)}</select>
       <button class="btn" data-act="a3">A3 보고서</button><button class="btn" data-act="report">8D 보고서</button>
       ${ps && !closed ? `<button class="btn" data-act="stagePrev">← ${esc(ps)}</button>` : ''}
-      ${closed ? `<button class="btn" data-act="reopen">다시 열기</button>` : ns ? `<button class="btn pri" data-act="stageNext">${ns === '종결' ? '종결 처리' : esc(ns) + '(으)로 →'}</button>` : ''}</div>
+      ${
+        closed
+          ? `<button class="btn" data-act="reopen">다시 열기</button>`
+          : ns
+            ? `<button class="btn pri" data-act="stageNext">${ns === '종결' ? '종결 처리' : esc(ns) + '(으)로 →'}</button>`
+            : ''
+      }</div>
       ${
         n || ds.length
-          ? `<div class="lnk">${n ? `<a class="bg inf" style="cursor:pointer" onclick="editNcr('${n.id}')">${esc(n.no)} · ${esc(ncrStatus(n))}</a>` : ''}${ds.length ? `<span class="bg mut">불량 ${ds.length}건 · ${sum(ds, 'qty').toLocaleString()}개</span>` : ''}${
+          ? `<div class="lnk">${
+              n ? `<a class="bg inf" style="cursor:pointer" onclick="editNcr('${n.id}')">${esc(n.no)} · ${esc(ncrStatus(n))}</a>` : ''
+            }${ds.length ? `<span class="bg mut">불량 ${ds.length}건 · ${sum(ds, 'qty').toLocaleString()}개</span>` : ''}${
               ds.length
                 ? (() => {
                     const g = ds.map((d) => sevOf(d).grade).sort()[0];
                     return `<span class="bg ${SEV_CLS[g]}">불량 심각도 ${g}</span>`;
                   })()
                 : ''
-            }${cost ? `<span class="bg mut">비용 ${won(cost)}원</span>` : ''}${c.RcaScope ? `<span class="bg ${c.RcaScope === '없음' ? 'mut' : 'warn'}">사내 분석: ${esc(CZ_RCA_LBL[c.RcaScope])}</span>` : ''}</div>`
+            }${cost ? `<span class="bg mut">비용 ${won(cost)}원</span>` : ''}${
+              c.RcaScope ? `<span class="bg ${c.RcaScope === '없음' ? 'mut' : 'warn'}">사내 분석: ${esc(CZ_RCA_LBL[c.RcaScope])}</span>` : ''
+            }</div>`
           : c.RcaScope
             ? `<div class="lnk"><span class="bg ${c.RcaScope === '없음' ? 'mut' : 'warn'}">사내 분석: ${esc(CZ_RCA_LBL[c.RcaScope])}</span></div>`
             : ''
@@ -1429,8 +1686,23 @@ function czCaseHTML(c) {
         <div><label>다음 행동</label><input type="text" data-scope="case" data-f="NextAction" value="${esc(c.NextAction)}"></div>
         <div><label>재확인일</label><input type="date" data-scope="case" data-f="RecheckDate" value="${esc(c.RecheckDate)}"></div>
         <div><button class="btn" data-act="bump" data-id="${c.id}">+2일</button></div></div>
-      ${czUi.showGate && missing.length ? `<div class="gate"><b>${esc(ns)} 단계로 넘어가려면 ${missing.length}개 항목이 필요합니다.</b><ul>${missing.map((r) => `<li><a data-act="gotoTab" data-tab="${r.tab}" data-f="${r.f || ''}">${esc(r.t)}</a></li>`).join('')}</ul></div>` : ''}</div>
-    <div class="tabs">${tabs.map((t) => `<div class="tab ${t.id === tab.id ? 'on' : ''}" data-act="tab" data-tab="${t.id}">${t.label}${t.id === 'actions' ? ` (${nOpen}/${czActs(c).length})` : ''}${t.id === 'cause' && (c.Analyses || []).length ? ` (${c.Analyses.length})` : ''}${t.id === 'hist' && (c.Log || []).length ? ` (${c.Log.length})` : ''}${missTabs.has(t.id) ? '<span class="dot"></span>' : ''}</div>`).join('')}</div>
+      ${
+        czUi.showGate && missing.length
+          ? `<div class="gate"><b>${esc(ns)} 단계로 넘어가려면 ${missing.length}개 항목이 필요합니다.</b><ul>${missing
+              .map((r) => `<li><a data-act="gotoTab" data-tab="${r.tab}" data-f="${r.f || ''}">${esc(r.t)}</a></li>`)
+              .join('')}</ul></div>`
+          : ''
+      }</div>
+    <div class="tabs">${tabs
+      .map(
+        (t) =>
+          `<div class="tab ${t.id === tab.id ? 'on' : ''}" data-act="tab" data-tab="${t.id}">${t.label}${
+            t.id === 'actions' ? ` (${nOpen}/${czActs(c).length})` : ''
+          }${t.id === 'cause' && (c.Analyses || []).length ? ` (${c.Analyses.length})` : ''}${
+            t.id === 'hist' && (c.Log || []).length ? ` (${c.Log.length})` : ''
+          }${missTabs.has(t.id) ? '<span class="dot"></span>' : ''}</div>`,
+      )
+      .join('')}</div>
     <div class="card">${body}</div>`;
 }
 // RCA 원인분석 결론 → 연결 불량의 귀책 판정 (귀책 조사와 연결)
@@ -1453,9 +1725,15 @@ function czVerdictBox(c) {
     })
     .join('');
   const allDone = !ds.some(pend);
-  return `<details class="vbox" id="czVerdict" ${allDone ? '' : 'open'}><summary><b>귀책 판정 반영</b> <span class="muted">— 원인분석 결론으로 연결된 불량의 귀책을 판정합니다 (귀책 조사 종료)</span>${allDone ? ' <span class="badge st-done">판정 완료</span>' : ''}</summary>
+  return `<details class="vbox" id="czVerdict" ${allDone ? '' : 'open'}><summary><b>귀책 판정 반영</b> <span class="muted">— 원인분석 결론으로 연결된 불량의 귀책을 판정합니다 (귀책 조사 종료)</span>${
+    allDone ? ' <span class="badge st-done">판정 완료</span>' : ''
+  }</summary>
     <div class="vlist">${rows}</div>
-    <div class="vsum">${sum ? `<b>판정 근거</b> RCA ${esc(c.CaseNo)} — ${esc(sum.length > 160 ? sum.slice(0, 160) + '…' : sum)}` : '<span style="color:var(--amb)">아래 <b>발생 원인</b>을 먼저 입력하세요. 원인이 판정 근거로 기록됩니다.</span>'}</div>
+    <div class="vsum">${
+      sum
+        ? `<b>판정 근거</b> RCA ${esc(c.CaseNo)} — ${esc(sum.length > 160 ? sum.slice(0, 160) + '…' : sum)}`
+        : '<span style="color:var(--amb)">아래 <b>발생 원인</b>을 먼저 입력하세요. 원인이 판정 근거로 기록됩니다.</span>'
+    }</div>
     <div class="vbtn"><button class="btn" onclick="czApplyVerdict('${c.id}','사내')" ${noCause ? 'disabled' : ''}>사내 귀책</button><button class="btn" onclick="czApplyVerdict('${c.id}','협력사')" ${noCause ? 'disabled' : ''}>협력사 귀책</button>
       <span class="vshare"><button class="btn" onclick="czApplyVerdict('${c.id}','공동')" ${noCause ? 'disabled' : ''}>공동 귀책</button> 협력사 부담 <input type="number" id="czShare" min="0" max="100" style="width:70px" placeholder="%"> %</span>
       <button class="btn" onclick="czApplyVerdict('${c.id}','원인 불명')">원인 불명</button></div></details>`;
@@ -1535,7 +1813,9 @@ function czNcrNote(c, where) {
           ? ' 사내 분석 대상이 없으면 워크시트 없이 넘어갑니다.'
           : ' 사내 분석 대상이 ‘없음’이면 대책서 승인 후 원인분석 단계가 충족됩니다.'),
     actions: ok
-      ? `협력사 대책은 ${open} 대책서(D5·D6)로 승인되었습니다. 여기에는 사내에서 할 일(수입검사 강화, 기준서 개정, 수평전개 등)만 등록하세요.${czNeedEsc(c) ? ' 유출 분석 대상이므로 유출대책 조치는 꼭 1건 이상 필요합니다.' : ''}`
+      ? `협력사 대책은 ${open} 대책서(D5·D6)로 승인되었습니다. 여기에는 사내에서 할 일(수입검사 강화, 기준서 개정, 수평전개 등)만 등록하세요.${
+          czNeedEsc(c) ? ' 유출 분석 대상이므로 유출대책 조치는 꼭 1건 이상 필요합니다.' : ''
+        }`
       : `협력사 대책은 ${open}에서 회신·평가합니다. 대책서가 승인되면 발생·유출대책 조치 요건이 충족됩니다. 여기에는 사내 할 일만 등록하세요.`,
     verify: czNcrDone(c)
       ? `${open} 유효성 검증이 ‘유효’로 끝나 효과검증 판정을 합격으로 반영했습니다.`
@@ -1546,7 +1826,8 @@ function czNcrNote(c, where) {
 function czCaseActions(c) {
   const list = czActs(c).sort((a, b) => (a.DueDate || '9').localeCompare(b.DueDate || '9'));
   return `<div class="bar"><span class="muted">봉쇄 · 대책 · 문서개정 · 수평전개 · 교육 등 담당자와 기한이 있는 모든 일을 한 줄씩 등록합니다.</span><span class="grow"></span><button class="btn pri sm" data-act="addAct">+ 조치 추가</button></div>
-    <div class="tw"><table class="t"><thead><tr><th style="min-width:220px">조치 내용</th><th>구분</th><th>담당자</th><th>외부 담당</th><th>기한</th><th>완료일</th><th>상태</th><th></th></tr></thead>
+    <div class="tw"><table class="t"><thead><tr><th style="min-width:220px">조치 내용</th>
+      <th>구분</th><th>담당자</th><th>외부 담당</th><th>기한</th><th>완료일</th><th>상태</th><th></th></tr></thead>
     <tbody>${list.map((a) => czActRow(a, false)).join('')}${czGhostRows(c)}</tbody></table></div>`;
 }
 // 기본 항목: 발생대책 · 유출대책이 없으면 빈 줄을 미리 보여 줌 (내용을 입력하면 조치로 등록)
@@ -1558,10 +1839,18 @@ function czGhostRows(c) {
   if (!g.length) return czActs(c).length ? '' : '<tr><td colspan="8" class="empty">등록된 조치가 없습니다.</td></tr>';
   return g
     .map(
-      (
-        k,
-      ) => `<tr class="ghost"><td><input type="text" data-scope="ghost" data-cat="${k}" placeholder="${k === '발생대책' ? '왜 만들어졌나 → 재발 방지 대책 (예: 금형 수정, 공정 조건 변경)' : k === '유출대책' ? '왜 못 걸렀나 → 검출 대책 (예: 검사 항목 추가, 전수검사)' : '대책 적용 후 효과 확인 (예: 3 LOT 연속 무결점 · 불량률 비교)'}"></td>
-    <td><span class="badge ${k === '발생대책' ? 't1' : k === '유출대책' ? 't2' : 't0'}">${k}</span></td><td class="muted">${esc(czMe() || '-')}</td><td></td><td><input type="date" data-scope="ghostdue" data-cat="${k}" value="${k === '효과검증' && has(c.VerifyEnd) ? c.VerifyEnd : addDays(today(), k === '효과검증' ? 30 : 7)}"></td><td></td><td class="muted">기본 항목</td><td></td></tr>`,
+      (k) => `<tr class="ghost"><td><input type="text" data-scope="ghost" data-cat="${k}" placeholder="${
+        k === '발생대책'
+          ? '왜 만들어졌나 → 재발 방지 대책 (예: 금형 수정, 공정 조건 변경)'
+          : k === '유출대책'
+            ? '왜 못 걸렀나 → 검출 대책 (예: 검사 항목 추가, 전수검사)'
+            : '대책 적용 후 효과 확인 (예: 3 LOT 연속 무결점 · 불량률 비교)'
+      }"></td>
+    <td><span class="badge ${
+      k === '발생대책' ? 't1' : k === '유출대책' ? 't2' : 't0'
+    }">${k}</span></td><td class="muted">${esc(czMe() || '-')}</td><td></td><td><input type="date" data-scope="ghostdue" data-cat="${k}" value="${
+      k === '효과검증' && has(c.VerifyEnd) ? c.VerifyEnd : addDays(today(), k === '효과검증' ? 30 : 7)
+    }"></td><td></td><td class="muted">기본 항목</td><td></td></tr>`,
     )
     .join('');
 }
@@ -1569,11 +1858,22 @@ function czActRow(a, showCase) {
   const c = czById('cases', a.CaseId),
     late = !['완료', '취소'].includes(a.ActionStatus) && has(a.DueDate) && a.DueDate < today();
   const at = (k) => `data-scope="act" data-id="${a.id}" data-f="${k}"`;
-  return `<tr>${showCase ? `<td class="mono"><a style="cursor:pointer;color:var(--acc)" data-act="open" data-id="${a.CaseId}" data-tab="actions">${c ? esc(c.CaseNo) : '-'}</a></td>` : ''}
-    <td><input type="text" ${at('Title')} value="${esc(a.Title)}"></td><td><select ${at('Category')}>${czOptHTML(CZ_OPT.ActCat, a.Category)}</select></td>
-    <td><input type="text" ${at('Assignee')} list="dlOwners" value="${esc(a.Assignee)}" style="width:96px"></td><td><input type="text" ${at('ExternalOwner')} value="${esc(a.ExternalOwner)}" style="width:96px"></td>
-    <td><input type="date" ${at('DueDate')} value="${esc(a.DueDate)}" style="${late ? 'border-color:var(--red);color:var(--red)' : ''}"></td><td><input type="date" ${at('DoneDate')} value="${esc(a.DoneDate)}"></td>
-    <td><select ${at('ActionStatus')}>${czOptHTML(CZ_OPT.ActStatus, a.ActionStatus)}</select></td><td><button class="btn sm danger" data-act="delAct" data-id="${a.id}" title="삭제">✕</button></td></tr>`;
+  return `<tr>${
+    showCase
+      ? `<td class="mono"><a style="cursor:pointer;color:var(--acc)" data-act="open" data-id="${a.CaseId}" data-tab="actions">${c ? esc(c.CaseNo) : '-'}</a></td>`
+      : ''
+  }
+    <td><input type="text" ${at('Title')} value="${esc(a.Title)}"></td>
+      <td><select ${at('Category')}>${czOptHTML(CZ_OPT.ActCat, a.Category)}</select></td>
+    <td><input type="text" ${at('Assignee')} list="dlOwners" value="${esc(a.Assignee)}" style="width:96px"></td>
+      <td><input type="text" ${at('ExternalOwner')} value="${esc(a.ExternalOwner)}" style="width:96px"></td>
+    <td><input type="date" ${at('DueDate')} value="${esc(a.DueDate)}" style="${
+      late ? 'border-color:var(--red);color:var(--red)' : ''
+    }"></td><td><input type="date" ${at('DoneDate')} value="${esc(a.DoneDate)}"></td>
+    <td><select ${at('ActionStatus')}>${czOptHTML(
+      CZ_OPT.ActStatus,
+      a.ActionStatus,
+    )}</select></td><td><button class="btn sm danger" data-act="delAct" data-id="${a.id}" title="삭제">✕</button></td></tr>`;
 }
 // 이력 탭 — RCA에 남긴 기록 + 연결 NCR · 불량의 자동 이벤트 (기록 도입 전 건은 날짜로 추정해 표시)
 function czHistHTML(c) {
@@ -1610,9 +1910,23 @@ function czHistHTML(c) {
     NCR: 't1',
     불량: 't0',
   };
-  return `<div class="bar"><span class="muted">단계 진행 · 되돌림 · 다시 열기 · 조치 완료 · 귀책 판정이 자동으로 남습니다. 지우거나 고칠 수 없습니다.</span><span class="grow"></span><button class="btn sm" data-act="histAll">${czUi.histOwn ? '연결 NCR · 불량 기록도 보기' : 'RCA 기록만 보기'}</button></div>
-    <div class="tw"><table class="t"><thead><tr><th style="width:96px">일자</th><th style="width:90px">구분</th><th>내용</th><th style="width:140px">출처 · 기록자</th></tr></thead><tbody>
-    ${L.length ? L.map((x) => `<tr${x.est ? ' class="muted"' : ''}><td class="mono">${esc(x.date)}${x.at ? `<br><span class="muted" style="font-size:11px">${esc(loc(x.at).slice(11, 16))}</span>` : ''}</td><td><span class="badge ${cls[x.type] || 't0'}">${esc(x.type)}</span></td><td>${esc(x.text)}${x.est ? ' <span class="muted" style="font-size:11px">(이력 기록 도입 전 — 날짜로 추정)</span>' : ''}</td><td style="font-size:12px">${esc(x.src)}${x.by ? ` · ${esc(x.by)}` : ''}</td></tr>`).join('') : '<tr><td colspan="4" class="empty">기록이 없습니다.</td></tr>'}</tbody></table></div>`;
+  return `<div class="bar"><span class="muted">단계 진행 · 되돌림 · 다시 열기 · 조치 완료 · 귀책 판정이 자동으로 남습니다. 지우거나 고칠 수 없습니다.</span><span class="grow"></span><button class="btn sm" data-act="histAll">${
+    czUi.histOwn ? '연결 NCR · 불량 기록도 보기' : 'RCA 기록만 보기'
+  }</button></div>
+    <div class="tw"><table class="t"><thead><tr><th style="width:96px">일자</th>
+      <th style="width:90px">구분</th><th>내용</th><th style="width:140px">출처 · 기록자</th></tr></thead><tbody>
+    ${
+      L.length
+        ? L.map(
+            (x) =>
+              `<tr${x.est ? ' class="muted"' : ''}><td class="mono">${esc(x.date)}${
+                x.at ? `<br><span class="muted" style="font-size:11px">${esc(loc(x.at).slice(11, 16))}</span>` : ''
+              }</td><td><span class="badge ${cls[x.type] || 't0'}">${esc(x.type)}</span></td><td>${esc(x.text)}${
+                x.est ? ' <span class="muted" style="font-size:11px">(이력 기록 도입 전 — 날짜로 추정)</span>' : ''
+              }</td><td style="font-size:12px">${esc(x.src)}${x.by ? ` · ${esc(x.by)}` : ''}</td></tr>`,
+          ).join('')
+        : '<tr><td colspan="4" class="empty">기록이 없습니다.</td></tr>'
+    }</tbody></table></div>`;
 }
 function czViewActions() {
   const t = today(),
@@ -1630,11 +1944,22 @@ function czViewActions() {
     ['all', '전체'],
   ];
   return `<h1>조치</h1><p class="sub">모든 RCA의 조치를 기한 순으로 봅니다. 여기서 바로 수정할 수 있습니다.</p>
-    <div class="bar"><div class="seg">${seg.map(([v, l]) => `<a class="${f === v ? 'on' : ''}" data-act="actFilt" data-v="${v}">${l}</a>`).join('')}</div>
-      ${f === 'mine' && !me ? '<span class="muted">설정 › 일반의 담당자 목록 첫 줄이 ‘나’로 쓰입니다.</span>' : f === 'mine' ? `<span class="muted">담당자 ‘${esc(me)}’ 기준</span>` : ''}
+    <div class="bar"><div class="seg">${seg
+      .map(([v, l]) => `<a class="${f === v ? 'on' : ''}" data-act="actFilt" data-v="${v}">${l}</a>`)
+      .join('')}</div>
+      ${
+        f === 'mine' && !me
+          ? '<span class="muted">설정 › 일반의 담당자 목록 첫 줄이 ‘나’로 쓰입니다.</span>'
+          : f === 'mine'
+            ? `<span class="muted">담당자 ‘${esc(me)}’ 기준</span>`
+            : ''
+      }
       <span class="grow"></span><button class="btn" data-act="csv" data-list="actions">CSV</button></div>
-    <div class="tw"><table class="t"><thead><tr><th>RCA</th><th style="min-width:220px">조치 내용</th><th>구분</th><th>담당자</th><th>외부 담당</th><th>기한</th><th>완료일</th><th>상태</th><th></th></tr></thead>
-    <tbody>${rows.length ? rows.map((a) => czActRow(a, true)).join('') : '<tr><td colspan="9" class="empty">해당하는 조치가 없습니다.</td></tr>'}</tbody></table></div>`;
+    <div class="tw"><table class="t"><thead><tr><th>RCA</th><th style="min-width:220px">조치 내용</th>
+      <th>구분</th><th>담당자</th><th>외부 담당</th><th>기한</th><th>완료일</th><th>상태</th><th></th></tr></thead>
+    <tbody>${
+      rows.length ? rows.map((a) => czActRow(a, true)).join('') : '<tr><td colspan="9" class="empty">해당하는 조치가 없습니다.</td></tr>'
+    }</tbody></table></div>`;
 }
 
 /* ---------- 생성 · 수정 ---------- */
@@ -2541,7 +2866,14 @@ function czReport() {
   const actTable = (cats) => {
     const l = A.filter((a) => cats.includes(a.Category));
     return l.length
-      ? `<table><tr><th style="width:auto">조치</th><th style="width:14%">구분</th><th style="width:14%">담당</th><th style="width:13%">기한</th><th style="width:13%">완료일</th><th style="width:10%">상태</th></tr>${l.map((a) => `<tr><td>${esc(a.Title)}</td><td>${esc(a.Category)}</td><td>${esc(a.Assignee || a.ExternalOwner)}</td><td>${esc(a.DueDate)}</td><td>${esc(a.DoneDate)}</td><td>${esc(a.ActionStatus)}</td></tr>`).join('')}</table>`
+      ? `<table><tr><th style="width:auto">조치</th><th style="width:14%">구분</th><th style="width:14%">담당</th>
+        <th style="width:13%">기한</th><th style="width:13%">완료일</th><th style="width:10%">상태</th></tr>${l
+          .map(
+            (a) =>
+              `<tr><td>${esc(a.Title)}</td><td>${esc(a.Category)}</td><td>${esc(a.Assignee || a.ExternalOwner)}</td>
+                <td>${esc(a.DueDate)}</td><td>${esc(a.DoneDate)}</td><td>${esc(a.ActionStatus)}</td></tr>`,
+          )
+          .join('')}</table>`
       : '<p class="muted">등록된 조치 없음</p>';
   };
   const html = reportFrame(`<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>${esc(c.CaseNo)} 문제해결 보고서</title><style>
@@ -2550,17 +2882,53 @@ function czReport() {
   table{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:6px}td,th{border:1px solid #bbb;padding:5px 7px;text-align:left;vertical-align:top}th{background:#f5f7f9;width:22%;font-weight:600}
   .pre{white-space:pre-wrap}.muted{color:#777}</style></head><body>${logoHead()}
   <h1>문제해결 보고서 (8D) — ${esc(c.CaseNo)}</h1><div class="muted">출력일 ${today()} · 상태 ${esc(c.Status)} · 단계 ${esc(c.Stage)}</div>
-  <h3>D0 · D1 개요와 팀</h3><table>${row('제목', c.Title)}${row('부품', p ? `${p.partNo} ${p.name}` : '')}${row('협력사 / 고객사', `${supName(c.SupplierId) || '-'} / ${c.Customer || '-'}`)}
-    ${row('발생원천 / 등록일', `${c.Origin} / ${c.Created}`)}${row('TIER / 대응방향', `${c.Tier} (S${c.SevS} × I${c.ImpI}) / ${c.Response}`)}${c.TierReason ? row('TIER 조정사유', c.TierReason) : ''}${row('담당자', c.Owner)}${row('연결 NCR', n ? `${n.no} (${ncrStatus(n)})` : '')}${row('기존 문서번호', c.LegacyNo)}</table>
+  <h3>D0 · D1 개요와 팀</h3><table>${row('제목', c.Title)}${row('부품', p ? `${p.partNo} ${p.name}` : '')}${row(
+    '협력사 / 고객사',
+    `${supName(c.SupplierId) || '-'} / ${c.Customer || '-'}`,
+  )}
+    ${row('발생원천 / 등록일', `${c.Origin} / ${c.Created}`)}${row('TIER / 대응방향', `${c.Tier} (S${c.SevS} × I${c.ImpI}) / ${c.Response}`)}${
+      c.TierReason ? row('TIER 조정사유', c.TierReason) : ''
+    }${row('담당자', c.Owner)}${row('연결 NCR', n ? `${n.no} (${ncrStatus(n)})` : '')}${row('기존 문서번호', c.LegacyNo)}</table>
   <h3>D2 문제 정의</h3><table>${row('불량유형 / 수량', `${c.DefectType} / ${c.DefectQty} EA`)}${row('불량내용', c.Description)}</table>
-  ${ds.length ? `<table><tr><th style="width:auto">발생일</th><th style="width:auto">발생처</th><th style="width:auto">부품</th><th style="width:auto">유형</th><th style="width:auto">수량</th><th style="width:auto">심각도</th><th style="width:auto">비용(원)</th></tr>${ds.map((d) => `<tr><td>${esc(d.date)}</td><td>${esc(d.source)}</td><td>${esc(d.partNo)} ${esc(d.partName)}</td><td>${esc(d.type)}</td><td>${num(d.qty).toLocaleString()}</td><td>${sevOf(d).grade}</td><td>${costTotal(d) ? won(costTotal(d)) : ''}</td></tr>`).join('')}</table>` : ''}
-  <h3>D3 임시 봉쇄 · 처분</h3><table>${row('격리 수량', `재고 ${c.QtyStock || 0} · 재공 ${c.QtyWIP || 0} · 이송중 ${c.QtyTransit || 0} · 고객처 ${c.QtyCustomer || 0} EA`)}
+  ${
+    ds.length
+      ? `<table><tr><th style="width:auto">발생일</th><th style="width:auto">발생처</th><th style="width:auto">부품</th>
+        <th style="width:auto">유형</th><th style="width:auto">수량</th><th style="width:auto">심각도</th><th style="width:auto">비용(원)</th></tr>${ds
+          .map(
+            (d) =>
+              `<tr><td>${esc(d.date)}</td><td>${esc(d.source)}</td><td>${esc(d.partNo)} ${esc(d.partName)}</td><td>${esc(d.type)}</td>
+                <td>${num(d.qty).toLocaleString()}</td><td>${sevOf(d).grade}</td><td>${costTotal(d) ? won(costTotal(d)) : ''}</td></tr>`,
+          )
+          .join('')}</table>`
+      : ''
+  }
+  <h3>D3 임시 봉쇄 · 처분</h3><table>${row(
+    '격리 수량',
+    `재고 ${c.QtyStock || 0} · 재공 ${c.QtyWIP || 0} · 이송중 ${c.QtyTransit || 0} · 고객처 ${c.QtyCustomer || 0} EA`,
+  )}
     ${row('격리 완료일 / 식별', `${c.ContainDate || ''} / ${c.ContainMethod || ''}`)}${row('소급 범위', c.ContainScope)}
-    ${row('처분', `${c.Disposition}${c.DeviationNo ? ' · 특채번호 ' + c.DeviationNo : ''}${c.CustApprover ? ' · 고객승인 ' + c.CustApprover + ' ' + (c.CustApproveDate || '') : ''}`)}${row('고객통보', `${c.CustNotify || ''} ${c.CustNotifyDate || ''} ${c.CustNotifyReason || ''}`)}</table>${actTable(['봉쇄', '재작업·재검사'])}
-  <h3>D4 근본 원인</h3><table>${row('분석도구', (c.AnalysisTools || []).join(', '))}${row('발생 원인', c.CauseOccur)}${row('유출 원인', c.CauseEscape)}${row('시스템 원인', c.CauseSystem)}</table>${anaReport(c)}
-  <h3>D5 영구 대책</h3>${actTable(['발생대책', '유출대책', '시스템대책'])}<table>${row('실수방지', `${c.PokaYoke || ''} ${c.PokaYokeType || ''} ${c.PokaYokeReason || ''}`)}</table>
-  <h3>D6 효과 검증</h3><table>${row('검증 기간', `${c.VerifyStart || ''} ~ ${c.VerifyEnd || ''}`)}${row('불량률', `개선 전 ${c.RateBefore || ''} → 개선 후 ${c.RateAfter || ''}`)}${row('재발 / 판정', `${c.Recurred || ''} / ${c.VerifyResult || ''}`)}</table>
-  <h3>D7 재발 방지 · 표준화</h3><table>${row('공정 FMEA', `${c.FMEAUpdate || ''} ${c.FMEARev || ''}`)}${row('관리계획서', `${c.CPUpdate || ''} ${c.CPRev || ''}`)}${row('해당없음 사유', c.DocNAReason)}${row('수평전개', c.Yokoten)}</table>${actTable(['문서개정', '수평전개', '교육'])}
+    ${row(
+      '처분',
+      `${c.Disposition}${c.DeviationNo ? ' · 특채번호 ' + c.DeviationNo : ''}${
+        c.CustApprover ? ' · 고객승인 ' + c.CustApprover + ' ' + (c.CustApproveDate || '') : ''
+      }`,
+    )}${row('고객통보', `${c.CustNotify || ''} ${c.CustNotifyDate || ''} ${c.CustNotifyReason || ''}`)}</table>${actTable(['봉쇄', '재작업·재검사'])}
+  <h3>D4 근본 원인</h3><table>${row(
+    '분석도구',
+    (c.AnalysisTools || []).join(', '),
+  )}${row('발생 원인', c.CauseOccur)}${row('유출 원인', c.CauseEscape)}${row('시스템 원인', c.CauseSystem)}</table>${anaReport(c)}
+  <h3>D5 영구 대책</h3>${actTable(['발생대책', '유출대책', '시스템대책'])}<table>${row(
+    '실수방지',
+    `${c.PokaYoke || ''} ${c.PokaYokeType || ''} ${c.PokaYokeReason || ''}`,
+  )}</table>
+  <h3>D6 효과 검증</h3><table>${row('검증 기간', `${c.VerifyStart || ''} ~ ${c.VerifyEnd || ''}`)}${row(
+    '불량률',
+    `개선 전 ${c.RateBefore || ''} → 개선 후 ${c.RateAfter || ''}`,
+  )}${row('재발 / 판정', `${c.Recurred || ''} / ${c.VerifyResult || ''}`)}</table>
+  <h3>D7 재발 방지 · 표준화</h3><table>${row('공정 FMEA', `${c.FMEAUpdate || ''} ${c.FMEARev || ''}`)}${row(
+    '관리계획서',
+    `${c.CPUpdate || ''} ${c.CPRev || ''}`,
+  )}${row('해당없음 사유', c.DocNAReason)}${row('수평전개', c.Yokoten)}</table>${actTable(['문서개정', '수평전개', '교육'])}
   <h3>D8 종결</h3><table>${row('종결일', c.CloseDate)}${row('종결 승인자', c.CloseApprover)}${row('보관기간', c.Retention)}</table>
   </body></html>`);
   reportShow(w, html, `8D_${c.CaseNo}.html`);

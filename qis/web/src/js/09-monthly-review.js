@@ -73,7 +73,9 @@ function autoSummary(m) {
     rl = open.filter((n) => ncrFlags(n).replyLate),
     vl = open.filter((n) => ncrFlags(n).verifyLate);
   L.push(
-    `• 미종결 NCR ${open.length}건${rl.length ? ` — 회신 지연 ${rl.length}건(${[...new Set(rl.map((n) => supName(n.supplierId)))].join(', ')})` : ''}${vl.length ? `, 유효성 검증 지연 ${vl.length}건` : ''}`,
+    `• 미종결 NCR ${open.length}건${
+      rl.length ? ` — 회신 지연 ${rl.length}건(${[...new Set(rl.map((n) => supName(n.supplierId)))].join(', ')})` : ''
+    }${vl.length ? `, 유효성 검증 지연 ${vl.length}건` : ''}`,
   );
   const recs = db.defects.filter((d) => !d.ncrId && d.date && diffDays(d.date, today()) <= 90 && ncrReasons(d).length);
   if (recs.length) L.push(`• NCR 발행 권고 미처리 ${recs.length}건 (최근 90일)`);
@@ -101,12 +103,16 @@ async function fillSummary(m) {
 }
 function reviewCard(m) {
   const r = getReview(m) || {};
-  return `<div class="card noprint"><h3>월간 특이사항 · 검토 의견 (${m})<span class="sp"></span><span id="revSaved" class="muted" style="font-weight:normal;font-size:12px">${r.updatedAt ? '저장됨 ' + loc(r.updatedAt).slice(5) : '입력하면 자동 저장'}</span>
+  return `<div class="card noprint"><h3>월간 특이사항 · 검토 의견 (${m})<span class="sp"></span><span id="revSaved" class="muted" style="font-weight:normal;font-size:12px">${
+    r.updatedAt ? '저장됨 ' + loc(r.updatedAt).slice(5) : '입력하면 자동 저장'
+  }</span>
     <button class="b s" onclick="fillSummary('${m}')">자동 요약 초안</button><button class="b s p" onclick="dashReport()">보고서로 출력</button></h3>
     <div class="grid g2" style="gap:10px">
       <label class="fgl">특이사항 (이번 달 주요 이슈·현황)<textarea id="revIssues" style="min-height:170px" placeholder="예) 대성정밀 브라켓 치수불량 124개 — 금형 마모, 10/25 수정 완료 예정&#10;‘자동 요약 초안’을 누르면 데이터 기반 요약이 들어갑니다." oninput="onReview('${m}','issues',this.value)">${esc(r.issues)}</textarea></label>
       <label class="fgl">검토 의견 · 향후 조치 계획<textarea style="min-height:170px" placeholder="예) 반복 불량 협력사 3사 11월 공정 감사 실시, 회신 지연 NCR 독촉 공문 발송" oninput="onReview('${m}','opinion',this.value)">${esc(r.opinion)}</textarea></label>
     </div>
-    <div class="row" style="margin-top:8px"><label class="fgl" style="flex-direction:row;align-items:center;gap:6px">작성자<input value="${esc(r.author || db.settings.owners[0] || '')}" list="dlOwners" style="width:140px" oninput="onReview('${m}','author',this.value)"></label><span class="help">여기 쓴 내용이 ‘보고용 인쇄’ 첫 장(1. 특이사항 및 검토 의견)에 그대로 들어갑니다. 월을 바꾸면 그 달의 기록이 따로 보관됩니다.</span></div>
+    <div class="row" style="margin-top:8px"><label class="fgl" style="flex-direction:row;align-items:center;gap:6px">작성자<input value="${esc(
+      r.author || db.settings.owners[0] || '',
+    )}" list="dlOwners" style="width:140px" oninput="onReview('${m}','author',this.value)"></label><span class="help">여기 쓴 내용이 ‘보고용 인쇄’ 첫 장(1. 특이사항 및 검토 의견)에 그대로 들어갑니다. 월을 바꾸면 그 달의 기록이 따로 보관됩니다.</span></div>
   </div>`;
 }

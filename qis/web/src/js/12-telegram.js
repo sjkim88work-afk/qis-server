@@ -57,7 +57,9 @@ function tgSummary() {
   }
   L.push(
     '',
-    `미종결 NCR ${db.ncrs.filter((n) => ncrStatus(n) !== '종결').length} · 진행 중 RCA ${db.cases.filter(czOpen).length} · 열린 이슈 ${is.filter((i) => !i.closedAt).length}`,
+    `미종결 NCR ${
+      db.ncrs.filter((n) => ncrStatus(n) !== '종결').length
+    } · 진행 중 RCA ${db.cases.filter(czOpen).length} · 열린 이슈 ${is.filter((i) => !i.closedAt).length}`,
   );
   return L.join('\n');
 }
@@ -150,7 +152,9 @@ async function tgFindChats() {
       ? [...m.values()]
           .map(
             (ch) =>
-              `<button class="b s" onclick="tgSet('chat',${jsq(String(ch.id))});render()">${esc(ch.title || [ch.first_name, ch.last_name].filter(Boolean).join(' ') || ch.username || ch.id)} <span class="muted">(${esc(ch.type)} · ${esc(String(ch.id))})</span></button>`,
+              `<button class="b s" onclick="tgSet('chat',${jsq(String(ch.id))});render()">${esc(
+                ch.title || [ch.first_name, ch.last_name].filter(Boolean).join(' ') || ch.username || ch.id,
+              )} <span class="muted">(${esc(ch.type)} · ${esc(String(ch.id))})</span></button>`,
           )
           .join(' ')
       : '<span class="muted">찾은 대화가 없습니다 — 봇을 그룹에 초대한 뒤 그 그룹에 아무 메시지나 한 번 보내고 다시 누르세요</span>';

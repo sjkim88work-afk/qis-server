@@ -71,7 +71,14 @@ function sqlTable(sdb, name, rows, first) {
     return num && !oth ? 'REAL' : 'TEXT';
   };
   sdb.run(
-    `CREATE TABLE ${sqlId(name)} (${cols.map((k) => `${sqlId(k)} ${typ(k)}${k === 'id' && rows.every((r) => r.id) && new Set(rows.map((r) => r.id)).size === rows.length ? ' PRIMARY KEY' : ''}`).join(', ')})`,
+    `CREATE TABLE ${sqlId(name)} (${cols
+      .map(
+        (k) =>
+          `${sqlId(k)} ${typ(k)}${
+            k === 'id' && rows.every((r) => r.id) && new Set(rows.map((r) => r.id)).size === rows.length ? ' PRIMARY KEY' : ''
+          }`,
+      )
+      .join(', ')})`,
   );
   if (!rows.length) return 0;
   const st = sdb.prepare(`INSERT INTO ${sqlId(name)} (${cols.map(sqlId).join(',')}) VALUES (${cols.map(() => '?').join(',')})`);
@@ -252,7 +259,9 @@ async function buildSqlite() {
   const mkView = (name, t, F, tail = '') => {
     const C = colsOf(t);
     sdb.run(
-      `CREATE VIEW ${name} AS SELECT ${F.map(([c, a, e]) => `${C.has(c) ? e || sqlId(c) : 'NULL'} AS ${sqlId(a || c)}`).join(', ')} FROM ${sqlId(t)} ${tail}`,
+      `CREATE VIEW ${name} AS SELECT ${F.map(([c, a, e]) => `${C.has(c) ? e || sqlId(c) : 'NULL'} AS ${sqlId(a || c)}`).join(
+        ', ',
+      )} FROM ${sqlId(t)} ${tail}`,
     );
   };
   mkView('v_defects', 'defects', [

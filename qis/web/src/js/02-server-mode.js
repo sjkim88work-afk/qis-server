@@ -317,12 +317,17 @@ function srvPanel() {
       sv(
         '연결',
         '데이터는 사내 서버에 저장됩니다. 이 PC에는 남지 않습니다.',
-        `<span class="${st.ok === false ? 'bg bad' : 'bg ok'}">${st.ok === false ? '연결 끊김' : '연결됨'}</span> <span class="muted">${st.at ? '마지막 동기화 ' + loc(st.at.toISOString()) : ''}</span>`,
+        `<span class="${st.ok === false ? 'bg bad' : 'bg ok'}">${st.ok === false ? '연결 끊김' : '연결됨'}</span> <span class="muted">${
+          st.at ? '마지막 동기화 ' + loc(st.at.toISOString()) : ''
+        }</span>`,
       ) +
         sv(
           '로그인 사용자',
           `${esc(SRV.name)} (${esc(SRV.user)}) · ${R[SRV.role] || SRV.role} 권한`,
-          `<span style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">${btn('비밀번호 변경', "location.href='/account'")}${btn('로그아웃', 'srvLogout()')}</span>`,
+          `<span style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">${btn(
+            '비밀번호 변경',
+            "location.href='/account'",
+          )}${btn('로그아웃', 'srvLogout()')}</span>`,
         ),
     ) +
     sg(
@@ -652,7 +657,11 @@ function renderAlert() {
     }
     if (srvState.ok === false) {
       b.style.display = 'flex';
-      b.innerHTML = `<span>⚠ <b>서버에 연결할 수 없습니다</b> (${esc(srvState.err)}). ${srvState.pend ? `저장하지 못한 변경 ${srvState.pend}건은 이 창에 남아 있고, 연결되면 자동으로 저장합니다 — <b>창을 닫지 마세요.</b>` : '연결되면 자동으로 다시 받아옵니다.'}</span><span style="flex:1"></span><button class="b s p" onclick="srvSync()">다시 시도</button>`;
+      b.innerHTML = `<span>⚠ <b>서버에 연결할 수 없습니다</b> (${esc(srvState.err)}). ${
+        srvState.pend
+          ? `저장하지 못한 변경 ${srvState.pend}건은 이 창에 남아 있고, 연결되면 자동으로 저장합니다 — <b>창을 닫지 마세요.</b>`
+          : '연결되면 자동으로 다시 받아옵니다.'
+      }</span><span style="flex:1"></span><button class="b s p" onclick="srvSync()">다시 시도</button>`;
       return;
     }
   }
@@ -671,7 +680,11 @@ function renderAlert() {
   }
   if (saveFailed) {
     b.style.display = 'flex';
-    b.innerHTML = `<span>⛔ <b>브라우저 저장 실패</b> — 마지막 변경이 저장되지 않았습니다 (${esc(saveFailed)}). ${dataStore === 'idb' ? 'PC 디스크 공간이 부족하거나 브라우저가 저장을 막았을 수 있습니다. 지금 <b>백업 내려받기</b>를 하고, 디스크 여유 공간을 확인하세요.' : '저장 공간이 가득 찼을 수 있습니다. 지금 <b>백업 내려받기</b>를 하고, 설정 › 데이터 · 백업 › 고급 설정에서 저장 공간을 확인하세요.'}</span><span style="flex:1"></span><button class="b s p" onclick="exportJSON(true)">백업 내려받기</button>`;
+    b.innerHTML = `<span>⛔ <b>브라우저 저장 실패</b> — 마지막 변경이 저장되지 않았습니다 (${esc(saveFailed)}). ${
+      dataStore === 'idb'
+        ? 'PC 디스크 공간이 부족하거나 브라우저가 저장을 막았을 수 있습니다. 지금 <b>백업 내려받기</b>를 하고, 디스크 여유 공간을 확인하세요.'
+        : '저장 공간이 가득 찼을 수 있습니다. 지금 <b>백업 내려받기</b>를 하고, 설정 › 데이터 · 백업 › 고급 설정에서 저장 공간을 확인하세요.'
+    }</span><span style="flex:1"></span><button class="b s p" onclick="exportJSON(true)">백업 내려받기</button>`;
     return;
   }
   b.style.display = 'none';

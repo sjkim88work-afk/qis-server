@@ -19,7 +19,9 @@ async function ncrFromDefect(id, extra = []) {
         msg: '같은 건이면 기존 NCR에 이 불량을 연결하세요. 다른 건이면 새 NCR을 발행하세요.',
         items: ns.map(
           (n) =>
-            `<a class="lk" onclick="ncrAddDefect('${n.id}','${d.id}')"><b>${esc(n.no)}</b></a> — ${esc(ncrStatus(n))}${n.supplierId ? ' · ' + esc(supName(n.supplierId)) : ''}${n.partNo ? ' · ' + esc(n.partNo) : ''} · 연결 불량 ${(n.defectIds || []).length}건`,
+            `<a class="lk" onclick="ncrAddDefect('${n.id}','${d.id}')"><b>${esc(n.no)}</b></a> — ${esc(ncrStatus(n))}${
+              n.supplierId ? ' · ' + esc(supName(n.supplierId)) : ''
+            }${n.partNo ? ' · ' + esc(n.partNo) : ''} · 연결 불량 ${(n.defectIds || []).length}건`,
         ),
         note: (ns.length > 1 ? 'NCR 번호를 누르면 그 NCR에 연결합니다. ' : '') + '연결하면 기존 NCR 창이 열립니다. 내용을 확인하고 저장하세요.',
         ok: `${ns[0].no}에 연결`,
@@ -64,7 +66,9 @@ async function ncrFromDefect(id, extra = []) {
     partNo: d.partNo,
     partName: d.partName,
     title: `${d.type || ''} - ${d.partName || d.partNo || ''}`,
-    d2: `[${d.date} / ${d.source}]${fg ? ' ' + fg + ' —' : ''} ${d.desc || ''}\n불량수량 ${num(d.qty)}개${d.inspQty ? ' / 로트 ' + d.inspQty + '개' : ''}${d.spec || d.actual ? `\n규격: ${d.spec || '-'} / 실측: ${d.actual || '-'}` : ''}${lotOf(d) ? ' / LOT ' + lotOf(d) : ''}`,
+    d2: `[${d.date} / ${d.source}]${fg ? ' ' + fg + ' —' : ''} ${d.desc || ''}\n불량수량 ${num(d.qty)}개${
+      d.inspQty ? ' / 로트 ' + d.inspQty + '개' : ''
+    }${d.spec || d.actual ? `\n규격: ${d.spec || '-'} / 실측: ${d.actual || '-'}` : ''}${lotOf(d) ? ' / LOT ' + lotOf(d) : ''}`,
     d3: d.containment || '',
     ...(invTxt ? { d4: invTxt } : {}),
     defectIds: grp.map((x) => x.id),
@@ -139,7 +143,15 @@ function filteredNcrs() {
 }
 function ncrNotifyCell(n) {
   if (n.notifyDate)
-    return `<span class="nwi" title="협력사 통보일">${esc(n.notifyDate)}</span>${(n.noticeDocs || []).length ? ` <span class="bg inf" title="발송한 통보서 파일 ${(n.noticeDocs || []).length}개">📎 ${(n.noticeDocs || []).length}</span>` : ''}${n.notifyMethod ? `<br><span class="muted" style="font-size:11.5px">${esc(n.notifyMethod)}</span>` : ''}${n.requestDate && n.requestDate !== n.notifyDate && n.reqType !== '단순 통보' ? `<br><span class="muted" style="font-size:11.5px">대책 요청 ${esc(n.requestDate)}</span>` : ''}`;
+    return `<span class="nwi" title="협력사 통보일">${esc(n.notifyDate)}</span>${
+      (n.noticeDocs || []).length
+        ? ` <span class="bg inf" title="발송한 통보서 파일 ${(n.noticeDocs || []).length}개">📎 ${(n.noticeDocs || []).length}</span>`
+        : ''
+    }${n.notifyMethod ? `<br><span class="muted" style="font-size:11.5px">${esc(n.notifyMethod)}</span>` : ''}${
+      n.requestDate && n.requestDate !== n.notifyDate && n.reqType !== '단순 통보'
+        ? `<br><span class="muted" style="font-size:11.5px">대책 요청 ${esc(n.requestDate)}</span>`
+        : ''
+    }`;
   if (ncrNotified(n)) return `<span class="bg ok">통보</span> <span class="muted">(일자 미기록)</span>`;
   return `<span class="bg ${notifyLate(n) ? 'bad' : 'warn'}">${notifyLate(n) ? '통보 지연' : '미통보'}</span><br><button class="b s p noprint" style="margin-top:3px" onclick="ncrQuickNotify('${n.id}')" title="오늘 날짜로 통보 완료 처리">통보 완료</button>`;
 }
@@ -188,7 +200,11 @@ function ncrNudge(id) {
     <label>방법<select name="method">${opts(LOG_METHODS, em ? '메일' : '전화')}</select></label>
     <label>상대 (협력사 담당)<input name="party" value="${esc(n.supAttn || (ct && ct.name) || '')}"></label>
     <label class="full">내용<textarea name="text" style="min-height:60px">${esc(txt)}</textarea></label>
-    ${em ? `<label class="full" style="flex-direction:row;align-items:center;gap:6px"><input type="checkbox" name="mail" checked> 저장 후 메일 초안 열기 <span class="muted">(${esc(em)})</span></label>` : '<div class="help full">협력사 기준정보에 담당자 메일이 없어 메일 초안은 열지 않습니다.</div>'}
+    ${
+      em
+        ? `<label class="full" style="flex-direction:row;align-items:center;gap:6px"><input type="checkbox" name="mail" checked> 저장 후 메일 초안 열기 <span class="muted">(${esc(em)})</span></label>`
+        : '<div class="help full">협력사 기준정보에 담당자 메일이 없어 메일 초안은 열지 않습니다.</div>'
+    }
   </div><div class="help">진행 기록에 ‘협력사 연락’으로 남고, 대시보드에 독촉 횟수가 표시됩니다.</div>`,
     [
       { label: '취소', fn: () => closeModal(true) },
@@ -297,15 +313,52 @@ async function ncrResubReceive(id) {
 }
 function ncrTable() {
   const ns = filteredNcrs();
-  return `<div class="muted" style="font-size:12px;margin-bottom:6px">${ns.length}/${db.ncrs.length}건${msState.ncr && msState.ncr.k ? ` · <a class="lk" onclick="msState.ncr={k:'',d:1};msSave();$('#ntab').innerHTML=ncrTable()">기본 정렬(최근 발행 순)로</a>` : ''}</div><div class="tw"><table><thead><tr>${sth('ncr', 'no', 'NCR 번호')}${sth('ncr', 'issue', '발행일')}${sth('ncr', 'sup', '협력사')}${sth('ncr', 'part', '부품')}${sth('ncr', 'title', '제목')}${sth('ncr', 'status', '상태')}${sth('ncr', 'notify', '통보')}${sth('ncr', 'due', '회신 기한')}${sth('ncr', 'reply', '회신일')}${sth('ncr', 'verify', '유효성 기한')}${sth('ncr', 'links', '연결 불량', 'n')}${sth('ncr', 'owner', '담당')}<th class="noprint"></th></tr></thead><tbody>
+  return `<div class="muted" style="font-size:12px;margin-bottom:6px">${ns.length}/${db.ncrs.length}건${
+    msState.ncr && msState.ncr.k
+      ? ` · <a class="lk" onclick="msState.ncr={k:'',d:1};msSave();$('#ntab').innerHTML=ncrTable()">기본 정렬(최근 발행 순)로</a>`
+      : ''
+  }</div><div class="tw"><table><thead><tr>${sth('ncr', 'no', 'NCR 번호')}${sth('ncr', 'issue', '발행일')}${sth('ncr', 'sup', '협력사')}${sth('ncr', 'part', '부품')}${sth('ncr', 'title', '제목')}${sth('ncr', 'status', '상태')}${sth('ncr', 'notify', '통보')}${sth('ncr', 'due', '회신 기한')}${sth('ncr', 'reply', '회신일')}${sth('ncr', 'verify', '유효성 기한')}${sth('ncr', 'links', '연결 불량', 'n')}${sth('ncr', 'owner', '담당')}<th class="noprint"></th></tr></thead><tbody>
   ${
     ns
       .map((n) => {
         const st = ncrStatus(n),
           fl = ncrFlags(n);
-        return `<tr class="${lateInfo('ncr', n).length ? 'late' : ''}"><td><a class="lk" onclick="editNcr('${n.id}',null,'${ncrModeDefault(n, n.id)}')"><b>${esc(n.no)}</b></a></td><td>${esc(n.issueDate)}</td><td>${esc(supName(n.supplierId))}</td><td>${esc(n.partNo)}<br><span class="muted">${esc(n.partName)}</span></td><td>${esc(n.title)}<br><span class="bg ${(n.reqType || '8D 보고서') === '8D 보고서' ? 'inf' : 'mut'}">${esc(n.reqType || '8D 보고서')}</span>${n.basis ? ` <span class="bg inf">${esc(n.basis)}</span>` : ''}${n.repeatOf ? ` <span class="bg bad" title="이전 NCR ${esc(n.repeatOf)}">재발</span>` : ''}${n.siteAudit === '요청' ? ' <span class="bg inf">현장 감사</span>' : ''}</td><td>${stB(st)}${ncrMini(n)}${farOn(n) ? farBadge(n) : ''}${ncrEsc(n) ? '<br>' + escB(n) : ''}</td>
+        return `<tr class="${lateInfo('ncr', n).length ? 'late' : ''}"><td><a class="lk" onclick="editNcr('${n.id}',null,'${ncrModeDefault(n, n.id)}')"><b>${esc(n.no)}</b></a></td>
+          <td>${esc(n.issueDate)}</td><td>${esc(supName(n.supplierId))}</td>
+            <td>${esc(n.partNo)}<br><span class="muted">${esc(n.partName)}</span></td><td>${esc(n.title)}<br><span class="bg ${
+              (n.reqType || '8D 보고서') === '8D 보고서' ? 'inf' : 'mut'
+            }">${esc(n.reqType || '8D 보고서')}</span>${n.basis ? ` <span class="bg inf">${esc(n.basis)}</span>` : ''}${
+              n.repeatOf ? ` <span class="bg bad" title="이전 NCR ${esc(n.repeatOf)}">재발</span>` : ''
+            }${
+              n.siteAudit === '요청' ? ' <span class="bg inf">현장 감사</span>' : ''
+            }</td><td>${stB(st)}${ncrMini(n)}${farOn(n) ? farBadge(n) : ''}${ncrEsc(n) ? '<br>' + escB(n) : ''}</td>
   <td>${ncrNotifyCell(n)}</td>
-  <td style="white-space:nowrap">${dday(n.dueDate, !!n.replyDate)}${fl.d3Late ? `<br><span class="bg bad" title="봉쇄 회신 기한 ${esc(n.d3Due)}">D3 봉쇄 지연</span>` : ''}</td><td>${esc(n.replyDate) || (st === '대책요청' && n.reqType !== '단순 통보' ? `<button class="b s noprint" onclick="ncrQuickReply('${n.id}')" title="오늘 날짜로 회신일 기록">회신 접수</button>` : '<span class="muted">-</span>')}${(n.resubs || []).length ? `<br><span class="muted" style="font-size:11.5px" title="보완 대책서를 다시 받은 날">재회신 ${esc(n.resubs[n.resubs.length - 1].date.slice(5))}${n.resubs.length > 1 ? ` (${n.resubs.length}회)` : ''}</span>` : ''}${st === '보완요청' ? `<br><button class="b s noprint" style="margin-top:3px" onclick="ncrQuickReply('${n.id}')" title="협력사가 보완해서 다시 낸 대책서의 접수일을 오늘로 기록">재회신 접수</button>` : ''}${!n.replyDate && nudgeLogs(n).length ? `<br><span class="muted" style="font-size:11.5px">독촉 ${nudgeLogs(n).length}회</span>` : ''}${(n.replyDocs || []).length ? ` <span class="bg inf" title="협력사 대책서 파일 ${(n.replyDocs || []).length}개">📎 ${(n.replyDocs || []).length}</span>` : ''}${n.replyDate && n.dueDate && n.replyDate > n.dueDate ? ' <span class="bg warn">지연접수</span>' : ''}${n.evalVerdict ? `<br><span class="bg ${VD_CLS[n.evalVerdict]}" title="대책서 평가 ${(n.evals || []).length}회차">${n.evalScore}점 ${n.evalVerdict}</span>` : ''}</td>
+  <td style="white-space:nowrap">${dday(n.dueDate, !!n.replyDate)}${
+    fl.d3Late ? `<br><span class="bg bad" title="봉쇄 회신 기한 ${esc(n.d3Due)}">D3 봉쇄 지연</span>` : ''
+  }</td><td>${
+    esc(n.replyDate) ||
+    (st === '대책요청' && n.reqType !== '단순 통보'
+      ? `<button class="b s noprint" onclick="ncrQuickReply('${n.id}')" title="오늘 날짜로 회신일 기록">회신 접수</button>`
+      : '<span class="muted">-</span>')
+  }${
+    (n.resubs || []).length
+      ? `<br><span class="muted" style="font-size:11.5px" title="보완 대책서를 다시 받은 날">재회신 ${esc(
+          n.resubs[n.resubs.length - 1].date.slice(5),
+        )}${n.resubs.length > 1 ? ` (${n.resubs.length}회)` : ''}</span>`
+      : ''
+  }${
+    st === '보완요청'
+      ? `<br><button class="b s noprint" style="margin-top:3px" onclick="ncrQuickReply('${n.id}')" title="협력사가 보완해서 다시 낸 대책서의 접수일을 오늘로 기록">재회신 접수</button>`
+      : ''
+  }${!n.replyDate && nudgeLogs(n).length ? `<br><span class="muted" style="font-size:11.5px">독촉 ${nudgeLogs(n).length}회</span>` : ''}${
+    (n.replyDocs || []).length
+      ? ` <span class="bg inf" title="협력사 대책서 파일 ${(n.replyDocs || []).length}개">📎 ${(n.replyDocs || []).length}</span>`
+      : ''
+  }${n.replyDate && n.dueDate && n.replyDate > n.dueDate ? ' <span class="bg warn">지연접수</span>' : ''}${
+    n.evalVerdict
+      ? `<br><span class="bg ${VD_CLS[n.evalVerdict]}" title="대책서 평가 ${(n.evals || []).length}회차">${n.evalScore}점 ${n.evalVerdict}</span>`
+      : ''
+  }</td>
   <td style="white-space:nowrap">${dday(n.verifyDue, st === '종결')}</td><td class="n">${(n.defectIds || []).length}</td><td>${esc(n.owner)}</td>
   <td class="noprint" style="white-space:nowrap">${(() => {
     const nx = ncrModeDefault(n, n.id),
@@ -337,12 +390,20 @@ function renderNcr() {
   ];
   return `<div class="card noprint"><div class="row">
     <button class="b p" onclick="editNcr()">+ NCR 발행</button>
-    <select onchange="state.nf.status=this.value;$('#ntab').innerHTML=ncrTable()">${sel.map(([v, l]) => `<option value="${v}" ${v === f.status ? 'selected' : ''}>${l}</option>`).join('')}</select>
+    <select onchange="state.nf.status=this.value;$('#ntab').innerHTML=ncrTable()">${sel
+      .map(([v, l]) => `<option value="${v}" ${v === f.status ? 'selected' : ''}>${l}</option>`)
+      .join('')}</select>
     <select onchange="state.nf.sup=this.value;$('#ntab').innerHTML=ncrTable()">${supOpts(f.sup, '전체 협력사')}</select>
-    <select onchange="state.nf.type=this.value;$('#ntab').innerHTML=ncrTable()"><option value="">전체 유형</option>${REQ_TYPES.map((t) => `<option ${t === f.type ? 'selected' : ''}>${t}</option>`).join('')}</select>
+    <select onchange="state.nf.type=this.value;$('#ntab').innerHTML=ncrTable()"><option value="">전체 유형</option>${REQ_TYPES.map(
+      (t) => `<option ${t === f.type ? 'selected' : ''}>${t}</option>`,
+    ).join('')}</select>
     <span style="display:inline-flex;align-items:center;gap:6px;white-space:nowrap"><span class="muted">발행일</span><input type="date" value="${esc(f.from)}" onchange="state.nf.from=this.value;$('#ntab').innerHTML=ncrTable()"> ~ <input type="date" value="${esc(f.to)}" onchange="state.nf.to=this.value;$('#ntab').innerHTML=ncrTable()"></span>
     <input placeholder="검색 (번호·협력사·부품·제목·담당)" value="${esc(f.q)}" oninput="state.nf.q=this.value;deb(()=>{$('#ntab').innerHTML=ncrTable()})" style="width:220px">
-    ${f.sup || f.type || f.from || f.to || f.q ? `<button class="b s" onclick="Object.assign(state.nf,{sup:'',type:'',from:'',to:'',q:''});render()">필터 해제</button>` : ''}
+    ${
+      f.sup || f.type || f.from || f.to || f.q
+        ? `<button class="b s" onclick="Object.assign(state.nf,{sup:'',type:'',from:'',to:'',q:''});render()">필터 해제</button>`
+        : ''
+    }
     <span style="flex:1"></span><button class="b" onclick="exportNcrCSV()">엑셀 내보내기</button>
   </div>
   <div class="help" style="margin-top:8px">기준: 협력사 통보일 = 대책 요청일 (통보 전에는 회신 지연을 따지지 않고, 발행 후 ${NOTIFY_GRACE}일 넘게 미통보면 ‘통보 지연’) · 요청 후 D3 봉쇄 ${num(S.d3Days) || 1}일 · 8D ${num(S.reply8D) || 7}일 / 간이 ${num(S.replySimple) || 5}일 내 대책서 회신 · 발행 후 D+${S.verifyDays} 내 유효성 검증. 상태는 입력한 날짜·판정으로 자동 결정됩니다 (회신일 입력 → 대책서 검토, 타당성 ‘적정’ → 승인(검증대기), 검증일+결과 ‘유효’ → 종결).</div></div>
@@ -386,7 +447,15 @@ function editNcr(id, preset, mode) {
     .map(sevOf)
     .sort((a, b) => 'ABC'.indexOf(a.grade) - 'ABC'.indexOf(b.grade) || b.score - a.score)[0];
   curNcrSev = sevD || null;
-  const body = `${id ? ncrTrack(n) : ''}${sevD ? `<div class="banner" style="background:${sevD.grade === 'A' ? 'var(--badb)' : sevD.grade === 'B' ? 'var(--warnb)' : 'var(--mut)'};border-color:transparent;color:#1d2433">연결 불량 심각도 <span class="bg ${SEV_CLS[sevD.grade]}" style="font-size:13px">${sevD.grade}</span> ${sevD.score}점${sevD.forced.length ? ' (강제 A: ' + esc(sevD.forced.join(', ')) + ')' : ''}${sevD.overridden ? ' (수동 조정: ' + esc(sevD.reason) + ')' : ''} → 권장 대응 <b>${sevD.resp}</b></div>` : ''}${farLine(n)}${ncrTabsBar(id, n, !!mode)}<div class="ntp" data-p="a">
+  const body = `${id ? ncrTrack(n) : ''}${
+    sevD
+      ? `<div class="banner" style="background:${
+          sevD.grade === 'A' ? 'var(--badb)' : sevD.grade === 'B' ? 'var(--warnb)' : 'var(--mut)'
+        };border-color:transparent;color:#1d2433">연결 불량 심각도 <span class="bg ${SEV_CLS[sevD.grade]}" style="font-size:13px">${sevD.grade}</span> ${sevD.score}점${
+          sevD.forced.length ? ' (강제 A: ' + esc(sevD.forced.join(', ')) + ')' : ''
+        }${sevD.overridden ? ' (수동 조정: ' + esc(sevD.reason) + ')' : ''} → 권장 대응 <b>${sevD.resp}</b></div>`
+      : ''
+  }${farLine(n)}${ncrTabsBar(id, n, !!mode)}<div class="ntp" data-p="a">
 <div class="fg">
     <label>NCR 번호<input name="no" value="${esc(n.no)}" placeholder="저장 시 자동 채번"></label>
     <label>발행일 *<input type="date" name="issueDate" value="${esc(n.issueDate)}" data-prev="${esc(n.issueDate)}" oninput="ncrAutoDates('issue')"></label>
@@ -456,18 +525,33 @@ function editNcr(id, preset, mode) {
 <div class="ntp" data-p="a">
   <div class="sec">대응 수준 · 회신 기한</div>
   <div class="fg">
-    <label>요구 회신 유형 (대응 수준)<select name="reqType" onchange="mfDirty=true;applyReqType(true)">${opts(REQ_TYPES, n.reqType || REQ_TYPES[0])}</select></label>
+    <label>요구 회신 유형 (대응 수준)<select name="reqType" onchange="mfDirty=true;applyReqType(true)">${opts(
+      REQ_TYPES,
+      n.reqType || REQ_TYPES[0],
+    )}</select></label>
     <label>현장 감사<select name="siteAudit" onchange="mfDirty=true" title="요청으로 두면 통보서 요구사항에 현장 감사 예정 문구가 붙습니다">${opts(['없음', '요청'], n.siteAudit || '없음')}</select></label>
     <div id="rtWarn" class="full" style="grid-column:1/-1"></div>
-    <label>대책 요청일<input type="date" name="requestDate" value="${esc(n.requestDate || (n.reqType === '단순 통보' ? '' : n.issueDate || ''))}" oninput="ncrAutoDates('req')" title="기본값은 협력사 통보일(통보 전에는 NCR 발행일)입니다."></label>
-    <label>회신 기한 <span id="dueHint">(요청+${typeDays(n.reqType)}일)</span><input type="date" name="dueDate" value="${esc(n.dueDate || (n.reqType === '단순 통보' || !(n.requestDate || n.issueDate) ? '' : addDays(n.requestDate || n.issueDate, typeDays(n.reqType))))}"></label>
+    <label>대책 요청일<input type="date" name="requestDate" value="${esc(
+      n.requestDate || (n.reqType === '단순 통보' ? '' : n.issueDate || ''),
+    )}" oninput="ncrAutoDates('req')" title="기본값은 협력사 통보일(통보 전에는 NCR 발행일)입니다."></label>
+    <label>회신 기한 <span id="dueHint">(요청+${typeDays(n.reqType)}일)</span><input type="date" name="dueDate" value="${esc(
+      n.dueDate || (n.reqType === '단순 통보' || !(n.requestDate || n.issueDate) ? '' : addDays(n.requestDate || n.issueDate, typeDays(n.reqType))),
+    )}"></label>
   </div>
   <div class="sec">연결된 불량</div><div id="linkBox"></div>
   </div>
 <div class="ntp" data-p="r">
   <div class="sec">대책서 회신 · 판정</div>
-  ${id && n.resubPending ? `<div class="banner" style="margin:0 0 10px;background:var(--pri2);border-color:transparent;color:var(--ink)">보완 대책서 재회신 접수 <b>${esc(n.resubPending.date)}</b> — 아래 대책서 평가에서 <b>+ 재제출 평가</b>를 눌러 다시 평가하세요. 평가를 마치고 저장하면 결과가 반영됩니다.</div>` : ''}
-  ${id && ncrEsc(n) ? `<div class="banner" style="margin:0 0 10px">대책서 보완요청·반려·검증 무효가 <b>${ncrRejects(n)}회</b>입니다 (기준 ${num(S.escCount) || 2}회). 현장 감사나 상위 보고를 검토하세요.</div>` : ''}
+  ${
+    id && n.resubPending
+      ? `<div class="banner" style="margin:0 0 10px;background:var(--pri2);border-color:transparent;color:var(--ink)">보완 대책서 재회신 접수 <b>${esc(n.resubPending.date)}</b> — 아래 대책서 평가에서 <b>+ 재제출 평가</b>를 눌러 다시 평가하세요. 평가를 마치고 저장하면 결과가 반영됩니다.</div>`
+      : ''
+  }
+  ${
+    id && ncrEsc(n)
+      ? `<div class="banner" style="margin:0 0 10px">대책서 보완요청·반려·검증 무효가 <b>${ncrRejects(n)}회</b>입니다 (기준 ${num(S.escCount) || 2}회). 현장 감사나 상위 보고를 검토하세요.</div>`
+      : ''
+  }
   <div class="fg">
     <label>대책서 회신일<input type="date" name="replyDate" value="${esc(n.replyDate)}" oninput="if(this.value){const w=$('#evalWrap'),r=$('#wrap8D');if(w)w.open=true;if(r)r.open=true;renderEval()}"></label>
     <label>대책 타당성<select name="validity">${opts(['적정', '보완요청'], n.validity, true)}</select></label>
@@ -475,14 +559,18 @@ function editNcr(id, preset, mode) {
   <div class="sec" style="margin-top:12px">협력사 대책서 파일 <span class="muted" style="font-weight:normal;font-size:12px">— 받은 8D · 간이 대책서 원본 (PDF · PPT · Excel · Word · 이미지, 파일당 20MB) · 끌어다 놓아도 됩니다</span></div>
   <div id="replyBox" class="docbox"></div>
   <details id="wrap8D" open style="margin-top:14px"><summary class="sec" style="cursor:pointer;list-style:revert"><span class="ttl">협력사 대책서 (8D) 회신 내용</span> <span class="muted" style="font-weight:normal;font-size:12px">— 대책서를 받은 뒤 요약 입력 (발행 시에는 비워둬도 됩니다)</span></summary>
-  <div class="fg">${D8.map(([k, l]) => `<label class="full" data-dk="${k}"><span class="dl" data-o="${l}">${l}</span><textarea name="${k}">${esc(n[k])}</textarea></label>`).join('')}</div></details>
+  <div class="fg">${D8.map(
+    ([k, l]) => `<label class="full" data-dk="${k}"><span class="dl" data-o="${l}">${l}</span><textarea name="${k}">${esc(n[k])}</textarea></label>`,
+  ).join('')}</div></details>
   <details id="evalWrap" open style="margin-top:14px"><summary class="sec" style="cursor:pointer;list-style:revert">대책서 평가 (점검 기준·점수) <span class="muted" style="font-weight:normal;font-size:12px">— 항목별 미흡/부분/충족 → 총점·판정 자동</span></summary>
   <div id="evalBox"></div></details>
   </div>
 <div class="ntp" data-p="b">
   <div id="d3Wrap"><div class="sec">D3 봉쇄 회신 <span class="muted" style="font-weight:normal;font-size:12px">— 대책서와 별도로, 협력사가 대책 요청 후 ${num(S.d3Days) || 1}일 안에 선별·봉쇄 결과를 먼저 회신</span></div>
   <div class="fg">
-    <label>봉쇄 회신 기한 (요청+${num(S.d3Days) || 1}일)<input type="date" name="d3Due" value="${esc(n.d3Due || (!id && n.reqType !== '단순 통보' ? d3DefaultDue(n.requestDate || n.issueDate) : ''))}"></label>
+    <label>봉쇄 회신 기한 (요청+${num(S.d3Days) || 1}일)<input type="date" name="d3Due" value="${esc(
+      n.d3Due || (!id && n.reqType !== '단순 통보' ? d3DefaultDue(n.requestDate || n.issueDate) : ''),
+    )}"></label>
     <label>봉쇄 회신일<input type="date" name="d3Date" value="${esc(n.d3Date)}"></label>
     <label>클린 포인트 (첫 양품 LOT / 납품일)<input name="cleanPoint" value="${esc(n.cleanPoint)}" placeholder="예: LOT 20261028 · 10/29 납품분부터"></label>
     <label>양품 식별 표시<input name="cleanMark" value="${esc(n.cleanMark)}" placeholder="예: 박스 측면 녹색 ‘D3 OK’ 라벨"></label>
@@ -501,8 +589,18 @@ function editNcr(id, preset, mode) {
     <div id="concWrap" style="grid-column:1/-1"><div style="font-size:12px;color:var(--sub);margin-bottom:6px">특채 신청서 · 고객 승인 문서 <span class="muted">(PDF · 이미지 · 엑셀 · 워드 등 · 끌어다 놓기 가능)</span></div>
       <div id="concBox" class="docbox"></div></div>
   </div>
-  ${id && String(n.verifyResult || '').startsWith('무효') ? `<div class="banner" style="background:var(--badb);border-color:transparent;margin-top:10px">검증 결과 <b>무효(재발)</b> — 대책이 효과가 없었습니다. <button type="button" class="b s p" onclick="ncrRework('${n.id}')">재대책 요청</button> <span class="muted">이번 검증 기록은 이력으로 남고 대책서를 다시 요청합니다</span></div>` : ''}
-  ${(n.verifyHist || []).length ? `<div class="muted" style="font-size:12px;margin-top:8px">이전 검증 이력: ${n.verifyHist.map((h, i) => `${i + 1}차 ${esc(h.date)} ${esc(h.result)}`).join(' · ')}</div>` : ''}
+  ${
+    id && String(n.verifyResult || '').startsWith('무효')
+      ? `<div class="banner" style="background:var(--badb);border-color:transparent;margin-top:10px">검증 결과 <b>무효(재발)</b> — 대책이 효과가 없었습니다. <button type="button" class="b s p" onclick="ncrRework('${n.id}')">재대책 요청</button> <span class="muted">이번 검증 기록은 이력으로 남고 대책서를 다시 요청합니다</span></div>`
+      : ''
+  }
+  ${
+    (n.verifyHist || []).length
+      ? `<div class="muted" style="font-size:12px;margin-top:8px">이전 검증 이력: ${n.verifyHist
+          .map((h, i) => `${i + 1}차 ${esc(h.date)} ${esc(h.result)}`)
+          .join(' · ')}</div>`
+      : ''
+  }
   <div class="sec">유효성 검증 LOT · 종결 <span class="muted" style="font-weight:normal;font-size:12px">— 대책 적용 후 입고 LOT별 결과 · 종결 시 협력사 평가 감점</span></div>
   <div style="font-size:12px;color:var(--sub)">검증 LOT <button type="button" class="b s" onclick="curVLots.push({lot:'',date:'',insp:'',ng:''});mfDirty=true;renderVLots()">+ 행</button></div>
   <div id="vlotBox"></div>
@@ -865,7 +963,12 @@ function ncrTabsBar(id, n, solo) {
   const dotT = { t: id && notifyLate(n), r: fl.replyLate, b: fl.d3Late, c: fl.verifyLate };
   return (
     modes +
-    `<div class="dtabs" id="ncrTabs" role="tablist">${NCR_TABS.map(([k, l]) => `<button type="button" role="tab" data-t="${k}" onclick="ncrTab('${k}')">${l}${k === 'd' && lg ? ` <span class="mono" style="opacity:.7">${lg}</span>` : ''}${dotT[k] ? '<i class="tdot" title="기한 경과"></i>' : ''}</button>`).join('')}</div>`
+    `<div class="dtabs" id="ncrTabs" role="tablist">${NCR_TABS.map(
+      ([k, l]) =>
+        `<button type="button" role="tab" data-t="${k}" onclick="ncrTab('${k}')">${l}${
+          k === 'd' && lg ? ` <span class="mono" style="opacity:.7">${lg}</span>` : ''
+        }${dotT[k] ? '<i class="tdot" title="기한 경과"></i>' : ''}</button>`,
+    ).join('')}</div>`
   );
 }
 function ncrModeDefault(n, id) {
@@ -1113,23 +1216,43 @@ function renderEval() {
     t = evalScore(e),
     vd = evalVerdict(e),
     done = evalDone(e);
-  b.innerHTML = `<div class="row" style="margin-bottom:6px">${curEvals.map((x, i) => `<button type="button" class="b s ${i === curEvIdx ? 'p' : ''}" onclick="curEvIdx=${i};renderEval()">${i + 1}차${x.type === '간이 대책서' ? '(간이)' : ''}${evalDone(x) ? ` · ${evalScore(x)}점 ${evalVerdict(x)}` : ' · 작성중'}</button>`).join('')}
+  b.innerHTML = `<div class="row" style="margin-bottom:6px">${curEvals
+    .map(
+      (x, i) =>
+        `<button type="button" class="b s ${i === curEvIdx ? 'p' : ''}" onclick="curEvIdx=${i};renderEval()">${i + 1}차${x.type === '간이 대책서' ? '(간이)' : ''}${
+          evalDone(x) ? ` · ${evalScore(x)}점 ${evalVerdict(x)}` : ' · 작성중'
+        }</button>`,
+    )
+    .join('')}
     <button type="button" class="b s" onclick="addEval()" title="협력사가 보완해서 다시 제출한 대책서 평가">+ 재제출 평가</button><span style="flex:1"></span>
     <label class="fgl" style="flex-direction:row;align-items:center;gap:4px">평가일<input type="date" value="${esc(e.date)}" onchange="curEvals[${curEvIdx}].date=this.value;mfDirty=true"></label>
     <label class="fgl" style="flex-direction:row;align-items:center;gap:4px">평가자<input value="${esc(e.by)}" list="dlOwners" style="width:90px" oninput="curEvals[${curEvIdx}].by=this.value;mfDirty=true"></label>
     ${curEvals.length > 1 || !done ? `<button type="button" class="b s d" onclick="delEval()">이 회차 삭제</button>` : ''}</div>
-  <table class="ct evt"><thead><tr><th>항목</th><th class="n">배점</th><th>점검 기준</th><th>평가</th><th class="n">점수</th><th>의견 (보완 요청 사항)</th></tr></thead><tbody>
+  <table class="ct evt"><thead><tr><th>항목</th><th class="n">배점</th><th>점검 기준</th>
+    <th>평가</th><th class="n">점수</th><th>의견 (보완 요청 사항)</th></tr></thead><tbody>
   ${evItems(e)
     .map((it) => {
       const v = e.sc?.[it.k];
-      return `<tr><td style="white-space:nowrap"><b>${it.t}</b>${it.must ? '<br><span class="bg bad" title="미흡이면 총점과 관계없이 반려">필수</span>' : ''}</td><td class="n">${it.w}</td>
+      return `<tr><td style="white-space:nowrap"><b>${it.t}</b>${
+        it.must ? '<br><span class="bg bad" title="미흡이면 총점과 관계없이 반려">필수</span>' : ''
+      }</td><td class="n">${it.w}</td>
     <td style="font-size:11.5px;color:#3d4659;line-height:1.5">${it.c.map((x) => '· ' + esc(x)).join('<br>')}</td>
-    <td style="white-space:nowrap">${EV_LV.map(([val, sym, lb]) => `<button type="button" class="b s evb ${v === val ? 'on' + String(val).replace('.', '') : ''}" onclick="setEv('${it.k}',${val})" title="${lb}">${sym} ${lb}</button>`).join(' ')}</td>
+    <td style="white-space:nowrap">${EV_LV.map(
+      ([val, sym, lb]) =>
+        `<button type="button" class="b s evb ${
+          v === val ? 'on' + String(val).replace('.', '') : ''
+        }" onclick="setEv('${it.k}',${val})" title="${lb}">${sym} ${lb}</button>`,
+    ).join(' ')}</td>
     <td class="n"><b>${v == null ? '-' : Math.round(v * it.w)}</b></td>
     <td><input value="${esc(e.cm?.[it.k])}" style="width:100%;min-width:150px" placeholder="${v === 1 || v == null ? '' : '보완 요청 내용'}" oninput="(curEvals[${curEvIdx}].cm=curEvals[${curEvIdx}].cm||{})['${it.k}']=this.value;mfDirty=true"></td></tr>`;
     })
     .join('')}
-  </tbody><tfoot><tr><td colspan="4" style="text-align:right"><b>총점</b> <span class="muted" style="font-size:12px">(승인 ≥ ${S.evalPass} · 보완요청 ≥ ${S.evalCond} · 그 미만 또는 필수항목 미흡은 반려)</span></td><td class="n" style="font-size:16px"><b>${t}</b></td><td>${done ? `<span class="bg ${VD_CLS[vd]}" style="font-size:13px;padding:3px 12px">${vd}</span> <span class="muted" style="font-size:12px">→ 저장 시 대책 타당성 ‘${vd === '승인' ? '적정' : '보완요청'}’ 반영</span>` : `<span class="muted">${evItems(e).filter((it) => e.sc?.[it.k] == null).length}개 항목 미평가</span>`}</td></tr>
+  </tbody><tfoot><tr><td colspan="4" style="text-align:right"><b>총점</b> <span class="muted" style="font-size:12px">(승인 ≥ ${S.evalPass} · 보완요청 ≥ ${S.evalCond} · 그 미만 또는 필수항목 미흡은 반려)</span></td>
+    <td class="n" style="font-size:16px"><b>${t}</b></td><td>${
+      done
+        ? `<span class="bg ${VD_CLS[vd]}" style="font-size:13px;padding:3px 12px">${vd}</span> <span class="muted" style="font-size:12px">→ 저장 시 대책 타당성 ‘${vd === '승인' ? '적정' : '보완요청'}’ 반영</span>`
+        : `<span class="muted">${evItems(e).filter((it) => e.sc?.[it.k] == null).length}개 항목 미평가</span>`
+    }</td></tr>
   <tr><td colspan="6"><input value="${esc(e.note)}" style="width:100%" placeholder="종합 의견 (예: D4 유출원인 미규명 — 검사 공정 누락 원인 보완 후 10/30까지 재제출)" oninput="curEvals[${curEvIdx}].note=this.value;mfDirty=true"></td></tr></tfoot></table>`;
 }
 function setEv(k, v) {
@@ -1194,7 +1317,11 @@ function farLine(n) {
   ]
     .filter(Boolean)
     .join(' · ');
-  return `<div class="banner" id="farLine" style="background:var(--pri2);border-color:transparent;color:var(--ink)">${farBadge(n) || '<b>FAR</b>'} ${bits}${f.src && db.defects.find((d) => d.id === f.src) ? ` <a class="lk" onclick="farGoInv('${f.src}')">FAR 열기</a>` : ' <span class="muted">(연결 불량이 없는 NCR — 읽기만 됩니다)</span>'}${f.summary ? `<div style="margin-top:3px;font-size:12.5px;white-space:pre-wrap">${esc(f.summary)}</div>` : ''}</div>`;
+  return `<div class="banner" id="farLine" style="background:var(--pri2);border-color:transparent;color:var(--ink)">${farBadge(n) || '<b>FAR</b>'} ${bits}${
+    f.src && db.defects.find((d) => d.id === f.src)
+      ? ` <a class="lk" onclick="farGoInv('${f.src}')">FAR 열기</a>`
+      : ' <span class="muted">(연결 불량이 없는 NCR — 읽기만 됩니다)</span>'
+  }${f.summary ? `<div style="margin-top:3px;font-size:12.5px;white-space:pre-wrap">${esc(f.summary)}</div>` : ''}</div>`;
 }
 // FAR 은 FAR 화면(연결 불량의 귀책 조사)이 원본 — NCR 창에서는 입력하지 않음.
 // n.far 는 연결 불량의 FAR 를 그대로 비춘 값(목록 배지 · 통보서 문구 · 지연 알림용)이고, src 에 원본 불량 id 를 둠.
@@ -1316,15 +1443,21 @@ let curStock = [],
 function renderContain() {
   const b = $('#containBox');
   if (!b) return;
-  b.innerHTML = `<table class="ct" style="margin-top:4px"><thead><tr><th>재고 위치</th><th>대상 (EA)</th><th>선별 (EA)</th><th>불량 (EA)</th><th>완료일</th><th></th></tr></thead><tbody>${curContain
-    .map(
-      (r, i) => `<tr>
+  b.innerHTML = `<table class="ct" style="margin-top:4px"><thead><tr><th>재고 위치</th><th>대상 (EA)</th>
+    <th>선별 (EA)</th><th>불량 (EA)</th><th>완료일</th><th></th></tr></thead><tbody>${curContain
+      .map(
+        (r, i) => `<tr>
     <td><input value="${esc(r.loc)}" style="width:140px" placeholder="예: 협력사 창고" oninput="curContain[${i}].loc=this.value;mfDirty=true"></td>
-    ${['target', 'sorted', 'ng'].map((k) => `<td><input value="${esc(r[k])}" style="width:100px" inputmode="numeric" oninput="curContain[${i}].${k}=this.value;mfDirty=true;containFoot()"></td>`).join('')}
+    ${['target', 'sorted', 'ng']
+      .map(
+        (k) =>
+          `<td><input value="${esc(r[k])}" style="width:100px" inputmode="numeric" oninput="curContain[${i}].${k}=this.value;mfDirty=true;containFoot()"></td>`,
+      )
+      .join('')}
     <td><input type="date" value="${esc(r.done)}" oninput="curContain[${i}].done=this.value;mfDirty=true"></td>
     <td><button type="button" class="b s d" onclick="curContain.splice(${i},1);mfDirty=true;renderContain()">✕</button></td></tr>`,
-    )
-    .join('')}</tbody>
+      )
+      .join('')}</tbody>
     <tfoot id="containFoot"></tfoot></table>`;
   containFoot();
 }
@@ -1334,7 +1467,11 @@ function containFoot() {
   const tot = (k) => curContain.reduce((a, r) => a + numC(r[k]), 0),
     T = tot('target'),
     So = tot('sorted');
-  e.innerHTML = `<tr><td><b>합계</b></td><td style="padding-left:12px">${T.toLocaleString()}</td><td style="padding-left:12px">${So.toLocaleString()}</td><td style="padding-left:12px">${tot('ng').toLocaleString()}</td><td colspan="2" class="muted" style="font-size:12px">${T && So < T ? `미선별 ${(T - So).toLocaleString()} EA` : ''}</td></tr>`;
+  e.innerHTML = `<tr><td><b>합계</b></td><td style="padding-left:12px">${T.toLocaleString()}</td>
+    <td style="padding-left:12px">${So.toLocaleString()}</td>
+    <td style="padding-left:12px">${tot('ng').toLocaleString()}</td><td colspan="2" class="muted" style="font-size:12px">${
+      T && So < T ? `미선별 ${(T - So).toLocaleString()} EA` : ''
+    }</td></tr>`;
 }
 function vlotVerdict(r) {
   const i = numC(r.insp),
@@ -1345,17 +1482,18 @@ function vlotVerdict(r) {
 function renderVLots() {
   const b = $('#vlotBox');
   if (!b) return;
-  b.innerHTML = `<table class="ct" style="margin-top:4px"><thead><tr><th>LOT No.</th><th>입고일</th><th>검사 (EA)</th><th>불량 (EA)</th><th>판정</th><th></th></tr></thead><tbody>${curVLots
-    .map(
-      (r, i) => `<tr>
+  b.innerHTML = `<table class="ct" style="margin-top:4px"><thead><tr><th>LOT No.</th>
+    <th>입고일</th><th>검사 (EA)</th><th>불량 (EA)</th><th>판정</th><th></th></tr></thead><tbody>${curVLots
+      .map(
+        (r, i) => `<tr>
     <td><input value="${esc(r.lot)}" style="width:150px" oninput="curVLots[${i}].lot=this.value;mfDirty=true"></td>
     <td><input type="date" value="${esc(r.date)}" oninput="curVLots[${i}].date=this.value;mfDirty=true"></td>
     <td><input value="${esc(r.insp)}" style="width:90px" inputmode="numeric" oninput="curVLots[${i}].insp=this.value;mfDirty=true;vlotRefresh()"></td>
     <td><input value="${esc(r.ng)}" style="width:90px" inputmode="numeric" oninput="curVLots[${i}].ng=this.value;mfDirty=true;vlotRefresh()"></td>
     <td data-vv="${i}"></td>
     <td><button type="button" class="b s d" onclick="curVLots.splice(${i},1);mfDirty=true;renderVLots()">✕</button></td></tr>`,
-    )
-    .join('')}</tbody></table>
+      )
+      .join('')}</tbody></table>
     <div class="muted" id="vlotNote" style="font-size:12px;margin-top:4px"></div>`;
   vlotRefresh();
 }
@@ -1369,20 +1507,23 @@ function vlotRefresh() {
   });
   const e = $('#vlotNote');
   if (e)
-    e.innerHTML = `합격 ${ok} LOT${ng ? ` · <span style="color:var(--bad)">불합격 ${ng} LOT — 검증 결과 ‘무효(재발)’ 검토</span>` : ''}${ok >= 3 && !ng ? ' · 3 LOT 무불량 충족 — 검증일·결과 ‘유효’를 입력하면 종결됩니다' : ''}`;
+    e.innerHTML = `합격 ${ok} LOT${ng ? ` · <span style="color:var(--bad)">불합격 ${ng} LOT — 검증 결과 ‘무효(재발)’ 검토</span>` : ''}${
+      ok >= 3 && !ng ? ' · 3 LOT 무불량 충족 — 검증일·결과 ‘유효’를 입력하면 종결됩니다' : ''
+    }`;
 }
 function renderStock() {
   const b = $('#stockBox');
   if (!b) return;
-  b.innerHTML = `<table class="ct" style="margin-top:4px"><thead><tr><th>구분</th><th>Quantity Stocked (재고보유수량)</th><th>Check Quality (확인된 불량수량)</th><th></th></tr></thead><tbody>${curStock
-    .map(
-      (r, i) => `<tr>
+  b.innerHTML = `<table class="ct" style="margin-top:4px"><thead><tr><th>구분</th>
+    <th>Quantity Stocked (재고보유수량)</th><th>Check Quality (확인된 불량수량)</th><th></th></tr></thead><tbody>${curStock
+      .map(
+        (r, i) => `<tr>
     <td><input value="${esc(r.loc)}" style="width:150px" placeholder="예: Customer, W/H" oninput="curStock[${i}].loc=this.value;mfDirty=true"></td>
     <td><input value="${esc(r.stocked)}" style="width:170px" placeholder="예: 76,000EA 또는 -" oninput="curStock[${i}].stocked=this.value;mfDirty=true"></td>
     <td><input value="${esc(r.ng)}" style="width:170px" placeholder="예: 24,000EA 또는 -" oninput="curStock[${i}].ng=this.value;mfDirty=true"></td>
     <td><button type="button" class="b s d" onclick="curStock.splice(${i},1);mfDirty=true;renderStock()">✕</button></td></tr>`,
-    )
-    .join('')}</tbody></table>`;
+      )
+      .join('')}</tbody></table>`;
 }
 // 불량 내용 서술의 작성 양식 (발행 근거 ‘불량’) — 연결 불량의 내용으로 채움. 새 NCR 에는 기본으로 들어감
 function descTplDefect(d, lot) {
@@ -1393,7 +1534,9 @@ function descTplDefect(d, lot) {
   return [
     `1. 발견 일시/장소 (When/Where) : ${d ? (d.date || '') + ' / ' + (d.source || '') + fg : ''}`,
     `2. 불량 현상 (What) : ${d ? [d.type, d.desc].filter(Boolean).join(' — ') : ''}`,
-    `3. 발생 수량/범위 (How many) : ${d ? num(d.qty).toLocaleString() + ' EA' + (d.inspQty ? ' / ' + num(d.inspQty).toLocaleString() + ' EA 중' : '') : ''}${lot ? ' (LOT ' + lot + ')' : ''}`,
+    `3. 발생 수량/범위 (How many) : ${
+      d ? num(d.qty).toLocaleString() + ' EA' + (d.inspQty ? ' / ' + num(d.inspQty).toLocaleString() + ' EA 중' : '') : ''
+    }${lot ? ' (LOT ' + lot + ')' : ''}`,
     `4. 영향 (Impact) : `,
     `5. 당사 조치 (Containment) : ${d?.containment || ''}`,
   ].join('\n');
@@ -1432,7 +1575,9 @@ function defaultReq(type, due, far, site, esc) {
   let b = defaultReq0(type, due);
   const k = () => (b.match(/^\d+\./gm) || []).length + 1;
   if (esc && type !== '단순 통보')
-    b += `\n${k()}. Outflow cause — why not detected at your outgoing inspection, and detection countermeasure${esc >= 2 ? ' (100% inspection or error-proofing before shipment)' : ''} (유출 원인 · 출하검사 대책${esc >= 2 ? ' — 출하 전 전수 또는 자동 검출' : ''})`;
+    b += `\n${k()}. Outflow cause — why not detected at your outgoing inspection, and detection countermeasure${
+      esc >= 2 ? ' (100% inspection or error-proofing before shipment)' : ''
+    } (유출 원인 · 출하검사 대책${esc >= 2 ? ' — 출하 전 전수 또는 자동 검출' : ''})`;
   if (far && far.reqDate && !far.replyDate) {
     const fd = far.due ? `${+far.due.slice(5, 7)}/${+far.due.slice(8, 10)}` : '';
     b += `\n${k()}. Failure analysis report (FAR) for returned samples${far.sampleQty ? ' (' + far.sampleQty + ')' : ''} : ~ ${fd} 限`;
@@ -1595,7 +1740,13 @@ function renderNcrCost() {
     .join('');
   box.innerHTML =
     tot || req
-      ? `<div class="tw" style="max-width:420px"><table><tbody>${rows}<tr><th>합계</th><th class="n">${won(tot)} 원</th></tr>${req ? `<tr><td>구상 청구(합의)</td><td class="n">${won(req)} 원</td></tr><tr><td>회수</td><td class="n">${won(recv)} 원${req > recv ? ` <span class="bg warn">미회수 ${won(req - recv)}</span>` : ''}</td></tr>` : ''}</tbody></table></div>`
+      ? `<div class="tw" style="max-width:420px"><table><tbody>${rows}<tr><th>합계</th><th class="n">${won(tot)} 원</th></tr>${
+          req
+            ? `<tr><td>구상 청구(합의)</td><td class="n">${won(req)} 원</td></tr><tr><td>회수</td><td class="n">${won(recv)} 원${
+                req > recv ? ` <span class="bg warn">미회수 ${won(req - recv)}</span>` : ''
+              }</td></tr>`
+            : ''
+        }</tbody></table></div>`
       : `<div class="muted" style="font-size:12.5px">연결된 불량 ${ds.length}건에 입력된 비용이 없습니다.</div>`;
 }
 function refreshLinks() {
@@ -1629,9 +1780,19 @@ function refreshLinks() {
     .slice(0, 100);
   box.innerHTML =
     (linked.length
-      ? `<table><tbody>${linked.map((d) => `<tr><td>${esc(d.date)}</td><td>${esc(d.partNo)} ${esc(d.partName)}</td><td>${esc(d.type)}</td><td class="n">${num(d.qty)}개</td><td>${photoBadge(d)}</td><td><button type="button" class="b s d" onclick="unlinkDefect('${d.id}')">해제</button></td></tr>`).join('')}</tbody></table>`
+      ? `<table><tbody>${linked
+          .map(
+            (d) =>
+              `<tr><td>${esc(d.date)}</td><td>${esc(d.partNo)} ${esc(d.partName)}</td><td>${esc(d.type)}</td><td class="n">${num(d.qty)}개</td>
+                <td>${photoBadge(d)}</td><td><button type="button" class="b s d" onclick="unlinkDefect('${d.id}')">해제</button></td></tr>`,
+          )
+          .join('')}</tbody></table>`
       : '<div class="muted">연결된 불량 없음</div>') +
-    `<div class="row" style="margin-top:8px"><select id="linkSel" style="max-width:520px"><option value="">— 불량 추가 연결 (같은 협력사, NCR 미연결) —</option>${cand.map((d) => `<option value="${d.id}">${esc(d.date)} · ${esc(d.partNo)} ${esc(d.partName)} · ${esc(d.type)} · ${num(d.qty)}개</option>`).join('')}</select><button type="button" class="b s" onclick="const v=$('#linkSel').value;if(v){curLinks.push(v);refreshLinks()}">추가</button></div>`;
+    `<div class="row" style="margin-top:8px"><select id="linkSel" style="max-width:520px"><option value="">— 불량 추가 연결 (같은 협력사, NCR 미연결) —</option>${cand
+      .map((d) => `<option value="${d.id}">${esc(d.date)} · ${esc(d.partNo)} ${esc(d.partName)} · ${esc(d.type)} · ${num(d.qty)}개</option>`)
+      .join(
+        '',
+      )}</select><button type="button" class="b s" onclick="const v=$('#linkSel').value;if(v){curLinks.push(v);refreshLinks()}">추가</button></div>`;
 }
 function saveNcr(id) {
   const o = gather(),
@@ -1857,36 +2018,84 @@ async function print8D(id) {
   ${logoHead()}<h1>8D Report — ${esc(n.no)}</h1>
   <table><tr><th>협력사</th><td>${esc(supName(n.supplierId))}</td><th>발행일</th><td>${esc(n.issueDate)}</td></tr>
   <tr><th>품번</th><td>${esc(n.partNo)}</td><th>품명</th><td>${esc(n.partName)}</td></tr>
-  <tr><th>제목</th><td colspan="3">${esc(n.title)}</td></tr>${n.basis === '공정 감사' ? `<tr><th>발행 근거</th><td colspan="3">공정 감사 — ${esc(n.auditDate)} ${esc(n.auditType)} ${esc(n.auditRef)}${n.finding ? '<br>' + esc(n.finding) : ''}</td></tr>` : ''}${n.basis === 'PPM 초과' ? `<tr><th>발행 근거</th><td colspan="3">PPM 초과 — ${esc(n.ppmFrom)}~${esc(n.ppmTo)} 실적 ${esc(n.ppmVal)} PPM / 목표 ${esc(n.ppmTarget)} PPM</td></tr>` : ''}${n.basis === '기타' ? `<tr><th>발행 근거</th><td colspan="3">기타</td></tr>` : ''}
+  <tr><th>제목</th><td colspan="3">${esc(n.title)}</td></tr>${
+    n.basis === '공정 감사'
+      ? `<tr><th>발행 근거</th><td colspan="3">공정 감사 — ${esc(n.auditDate)} ${esc(n.auditType)} ${esc(n.auditRef)}${
+          n.finding ? '<br>' + esc(n.finding) : ''
+        }</td></tr>`
+      : ''
+  }${
+    n.basis === 'PPM 초과'
+      ? `<tr><th>발행 근거</th><td colspan="3">PPM 초과 — ${esc(n.ppmFrom)}~${esc(n.ppmTo)} 실적 ${esc(n.ppmVal)} PPM / 목표 ${esc(n.ppmTarget)} PPM</td></tr>`
+      : ''
+  }${n.basis === '기타' ? `<tr><th>발행 근거</th><td colspan="3">기타</td></tr>` : ''}
   <tr><th>대책 요청일</th><td>${esc(n.requestDate)}</td><th>회신 기한 / 회신일</th><td>${esc(n.dueDate)} / ${esc(n.replyDate)}</td></tr>
   <tr><th>유효성 기한</th><td>${esc(n.verifyDue)}</td><th>검증일 / 결과</th><td>${esc(n.verifyDate)} / ${esc(n.verifyResult)}</td></tr>
-  <tr><th>상태</th><td>${ncrStatus(n)}${ncrRejects(n) ? ` · 보완요청·반려 ${ncrRejects(n)}회` : ''}</td><th>담당</th><td>${esc(n.owner)}</td></tr>${nds.length ? `<tr><th>발송한 통보서 파일</th><td colspan="3">${nds.map((r) => esc(r.name)).join(' · ')}</td></tr>` : ''}${rds.length ? `<tr><th>협력사 대책서 파일</th><td colspan="3">${rds.map((r) => esc(r.name)).join(' · ')}</td></tr>` : ''}${n.reqType !== '단순 통보' ? `<tr><th>D3 봉쇄 기한 / 회신일</th><td>${esc(n.d3Due)} / ${esc(n.d3Date)}</td><th>클린 포인트</th><td>${esc(n.cleanPoint)}${n.cleanMark ? '<br>' + esc(n.cleanMark) : ''}</td></tr>` : ''}${n.concession && n.concession !== '없음' ? `<tr><th>특채</th><td colspan="3">${esc(n.concession)}${(n.concDocs || []).length ? ` · 첨부 문서 ${n.concDocs.length}건` : ''}</td></tr>` : ''}${n.penalty !== undefined && n.penalty !== '' ? `<tr><th>협력사 평가 감점</th><td colspan="3">${esc(n.penalty)}점</td></tr>` : ''}</table>${(n.contain || []).length ? `<table class="sm"><tr><th>재고 위치</th><th>대상 (EA)</th><th>선별 (EA)</th><th>불량 (EA)</th><th>완료일</th></tr>${n.contain.map((r) => `<tr><td>${esc(r.loc)}</td><td>${esc(r.target)}</td><td>${esc(r.sorted)}</td><td>${esc(r.ng)}</td><td>${esc(r.done)}</td></tr>`).join('')}</table>` : ''}${(n.vlots || []).length ? `<table class="sm"><tr><th>검증 LOT</th><th>입고일</th><th>검사 (EA)</th><th>불량 (EA)</th><th>판정</th></tr>${n.vlots.map((r) => `<tr><td>${esc(r.lot)}</td><td>${esc(r.date)}</td><td>${esc(r.insp)}</td><td>${esc(r.ng)}</td><td>${vlotVerdict(r)}</td></tr>`).join('')}</table>` : ''}
+  <tr><th>상태</th><td>${ncrStatus(n)}${ncrRejects(n) ? ` · 보완요청·반려 ${ncrRejects(n)}회` : ''}</td><th>담당</th><td>${esc(n.owner)}</td></tr>${
+    nds.length ? `<tr><th>발송한 통보서 파일</th><td colspan="3">${nds.map((r) => esc(r.name)).join(' · ')}</td></tr>` : ''
+  }${rds.length ? `<tr><th>협력사 대책서 파일</th><td colspan="3">${rds.map((r) => esc(r.name)).join(' · ')}</td></tr>` : ''}${
+    n.reqType !== '단순 통보'
+      ? `<tr><th>D3 봉쇄 기한 / 회신일</th><td>${esc(n.d3Due)} / ${esc(n.d3Date)}</td><th>클린 포인트</th><td>${esc(n.cleanPoint)}${
+          n.cleanMark ? '<br>' + esc(n.cleanMark) : ''
+        }</td></tr>`
+      : ''
+  }${
+    n.concession && n.concession !== '없음'
+      ? `<tr><th>특채</th><td colspan="3">${esc(n.concession)}${(n.concDocs || []).length ? ` · 첨부 문서 ${n.concDocs.length}건` : ''}</td></tr>`
+      : ''
+  }${n.penalty !== undefined && n.penalty !== '' ? `<tr><th>협력사 평가 감점</th><td colspan="3">${esc(n.penalty)}점</td></tr>` : ''}</table>${
+    (n.contain || []).length
+      ? `<table class="sm"><tr><th>재고 위치</th><th>대상 (EA)</th><th>선별 (EA)</th><th>불량 (EA)</th><th>완료일</th></tr>${n.contain
+          .map((r) => `<tr><td>${esc(r.loc)}</td><td>${esc(r.target)}</td><td>${esc(r.sorted)}</td><td>${esc(r.ng)}</td><td>${esc(r.done)}</td></tr>`)
+          .join('')}</table>`
+      : ''
+  }${
+    (n.vlots || []).length
+      ? `<table class="sm"><tr><th>검증 LOT</th><th>입고일</th><th>검사 (EA)</th><th>불량 (EA)</th><th>판정</th></tr>${n.vlots
+          .map((r) => `<tr><td>${esc(r.lot)}</td><td>${esc(r.date)}</td><td>${esc(r.insp)}</td><td>${esc(r.ng)}</td><td>${vlotVerdict(r)}</td></tr>`)
+          .join('')}</table>`
+      : ''
+  }
   <table>${D8.map(([k, l]) => `<tr><th>${l}</th><td style="height:48px">${nl(n[k])}</td></tr>`).join('')}</table>
   ${(n.evals || [])
     .filter(evalDone)
     .map(
-      (
-        e,
-        ri,
-        arr,
-      ) => `<table class="sm" style="break-inside:avoid"><tr><th colspan="5" style="background:#dde4ef">대책서 평가 ${(n.evals || []).indexOf(e) + 1}차 — ${esc(e.date)} · 평가자 ${esc(e.by)} · <b>${evalScore(e)}점 / ${evalVerdict(e)}</b></th></tr>
+      (e, ri, arr) => `<table class="sm" style="break-inside:avoid"><tr>
+        <th colspan="5" style="background:#dde4ef">대책서 평가 ${(n.evals || []).indexOf(e) + 1}차 — ${esc(e.date)} · 평가자 ${esc(e.by)} · <b>${evalScore(e)}점 / ${evalVerdict(e)}</b></th></tr>
     <tr><th>항목</th><th>배점</th><th>평가</th><th>점수</th><th>의견</th></tr>
     ${evItems(e)
       .map((it) => {
         const v = e.sc[it.k];
-        return `<tr><td>${it.t}</td><td>${it.w}</td><td>${(EV_LV.find((l) => l[0] === v) || ['', '', ''])[2]}</td><td>${Math.round(v * it.w)}</td><td>${esc(e.cm?.[it.k])}</td></tr>`;
+        return `<tr><td>${it.t}</td><td>${it.w}</td><td>${
+          (EV_LV.find((l) => l[0] === v) || ['', '', ''])[2]
+        }</td><td>${Math.round(v * it.w)}</td><td>${esc(e.cm?.[it.k])}</td></tr>`;
       })
       .join('')}
     ${e.note ? `<tr><th>종합 의견</th><td colspan="4">${esc(e.note)}</td></tr>` : ''}</table>`,
     )
     .join('')}
-  ${ds.length ? `<table class="sm"><tr><th>발생일</th><th>발생처</th><th>부품</th><th>유형</th><th>수량</th><th>납품일자</th><th>내용</th></tr>${ds.map((d) => `<tr><td>${esc(d.date)}</td><td>${esc(d.source)}</td><td>${esc(d.partNo)} ${esc(d.partName)}</td><td>${esc(d.type)}</td><td>${num(d.qty)}</td><td>${esc(d.delivDate || d.lot)}</td><td>${nl(d.desc)}</td></tr>`).join('')}</table>` : ''}
+  ${
+    ds.length
+      ? `<table class="sm"><tr><th>발생일</th><th>발생처</th><th>부품</th><th>유형</th><th>수량</th><th>납품일자</th><th>내용</th></tr>${ds
+          .map(
+            (d) =>
+              `<tr><td>${esc(d.date)}</td><td>${esc(d.source)}</td><td>${esc(d.partNo)} ${esc(d.partName)}</td>
+                <td>${esc(d.type)}</td><td>${num(d.qty)}</td><td>${esc(d.delivDate || d.lot)}</td><td>${nl(d.desc)}</td></tr>`,
+          )
+          .join('')}</table>`
+      : ''
+  }
   ${(() => {
     const lg = [...(n.logs || []), ...ds.flatMap((d) => (d.logs || []).map((l) => ({ ...l, dd: d })))].sort((a, b) =>
       (a.date || '').localeCompare(b.date || ''),
     );
     return lg.length
-      ? `<table class="sm"><tr><th colspan="3" style="background:#dde4ef">조사 · 진행 경과</th></tr><tr><th>일자</th><th>구분</th><th>내용</th></tr>${lg.map((l) => `<tr><td style="white-space:nowrap">${esc(l.date)}</td><td style="white-space:nowrap">${esc(l.kind)}</td><td>${nl(l.text)}</td></tr>`).join('')}</table>`
+      ? `<table class="sm"><tr><th colspan="3" style="background:#dde4ef">조사 · 진행 경과</th></tr><tr><th>일자</th><th>구분</th><th>내용</th></tr>${lg
+          .map(
+            (l) =>
+              `<tr><td style="white-space:nowrap">${esc(l.date)}</td><td style="white-space:nowrap">${esc(l.kind)}</td><td>${nl(l.text)}</td></tr>`,
+          )
+          .join('')}</table>`
       : '';
   })()}
   ${

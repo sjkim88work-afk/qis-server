@@ -184,11 +184,31 @@ function renderIssue() {
       '<span class="muted">—</span>'
     );
   };
-  return `<div class="row noprint" style="margin-bottom:12px;align-items:baseline"><h2 style="margin:0;font-size:20px">이슈</h2><span class="muted" style="font-size:13px">원인 · 처리 방향이 아직 정해지지 않은 이상 건. 일상 불량은 불량 관리에서 바로 등록합니다.</span><span style="flex:1"></span>${RO ? '' : '<button class="b p" onclick="editIssue()">+ 이슈 등록</button>'}</div>
+  return `<div class="row noprint" style="margin-bottom:12px;align-items:baseline"><h2 style="margin:0;font-size:20px">이슈</h2><span class="muted" style="font-size:13px">원인 · 처리 방향이 아직 정해지지 않은 이상 건. 일상 불량은 불량 관리에서 바로 등록합니다.</span><span style="flex:1"></span>${
+    RO ? '' : '<button class="b p" onclick="editIssue()">+ 이슈 등록</button>'
+  }</div>
   <div class="kpis">
-    ${kpi('열린 이슈', open.length, `접수 · 조사 중 ${open.filter(issWait).length} · 분류 완료 ${open.length - open.filter(issWait).length}`, open.length ? 'warn' : 'ok', "state.isf.status='open';render()")}
-    ${kpi('분류 대기 (처리 방향 미정)', wait.length, `2일 넘은 건 ${wait.filter(issStale).length} — 오늘 챙길 일에 표시`, wait.filter(issStale).length ? 'bad' : wait.length ? 'warn' : 'ok', "state.isf.status='wait';render()")}
-    ${kpi('긴급 · 특별특성', hot.length, `격리 기록 없음 ${hot.filter((i) => !i.contain).length}`, hot.length ? 'bad' : 'ok', "state.isf.hot=!state.isf.hot;state.isf.status='open';render()")}
+    ${kpi(
+      '열린 이슈',
+      open.length,
+      `접수 · 조사 중 ${open.filter(issWait).length} · 분류 완료 ${open.length - open.filter(issWait).length}`,
+      open.length ? 'warn' : 'ok',
+      "state.isf.status='open';render()",
+    )}
+    ${kpi(
+      '분류 대기 (처리 방향 미정)',
+      wait.length,
+      `2일 넘은 건 ${wait.filter(issStale).length} — 오늘 챙길 일에 표시`,
+      wait.filter(issStale).length ? 'bad' : wait.length ? 'warn' : 'ok',
+      "state.isf.status='wait';render()",
+    )}
+    ${kpi(
+      '긴급 · 특별특성',
+      hot.length,
+      `격리 기록 없음 ${hot.filter((i) => !i.contain).length}`,
+      hot.length ? 'bad' : 'ok',
+      "state.isf.hot=!state.isf.hot;state.isf.status='open';render()",
+    )}
     ${kpi(`${m} 종결`, all.filter((i) => (i.closedAt || '').startsWith(m)).length, '후속 건 이관 · 이상 없음 포함', 'ok', "state.isf.status='closed';render()")}
   </div>
   <div class="card"><div class="row noprint" style="margin-bottom:8px">
@@ -203,17 +223,26 @@ function renderIssue() {
     <select onchange="state.isf.src=this.value;render()"><option value="">발견 위치 전체</option>${opts(db.settings.sources, f.src)}</select>
     <label class="row" style="gap:6px;font-size:13px"><input type="checkbox" ${f.hot ? 'checked' : ''} onchange="state.isf.hot=this.checked;render()"> 긴급 · 특별특성만</label>
     <span style="flex:1"></span><input placeholder="번호 · 제목 · 품목 · 기록 내용" value="${esc(f.q)}" oninput="state.isf.q=this.value;deb(render)" style="width:240px"></div>
-  <div class="tw"><table><thead><tr><th>이슈 번호</th><th>제목</th><th>발견</th><th>긴급도</th><th>상태</th><th class="n">기록</th><th>후속 건</th><th>담당</th><th>경과</th></tr></thead><tbody>
+  <div class="tw"><table><thead><tr><th>이슈 번호</th><th>제목</th><th>발견</th><th>긴급도</th>
+    <th>상태</th><th class="n">기록</th><th>후속 건</th><th>담당</th><th>경과</th></tr></thead><tbody>
   ${
     L.map((i) => {
       const st = issStatus(i),
         age = i.closedAt ? '종결' : diffDays((i.at || '').slice(0, 10) || today(), today()) + '일';
       return `<tr class="${issStale(i) ? 'late' : ''}" style="cursor:pointer" onclick="if(!event.target.closest('a,button,input'))issOpen('${i.id}')">
     <td class="mono"><a class="lk" onclick="issOpen('${i.id}')"><b>${esc(i.no)}</b></a></td>
-    <td style="min-width:220px"><b>${esc(i.title)}</b><br><span class="muted" style="font-size:12px">${esc([i.partNo, i.qty ? num(i.qty).toLocaleString() + 'EA' : ''].filter(Boolean).join(' · ') || '품목 미정')}</span></td>
-    <td style="white-space:nowrap">${esc(issAt(i.at, i.band).slice(5))}<br><span class="muted" style="font-size:12px">${esc([i.source, i.loc].filter(Boolean).join(' · '))}</span></td>
-    <td style="white-space:nowrap"><span class="bg ${ISS_UCLS[i.urg] || 'mut'}">${esc(i.urg || '보통')}</span>${i.special ? ' <span class="bg svA">CC/SC</span>' : ''}</td>
-    <td style="white-space:nowrap"><span class="bg ${ISS_SCLS[st]}">${st === '접수' ? '접수 · 분류 대기' : st === '종결' && !issLinks(i).n ? '종결 · 이상 없음' : st}</span></td>
+    <td style="min-width:220px"><b>${esc(i.title)}</b><br><span class="muted" style="font-size:12px">${esc(
+      [i.partNo, i.qty ? num(i.qty).toLocaleString() + 'EA' : ''].filter(Boolean).join(' · ') || '품목 미정',
+    )}</span></td>
+    <td style="white-space:nowrap">${esc(issAt(i.at, i.band).slice(5))}<br><span class="muted" style="font-size:12px">${esc(
+      [i.source, i.loc].filter(Boolean).join(' · '),
+    )}</span></td>
+    <td style="white-space:nowrap"><span class="bg ${ISS_UCLS[i.urg] || 'mut'}">${esc(i.urg || '보통')}</span>${
+      i.special ? ' <span class="bg svA">CC/SC</span>' : ''
+    }</td>
+    <td style="white-space:nowrap"><span class="bg ${ISS_SCLS[st]}">${
+      st === '접수' ? '접수 · 분류 대기' : st === '종결' && !issLinks(i).n ? '종결 · 이상 없음' : st
+    }</span></td>
     <td class="n">${(i.logs || []).filter((l) => !l.void).length}</td><td>${out(i)}</td><td>${esc(i.owner)}</td><td class="mono">${age}</td></tr>`;
     }).join('') || '<tr><td colspan="9" class="muted" style="text-align:center;padding:28px">조건에 맞는 이슈가 없습니다.</td></tr>'
   }
@@ -248,7 +277,9 @@ function issFHTML(ids, rm) {
           if (r.gone) return `<span class="f ld" title="이 PC에서 파일을 찾지 못했습니다">📎 파일 없음${x}</span>`;
           return issFImg(r)
             ? `<span class="f im"><img src="${r.thumb || r.data}" alt="${esc(r.name || '첨부 이미지')}" title="${esc(r.name || '')}" onclick="issFOpen('${id}')">${x}</span>`
-            : `<span class="f"><a class="o" onclick="issFOpen('${id}')" title="${esc(r.name)} — 열기"><span class="dk">${docIcon(r)}</span><b>${esc(r.name)}</b>${r.size ? `<span class="muted">${fmtBytes(r.size)}</span>` : ''}</a>${x}</span>`;
+            : `<span class="f"><a class="o" onclick="issFOpen('${id}')" title="${esc(r.name)} — 열기"><span class="dk">${docIcon(r)}</span><b>${esc(r.name)}</b>${
+                r.size ? `<span class="muted">${fmtBytes(r.size)}</span>` : ''
+              }</a>${x}</span>`;
         })
         .join('')}</div>`
     : '';
@@ -565,7 +596,9 @@ function issDetailHTML(i) {
     issFLoad(i);
   }, 0);
   const kv = (k, v, s) =>
-    `<div><div class="muted" style="font-size:12px">${k}</div><div style="font-weight:600;margin-top:2px">${v}</div>${s ? `<div style="font-size:12.5px">${s}</div>` : ''}</div>`;
+    `<div><div class="muted" style="font-size:12px">${k}</div><div style="font-weight:600;margin-top:2px">${v}</div>${
+      s ? `<div style="font-size:12.5px">${s}</div>` : ''
+    }</div>`;
   const p = partByNo(i.partNo || '');
   const fol = [
     ...L.ds.map(
@@ -574,7 +607,11 @@ function issDetailHTML(i) {
     ),
     ...L.ns.map(
       (n) =>
-        `<a class="isf" onclick="editNcr('${n.id}')"><span class="bg inf">NCR</span><span style="flex:1">${esc(n.no)} · ${esc(n.reqType || '8D 보고서')}</span>${stB(ncrStatus(n))}${n.dueDate && !n.replyDate && n.reqType !== '단순 통보' ? ` <span class="bg ${ncrFlags(n).replyLate ? 'bad' : 'warn'}">회신 기한 ${esc(n.dueDate.slice(5))}</span>` : ''}</a>`,
+        `<a class="isf" onclick="editNcr('${n.id}')"><span class="bg inf">NCR</span><span style="flex:1">${esc(n.no)} · ${esc(n.reqType || '8D 보고서')}</span>${stB(ncrStatus(n))}${
+          n.dueDate && !n.replyDate && n.reqType !== '단순 통보'
+            ? ` <span class="bg ${ncrFlags(n).replyLate ? 'bad' : 'warn'}">회신 기한 ${esc(n.dueDate.slice(5))}</span>`
+            : ''
+        }</a>`,
     ),
     ...L.cs.map(
       (c) =>
@@ -583,13 +620,19 @@ function issDetailHTML(i) {
   ].join('');
   const of = issOpenFollow(i);
   return `<div class="card">
-    <div class="row" style="gap:8px;align-items:center"><span class="mono muted">${esc(i.no)}</span><span class="bg ${ISS_UCLS[i.urg] || 'mut'}">${esc(i.urg || '보통')}</span>${i.special ? '<span class="bg svA">CC/SC 특별특성</span>' : ''}<span class="bg ${ISS_SCLS[st]}">${st}</span>
+    <div class="row" style="gap:8px;align-items:center"><span class="mono muted">${esc(i.no)}</span><span class="bg ${ISS_UCLS[i.urg] || 'mut'}">${esc(i.urg || '보통')}</span>${
+      i.special ? '<span class="bg svA">CC/SC 특별특성</span>' : ''
+    }<span class="bg ${ISS_SCLS[st]}">${st}</span>
       <h2 style="margin:0;font-size:18px">${esc(i.title)}</h2></div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-top:14px;font-size:13px">
       ${kv('발견', esc(issAt(i.at, i.band)), esc([i.source, i.loc].filter(Boolean).join(' · ')))}
       ${kv('품목 (추정)', esc(i.partNo || '미정'), p ? esc(`${p.name} · ${supName(p.supplierId) || '협력사 미지정'}`) : '')}
       ${kv('수량', i.qty !== '' && i.qty != null ? num(i.qty).toLocaleString() + ' EA' : '미정', '')}
-      ${kv('즉시 조치 (격리)', i.contain ? '<span style="color:var(--ok)">했음</span>' : issHot(i) ? '<span style="color:var(--bad)">기록 없음</span>' : '—', esc(i.containText || ''))}
+      ${kv(
+        '즉시 조치 (격리)',
+        i.contain ? '<span style="color:var(--ok)">했음</span>' : issHot(i) ? '<span style="color:var(--bad)">기록 없음</span>' : '—',
+        esc(i.containText || ''),
+      )}
       ${kv('담당', esc(i.owner || '-'), '')}
     </div>
     ${i.desc ? `<div style="background:var(--mut);border-radius:6px;padding:10px 12px;margin-top:12px;line-height:1.6">${nl(i.desc)}</div>` : ''}
@@ -605,24 +648,52 @@ function issDetailHTML(i) {
             if (can && state.issEditK === l._k)
               return `<li class="ised"><div style="grid-column:1/-1"><div class="dtrow">
           <label class="fgl"><span>일시 <span class="muted" style="font-weight:normal">(시간은 선택)</span></span>${dtpHTML('ieAt', l.at, l.band)}</label>
-          <label class="fgl">구분<select id="ieK">${opts(ISS_KINDS.includes(l.kind) ? ISS_KINDS : [l.kind, ...ISS_KINDS], l.kind)}</select></label></div>
+          <label class="fgl">구분<select id="ieK">${opts(
+            ISS_KINDS.includes(l.kind) ? ISS_KINDS : [l.kind, ...ISS_KINDS],
+            l.kind,
+          )}</select></label></div>
           <label class="fgl" style="margin-top:8px">상대방 · 참석<input id="ieWho" value="${esc(l.who || '')}"></label>
           <label class="fgl" style="margin-top:8px">내용<textarea id="ieTx" style="min-height:120px;width:100%">${esc(l.text)}</textarea></label>
-          <div class="row" style="gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px">${issFBtn('ed')}</div><div id="ieF">${issFHTML(issF.ed ? issF.ed.ids : l.photos, 'ed')}</div>
+          <div class="row" style="gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px">${issFBtn('ed')}</div><div id="ieF">${issFHTML(
+            issF.ed ? issF.ed.ids : l.photos,
+            'ed',
+          )}</div>
           <label class="fgl" style="margin-top:8px">수정 사유 <span class="muted" style="font-weight:normal">(선택 — 적으면 기록 아래에 남습니다)</span><input id="ieWhy" placeholder="예: 오타 수정, 협력사 회신 내용 보완"></label>
           <div class="row" style="justify-content:flex-end;gap:8px;margin-top:8px"><button type="button" class="b" onclick="issEditLog('${i.id}',null)">취소</button><button type="button" class="b p" onclick="issSaveLog('${i.id}',${l._k})">수정 저장</button></div></div></li>`;
-            return `<li class="${l.void ? 'void' : ''}"><span class="mono" title="${l.at && String(l.at).length > 10 ? '' : l.band ? '정확한 시각 모름 — ' + esc(l.band) : '시간 모름'}">${esc(issAt(l.at, l.band).slice(5))}</span><span><span class="bg ${ISS_KCLS[l.kind] || 'mut'}">${esc(l.kind)}</span></span><div>${l.who ? `<div class="muted" style="font-size:12px">${esc(l.who)}</div>` : ''}<div>${nl(issTidy(l.text))}</div><div data-isf="${l.id}">${issFHTML(l.photos)}</div>${l.void ? `<div class="muted" style="font-size:12px">취소 ${esc(issAt(l.void.at))} — ${esc(l.void.reason)}</div>` : ''}${
+            return `<li class="${l.void ? 'void' : ''}"><span class="mono" title="${
+              l.at && String(l.at).length > 10 ? '' : l.band ? '정확한 시각 모름 — ' + esc(l.band) : '시간 모름'
+            }">${esc(issAt(l.at, l.band).slice(5))}</span><span><span class="bg ${ISS_KCLS[l.kind] || 'mut'}">${esc(l.kind)}</span></span><div>${
+              l.who ? `<div class="muted" style="font-size:12px">${esc(l.who)}</div>` : ''
+            }<div>${nl(issTidy(l.text))}</div><div data-isf="${l.id}">${issFHTML(l.photos)}</div>${
+              l.void ? `<div class="muted" style="font-size:12px">취소 ${esc(issAt(l.void.at))} — ${esc(l.void.reason)}</div>` : ''
+            }${
               ed.length
-                ? `<details class="muted" style="font-size:12px;margin-top:4px"><summary style="cursor:pointer">수정 ${ed.length}회 · 최근 ${esc(issAt(ed[ed.length - 1].at))}${ed[ed.length - 1].by ? ' ' + esc(ed[ed.length - 1].by) : ''}${ed[ed.length - 1].reason ? ' — ' + esc(ed[ed.length - 1].reason) : ''}</summary>${ed
+                ? `<details class="muted" style="font-size:12px;margin-top:4px"><summary style="cursor:pointer">수정 ${ed.length}회 · 최근 ${esc(issAt(ed[ed.length - 1].at))}${
+                    ed[ed.length - 1].by ? ' ' + esc(ed[ed.length - 1].by) : ''
+                  }${ed[ed.length - 1].reason ? ' — ' + esc(ed[ed.length - 1].reason) : ''}</summary>${ed
                     .slice()
                     .reverse()
                     .map(
                       (e) =>
-                        `<div style="border-left:2px solid var(--line);padding:2px 0 2px 8px;margin-top:6px"><div>${esc(issAt(e.at))}${e.by ? ' ' + esc(e.by) : ''} 수정${e.reason ? ' — ' + esc(e.reason) : ' (사유 없음)'}</div><div>수정 전: ${esc(issAt(e.prev.at, e.prev.band).slice(5))} · ${esc(e.prev.kind)}${e.prev.who ? ' · ' + esc(e.prev.who) : ''}</div><div style="white-space:pre-wrap">${esc(issTidy(e.prev.text))}</div>${e.files ? `<div>첨부 ${[e.files.add ? `추가 ${e.files.add}` : '', e.files.del ? `삭제 ${e.files.del}` : ''].filter(Boolean).join(' · ')}</div>` : ''}</div>`,
+                        `<div style="border-left:2px solid var(--line);padding:2px 0 2px 8px;margin-top:6px"><div>${esc(issAt(e.at))}${e.by ? ' ' + esc(e.by) : ''} 수정${
+                          e.reason ? ' — ' + esc(e.reason) : ' (사유 없음)'
+                        }</div><div>수정 전: ${esc(issAt(e.prev.at, e.prev.band).slice(5))} · ${esc(e.prev.kind)}${
+                          e.prev.who ? ' · ' + esc(e.prev.who) : ''
+                        }</div><div style="white-space:pre-wrap">${esc(issTidy(e.prev.text))}</div>${
+                          e.files
+                            ? `<div>첨부 ${[e.files.add ? `추가 ${e.files.add}` : '', e.files.del ? `삭제 ${e.files.del}` : '']
+                                .filter(Boolean)
+                                .join(' · ')}</div>`
+                            : ''
+                        }</div>`,
                     )
                     .join('')}</details>`
                 : ''
-            }</div>${can ? `<span class="noprint" style="display:flex;flex-direction:column;gap:4px">${mv(l)}<button type="button" class="b s" onclick="issEditLog('${i.id}',${l._k})" title="이 기록의 내용 고치기">수정</button><button type="button" class="b s" onclick="issVoid('${i.id}',${l._k})" title="잘못 쓴 기록을 취소선으로 남기고 무효 처리">기록 취소</button></span>` : `<span class="noprint">${mv(l)}</span>`}</li>`;
+            }</div>${
+              can
+                ? `<span class="noprint" style="display:flex;flex-direction:column;gap:4px">${mv(l)}<button type="button" class="b s" onclick="issEditLog('${i.id}',${l._k})" title="이 기록의 내용 고치기">수정</button><button type="button" class="b s" onclick="issVoid('${i.id}',${l._k})" title="잘못 쓴 기록을 취소선으로 남기고 무효 처리">기록 취소</button></span>`
+                : `<span class="noprint">${mv(l)}</span>`
+            }</li>`;
           })
           .join('') || '<li class="muted">기록이 없습니다</li>'
       }</ol>
@@ -635,7 +706,8 @@ function issDetailHTML(i) {
         <label>구분<select id="isK">${opts(ISS_KINDS, '인터뷰')}</select></label></div>
         <label style="margin-top:8px">상대방 · 참석<input id="isWho" placeholder="예: 생산팀 · 생산기술팀"></label>
         <label style="margin-top:8px">내용 *<textarea id="isTx" placeholder="확인한 사실 · 원인 추정 · 결정 사항"></textarea></label>
-        <div class="cf">${issFBtn('nw')}<span style="flex:1"></span><button type="button" class="b" onclick="issClearLog()">취소</button><button type="button" class="b p" onclick="issAddLog('${i.id}')">저장</button></div><div id="isF">${issFHTML(issF.nw, 'nw')}</div></div>`
+        <div class="cf">${issFBtn('nw')}<span style="flex:1"></span><button type="button" class="b" onclick="issClearLog()">취소</button><button type="button" class="b p" onclick="issAddLog('${i.id}')">저장</button></div>
+          <div id="isF">${issFHTML(issF.nw, 'nw')}</div></div>`
       }
     </div>
     <div style="flex:1 1 380px;min-width:0;display:flex;flex-direction:column;gap:14px">
@@ -643,14 +715,31 @@ function issDetailHTML(i) {
         ro
           ? ''
           : `<div class="card noprint"><h3 style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap"><span style="white-space:nowrap">처리 방향</span><span class="muted" style="font-weight:normal;font-size:12px;flex:1 1 160px">이슈 내용 · 사진이 넘어갑니다. 여러 번 보낼 수 있습니다. FAR · NCR은 불량 등록 뒤에 합니다</span></h3>
-        <div style="display:flex;flex-direction:column;gap:6px">${ISS_ROUTES.map((x) => `<button type="button" class="isr ${x.k === r.k ? 'on' : ''}" aria-pressed="${x.k === r.k}" onclick="state.issRoute='${x.k}';render()"><b>${x.l}</b><span class="muted">${x.w}</span></button>`).join('')}</div>
-        <div class="isprev"><div class="muted" style="font-size:12px;font-weight:600">누르면 만들어지는 것</div><ul>${r.m.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>
-          ${r.k === 'close' && of.length ? `<div style="color:var(--warn);font-size:12.5px">진행 중인 후속 건 ${of.length}건 — 종결해도 후속 건은 각자 계속 진행됩니다</div>` : ''}
+        <div style="display:flex;flex-direction:column;gap:6px">${ISS_ROUTES.map(
+          (x) =>
+            `<button type="button" class="isr ${x.k === r.k ? 'on' : ''}" aria-pressed="${x.k === r.k}" onclick="state.issRoute='${x.k}';render()"><b>${x.l}</b><span class="muted">${x.w}</span></button>`,
+        ).join('')}</div>
+        <div class="isprev"><div class="muted" style="font-size:12px;font-weight:600">누르면 만들어지는 것</div><ul>${r.m
+          .map((x) => `<li>${esc(x)}</li>`)
+          .join('')}</ul>
+          ${
+            r.k === 'close' && of.length
+              ? `<div style="color:var(--warn);font-size:12.5px">진행 중인 후속 건 ${of.length}건 — 종결해도 후속 건은 각자 계속 진행됩니다</div>`
+              : ''
+          }
           <button class="b p" style="width:100%;padding:10px" onclick="issRoute('${i.id}','${r.k}')">${r.cta}</button></div></div>`
       }
       <div class="card"><h3>후속 건 <span class="muted" style="font-weight:normal;font-size:12px">이 이슈에서 만든 기록</span></h3>
         ${fol ? `<div style="display:flex;flex-direction:column;gap:6px">${fol}</div>` : '<div class="muted">아직 없습니다 — 처리 방향을 정하면 여기에 이어집니다.</div>'}
-        ${i.closedAt ? `<div class="muted" style="font-size:12px;margin-top:8px">종결 ${esc(i.closedAt)} — ${esc(i.closeReason || '')}</div>` : fol ? `<div class="muted" style="font-size:12px;margin-top:8px">${of.length ? `진행 중 ${of.length}건 — 모두 끝나면 이슈를 종결하세요` : '후속 건이 모두 끝났습니다 — ‘종결’로 이슈를 닫으세요'}</div>` : ''}</div>
+        ${
+          i.closedAt
+            ? `<div class="muted" style="font-size:12px;margin-top:8px">종결 ${esc(i.closedAt)} — ${esc(i.closeReason || '')}</div>`
+            : fol
+              ? `<div class="muted" style="font-size:12px;margin-top:8px">${
+                  of.length ? `진행 중 ${of.length}건 — 모두 끝나면 이슈를 종결하세요` : '후속 건이 모두 끝났습니다 — ‘종결’로 이슈를 닫으세요'
+                }</div>`
+              : ''
+        }</div>
     </div>
   </div>`;
 }
@@ -1011,7 +1100,10 @@ function issDashItems() {
     .filter(issStale)
     .forEach((i) =>
       L.push(
-        `<li><span class="bg warn">이슈 분류 대기</span> <a class="lk" onclick="issOpen('${i.id}')">${esc(i.no)} ${esc(i.title)}</a> — 발견 ${esc(issAt(i.at).slice(5, 10))} · ${diffDays((i.at || i.createdAt || today()).slice(0, 10), today())}일째 처리 방향 미정</li>`,
+        `<li><span class="bg warn">이슈 분류 대기</span> <a class="lk" onclick="issOpen('${i.id}')">${esc(i.no)} ${esc(i.title)}</a> — 발견 ${esc(issAt(i.at).slice(5, 10))} · ${diffDays(
+          (i.at || i.createdAt || today()).slice(0, 10),
+          today(),
+        )}일째 처리 방향 미정</li>`,
       ),
     );
   return L.join('');

@@ -115,13 +115,29 @@ function msSupTable() {
         .includes(q),
   );
   L = msSort(L, msState.sup, SUP_G);
-  return `<div class="muted" style="font-size:12px;margin-bottom:6px">${L.length}/${db.suppliers.length}개</div><div class="tw"><table class="mst"><colgroup><col style="width:76px"><col style="width:220px"><col><col style="width:60px"><col style="width:200px"><col style="width:150px"><col style="width:190px"><col style="width:106px"></colgroup><thead><tr>${sth('sup', 'code', '코드')}${sth('sup', 'name', '협력사명')}${sth('sup', 'items', '주요 품목')}${sth('sup', 'nParts', '부품 수', 'n')}${sth('sup', 'contact', '주담당')}<th>전화</th><th>이메일</th><th></th></tr></thead><tbody>
+  return `<div class="muted" style="font-size:12px;margin-bottom:6px">${L.length}/${db.suppliers.length}개</div><div class="tw"><table class="mst">
+    <colgroup><col style="width:76px"><col style="width:220px"><col><col style="width:60px"><col style="width:200px"><col style="width:150px"><col style="width:190px"><col style="width:106px"></colgroup>
+    <thead><tr>${sth('sup', 'code', '코드')}${sth('sup', 'name', '협력사명')}${sth('sup', 'items', '주요 품목')}${sth('sup', 'nParts', '부품 수', 'n')}${sth('sup', 'contact', '주담당')}<th>전화</th>
+      <th>이메일</th><th></th></tr></thead><tbody>
   ${
     L.map((s) => {
       const p = primaryOf(s),
         n = s.contacts.filter((c) => c.active !== false).length,
         np = SUP_G.nParts(s);
-      return `<tr><td style="white-space:nowrap">${esc(s.code)}</td><td><b>${esc(s.name)}</b>${s.short && s.short !== s.name ? ` <span class="muted">${esc(s.short)}</span>` : ''}${s.region === '국외' ? ` <span class="bg inf" title="${esc(supCountry(s))}">${esc(s.country || '국외')}</span>` : ''}</td><td>${esc(s.items)}</td><td class="n">${np ? `<a class="lk" onclick="msState.psup='${s.id}';msState.pq='';msRefreshPart(true)" title="이 협력사 부품만 보기">${np}</a>` : '<span class="muted">0</span>'}</td><td>${p ? `<b>${esc(p.name)}</b> <span class="muted">${esc(p.role)}${p.dept ? ' · ' + esc(p.dept) : ''}</span>` : '<span class="muted">-</span>'}${n > 1 ? ` <a class="bg inf" style="cursor:pointer" onclick="contactCard('${s.id}')">외 ${n - 1}명</a>` : ''}</td><td class="nw">${p ? telLink(p.mobile || p.phone) : ''}</td><td class="nw">${p ? mailLink(p.email) : ''}</td><td style="white-space:nowrap"><button class="b s" onclick="editSup('${s.id}')">수정</button> <button class="b s d" onclick="delSup('${s.id}')">삭제</button></td></tr>`;
+      return `<tr><td style="white-space:nowrap">${esc(s.code)}</td><td><b>${esc(s.name)}</b>${
+        s.short && s.short !== s.name ? ` <span class="muted">${esc(s.short)}</span>` : ''
+      }${
+        s.region === '국외' ? ` <span class="bg inf" title="${esc(supCountry(s))}">${esc(s.country || '국외')}</span>` : ''
+      }</td><td>${esc(s.items)}</td><td class="n">${
+        np
+          ? `<a class="lk" onclick="msState.psup='${s.id}';msState.pq='';msRefreshPart(true)" title="이 협력사 부품만 보기">${np}</a>`
+          : '<span class="muted">0</span>'
+      }</td><td>${
+        p ? `<b>${esc(p.name)}</b> <span class="muted">${esc(p.role)}${p.dept ? ' · ' + esc(p.dept) : ''}</span>` : '<span class="muted">-</span>'
+      }${
+        n > 1 ? ` <a class="bg inf" style="cursor:pointer" onclick="contactCard('${s.id}')">외 ${n - 1}명</a>` : ''
+      }</td><td class="nw">${p ? telLink(p.mobile || p.phone) : ''}</td><td class="nw">${p ? mailLink(p.email) : ''}</td>
+        <td style="white-space:nowrap"><button class="b s" onclick="editSup('${s.id}')">수정</button> <button class="b s d" onclick="delSup('${s.id}')">삭제</button></td></tr>`;
     }).join('') ||
     `<tr><td colspan="8" class="muted" style="text-align:center;padding:24px">${db.suppliers.length ? '검색 결과가 없습니다.' : '등록된 협력사가 없습니다.'}</td></tr>`
   }
@@ -145,8 +161,38 @@ function msPartTable() {
         )),
   );
   L = msSort(L, msState.part, PART_G);
-  return `<div class="muted" style="font-size:12px;margin-bottom:6px">${L.length}/${db.parts.length}개</div><div class="tw"><table class="mst"><colgroup><col style="width:150px"><col><col style="width:120px"><col style="width:96px"><col style="width:220px"><col style="width:120px">${hasBom ? '<col style="width:104px">' : ''}<col style="width:106px"></colgroup><thead><tr>${sth('part', 'partNo', '품번')}${sth('part', 'name', '품명')}${sth('part', 'model', '차종')}${sth('part', 'supCode', '협력사 코드')}${sth('part', 'sup', '협력사명')}${sth('part', 'price', '단가', 'n', '원화 환산 기준으로 정렬')}${hasBom ? sth('part', 'bom', 'BOM', '', 'BOM에 들어가는 제품 수 — 누르면 BOM 구성현황에서 그 제품들을 보여줌') : ''}<th></th></tr></thead><tbody>
-  ${L.map((p) => `<tr><td style="white-space:nowrap"><b>${esc(p.partNo)}</b></td><td>${esc(p.name)}${p.safety && p.safety !== '해당없음' ? ` <span class="bg bad">${esc(p.safety)}</span>` : ''}</td><td>${esc(p.model)}</td><td class="nw">${esc(supById(p.supplierId)?.code || '')}</td><td>${esc(supName(p.supplierId))}${supById(p.supplierId)?.short && supById(p.supplierId).short !== supName(p.supplierId) ? ` <span class="muted">${esc(supById(p.supplierId).short)}</span>` : ''}</td><td class="n">${fmtPrice(p)}${p.price && curOf(p) !== 'KRW' ? `<br><span class="muted" style="font-size:11.5px">${fxRate(curOf(p)) ? '≈ ' + won(partKRW(p)) + '원' : '환율 미설정'}</span>` : ''}</td>${hasBom ? `<td class="nw">${bomCell(p)}</td>` : ''}<td style="white-space:nowrap"><button class="b s" onclick="editPart('${p.id}')">수정</button> <button class="b s d" onclick="delPart('${p.id}')">삭제</button></td></tr>`).join('') || `<tr><td colspan="${hasBom ? 8 : 7}" class="muted" style="text-align:center;padding:24px">${db.parts.length ? '조건에 맞는 부품이 없습니다.' : '등록된 부품이 없습니다.'}</td></tr>`}
+  return `<div class="muted" style="font-size:12px;margin-bottom:6px">${L.length}/${db.parts.length}개</div><div class="tw"><table class="mst">
+    <colgroup><col style="width:150px"><col><col style="width:120px"><col style="width:96px"><col style="width:220px"><col style="width:120px">${
+      hasBom ? '<col style="width:104px">' : ''
+    }<col style="width:106px"></colgroup><thead>
+    <tr>${sth('part', 'partNo', '품번')}${sth('part', 'name', '품명')}${sth('part', 'model', '차종')}${sth('part', 'supCode', '협력사 코드')}${sth('part', 'sup', '협력사명')}${sth(
+      'part',
+      'price',
+      '단가',
+      'n',
+      '원화 환산 기준으로 정렬',
+    )}${hasBom ? sth('part', 'bom', 'BOM', '', 'BOM에 들어가는 제품 수 — 누르면 BOM 구성현황에서 그 제품들을 보여줌') : ''}<th></th></tr></thead><tbody>
+  ${
+    L.map(
+      (p) =>
+        `<tr><td style="white-space:nowrap"><b>${esc(p.partNo)}</b></td><td>${esc(p.name)}${
+          p.safety && p.safety !== '해당없음' ? ` <span class="bg bad">${esc(p.safety)}</span>` : ''
+        }</td><td>${esc(p.model)}</td><td class="nw">${esc(supById(p.supplierId)?.code || '')}</td><td>${esc(supName(p.supplierId))}${
+          supById(p.supplierId)?.short && supById(p.supplierId).short !== supName(p.supplierId)
+            ? ` <span class="muted">${esc(supById(p.supplierId).short)}</span>`
+            : ''
+        }</td><td class="n">${fmtPrice(p)}${
+          p.price && curOf(p) !== 'KRW'
+            ? `<br><span class="muted" style="font-size:11.5px">${fxRate(curOf(p)) ? '≈ ' + won(partKRW(p)) + '원' : '환율 미설정'}</span>`
+            : ''
+        }</td>${
+          hasBom ? `<td class="nw">${bomCell(p)}</td>` : ''
+        }<td style="white-space:nowrap"><button class="b s" onclick="editPart('${p.id}')">수정</button> <button class="b s d" onclick="delPart('${p.id}')">삭제</button></td></tr>`,
+    ).join('') ||
+    `<tr><td colspan="${hasBom ? 8 : 7}" class="muted" style="text-align:center;padding:24px">${
+      db.parts.length ? '조건에 맞는 부품이 없습니다.' : '등록된 부품이 없습니다.'
+    }</td></tr>`
+  }
   </tbody></table></div>`;
 }
 function bomCell(p) {
@@ -185,12 +231,30 @@ function renderMaster() {
   <div class="card"><h3>부품 (${db.parts.length})<span class="sp"></span><button class="b s" onclick="openMasterImport('part')">엑셀 가져오기</button><button class="b s p" onclick="editPart()">+ 추가</button></h3>
   <div class="row" style="margin-bottom:8px"><input placeholder="검색 (번호·품명·차종·협력사)" value="${esc(msState.pq)}" oninput="msState.pq=this.value;msRefreshPart()" style="flex:1;min-width:160px">
     <select onchange="msState.psup=this.value;msRefreshPart()">${supOpts(msState.psup, '전체 협력사')}</select>
-    <select onchange="msState.pmodel=this.value;msRefreshPart()"><option value="">전체 차종</option>${models.map((m) => `<option ${m === msState.pmodel ? 'selected' : ''}>${esc(m)}</option>`).join('')}</select>
-    ${db.bom.rows.length ? `<select onchange="msState.pbom=this.value;msRefreshPart()"><option value="">BOM 전체</option><option value="y" ${msState.pbom === 'y' ? 'selected' : ''}>BOM에 있음</option><option value="n" ${msState.pbom === 'n' ? 'selected' : ''}>BOM에 없음</option></select>` : ''}
-    ${msState.psup || msState.pmodel || msState.pq || msState.pbom ? `<button class="b s" onclick="msState.psup='';msState.pmodel='';msState.pq='';msState.pbom='';msRefreshPart(true)">필터 해제</button>` : ''}</div>
+    <select onchange="msState.pmodel=this.value;msRefreshPart()"><option value="">전체 차종</option>${models
+      .map((m) => `<option ${m === msState.pmodel ? 'selected' : ''}>${esc(m)}</option>`)
+      .join('')}</select>
+    ${
+      db.bom.rows.length
+        ? `<select onchange="msState.pbom=this.value;msRefreshPart()"><option value="">BOM 전체</option>
+          <option value="y" ${msState.pbom === 'y' ? 'selected' : ''}>BOM에 있음</option>
+            <option value="n" ${msState.pbom === 'n' ? 'selected' : ''}>BOM에 없음</option></select>`
+        : ''
+    }
+    ${
+      msState.psup || msState.pmodel || msState.pq || msState.pbom
+        ? `<button class="b s" onclick="msState.psup='';msState.pmodel='';msState.pq='';msState.pbom='';msRefreshPart(true)">필터 해제</button>`
+        : ''
+    }</div>
   <div id="msPart">${msPartTable()}</div></div></div>
-  <div class="card"><h3>BOM 구성현황 <span class="muted" style="font-weight:normal;font-size:12px">왼쪽 제품을 고르면 오른쪽에 구성 트리 (레벨 · U/S)</span><span class="sp"></span>${bomIx().byFg.size ? `<button class="b s" onclick="exportBomCSV()">엑셀</button><button class="b s" onclick="bomClear()">전체 삭제</button>` : ''}<button class="b s p" onclick="openBomImport()">BOM 가져오기</button></h3>
-  ${bomIx().byFg.size ? `<div class="row" style="margin-bottom:8px"><input placeholder="검색 (제품 · 구성 품번 · 품명 · 차종) — 구성 품번으로 찾으면 그 품번이 들어간 제품만 남고 트리에 표시" value="${esc(msState.bq || '')}" oninput="msState.bq=this.value;deb(()=>{$('#msBom').innerHTML=bomTable()})" style="flex:1;min-width:200px"></div>` : ''}
+  <div class="card"><h3>BOM 구성현황 <span class="muted" style="font-weight:normal;font-size:12px">왼쪽 제품을 고르면 오른쪽에 구성 트리 (레벨 · U/S)</span><span class="sp"></span>${
+    bomIx().byFg.size ? `<button class="b s" onclick="exportBomCSV()">엑셀</button><button class="b s" onclick="bomClear()">전체 삭제</button>` : ''
+  }<button class="b s p" onclick="openBomImport()">BOM 가져오기</button></h3>
+  ${
+    bomIx().byFg.size
+      ? `<div class="row" style="margin-bottom:8px"><input placeholder="검색 (제품 · 구성 품번 · 품명 · 차종) — 구성 품번으로 찾으면 그 품번이 들어간 제품만 남고 트리에 표시" value="${esc(msState.bq || '')}" oninput="msState.bq=this.value;deb(()=>{$('#msBom').innerHTML=bomTable()})" style="flex:1;min-width:200px"></div>`
+      : ''
+  }
   <div id="msBom">${bomTable()}</div></div>`;
 }
 let curContacts = [],
@@ -210,7 +274,10 @@ function editSup(id) {
     <label>코드<input name="code" value="${esc(s.code)}"></label><label>협력사명 *<input name="name" value="${esc(s.name)}"></label>
     <label>약어<input name="short" value="${esc(s.short)}" placeholder="예: EMK"></label>
     <label>국가<input name="country" list="dlCountry" value="${esc(s.country)}" placeholder="예: KR, CN, DE" style="text-transform:uppercase" oninput="const r=this.form.region;if(r&&!r.dataset.touched)r.value=countryRegion(this.value)"></label>
-    <label>국내 · 국외<select name="region" onchange="this.dataset.touched=1">${opts(['', '국내', '국외'], s.region || countryRegion(s.country))}</select></label>
+    <label>국내 · 국외<select name="region" onchange="this.dataset.touched=1">${opts(
+      ['', '국내', '국외'],
+      s.region || countryRegion(s.country),
+    )}</select></label>
     <label class="full">주소<input name="address" value="${esc(s.address)}"></label>
     <datalist id="dlCountry">${Object.entries(COUNTRY)
       .map(([k, v]) => `<option value="${k}">${esc(v)}</option>`)
@@ -221,7 +288,21 @@ function editSup(id) {
     <span style="flex:1"></span><button type="button" class="b s" onclick="addContact()">+ 연락처 추가</button><button type="button" class="b s" onclick="openReplace()">담당자 교체</button></div>
   <div id="ctBox"></div><div id="rpBox"></div>
   <div class="fg" style="margin-top:10px"><label class="full">변경 사유 / 메모 (이력에 함께 기록)<input name="chgReason" placeholder="예: 품질팀 인사이동, 전화번호 변경 통보(10/24)"></label></div>
-  ${id ? `<div class="sec">연락처 변경 이력 (${log.length})</div>${log.length ? `<div class="tw" style="max-height:220px"><table><thead><tr><th>적용일</th><th>내용</th><th>사유</th><th>기록 시각</th></tr></thead><tbody>${log.map((l) => `<tr><td style="white-space:nowrap">${esc(l.at)}</td><td>${nl(l.text)}</td><td>${esc(l.reason)}</td><td class="muted" style="white-space:nowrap">${esc(loc(l.ts))}</td></tr>`).join('')}</tbody></table></div>` : '<div class="muted">아직 이력이 없습니다. 연락처를 추가·수정·교체하면 자동으로 기록됩니다.</div>'}` : ''}`,
+  ${
+    id
+      ? `<div class="sec">연락처 변경 이력 (${log.length})</div>${
+          log.length
+            ? `<div class="tw" style="max-height:220px"><table><thead><tr><th>적용일</th><th>내용</th><th>사유</th><th>기록 시각</th></tr></thead><tbody>${log
+                .map(
+                  (l) =>
+                    `<tr><td style="white-space:nowrap">${esc(l.at)}</td><td>${nl(l.text)}</td>
+                      <td>${esc(l.reason)}</td><td class="muted" style="white-space:nowrap">${esc(loc(l.ts))}</td></tr>`,
+                )
+                .join('')}</tbody></table></div>`
+            : '<div class="muted">아직 이력이 없습니다. 연락처를 추가·수정·교체하면 자동으로 기록됩니다.</div>'
+        }`
+      : ''
+  }`,
     [
       { label: '취소', fn: closeModal },
       { label: '저장', cls: 'p', fn: () => saveSup(id) },
@@ -238,15 +319,29 @@ function renderContacts() {
   const inp = (i, k, ph, w) =>
     `<input value="${esc(curContacts[i][k])}" placeholder="${ph}" oninput="curContacts[${i}].${k}=this.value;mfDirty=true" style="width:${w}">`;
   const row = ([c, i]) => `<tr style="${c.active === false ? 'opacity:.6' : ''}">
-    <td style="text-align:center">${c.active === false ? '' : `<input type="radio" name="ctPrim" ${c.primary ? 'checked' : ''} onchange="setPrimary(${i})" title="주담당">`}</td>
+    <td style="text-align:center">${
+      c.active === false ? '' : `<input type="radio" name="ctPrim" ${c.primary ? 'checked' : ''} onchange="setPrimary(${i})" title="주담당">`
+    }</td>
     <td><select style="width:96px" onchange="curContacts[${i}].role=this.value;mfDirty=true">${opts(ROLES, c.role)}</select></td>
     <td>${inp(i, 'name', '이름 *', '76px')}</td><td>${inp(i, 'dept', '부서/직급', '86px')}</td>
-    <td>${inp(i, 'phone', '전화', '104px')}</td><td>${inp(i, 'mobile', '휴대폰', '108px')}</td><td>${inp(i, 'email', '이메일', '140px')}</td><td>${inp(i, 'note', '비고', '80px')}</td>
-    <td style="white-space:nowrap">${c.active === false ? `<span class="bg mut">${esc(c.until || '')} 종료</span> <button type="button" class="b s" onclick="reactivate(${i})">복귀</button>` : `<button type="button" class="b s" onclick="deactivate(${i})" title="퇴사·담당 해제 (이력 보존)">해제</button>`}
+    <td>${inp(i, 'phone', '전화', '104px')}</td><td>${inp(i, 'mobile', '휴대폰', '108px')}</td>
+      <td>${inp(i, 'email', '이메일', '140px')}</td><td>${inp(i, 'note', '비고', '80px')}</td>
+    <td style="white-space:nowrap">${
+      c.active === false
+        ? `<span class="bg mut">${esc(c.until || '')} 종료</span> <button type="button" class="b s" onclick="reactivate(${i})">복귀</button>`
+        : `<button type="button" class="b s" onclick="deactivate(${i})" title="퇴사·담당 해제 (이력 보존)">해제</button>`
+    }
       <button type="button" class="b s d" onclick="removeContact(${i})" title="잘못 입력한 경우에만 삭제">삭제</button></td></tr>`;
-  box.innerHTML = `<div class="tw" style="max-height:none"><table class="ct"><thead><tr><th>★</th><th>역할</th><th>이름</th><th>부서/직급</th><th>전화</th><th>휴대폰</th><th>이메일</th><th>비고</th><th></th></tr></thead><tbody>
+  box.innerHTML = `<div class="tw" style="max-height:none"><table class="ct"><thead><tr><th>★</th><th>역할</th>
+    <th>이름</th><th>부서/직급</th><th>전화</th><th>휴대폰</th><th>이메일</th><th>비고</th><th></th></tr></thead><tbody>
     ${act.map(row).join('') || '<tr><td colspan="9" class="muted" style="text-align:center">등록된 연락처가 없습니다.</td></tr>'}
-    ${ina.length ? `<tr><td colspan="9" style="background:#f7f8fa"><a class="lk" onclick="showInactive=!showInactive;renderContacts()">${showInactive ? '▾' : '▸'} 이전 담당자 ${ina.length}명 ${showInactive ? '숨기기' : '보기'}</a></td></tr>${showInactive ? ina.map(row).join('') : ''}` : ''}
+    ${
+      ina.length
+        ? `<tr><td colspan="9" style="background:#f7f8fa"><a class="lk" onclick="showInactive=!showInactive;renderContacts()">${showInactive ? '▾' : '▸'} 이전 담당자 ${ina.length}명 ${showInactive ? '숨기기' : '보기'}</a></td></tr>${
+            showInactive ? ina.map(row).join('') : ''
+          }`
+        : ''
+    }
   </tbody></table></div>`;
 }
 function newContact(o) {
@@ -340,7 +435,9 @@ function openReplace() {
   $('#rpBox').innerHTML =
     `<div class="card" style="margin-top:10px;background:var(--pri2);border-color:#c9d8f2"><h3>담당자 교체<span class="sp"></span><button type="button" class="b s" onclick="$('#rpBox').innerHTML=''">닫기</button></h3>
   <div class="fg">
-    <label>기존 담당자<select id="rpOld">${act.map(([c, i]) => `<option value="${i}" ${i === pi ? 'selected' : ''}>${esc(cLabel(c))}${c.primary ? ' ★' : ''}</option>`).join('')}</select></label>
+    <label>기존 담당자<select id="rpOld">${act
+      .map(([c, i]) => `<option value="${i}" ${i === pi ? 'selected' : ''}>${esc(cLabel(c))}${c.primary ? ' ★' : ''}</option>`)
+      .join('')}</select></label>
     <label>적용일<input type="date" id="rpDate" value="${today()}"></label>
     <label>새 담당자 이름 *<input id="rpName"></label><label>부서/직급<input id="rpDept"></label>
     <label>전화<input id="rpPhone"></label><label>휴대폰<input id="rpMobile"></label><label>이메일<input id="rpEmail"></label>
@@ -406,7 +503,9 @@ function diffContacts(oldL, newL, events) {
     if (!o) {
       out.push({
         at: c.since || today(),
-        text: `[추가] ${cLabel(c)}${c.primary ? ' — 주담당' : ''}${c.phone || c.mobile ? ` · ${c.mobile || c.phone}` : ''}${c.email ? ` · ${c.email}` : ''}`,
+        text: `[추가] ${cLabel(c)}${c.primary ? ' — 주담당' : ''}${
+          c.phone || c.mobile ? ` · ${c.mobile || c.phone}` : ''
+        }${c.email ? ` · ${c.email}` : ''}`,
       });
       return;
     }
@@ -521,7 +620,9 @@ function editPart(id) {
     `<div class="fg">
     <label>품번 *<input name="partNo" value="${esc(p.partNo)}"></label><label>품명<input name="name" value="${esc(p.name)}"></label>
     <label>차종<input name="model" value="${esc(p.model)}"></label><label>협력사<select name="supplierId">${supOpts(p.supplierId)}</select></label>
-    <label>단가<span style="display:flex;gap:6px"><input type="number" min="0" step="any" name="price" value="${esc(p.price)}" style="flex:1" oninput="partFxHint()"><select name="currency" style="width:auto" onchange="partFxHint()">${CURS.map((c) => `<option value="${c}" ${curOf(p) === c ? 'selected' : ''}>${c}</option>`).join('')}</select></span><span id="partFx" class="muted" style="font-size:11.5px;font-weight:normal"></span></label>
+    <label>단가<span style="display:flex;gap:6px"><input type="number" min="0" step="any" name="price" value="${esc(p.price)}" style="flex:1" oninput="partFxHint()"><select name="currency" style="width:auto" onchange="partFxHint()">${CURS.map(
+      (c) => `<option value="${c}" ${curOf(p) === c ? 'selected' : ''}>${c}</option>`,
+    ).join('')}</select></span><span id="partFx" class="muted" style="font-size:11.5px;font-weight:normal"></span></label>
     <label>안전특성 (RCA 화면에 표시)<select name="safety">${czOptHTML(CZ_OPT.SafetyChar, p.safety || '해당없음')}</select></label></div>`,
     [
       { label: '취소', fn: closeModal },
@@ -1029,9 +1130,40 @@ function miRender() {
   const badCur = mi.kind === 'part' ? [...new Set(L.map((x) => miPrice(x.price, x.cur).bad).filter(Boolean))] : [];
   $('#miMap').innerHTML =
     `<div class="sec">열 연결 확인 <span class="muted" style="font-weight:normal;font-size:12px">${esc(mi.name)} · 제목행 ${mi.hdr + 1}번째 줄 · 틀린 열만 바꾸세요</span></div>
-  <div class="fg">${C.F.map(([f, l, req]) => `<label>${l}${req ? ' *' : ''}<select onchange="if(this.value==='')delete mi.map.${f};else mi.map.${f}=+this.value;miRender()"><option value="">(없음)</option>${h.map((c, i) => `<option value="${i}" ${mi.map[f] === i ? 'selected' : ''}>${esc(c || '열 ' + (i + 1))}</option>`).join('')}</select></label>`).join('')}
-   ${mi.kind === 'part' && mi.map.proc != null ? `<label class="full row" style="flex-direction:row;align-items:center;gap:6px"><input type="checkbox" ${mi.buyOnly ? 'checked' : ''} onchange="mi.buyOnly=this.checked;miRender()"> 조달구분이 <b>구매</b>인 품목만 등록 (생산 · 반제품 · 완제품은 건너뜀)</label>` : ''}</div>
-  <div class="${okMap && L.length ? 'help' : 'banner'}" style="margin-top:8px">${!okMap ? `<b>${C.F.find((f) => f[0] === C.key)[1]}</b> 열을 고르세요.` : L.length ? `<b>${L.length}</b>건을 읽었습니다 — 신규 <b>${n}</b> · 갱신(바뀌는 칸 있음) <b>${u}</b> · 같음(바뀌는 것 없음) <b>${same}</b>${sim ? ` · <b style="color:var(--warn)">⚠ 비슷한 항목이 이미 있는 신규 ${sim}건 — 아래에서 확인 후 필요 없으면 체크를 빼세요</b>` : ''}${skip.dup ? ` · 같은 ${C.key === 'partNo' ? '품번' : '협력사'} 중복 ${skip.dup}줄 합침` : ''}${skip.make ? ` · 생산품 ${skip.make}줄 건너뜀` : ''}${skip.nokey ? ` · ${C.F.find((f) => f[0] === C.key)[1]} 없는 ${skip.nokey}줄 건너뜀` : ''}. 빈 칸은 기존 값을 그대로 둡니다.${newSup.length ? `<br>기준정보에 없는 협력사 ${newSup.length}곳(${newSup.slice(0, 5).map(esc).join(', ')}${newSup.length > 5 ? ' …' : ''})은 새로 등록합니다.` : ''}${badCur.length ? `<br>⚠ 쓸 수 없는 통화 ${badCur.map(esc).join(', ')} — 이 줄들은 단가를 넣지 않습니다 (쓸 수 있는 통화: ${CURS.join(' · ')}).` : ''}${noFx.length ? `<br>⚠ ${noFx.join(', ')} 환율이 설정에 없습니다 — 단가는 그대로 저장되고, 설정 → 불량 관리 → 환율을 넣으면 비용이 원화로 계산됩니다.` : ''}` : '읽은 줄이 없습니다. 열 연결을 확인하세요.'}</div>
+  <div class="fg">${C.F.map(
+    ([f, l, req]) =>
+      `<label>${l}${req ? ' *' : ''}<select onchange="if(this.value==='')delete mi.map.${f};else mi.map.${f}=+this.value;miRender()"><option value="">(없음)</option>${h
+        .map((c, i) => `<option value="${i}" ${mi.map[f] === i ? 'selected' : ''}>${esc(c || '열 ' + (i + 1))}</option>`)
+        .join('')}</select></label>`,
+  ).join('')}
+   ${
+     mi.kind === 'part' && mi.map.proc != null
+       ? `<label class="full row" style="flex-direction:row;align-items:center;gap:6px"><input type="checkbox" ${mi.buyOnly ? 'checked' : ''} onchange="mi.buyOnly=this.checked;miRender()"> 조달구분이 <b>구매</b>인 품목만 등록 (생산 · 반제품 · 완제품은 건너뜀)</label>`
+       : ''
+   }</div>
+  <div class="${okMap && L.length ? 'help' : 'banner'}" style="margin-top:8px">${
+    !okMap
+      ? `<b>${C.F.find((f) => f[0] === C.key)[1]}</b> 열을 고르세요.`
+      : L.length
+        ? `<b>${L.length}</b>건을 읽었습니다 — 신규 <b>${n}</b> · 갱신(바뀌는 칸 있음) <b>${u}</b> · 같음(바뀌는 것 없음) <b>${same}</b>${
+            sim ? ` · <b style="color:var(--warn)">⚠ 비슷한 항목이 이미 있는 신규 ${sim}건 — 아래에서 확인 후 필요 없으면 체크를 빼세요</b>` : ''
+          }${skip.dup ? ` · 같은 ${C.key === 'partNo' ? '품번' : '협력사'} 중복 ${skip.dup}줄 합침` : ''}${
+            skip.make ? ` · 생산품 ${skip.make}줄 건너뜀` : ''
+          }${skip.nokey ? ` · ${C.F.find((f) => f[0] === C.key)[1]} 없는 ${skip.nokey}줄 건너뜀` : ''}. 빈 칸은 기존 값을 그대로 둡니다.${
+            newSup.length
+              ? `<br>기준정보에 없는 협력사 ${newSup.length}곳(${newSup.slice(0, 5).map(esc).join(', ')}${newSup.length > 5 ? ' …' : ''})은 새로 등록합니다.`
+              : ''
+          }${
+            badCur.length
+              ? `<br>⚠ 쓸 수 없는 통화 ${badCur.map(esc).join(', ')} — 이 줄들은 단가를 넣지 않습니다 (쓸 수 있는 통화: ${CURS.join(' · ')}).`
+              : ''
+          }${
+            noFx.length
+              ? `<br>⚠ ${noFx.join(', ')} 환율이 설정에 없습니다 — 단가는 그대로 저장되고, 설정 → 불량 관리 → 환율을 넣으면 비용이 원화로 계산됩니다.`
+              : ''
+          }`
+        : '읽은 줄이 없습니다. 열 연결을 확인하세요.'
+  }</div>
   ${L.length ? miTable(L, cols, { n: cnt('신규'), u, same, sim }) : ''}`;
 }
 function miCell(f, x) {
@@ -1072,15 +1204,46 @@ function miTable(L, cols, c) {
     const shown = new Set(cols.map(([f]) => (f === 'supCode' ? 'sup' : f === 'cur' ? 'price' : f)));
     const o = x.diff.filter((d) => !shown.has(d.f));
     return o.length
-      ? `<div class="mich" style="font-size:11.5px">${o.map((d) => `${esc(LB[d.f] || d.f)}: <s class="muted">${esc(d.o || '빈칸')}</s> → <b>${esc(d.n)}</b>`).join(' · ')}</div>`
+      ? `<div class="mich" style="font-size:11.5px">${o
+          .map((d) => `${esc(LB[d.f] || d.f)}: <s class="muted">${esc(d.o || '빈칸')}</s> → <b>${esc(d.n)}</b>`)
+          .join(' · ')}</div>`
       : '';
   };
   const simH = (x) =>
     x.sim && x.sim.length
-      ? `<div style="font-size:11.5px;color:var(--warn)">⚠ 비슷한 기존 ${mi.kind === 'part' ? '부품' : '협력사'}: ${x.sim.map((p) => (mi.kind === 'part' ? `<b>${esc(p.partNo)}</b> ${esc(p.name || '')}${p.model ? ' · ' + esc(p.model) : ''}${p.supplierId ? ' · ' + esc(supName(p.supplierId)) : ''}` : `<b>${esc(p.name)}</b>${p.code ? ' (' + esc(p.code) + ')' : ''}`)).join(' / ')}</div>`
+      ? `<div style="font-size:11.5px;color:var(--warn)">⚠ 비슷한 기존 ${mi.kind === 'part' ? '부품' : '협력사'}: ${x.sim
+          .map((p) =>
+            mi.kind === 'part'
+              ? `<b>${esc(p.partNo)}</b> ${esc(p.name || '')}${p.model ? ' · ' + esc(p.model) : ''}${
+                  p.supplierId ? ' · ' + esc(supName(p.supplierId)) : ''
+                }`
+              : `<b>${esc(p.name)}</b>${p.code ? ' (' + esc(p.code) + ')' : ''}`,
+          )
+          .join(' / ')}</div>`
       : '';
-  return `<div class="row" style="gap:6px;margin-top:8px;flex-wrap:wrap">${chip('', '전체', L.length)}${chip('신규', '신규', c.n)}${chip('갱신', '갱신', c.u)}${chip('같음', '같음', c.same)}${chip('비슷함', '⚠ 비슷함', c.sim)}<span style="flex:1"></span><span class="muted" style="font-size:12px">체크를 뺀 줄은 등록하지 않습니다${off.size ? ` · 제외 <b>${off.size}</b>건` : ''}</span></div>
-  <div class="tw" style="max-height:340px;margin-top:6px"><table class="sm mip"><thead><tr><th style="width:26px"><input type="checkbox" title="보이는 줄 모두" ${V.every((x) => !off.has(x.key)) ? 'checked' : ''} onchange="miOffAll(this.checked)"></th><th>상태</th>${cols.map(([, l]) => `<th>${esc(l.replace(/ \(.*\)/, ''))}</th>`).join('')}</tr></thead><tbody>${show.map((x) => `<tr${off.has(x.key) ? ' style="opacity:.45"' : ''}><td><input type="checkbox" ${off.has(x.key) ? '' : 'checked'} onchange="miOff(${jsq(x.key)},!this.checked)"></td><td class="nw"><span class="bg ${MI_ST[x.st]}">${x.st === '갱신' ? '갱신 ' + x.diff.length : x.st}</span></td>${cols.map(([f], i) => (i === 0 ? `<td>${miCell(f, x)}${simH(x)}${extraD(x)}</td>` : dcell(x, f))).join('')}</tr>`).join('')}</tbody></table></div>${V.length > show.length ? `<div class="muted" style="font-size:12px;margin-top:4px">${V.length}건 중 ${show.length}건 표시 — 위 버튼으로 골라 보세요</div>` : ''}<div class="muted" style="font-size:12px;margin-top:4px"><b>갱신</b>: <s>기존</s> → <b>새 값</b>으로 바뀌는 칸 · <b>같음</b>: 이미 같은 내용(그대로 둠) · 같은 번호 판단은 대소문자 · 공백 · 하이픈 차이를 무시합니다.</div>`;
+  return `<div class="row" style="gap:6px;margin-top:8px;flex-wrap:wrap">${chip('', '전체', L.length)}${chip('신규', '신규', c.n)}${chip('갱신', '갱신', c.u)}${chip('같음', '같음', c.same)}${chip('비슷함', '⚠ 비슷함', c.sim)}<span style="flex:1"></span><span class="muted" style="font-size:12px">체크를 뺀 줄은 등록하지 않습니다${
+    off.size ? ` · 제외 <b>${off.size}</b>건` : ''
+  }</span></div>
+  <div class="tw" style="max-height:340px;margin-top:6px"><table class="sm mip">
+    <thead><tr><th style="width:26px"><input type="checkbox" title="보이는 줄 모두" ${
+      V.every((x) => !off.has(x.key)) ? 'checked' : ''
+    } onchange="miOffAll(this.checked)"></th><th>상태</th>${cols
+      .map(([, l]) => `<th>${esc(l.replace(/ \(.*\)/, ''))}</th>`)
+      .join('')}</tr></thead><tbody>${show
+      .map(
+        (x) =>
+          `<tr${
+            off.has(x.key) ? ' style="opacity:.45"' : ''
+          }><td><input type="checkbox" ${off.has(x.key) ? '' : 'checked'} onchange="miOff(${jsq(x.key)},!this.checked)"></td>
+          <td class="nw"><span class="bg ${MI_ST[x.st]}">${
+            x.st === '갱신' ? '갱신 ' + x.diff.length : x.st
+          }</span></td>${cols.map(([f], i) => (i === 0 ? `<td>${miCell(f, x)}${simH(x)}${extraD(x)}</td>` : dcell(x, f))).join('')}</tr>`,
+      )
+      .join('')}</tbody></table></div>${
+      V.length > show.length
+        ? `<div class="muted" style="font-size:12px;margin-top:4px">${V.length}건 중 ${show.length}건 표시 — 위 버튼으로 골라 보세요</div>`
+        : ''
+    }<div class="muted" style="font-size:12px;margin-top:4px"><b>갱신</b>: <s>기존</s> → <b>새 값</b>으로 바뀌는 칸 · <b>같음</b>: 이미 같은 내용(그대로 둠) · 같은 번호 판단은 대소문자 · 공백 · 하이픈 차이를 무시합니다.</div>`;
 }
 function miOff(k, v) {
   if (!mi.off) mi.off = new Set();

@@ -16,10 +16,22 @@ function askConfirm({
     const c = $('#cfm'),
       prevFocus = document.activeElement;
     c.innerHTML = `<div class="cbox" role="alertdialog" aria-modal="true"><div class="ch"><span class="ic ${danger ? 'dz' : 'nt'}">${danger ? '!' : '?'}</span>${esc(title)}</div>
-      <div class="cb">${msg}${items.length ? `<ul>${items.map((i) => `<li>${i}</li>`).join('')}</ul>` : ''}${note ? `<div class="note">${note}</div>` : ''}
-      ${typeWord ? `<div style="margin-top:10px">계속하려면 <b>${esc(typeWord)}</b> 를 입력하세요<input id="cfmIn" autocomplete="off" style="width:100%;margin-top:4px"></div>` : ''}
-      ${input ? `<div style="margin-top:10px">${esc(input.label || '사유')} ${input.required === false ? '' : '*'}<textarea id="cfmTx" style="width:100%;min-height:56px;margin-top:4px" placeholder="${esc(input.ph || '')}"></textarea></div>` : ''}</div>
-      <div class="cf"><button type="button" class="b" id="cfmNo">${esc(cancel)}</button>${alt ? `<button type="button" class="b" id="cfmAlt">${esc(alt)}</button>` : ''}<button type="button" class="b ${danger ? 'dz' : 'p'}" id="cfmOk">${esc(ok)}</button></div></div>`;
+      <div class="cb">${msg}${items.length ? `<ul>${items.map((i) => `<li>${i}</li>`).join('')}</ul>` : ''}${
+        note ? `<div class="note">${note}</div>` : ''
+      }
+      ${
+        typeWord
+          ? `<div style="margin-top:10px">계속하려면 <b>${esc(typeWord)}</b> 를 입력하세요<input id="cfmIn" autocomplete="off" style="width:100%;margin-top:4px"></div>`
+          : ''
+      }
+      ${
+        input
+          ? `<div style="margin-top:10px">${esc(input.label || '사유')} ${input.required === false ? '' : '*'}<textarea id="cfmTx" style="width:100%;min-height:56px;margin-top:4px" placeholder="${esc(input.ph || '')}"></textarea></div>`
+          : ''
+      }</div>
+      <div class="cf"><button type="button" class="b" id="cfmNo">${esc(cancel)}</button>${
+        alt ? `<button type="button" class="b" id="cfmAlt">${esc(alt)}</button>` : ''
+      }<button type="button" class="b ${danger ? 'dz' : 'p'}" id="cfmOk">${esc(ok)}</button></div></div>`;
     c.classList.add('on');
     const done = (v) => {
       c.classList.remove('on');

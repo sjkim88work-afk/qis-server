@@ -26,7 +26,9 @@ function weekReport() {
   const kind = (c) => (c.kind === 'ncr' ? 'NCR' : c.kind === 'rca' ? 'RCA' : '불량');
   const tb = (h, rows, empty) =>
     rows.length
-      ? `<table><tr>${h.map((x) => `<th>${x}</th>`).join('')}</tr>${rows.map((r) => `<tr>${r.map((v) => `<td>${v}</td>`).join('')}</tr>`).join('')}</table>`
+      ? `<table><tr>${h.map((x) => `<th>${x}</th>`).join('')}</tr>${rows
+          .map((r) => `<tr>${r.map((v) => `<td>${v}</td>`).join('')}</tr>`)
+          .join('')}</table>`
       : `<div class="em">${empty}</div>`;
   const html = reportFrame(`<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>주간품질보고_${from}_${to}</title><style>
   body{font-family:'Malgun Gothic','맑은 고딕',sans-serif;font-size:11px;color:#111;margin:24px}
@@ -37,14 +39,18 @@ function weekReport() {
   .kp{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:12px}.kp div{border:1px solid #bbb;border-radius:5px;padding:7px}.kp b{display:block;font-size:17px;margin-top:2px}.kp span{color:#555;font-size:10px}.kp .r b{color:#c0392b}
   .memo td{height:60px;line-height:1.6}@media print{.scr{display:none}}@media screen{.ed{outline:1px dashed #9db4dc;background:#fbfdff}.ed:focus{outline:2px solid #007A78;background:#fff}}
   </style></head><body>
-  <div class="hd">${S.logo ? `<img src="${S.logo}">` : ''}<div class="t"><h1>주간 품질 현황 보고</h1><div class="s">${from} ~ ${to} (최근 7일) · ${esc(S.company || '')}${S.dept ? ' · ' + esc(S.dept) : ''} · 출력일 ${today()}</div></div>
+  <div class="hd">${S.logo ? `<img src="${S.logo}">` : ''}<div class="t"><h1>주간 품질 현황 보고</h1>
+    <div class="s">${from} ~ ${to} (최근 7일) · ${esc(S.company || '')}${S.dept ? ' · ' + esc(S.dept) : ''} · 출력일 ${today()}</div></div>
   <table class="sign"><tr><th>작성</th><th>검토</th><th>승인</th></tr><tr><td></td><td></td><td></td></tr></table></div>
   <div class="kp">
     <div><span>신규 불량</span><b>${ds.length}건</b><span>${sum(ds, 'qty').toLocaleString()}개 · A ${g.A} / B ${g.B} / C ${g.C}</span></div>
     <div><span>NCR 발행 / 회신 / 승인 / 종결</span><b>${nNew.length} / ${nRep.length} / ${nOk.length} / ${nClose.length}</b><span>독촉 ${nudges.length}회</span></div>
     <div><span>RCA 등록 / 종결</span><b>${cNew.length} / ${cClose.length}</b><span>진행 중 ${db.cases.filter(czOpen).length}건</span></div>
     <div class="${late.length ? 'r' : ''}"><span>지연 중인 건 (${to})</span><b>${late.length}</b><span>다음 7일 기한 ${next.length}건</span></div></div>
-  <div class="sec"><h2>1. 이번 주 특이사항</h2><div class="scr" style="color:#007A78;margin-bottom:4px">✎ 점선 칸은 인쇄 직전에 바로 쓸 수 있습니다 (저장되지 않음)</div><table class="memo"><tr><th style="width:17%">특이사항</th><td class="ed" contenteditable></td></tr><tr><th>다음 주 계획</th><td class="ed" contenteditable></td></tr></table></div>
+  <div class="sec"><h2>1. 이번 주 특이사항</h2>
+    <div class="scr" style="color:#007A78;margin-bottom:4px">✎ 점선 칸은 인쇄 직전에 바로 쓸 수 있습니다 (저장되지 않음)</div><table class="memo">
+    <tr><th style="width:17%">특이사항</th><td class="ed" contenteditable></td>
+      </tr><tr><th>다음 주 계획</th><td class="ed" contenteditable></td></tr></table></div>
   <div class="sec"><h2>2. 신규 불량 (${ds.length}건)</h2>${tb(
     ['발생일', '발생처', '심각도', '협력사', '부품', '유형', '수량', '진행'],
     ds.map((d) => [

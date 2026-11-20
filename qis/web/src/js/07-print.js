@@ -96,7 +96,8 @@ function dashReport() {
   .g{display:grid;grid-template-columns:1fr 1fr;gap:8px}.g>div{border:1px solid #ccc;border-radius:5px;padding:6px}.g h3{font-size:11px;margin:0 0 4px}
   svg{width:100%;height:auto;display:block}.sec{break-inside:avoid}.memo td{height:70px;line-height:1.6}@media print{.scr{display:none}}@media screen{.ed{outline:1px dashed #9db4dc;background:#fbfdff}.ed:focus{outline:2px solid #007A78;background:#fff}}
   </style></head><body>
-  <div class="hd">${S.logo ? `<img src="${S.logo}">` : ''}<div class="t"><h1>월간 품질 현황 보고 (${m.replace('-', '년 ')}월)</h1><div class="s">${esc(S.company)}${S.dept ? ' · ' + esc(S.dept) : ''} · 출력일 ${today()}</div></div>
+  <div class="hd">${S.logo ? `<img src="${S.logo}">` : ''}<div class="t"><h1>월간 품질 현황 보고 (${m.replace('-', '년 ')}월)</h1>
+    <div class="s">${esc(S.company)}${S.dept ? ' · ' + esc(S.dept) : ''} · 출력일 ${today()}</div></div>
   <table class="sign"><tr><th>작성</th><th>검토</th><th>승인</th></tr><tr><td></td><td></td><td></td></tr></table></div>
   <div class="kp">
     <div><span>불량 건수</span><b>${ds.length}</b><span>전월 ${pds.length} / ${dl(ds.length, pds.length)}</span></div>
@@ -108,10 +109,20 @@ function dashReport() {
     <div class="${recs.length ? 'w' : ''}"><span>NCR 권고 미발행</span><b>${recs.length}</b><span>최근 90일</span></div>
     <div><span>순손실 (COPQ−회수)</span><b>${won(cost - rec)}원</b><span>전월 ${won(pcost - prec)}원</span></div>
   </div>
-  <div class="sec"><h2>1. 특이사항 및 검토 의견</h2><div class="scr" style="color:#007A78;margin-bottom:4px">✎ 점선 칸은 인쇄 직전에 바로 고칠 수 있습니다. (이 창에서 고친 내용은 저장되지 않으니, 계속 남길 내용은 대시보드에서 입력하세요)</div><table class="memo"><tr><th style="width:17%">특이사항</th><td class="ed" contenteditable="true">${nl(rv.issues)}</td></tr><tr><th>검토 의견 · 향후 조치</th><td class="ed" contenteditable="true">${nl(rv.opinion)}</td></tr></table>${rv.author ? `<div style="text-align:right;margin-top:4px;color:#555">작성: ${esc(rv.author)}${rv.updatedAt ? ' (' + loc(rv.updatedAt, 10) + ')' : ''}</div>` : ''}</div>
+  <div class="sec"><h2>1. 특이사항 및 검토 의견</h2>
+    <div class="scr" style="color:#007A78;margin-bottom:4px">✎ 점선 칸은 인쇄 직전에 바로 고칠 수 있습니다. (이 창에서 고친 내용은 저장되지 않으니, 계속 남길 내용은 대시보드에서 입력하세요)</div><table class="memo">
+    <tr><th style="width:17%">특이사항</th><td class="ed" contenteditable="true">${nl(rv.issues)}</td></tr>
+      <tr><th>검토 의견 · 향후 조치</th><td class="ed" contenteditable="true">${nl(rv.opinion)}</td></tr></table>${
+        rv.author
+          ? `<div style="text-align:right;margin-top:4px;color:#555">작성: ${esc(rv.author)}${
+              rv.updatedAt ? ' (' + loc(rv.updatedAt, 10) + ')' : ''
+            }</div>`
+          : ''
+      }</div>
   <div class="sec"><h2>2. 주요 지표 (전월 대비)</h2><table><tr><th>항목</th><th class="n">${pm}</th><th class="n">${m}</th><th class="n">증감</th></tr>
     <tr><td>불량 건수</td><td class="n">${pds.length}</td><td class="n">${ds.length}</td><td class="n">${dl(ds.length, pds.length)}</td></tr>
-    <tr><td>불량 수량</td><td class="n">${sum(pds, 'qty').toLocaleString()}</td><td class="n">${sum(ds, 'qty').toLocaleString()}</td><td class="n">${dl(sum(ds, 'qty'), sum(pds, 'qty'))}</td></tr>
+    <tr><td>불량 수량</td><td class="n">${sum(pds, 'qty').toLocaleString()}</td>
+      <td class="n">${sum(ds, 'qty').toLocaleString()}</td><td class="n">${dl(sum(ds, 'qty'), sum(pds, 'qty'))}</td></tr>
     <tr><td>실패비용 (원)</td><td class="n">${won(pcost)}</td><td class="n">${won(cost)}</td><td class="n">${dl(cost, pcost, won)}</td></tr>
     <tr><td>구상 회수 (원)</td><td class="n">${won(prec)}</td><td class="n">${won(rec)}</td><td class="n">${dl(rec, prec, won)}</td></tr>
     <tr><td>NCR 발행 / 종결</td><td class="n">${pnNew} / ${pnClose}</td><td class="n">${nNew} / ${nClose}</td><td class="n">-</td></tr></table></div>
@@ -122,14 +133,32 @@ function dashReport() {
     <div><h3>불량유형별 건수</h3>${pareto(typeMap, '건')}</div></div></div>
   <div class="sec"><h2>4. 협력사별 현황 (${m})</h2>${
     st.length
-      ? `<table><tr><th>협력사</th><th class="n">건수</th><th class="n">A등급</th><th class="n">불량수량</th><th class="n">입고수량</th><th class="n">PPM</th><th>등급</th><th class="n">NCR(미종결)</th><th class="n">COPQ(원)</th><th class="n">회수(원)</th></tr>
-    ${st.map((x) => `<tr><td>${esc(x.s.name)}</td><td class="n">${x.cnt}</td><td class="n">${x.nA || ''}</td><td class="n">${x.qty.toLocaleString()}</td><td class="n">${x.rcv ? x.rcv.toLocaleString() : '-'}</td><td class="n">${x.ppm == null ? '-' : Math.round(x.ppm).toLocaleString()}</td><td>${x.grade}</td><td class="n">${x.ncr}${x.open ? ` (${x.open})` : ''}</td><td class="n">${won(x.cost)}</td><td class="n">${won(x.rec)}</td></tr>`).join('')}</table>`
+      ? `<table><tr><th>협력사</th><th class="n">건수</th><th class="n">A등급</th><th class="n">불량수량</th><th class="n">입고수량</th>
+        <th class="n">PPM</th><th>등급</th><th class="n">NCR(미종결)</th><th class="n">COPQ(원)</th><th class="n">회수(원)</th></tr>
+    ${st
+      .map(
+        (x) =>
+          `<tr><td>${esc(x.s.name)}</td><td class="n">${x.cnt}</td><td class="n">${x.nA || ''}</td>
+            <td class="n">${x.qty.toLocaleString()}</td><td class="n">${x.rcv ? x.rcv.toLocaleString() : '-'}</td><td class="n">${
+              x.ppm == null ? '-' : Math.round(x.ppm).toLocaleString()
+            }</td><td>${x.grade}</td><td class="n">${x.ncr}${x.open ? ` (${x.open})` : ''}</td>
+            <td class="n">${won(x.cost)}</td><td class="n">${won(x.rec)}</td></tr>`,
+      )
+      .join('')}</table>`
       : '<div>해당 월 불량 없음</div>'
   }</div>
   <div class="sec"><h2>5. 주요 불량 (수량 상위)</h2>${
     top.length
       ? `<table><tr><th>발생일</th><th>발생처</th><th>협력사</th><th>부품</th><th>유형</th><th class="n">수량</th><th>처리</th><th>NCR</th></tr>
-    ${top.map((d) => `<tr><td>${esc(d.date)}</td><td>${esc(d.source)}</td><td>${esc(supName(d.supplierId))}</td><td>${esc(d.partNo)} ${esc(d.partName)}</td><td>${esc(d.type)}</td><td class="n">${num(d.qty).toLocaleString()}</td><td>${esc(d.disposition)}</td><td>${esc(db.ncrs.find((n) => n.id === d.ncrId)?.no || '')}</td></tr>`).join('')}</table>`
+    ${top
+      .map(
+        (d) =>
+          `<tr><td>${esc(d.date)}</td><td>${esc(d.source)}</td><td>${esc(supName(d.supplierId))}</td><td>${esc(d.partNo)} ${esc(d.partName)}</td>
+            <td>${esc(d.type)}</td><td class="n">${num(d.qty).toLocaleString()}</td><td>${esc(d.disposition)}</td><td>${esc(
+              db.ncrs.find((n) => n.id === d.ncrId)?.no || '',
+            )}</td></tr>`,
+      )
+      .join('')}</table>`
       : '<div>해당 월 불량 없음</div>'
   }</div>
   <div class="sec"><h2>6. 조치 필요 항목</h2>${
