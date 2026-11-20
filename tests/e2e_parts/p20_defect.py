@@ -70,3 +70,9 @@ def run(c):
     ok(r["rec"]["ok"] and r["rec"]["keys"] == "caption,createdAt,data,id,isNew,name,thumb", f"첨부 공통 부품(이미지): 기록 모양 ({r['rec']['keys']})")
     ok(r["doc"] == {"kind": "doc", "name": "특채.pdf", "mime": "application/pdf", "size": 8, "data": True, "thumb": "", "isNew": True}, f"첨부 공통 부품(문서): 내용 그대로 ({r['doc']})")
     ok(r["big"] and r["drop"], "첨부 공통 부품: 20MB 넘으면 거절 · 지울 때 삭제 표시를 남김")
+
+    # 크게 보기의 ‘원본 저장’: 저장 이름의 확장자는 내용의 형식에 맞춤 (확장자가 없거나 틀리면 파일이 안 열림)
+    r = A.evaluate("""()=>{const px='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';const o=[];
+      lbOpen([{id:'a',name:'image',data:px},{id:'b',name:'현장.png',data:'data:image/jpeg;base64,/9j/4AAQ'},{id:'c',name:'',data:px}],0);o.push(document.querySelector('#lbdl').getAttribute('download'));
+      lbMove(1);o.push(document.querySelector('#lbdl').getAttribute('download'));lbMove(1);o.push(document.querySelector('#lbdl').getAttribute('download'));closeLb();return o}""")
+    ok(r == ["image.png", "현장.jpg", "photo.png"], f"원본 저장 이름: 내용 형식의 확장자 ({r})")

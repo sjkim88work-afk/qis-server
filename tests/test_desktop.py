@@ -653,3 +653,68 @@ def test_report_window_can_close(monkeypatch):
         time.sleep(0.02)
     assert w.destroyed == 1
     gui.ReportApi().close_report()                                               # 창이 없으면 아무 것도 하지 않음
+
+
+# ---- 첨부 저장: 확장자를 지킴 (2026-11 — 이름만 바꿔 저장하면 확장자가 빠져서 파일이 안 열리던 문제) ----
+def _b64(b: bytes, mime: str) -> str:
+    import base64
+    return f"data:{mime};base64," + base64.b64encode(b).decode()
+
+
+def test_save_file_tells_the_dialog_the_file_type(tmp_path):
+    from qis.desktop import attach
+    seen = {}
+
+    def ask(name, types=()):
+        seen["name"], seen["types"] = name, tuple(types)
+        return tmp_path / name
+
+    msg = attach.save_file(ask, "회의자료.pptx", _b64(b"PK", "application/vnd.openxmlformats-officedocument.presentationml.presentation"))
+    assert seen["name"] == "회의자료.pptx"
+    assert seen["types"] == ("PPTX 파일 (*.pptx)", "모든 파일 (*.*)")
+    assert (tmp_path / "회의자료.pptx").read_bytes() == b"PK" and "회의자료.pptx" in msg
+
+
+def test_save_file_puts_the_extension_back_when_the_user_drops_it(tmp_path):
+    """저장 창에서 이름을 새로 쓰면서 확장자를 빼도 원래 확장자로 저장한다."""
+    from qis.desktop import attach
+    cases = [("성적서.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "새이름", "새이름.xlsx"),
+             ("RE_ 회의.eml", "message/rfc822", "메일", "메일.eml"),
+             ("image.jpg", "image/jpeg", "고품확인", "고품확인.jpg"),
+             ("image.jpg", "image/jpeg", "사진.jpeg", "사진.jpeg"),            # 같은 형식은 그대로
+             ("보고.pptx", "application/octet-stream", "보고 v1.2", "보고 v1.2.pptx"),   # 이름 안의 점은 확장자가 아님
+             ("자료.pdf", "application/pdf", "자료.PDF", "자료.PDF")]            # 대소문자만 다르면 그대로
+    for name, mime, typed, want in cases:
+        msg = attach.save_file(lambda n, t=(): tmp_path / typed, name, _b64(b"x", mime))
+        assert (tmp_path / want).exists(), (typed, want, msg)
+        (tmp_path / want).unlink()
+
+
+def test_save_file_finds_the_extension_from_the_content_when_the_name_has_none(tmp_path):
+    from qis.desktop import attach
+    assert attach.save_name("image", _b64(b"x", "image/png")) == ("image.png", ".png")
+    assert attach.save_name("메일", _b64(b"x", "message/rfc822")) == ("메일.eml", ".eml")
+    assert attach.save_name("메일", _b64(b"x", "application/vnd.ms-outlook")) == ("메일.msg", ".msg")
+    assert attach.save_name("이름없음", _b64(b"x", "application/octet-stream")) == ("이름없음", "")      # 모르는 형식은 그대로
+    seen = {}
+    attach.save_file(lambda n, t=(): seen.update(n=n, t=t) or (tmp_path / n), "image", _b64(b"x", "image/png"))
+    assert seen["n"] == "image.png" and seen["t"][0] == "PNG 파일 (*.png)" and (tmp_path / "image.png").exists()
+
+
+def test_save_file_does_not_overwrite_when_it_adds_the_extension(tmp_path):
+    """확장자를 붙인 이름의 파일이 이미 있으면 (저장 창은 그 이름을 묻지 않았으므로) 덮어쓰지 않는다."""
+    from qis.desktop import attach
+    (tmp_path / "새이름.xlsx").write_bytes(b"old")
+    attach.save_file(lambda n, t=(): tmp_path / "새이름", "성적서.xlsx", _b64(b"new", "application/octet-stream"))
+    assert (tmp_path / "새이름.xlsx").read_bytes() == b"old"
+    assert (tmp_path / "새이름 (1).xlsx").read_bytes() == b"new"
+
+
+def test_save_dialog_file_types_have_the_format_the_window_library_accepts():
+    """pywebview 는 '설명 (*.확장자)' 형식만 받는다 — 형식이 틀리면 저장 창이 열리지 않는다."""
+    import re
+    from qis.desktop import attach
+    pat = re.compile(r"^([\w ]+)\((\*(?:\.(?:\w+|\*))*(?:;\*\.\w+)*)\)$")
+    for ext in sorted(set(attach.SAVE_MIME_EXT.values()) | {".msg", ".eml", ".hwpx", ".xlsm"}):
+        assert pat.match(f"{ext[1:].upper()} 파일 (*{ext})"), ext
+    assert pat.match("모든 파일 (*.*)")

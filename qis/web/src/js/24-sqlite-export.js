@@ -718,7 +718,10 @@ function lbShow() {
   $('#lbcap').textContent = `${lbIdx + 1} / ${lbList.length}  ${p.caption || ''}`;
   const a = $('#lbdl');
   a.href = p.data || p.thumb;
-  a.download = (p.name || 'photo').replace(/\.[^.]+$/, '') + '.jpg';
+  // 저장 이름의 확장자는 내용의 형식에 맞춤 (줄인 그림은 JPG · 예전 사진은 PNG 일 수 있음)
+  const m = /^data:image\/([a-z0-9.+-]+)/i.exec(a.href),
+    ext = { jpeg: 'jpg', 'svg+xml': 'svg' }[m ? m[1].toLowerCase() : 'jpeg'] || (m ? m[1].toLowerCase() : 'jpg');
+  a.download = (p.name || 'photo').replace(/\.[^.]+$/, '') + '.' + ext;
 }
 function lbMove(k) {
   if (!lbList.length) return;
