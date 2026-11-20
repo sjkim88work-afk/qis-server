@@ -554,11 +554,28 @@ function ncrSteps(n) {
   });
   return { S, cur, closed, bad: st === '검증 무효' };
 }
-function ncrTrack(n) {
-  const r = ncrSteps(n);
-  return `<div class="qtrack${r.closed ? ' closed' : ''}${r.bad ? ' bad' : ''}" style="grid-template-columns:repeat(${r.S.length},minmax(0,1fr))">${r.S.map(
+// 단계 → NCR 창의 화면(mode) · 탭. 창 위쪽의 단계 줄을 누르면 그 단계의 화면으로 감
+const NCR_STEP_GO = {
+  발행: ['issue', 'a'],
+  '협력사 통보': ['issue', 't'],
+  'D3 봉쇄': ['reply', 'b'],
+  '대책서 회신': ['reply', 'r'],
+  '대책 승인': ['reply', 'r'],
+  '유효성 검증': ['verify', 'c'],
+  종결: ['verify', 'c'],
+};
+// nav=true: NCR 창용 — 단계가 단추가 되고(누르면 그 단계의 화면), 오른쪽 끝에 ‘진행 기록’ 단추
+function ncrTrack(n, nav) {
+  const r = ncrSteps(n),
+    tag = nav ? 'button' : 'div',
+    lg = (n.logs || []).length;
+  const bar = `<div class="qtrack${r.closed ? ' closed' : ''}${r.bad ? ' bad' : ''}${nav ? ' nav' : ''}" style="grid-template-columns:repeat(${r.S.length},minmax(0,1fr))">${r.S.map(
     (x) =>
-      `<div class="${x.state}${x.late ? ' late' : ''}${x.skip ? ' skip' : ''}">${x.l}<b>${
+      `<${tag}${
+        nav
+          ? ` type="button" data-m="${(NCR_STEP_GO[x.l] || ['issue'])[0]}" onclick="ncrMode('${(NCR_STEP_GO[x.l] || ['issue', 'a']).join("','")}')"`
+          : ''
+      } class="${x.state}${x.late ? ' late' : ''}${x.skip ? ' skip' : ''}">${x.l}<b>${
         x.d ? (x.due && !x.done ? '기한 ' : '') + esc(String(x.d).slice(5)) : '–'
       }${
         x.state === 'cur' && x.due && !x.done
@@ -569,8 +586,13 @@ function ncrTrack(n) {
           : x.late
             ? ' 초과'
             : ''
-      }</b></div>`,
+      }</b></${tag}>`,
   ).join('')}</div>`;
+  return nav
+    ? `<div class="qnav" id="ncrNav">${bar}<button type="button" class="b qlog" data-t="d" onclick="ncrTab('d')">진행 기록${
+        lg ? ` <span class="mono">${lg}</span>` : ''
+      }</button></div>`
+    : bar;
 }
 function ncrMini(n) {
   const r = ncrSteps(n);

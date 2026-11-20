@@ -484,12 +484,6 @@ td.nw,td .nwi,td>b:first-child,td>a:first-child>b:first-child{white-space:nowrap
   .tw td,.tw th{padding-left:6px;padding-right:6px}
 }
 /* NCR 화면 전환 (발행 · 통보 / 협력사 회신 / 검증 · 종결) */
-.nmodes{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;margin:0 0 10px;background:var(--card)}
-.nmodes button{border:0;border-right:1px solid var(--line);background:transparent;padding:7px 16px;font:inherit;font-weight:500;color:var(--sub);cursor:pointer;white-space:nowrap}
-.nmodes button:last-child{border-right:0}
-.nmodes button[aria-selected="true"]{background:var(--pri);color:#fff;font-weight:700}
-.nmodes .tdot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--bad);margin-left:6px;vertical-align:2px}
-.nmodes button[aria-selected="true"] .tdot{background:#fff}
 /* 편집 서류철 안의 탭 */
 .dtabs{position:sticky;top:-18px;z-index:6;display:flex;gap:4px;flex-wrap:wrap;background:var(--card);margin:0 -22px 14px;padding:6px 22px 0;border-bottom:1px solid var(--line)}
 .dtabs button{border:0;border-bottom:3px solid transparent;background:transparent;padding:9px 14px;font:inherit;font-weight:500;color:var(--sub);cursor:pointer;margin-bottom:-1px;white-space:nowrap;position:relative}
@@ -530,6 +524,15 @@ details>summary.sec:hover{color:var(--pri-d,#005F5D)}
 .qtrack .skip{opacity:.45}
 .qtrack.closed div{border-color:var(--ok)}
 .qtrack.bad .cur{border-color:var(--bad)}
+/* NCR 창의 단계 줄 — 단계가 단추 (누르면 그 단계의 화면). 지금 보는 단계 묶음은 바탕색으로 표시 */
+.qnav{display:flex;gap:8px;align-items:stretch;margin:0 0 14px}.qnav .qtrack{flex:1;margin:0}
+.qtrack.nav button{font:inherit;font-size:11.5px;color:#6b7689;text-align:left;background:none;border:0;border-top:3px solid var(--line);border-radius:0 0 8px 8px;padding:6px 8px 6px;min-width:0;min-height:44px;line-height:1.35;cursor:pointer}
+.qtrack.nav button b{display:block;font-family:var(--f-mono);font-weight:500;font-size:11.5px}
+.qtrack.nav button:hover{background:var(--mut)}.qtrack.nav button[aria-current="step"]{background:#ddf1ef;color:var(--ink)}
+.qtrack.nav button:focus-visible,.qnav .qlog:focus-visible{outline:2px solid var(--pri);outline-offset:1px}
+.qtrack.closed.nav button{border-color:var(--ok)}
+.qnav .qlog{white-space:nowrap;align-self:center}.qnav .qlog[aria-selected="true"]{border-color:var(--pri);background:#ddf1ef}.qnav .qlog .mono{opacity:.7}
+@media(max-width:600px){.qnav{flex-direction:column}.qnav .qlog{align-self:flex-start}}
 .qsteps{display:flex;gap:3px;margin-top:5px}
 .qsteps i{display:block;width:14px;height:4px;border-radius:2px;background:var(--line)}
 .qsteps i.on{background:var(--pri)}
@@ -2807,11 +2810,28 @@ function ncrSteps(n) {
   });
   return { S, cur, closed, bad: st === '검증 무효' };
 }
-function ncrTrack(n) {
-  const r = ncrSteps(n);
-  return `<div class="qtrack${r.closed ? ' closed' : ''}${r.bad ? ' bad' : ''}" style="grid-template-columns:repeat(${r.S.length},minmax(0,1fr))">${r.S.map(
+// 단계 → NCR 창의 화면(mode) · 탭. 창 위쪽의 단계 줄을 누르면 그 단계의 화면으로 감
+const NCR_STEP_GO = {
+  발행: ['issue', 'a'],
+  '협력사 통보': ['issue', 't'],
+  'D3 봉쇄': ['reply', 'b'],
+  '대책서 회신': ['reply', 'r'],
+  '대책 승인': ['reply', 'r'],
+  '유효성 검증': ['verify', 'c'],
+  종결: ['verify', 'c'],
+};
+// nav=true: NCR 창용 — 단계가 단추가 되고(누르면 그 단계의 화면), 오른쪽 끝에 ‘진행 기록’ 단추
+function ncrTrack(n, nav) {
+  const r = ncrSteps(n),
+    tag = nav ? 'button' : 'div',
+    lg = (n.logs || []).length;
+  const bar = `<div class="qtrack${r.closed ? ' closed' : ''}${r.bad ? ' bad' : ''}${nav ? ' nav' : ''}" style="grid-template-columns:repeat(${r.S.length},minmax(0,1fr))">${r.S.map(
     (x) =>
-      `<div class="${x.state}${x.late ? ' late' : ''}${x.skip ? ' skip' : ''}">${x.l}<b>${
+      `<${tag}${
+        nav
+          ? ` type="button" data-m="${(NCR_STEP_GO[x.l] || ['issue'])[0]}" onclick="ncrMode('${(NCR_STEP_GO[x.l] || ['issue', 'a']).join("','")}')"`
+          : ''
+      } class="${x.state}${x.late ? ' late' : ''}${x.skip ? ' skip' : ''}">${x.l}<b>${
         x.d ? (x.due && !x.done ? '기한 ' : '') + esc(String(x.d).slice(5)) : '–'
       }${
         x.state === 'cur' && x.due && !x.done
@@ -2822,8 +2842,13 @@ function ncrTrack(n) {
           : x.late
             ? ' 초과'
             : ''
-      }</b></div>`,
+      }</b></${tag}>`,
   ).join('')}</div>`;
+  return nav
+    ? `<div class="qnav" id="ncrNav">${bar}<button type="button" class="b qlog" data-t="d" onclick="ncrTab('d')">진행 기록${
+        lg ? ` <span class="mono">${lg}</span>` : ''
+      }</button></div>`
+    : bar;
 }
 function ncrMini(n) {
   const r = ncrSteps(n);
@@ -9906,7 +9931,7 @@ function editNcr(id, preset, mode) {
     .map(sevOf)
     .sort((a, b) => 'ABC'.indexOf(a.grade) - 'ABC'.indexOf(b.grade) || b.score - a.score)[0];
   curNcrSev = sevD || null;
-  const body = `${id ? ncrTrack(n) : ''}${
+  const body = `${id ? ncrTrack(n, !mode) : ''}${
     sevD
       ? `<div class="banner" style="background:${
           sevD.grade === 'A' ? 'var(--badb)' : sevD.grade === 'B' ? 'var(--warnb)' : 'var(--mut)'
@@ -9972,7 +9997,7 @@ function editNcr(id, preset, mode) {
   </div>
 <div class="ntp" data-p="t">
   <div class="sec">협력사 통보 <span class="muted" style="font-weight:normal;font-size:12px">통보서를 실제로 보낸 날 — 넣으면 대책 요청일 · 회신 기한이 통보일 기준으로 맞춰집니다</span></div>
-  <div class="help" style="margin:0 0 8px">순서: ① 발행 정보 → ② 통보서 내용 → 창 아래 ‘저장 후 통보서 출력’으로 통보서를 보냄 → 여기에 통보일 · 방법을 기록하고 보낸 파일을 첨부</div>
+  <div class="help" style="margin:0 0 8px">순서: 발행 정보 → 통보서 내용 → 창 아래 ‘저장 후 통보서 출력’으로 통보서를 보냄 → 여기에 통보일 · 방법을 기록하고 보낸 파일을 첨부</div>
   <div class="fg">
     <label>통보 여부<select name="notifyYN" onchange="ncrNotify('yn')">${opts(['미통보', '통보 완료'], ncrNotified(n) ? '통보 완료' : '미통보')}</select></label>
     <label>통보일<input type="date" name="notifyDate" value="${esc(n.notifyDate || '')}" data-prev="${esc(n.notifyDate || '')}" onchange="ncrNotify('date')"></label>
@@ -10346,9 +10371,9 @@ function concCommit(n) {
   curConcDel = [];
 }
 const NCR_TABS = [
-  ['a', '① 발행 정보'],
-  ['n', '② 통보서 내용'],
-  ['t', '③ 협력사 통보'],
+  ['a', '발행 정보'],
+  ['n', '통보서 내용'],
+  ['t', '협력사 통보'],
   ['r', '대책서 회신'],
   ['b', 'D3 봉쇄'],
   ['c', '유효성 검증 · 종결'],
@@ -10364,29 +10389,17 @@ let ncrModeCur = 'issue',
   ncrCurNo = '';
 // ── NCR — 창의 탭 · 단계 화면 · 요구 유형 · 대책서 평가 ──
 // solo: 목록의 단추(발행 정보 · 회신 · 검증)로 단계를 골라 연 창 — 그 단계만 보이고, 단계 전환 줄은 넣지 않음
-function ncrTabsBar(id, n, solo) {
+function ncrTabsBar(id, n) {
   const fl = id ? ncrFlags(n) : {},
-    dot = { reply: fl.d3Late || fl.replyLate, verify: fl.verifyLate };
-  const lg = (n.logs || []).length;
-  const modes =
-    id && !solo
-      ? `<div class="nmodes" id="ncrModes" role="tablist" aria-label="NCR 화면">${Object.entries(NCR_MODES)
-          .map(
-            ([k, m]) =>
-              `<button type="button" data-m="${k}" onclick="ncrMode('${k}')">${m.l}${dot[k] ? '<i class="tdot" title="기한 경과"></i>' : ''}</button>`,
-          )
-          .join('')}</div>`
-      : '';
+    lg = (n.logs || []).length;
   const dotT = { t: id && notifyLate(n), r: fl.replyLate, b: fl.d3Late, c: fl.verifyLate };
-  return (
-    modes +
-    `<div class="dtabs" id="ncrTabs" role="tablist">${NCR_TABS.map(
-      ([k, l]) =>
-        `<button type="button" role="tab" data-t="${k}" onclick="ncrTab('${k}')">${l}${
-          k === 'd' && lg ? ` <span class="mono" style="opacity:.7">${lg}</span>` : ''
-        }${dotT[k] ? '<i class="tdot" title="기한 경과"></i>' : ''}</button>`,
-    ).join('')}</div>`
-  );
+  // 단계 전환은 창 위쪽의 단계 줄(ncrTrack nav)이 맡음 — 여기는 그 단계 안의 탭만
+  return `<div class="dtabs" id="ncrTabs" role="tablist">${NCR_TABS.map(
+    ([k, l]) =>
+      `<button type="button" role="tab" data-t="${k}" onclick="ncrTab('${k}')">${l}${
+        k === 'd' && lg ? ` <span class="mono" style="opacity:.7">${lg}</span>` : ''
+      }${dotT[k] ? '<i class="tdot" title="기한 경과"></i>' : ''}</button>`,
+  ).join('')}</div>`;
 }
 function ncrModeDefault(n, id) {
   if (!id) return 'issue';
@@ -10404,10 +10417,11 @@ function ncrMode(m, tab) {
   ncrModeCur = m;
   const M = NCR_MODES[m],
     tabs = M.tabs.filter((k) => k !== 'd' || ncrCurId);
+  const nav = $('#ncrNav'); // 단계 줄이 있으면 ‘진행 기록’은 그 줄의 단추로 엶 (탭 줄에서는 뺌)
   document.querySelectorAll('#ncrTabs [data-t]').forEach((b) => {
-    b.style.display = tabs.includes(b.dataset.t) ? '' : 'none';
+    b.style.display = tabs.includes(b.dataset.t) && !(nav && b.dataset.t === 'd') ? '' : 'none';
   });
-  document.querySelectorAll('#ncrModes [data-m]').forEach((b) => b.setAttribute('aria-selected', b.dataset.m === m ? 'true' : 'false'));
+  document.querySelectorAll('#ncrNav [data-m]').forEach((b) => b.setAttribute('aria-current', b.dataset.m === m ? 'step' : 'false'));
   const mt = $('#mt');
   if (mt && ncrCurId) {
     const st = mt.querySelector('.qstamp');
@@ -10468,7 +10482,7 @@ function ncrTab(k, fromMode) {
   f.querySelectorAll('.ntp').forEach((el) => {
     el.hidden = el.dataset.p !== k;
   });
-  document.querySelectorAll('#ncrTabs [data-t]').forEach((b) => b.setAttribute('aria-selected', b.dataset.t === k ? 'true' : 'false'));
+  document.querySelectorAll('#ncrTabs [data-t], #ncrNav .qlog').forEach((b) => b.setAttribute('aria-selected', b.dataset.t === k ? 'true' : 'false'));
   const mb = $('#mbody');
   if (mb) {
     const t = $('#ncrTabs');
@@ -10508,8 +10522,13 @@ function applyReqType(changed) {
     if (ev) ev.style.display = info ? 'none' : '';
   }
   {
-    const mb = document.querySelector('#ncrModes [data-m="reply"]');
-    if (mb) mb.style.display = info ? 'none' : '';
+    // 요구 유형을 바꾸면 단계 줄을 다시 그림 (단순 통보는 회신 · 검증 단계가 없음)
+    const nv = $('#ncrNav'),
+      n0 = ncrCurId && db.ncrs.find((x) => x.id === ncrCurId);
+    if (nv && n0 && changed) {
+      nv.outerHTML = ncrTrack({ ...n0, reqType: t }, true);
+      document.querySelectorAll('#ncrNav [data-m]').forEach((b) => b.setAttribute('aria-current', b.dataset.m === ncrModeCur ? 'step' : 'false'));
+    }
     if (info && ncrModeCur === 'reply') ncrMode('issue');
   }
   {

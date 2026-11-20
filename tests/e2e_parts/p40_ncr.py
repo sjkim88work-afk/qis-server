@@ -43,9 +43,9 @@ def run(c):
     r = A.evaluate("""() => {mfDirty=false;closeModal(true);state.tab='ncr';render();
       const n=db.ncrs.find(x=>x.reqType!=='단순 통보')||db.ncrs[0],row=[...document.querySelectorAll('#ntab tbody tr')][0],btn=[...row.querySelectorAll('td:last-child button')].map(b=>b.textContent.trim()).join(',');
       const tabs=()=>[...document.querySelectorAll('#ncrTabs [data-t]')].filter(b=>b.style.display!=='none').map(b=>b.dataset.t).join('');
-      const o={btn};for(const m of ['issue','reply','verify']){editNcr(n.id,null,m);o[m]={sw:!!document.querySelector('#ncrModes'),tabs:tabs(),t:document.querySelector('#mt').textContent};mfDirty=false;closeModal(true)}
-      editNcr(n.id);o.link=!!document.querySelector('#ncrModes');mfDirty=false;closeModal(true);
-      row.querySelector('a.lk').click();o.no=!!document.querySelector('#ncrModes');mfDirty=false;closeModal(true);return o}""")
+      const o={btn};for(const m of ['issue','reply','verify']){editNcr(n.id,null,m);o[m]={sw:!!document.querySelector('#ncrNav')||!!document.querySelector('.qtrack button'),tabs:tabs(),t:document.querySelector('#mt').textContent};mfDirty=false;closeModal(true)}
+      editNcr(n.id);o.link=document.querySelectorAll('#ncrNav .qtrack button').length>=3&&!!document.querySelector('#ncrNav .qlog');mfDirty=false;closeModal(true);
+      row.querySelector('a.lk').click();o.no=!!document.querySelector('#ncrNav');mfDirty=false;closeModal(true);return o}""")
     ok("통보서" not in r["btn"] and r["btn"].startswith("발행 정보"), f"NCR 목록: 통보서 단추 없음 ({r['btn']})")
     ok(not r["issue"]["sw"] and not r["reply"]["sw"] and not r["verify"]["sw"] and not r["no"], "NCR 목록의 단계 단추 · 번호: 단계 전환 줄 없이 그 단계만")
     ok(r["issue"]["tabs"] == "antd" and r["reply"]["tabs"] == "rbd" and r["verify"]["tabs"] == "cd", f"NCR 단계별 탭 ({r['issue']['tabs']}/{r['reply']['tabs']}/{r['verify']['tabs']})")
@@ -53,10 +53,10 @@ def run(c):
       const o={p:['notifyYN','notifyDate','notifyMethod'].map(pane).join(''),box:document.querySelector('#noticeBox').closest('.ntp').dataset.p,req:pane('reqType'),a:vis('notifyDate')};
       ncrTab('t');o.t=vis('notifyDate')&&!vis('reqType');o.lab=[...document.querySelectorAll('#ncrTabs [data-t]')].filter(b=>b.style.display!=='none').map(b=>b.textContent.trim().replace(/\\s*\\d+$/,'')).join('|');
       const f=document.querySelector('#mf');f.notifyDate.value='2000-01-01';const r=saveNcr(n.id);o.err=r===null&&document.querySelector('#ncrTabs [data-t=t]').getAttribute('aria-selected')==='true';mfDirty=false;closeModal(true);return o}""")
-    ok(r2["p"] == "ttt" and r2["box"] == "t" and r2["req"] == "a" and not r2["a"] and r2["t"], f"NCR 발행 정보: 협력사 통보는 ‘③ 협력사 통보’ 탭에 따로 ({r2['lab']})")
-    ok(r2["lab"].startswith("① 발행 정보|② 통보서 내용|③ 협력사 통보|진행 기록") and r2["err"], "탭 순서 · 통보일 오류는 통보 탭으로 이동")
+    ok(r2["p"] == "ttt" and r2["box"] == "t" and r2["req"] == "a" and not r2["a"] and r2["t"], f"NCR 발행 정보: 협력사 통보는 ‘협력사 통보’ 탭에 따로 ({r2['lab']})")
+    ok(r2["lab"].startswith("발행 정보|통보서 내용|협력사 통보|진행 기록") and r2["err"], "탭 순서 · 통보일 오류는 통보 탭으로 이동")
     ok("발행 정보" in r["issue"]["t"] and "협력사 회신" in r["reply"]["t"] and "검증" in r["verify"]["t"], "NCR 창 제목에 단계 이름")
-    ok(r["link"], "다른 화면의 NCR 링크(단계 지정 없음): 단계 전환 줄 유지")
+    ok(r["link"], "다른 화면의 NCR 링크(단계 지정 없음): 단계 줄이 단추 · ‘진행 기록’ 단추")
     r = A.evaluate("""() => {const n=db.ncrs.find(x=>x.reqType!=='단순 통보')||db.ncrs[0],lab=()=>[...document.querySelector('#mfoot').children].filter(e=>!e.className.includes('mfsp')).map(e=>e.textContent).join(',');
       editNcr(n.id,null,'reply');const rp=lab();mfDirty=false;closeModal(true);editNcr(n.id,null,'verify');const vf=lab();mfDirty=false;closeModal(true);return {rp,vf,info:n.reqType==='단순 통보'}}""")
     ok(r["info"] or r["rp"] == "취소,저장", f"NCR 협력사 회신 창: 아래 단추는 취소 · 저장만 ({r['rp']})")
@@ -116,3 +116,24 @@ def run(c):
     ok(r["st1"] == "대책서 검토" and r["pend"] and r["resubs"] == 1 and r["reply"] and not r["btn1"] and r["cell"], f"재회신 접수 → 상태 ‘대책서 검토’, 처음 회신일은 그대로, 목록에 재회신일 표시 ({r['st1']})")
     ok(r["banner"] and r["st2"] == "대책서 검토", "회신 창에 재제출 평가 안내 · 평가 전에는 검토 단계 유지")
     ok(r["st3"] == "승인(검증대기)" and r["cleared"] and r["val"] == "적정", f"재제출 평가(승인)를 마치면 그 결과로 바뀜 ({r['st3']})")
+
+    # NCR 창의 단계 줄: 단계가 단추 (누르면 그 단계의 화면) · ‘진행 기록’ 단추 · 요구 유형을 바꾸면 단계 줄도 바뀜
+    r = A.evaluate("""async()=>{const wait=ms=>window.__settle(ms),q=s=>document.querySelector(s),o={};mfDirty=false;closeModal(true);
+      const n=db.ncrs.find(x=>x.reqType!=='단순 통보')||db.ncrs[0];go('ncr');editNcr(n.id);await wait(300);
+      const steps=()=>[...document.querySelectorAll('#ncrNav .qtrack button')],cur=()=>steps().filter(b=>b.getAttribute('aria-current')==='step').map(b=>b.firstChild.textContent.trim()).join(),
+        tabs=()=>[...document.querySelectorAll('#ncrTabs [data-t]')].filter(b=>b.style.display!=='none').map(b=>b.dataset.t).join('');
+      o.labels=steps().map(b=>b.firstChild.textContent.trim()).join('>');o.modes=!!q('#ncrModes');
+      steps().find(b=>/^발행/.test(b.textContent)).click();await wait(150);o.a={cur:cur(),tabs:tabs(),t:q('#mt').textContent,sel:ncrTabCur};
+      steps().find(b=>/^협력사 통보/.test(b.textContent)).click();await wait(150);o.t={cur:cur(),sel:ncrTabCur};
+      steps().find(b=>/^대책서 회신/.test(b.textContent)).click();await wait(150);o.r={cur:cur(),tabs:tabs(),t:q('#mt').textContent,sel:ncrTabCur};
+      steps().find(b=>/^유효성 검증/.test(b.textContent)).click();await wait(150);o.c={cur:cur(),tabs:tabs(),sel:ncrTabCur};
+      q('#ncrNav .qlog').click();await wait(150);o.d={sel:ncrTabCur,on:q('#ncrNav .qlog').getAttribute('aria-selected'),log:!q('#logBox').closest('.ntp').hidden};
+      steps()[0].click();await wait(100);const f=q('#mf');f.reqType.value='단순 통보';f.reqType.dispatchEvent(new Event('change',{bubbles:true}));await wait(200);
+      o.info={labels:steps().map(b=>b.firstChild.textContent.trim()).join('>'),cur:cur()};
+      mfDirty=false;closeModal(true);return o}""")
+    ok(r["labels"] == "발행>협력사 통보>D3 봉쇄>대책서 회신>대책 승인>유효성 검증>종결" and not r["modes"], f"NCR 창: 단계 줄이 단추 · 큰 전환 단추는 없음 ({r['labels']})")
+    ok(r["a"]["cur"] == "발행,협력사 통보" and r["a"]["tabs"] == "ant" and r["a"]["sel"] == "a" and r["t"]["sel"] == "t", f"‘발행’ · ‘협력사 통보’ 단계 → 발행 화면의 해당 탭 ({r['a']['tabs']})")
+    ok(r["r"]["cur"] == "D3 봉쇄,대책서 회신,대책 승인" and r["r"]["tabs"] == "rb" and r["r"]["sel"] == "r" and "협력사 회신" in r["r"]["t"], f"‘대책서 회신’ 단계 → 회신 화면 ({r['r']['cur']})")
+    ok(r["c"]["cur"] == "유효성 검증,종결" and r["c"]["tabs"] == "c" and r["c"]["sel"] == "c", "‘유효성 검증’ 단계 → 검증 · 종결 화면")
+    ok(r["d"] == {"sel": "d", "on": "true", "log": True}, f"‘진행 기록’ 단추 → 기록 화면 (탭 줄에는 없음) ({r['d']})")
+    ok(r["info"]["labels"] == "발행>협력사 통보>종결" and r["info"]["cur"] == "발행,협력사 통보", f"요구 유형을 단순 통보로 바꾸면 단계 줄도 바뀜 ({r['info']['labels']})")
