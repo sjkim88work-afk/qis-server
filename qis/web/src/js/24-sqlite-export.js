@@ -751,11 +751,12 @@ document.addEventListener('paste', (e) => {
   }
   const lb = $('#logBox');
   if (lb && $('#modal').classList.contains('on') && lb.contains(document.activeElement)) {
-    const fs = [...(e.clipboardData?.files || [])].filter((f) => f.type.startsWith('image/'));
+    const fs = [...(e.clipboardData?.files || [])];
     if (fs.length) {
       e.preventDefault();
-      lgAddFiles(fs, tl.edit != null ? 'edit' : undefined);
-      toast(`증빙 ${fs.length}장 첨부`);
+      lgAddFiles(fs, tl.edit != null ? 'edit' : undefined).then((n) => {
+        if (n) toast(`증빙 ${n}개 첨부`);
+      });
     }
     return;
   }

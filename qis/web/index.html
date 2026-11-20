@@ -131,6 +131,9 @@ button.evb.on1{background:var(--okb);border-color:#8fd0b0;color:var(--ok);font-w
 /* 진행 기록 */
 .lgplan{border:1px solid #f0d49b;background:#fffaf0;border-radius:8px;padding:8px 12px;margin-top:6px;font-size:12.5px}
 .lgph{display:flex;gap:6px;flex-wrap:wrap;margin-top:5px}.lgph .t{position:relative;display:inline-block}.lgph img{width:64px;height:48px;object-fit:cover;border-radius:4px;border:1px solid var(--line);cursor:zoom-in;display:block}
+.lgph{align-items:center}.lgph .t.dc{display:inline-flex;align-items:center;max-width:100%;border:1px solid var(--line);border-radius:6px;background:var(--card);font-size:12.5px}
+.lgph .dc .o{display:inline-flex;align-items:center;gap:6px;padding:4px 8px;cursor:pointer;min-width:0}.lgph .dc .o b{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:240px}
+.lgph .dk{font:600 10.5px/1 var(--f-mono,monospace);color:#fff;background:var(--pri);border-radius:3px;padding:4px 5px;flex:none}
 .lgph .ld{display:inline-flex;width:64px;height:48px;align-items:center;justify-content:center;background:var(--mut);border-radius:4px}
 .lgph a{position:absolute;top:-6px;right:-6px;background:#fff;border:1px solid var(--line);border-radius:50%;width:16px;height:16px;font-size:10px;line-height:14px;text-align:center;cursor:pointer;color:var(--bad)}
 ul.logs .lr{margin-top:4px;font-size:12.5px;background:#eef6f0;border-radius:4px;padding:3px 7px;display:inline-block}ul.logs .lr b{color:var(--ok);font-size:11.5px}
@@ -142,6 +145,7 @@ ul.logs .lhist{margin-top:6px;border-top:1px dashed var(--line);padding-top:6px;
 .lgc .ch{display:flex;align-items:center;gap:8px;font-weight:600;font-size:12.5px;color:var(--pri);margin-bottom:8px}
 .lgc .cg,ul.logs .cg{display:grid;grid-template-columns:140px 130px 1fr 120px;gap:8px}
 .lgc .cg2,ul.logs .cg2{display:grid;grid-template-columns:3fr 2fr;gap:8px;margin-top:8px}
+.lgc .cgp,ul.logs .cgp{display:grid;grid-template-columns:minmax(0,1fr) 160px;gap:8px;margin-top:8px}
 .lgc label,ul.logs li.ed label{display:flex;flex-direction:column;gap:3px;font-size:11.5px;color:var(--sub)}
 .lgc .cf label.b{flex-direction:row;color:inherit;font-size:12px}
 .lgc textarea,ul.logs li.ed textarea{min-height:52px}
@@ -150,7 +154,7 @@ ul.logs .lhist{margin-top:6px;border-top:1px dashed var(--line);padding-top:6px;
 .lgh label{font-weight:normal;color:var(--sub);display:flex;gap:4px;align-items:center}
 .lgpend{margin-top:8px;font-size:12px;background:var(--warnb);border:1px solid #f0d49b;color:#7a5410;border-radius:6px;padding:6px 10px}
 ul.logs li.nw{outline:2px solid #f0d49b;background:#fffbef}
-@media(max-width:700px){.lgc .cg,.lgc .cg2,ul.logs .cg,ul.logs .cg2{grid-template-columns:1fr}}
+@media(max-width:700px){.lgc .cg,.lgc .cg2,.lgc .cgp,ul.logs .cg,ul.logs .cg2,ul.logs .cgp{grid-template-columns:1fr}}
 ul.logs{list-style:none;margin:10px 0 0;padding:0 0 0 14px;border-left:2px solid #d4dbe6}
 ul.logs li{position:relative;margin:0 0 10px;padding:6px 10px;background:#f7f8fa;border-radius:6px}
 ul.logs li:before{content:'';position:absolute;left:-21px;top:11px;width:10px;height:10px;border-radius:50%;background:#fff;border:2px solid var(--pri)}
@@ -7461,7 +7465,52 @@ const LOG_CLS = {
 const lastLog = (d) => (d.logs || []).slice().sort(lgCmpDesc)[0];
 const defLabel = (d) => `${d.date} ${d.partName || d.partNo || (d.fgName || d.fgNo ? '[완성품] ' + (d.fgName || d.fgNo) : '')}`;
 const ncrOfDefect = (d) => (d.ncrId ? db.ncrs.find((n) => n.id === d.ncrId) : null);
-// ── 불량 · NCR 실행 기록 — 자동 이벤트 · 기록 작성/수정/취소 · 출력 · 불량 진행 창 ──
+// ── 기록(이슈 · 불량 · NCR 공통) — 자동 이벤트 · 기록 작성/수정/취소 · 출력 · 불량 진행 창 ──
+// 기록 한 건의 구조 (세 곳이 같음):
+//   id · date(YYYY-MM-DD) · time(HH:MM, 선택) · band(오전/오후/야간, 선택) · kind(구분) · party(상대방 · 참석) · method(방법)
+//   text(내용) · result(결과 · 합의 사항) · photos[첨부 id — 이미지 · 문서] · by(작성자) · at(작성 시각)
+//   hist[수정 전 원문 + 사유] · void{취소} · ord(같은 날 손으로 정한 순서) · sys(프로그램이 남긴 기록 — 수정 불가)
+// 종류별로 다른 것은 구분 목록 · 문구 · 수정 사유 필수 여부뿐
+const LOGCFG = {
+  defect: {
+    coll: () => db.defects,
+    kinds: () => LOG_KINDS,
+    now: false,
+    reason: true,
+    ch: '실행 기록 남기기',
+    hint: '실제로 한 일과 결과만 적습니다.',
+    text: '실행 내용',
+    ph: '무엇을 했는가 — 예: 출하 대기 재고 300개 전수 선별, 협력사에 불량 시료 5개 전달',
+    head: '실행 기록',
+  },
+  ncr: {
+    coll: () => db.ncrs,
+    kinds: () => LOG_KINDS,
+    now: false,
+    reason: true,
+    ch: '실행 기록 남기기',
+    hint: '실제로 한 일과 결과만 적습니다.',
+    text: '실행 내용',
+    ph: '무엇을 했는가 — 예: 출하 대기 재고 300개 전수 선별, 협력사에 불량 시료 5개 전달',
+    head: '실행 기록',
+  },
+  issue: {
+    coll: () => db.issues || [],
+    kinds: () => ISS_KINDS,
+    now: true,
+    reason: false,
+    ch: '기록 남기기',
+    hint: '확인한 사실과 결정 사항을 적습니다.',
+    text: '내용',
+    ph: '확인한 사실 · 원인 추정 · 결정 사항',
+    head: '기록',
+  },
+};
+const lgCfg = () => LOGCFG[tl.kind] || LOGCFG.defect;
+// 기록의 일시 표시: 날짜 + 시각 (없으면 시간대, 그것도 없으면 날짜만)
+const lgWhen = (x) => (x.date || '') + (x.time ? ' ' + x.time : x.band ? ' ' + x.band : '');
+const lgAtOf = (x) => (x.date || '') + (x.time ? 'T' + x.time : '');
+const lgKindCls = (k) => LOG_CLS[k] || (typeof ISS_KCLS !== 'undefined' && ISS_KCLS[k]) || 'mut';
 function autoEvents(d, n, lbl) {
   const E = [],
     add = (date, text, src) => {
@@ -7595,7 +7644,11 @@ function tlDraftHas() {
 // 실행 기록은 바로 저장 — 추가 · 수정 · 취소 처리 · 삭제를 할 때마다 대상(불량 · NCR)에 반영. 아직 저장하지 않은 새 NCR 은 창을 저장할 때 함께 저장
 function tlPersist(msg) {
   const id = tl.obj && tl.obj.id,
-    o = id && (tl.kind === 'ncr' ? db.ncrs : db.defects).find((x) => x.id === id);
+    o =
+      id &&
+      lgCfg()
+        .coll()
+        .find((x) => x.id === id);
   if (!o || (typeof RO !== 'undefined' && RO)) {
     mfDirty = true;
     return false;
@@ -7625,13 +7678,17 @@ async function tlLoadThumbs() {
 }
 const phRec = (id) => tl.newPh[id] || phCache[id];
 const LOG_DRAFT = [
-  'lgDate',
+  'lgAtD',
+  'lgAtB',
+  'lgAtT',
   'lgKind',
   'lgParty',
   'lgMethod',
   'lgText',
   'lgResult',
-  'leDate',
+  'leAtD',
+  'leAtB',
+  'leAtT',
   'leKind',
   'leParty',
   'leMethod',
@@ -7654,46 +7711,54 @@ function renderLogs(keepDraft = true) {
     const e = document.getElementById(k);
     if (e && draft[k] !== undefined) e.value = draft[k];
   });
+  dtpSync('lgAt');
+  dtpSync('leAt');
 }
 const lgLate = (x) => x.at && x.date && diffDays(x.date, loc(x.at, 10)) >= 2;
 function lgThumbs(ids, editable) {
   return (ids || []).length
     ? `<div class="lgph">${ids
         .map((id, k) => {
-          const r = phRec(id);
-          return `<span class="t">${
-            r
-              ? `<img src="${r.thumb || r.data}" onclick="lgViewPh('${id}')" title="${esc(r.caption || r.name || '')}">`
-              : '<span class="ld">📎</span>'
-          }${editable ? `<a onclick="${editable}(${k})" title="빼기">✕</a>` : ''}</span>`;
+          const r = phRec(id),
+            x = editable ? `<a onclick="${editable}(${k})" title="빼기" aria-label="첨부 빼기">✕</a>` : '';
+          if (!r) return `<span class="t"><span class="ld">📎</span>${x}</span>`;
+          return isDocRec(r)
+            ? `<span class="t dc"><span class="o" role="button" tabindex="0" onclick="lgOpenDoc('${id}')" title="${esc(r.name)} — 열기"><span class="dk">${docIcon(r)}</span><b>${esc(r.name)}</b>${
+                r.size ? `<span class="muted">${fmtBytes(r.size)}</span>` : ''
+              }</span>${x}</span>`
+            : `<span class="t"><img src="${r.thumb || r.data}" onclick="lgViewPh('${id}')" title="${esc(r.caption || r.name || '')}">${x}</span>`;
         })
         .join('')}</div>`
     : '';
 }
+function lgOpenDoc(id) {
+  const r = phRec(id);
+  if (r) docOpenRec(r);
+}
 function lgViewPh(id) {
   const all = [...new Set([...tl.own, ...caseReadonly(tl.kind, tl.obj)].flatMap((l) => l.photos || []).concat(tl.draftPh, tl.editPh || []))]
     .map(phRec)
-    .filter(Boolean);
+    .filter((r) => r && !isDocRec(r));
   const i = all.findIndex((r) => r.id === id);
   if (i >= 0) lbOpen(all, i);
 }
 async function lgAddFiles(files, target) {
-  const imgs = files.filter((f) => f.type.startsWith('image/'));
-  if (!imgs.length) {
-    if (files.length) toast('이미지 파일만 첨부할 수 있습니다 (메일·문서는 화면 캡처로 첨부)');
-    return;
-  }
-  for (const f of imgs) {
+  let n = 0;
+  for (const f of files) {
     try {
-      const r = await attImgRec(f);
+      const r = (f.type || '').startsWith('image/') ? await attImgRec(f) : await attDocRec(f, 20);
+      if (!r) continue;
       tl.newPh[r.id] = r;
       (target === 'edit' ? tl.editPh : tl.draftPh).push(r.id);
+      n++;
     } catch (e) {
       toast(e.message);
     }
   }
+  if (!n) return 0;
   mfDirty = true;
   renderLogs();
+  return n;
 }
 function lgPartyList() {
   const sid = tl.obj && tl.obj.supplierId,
@@ -7738,23 +7803,25 @@ function renderLogsInner(b) {
   const plan = ownCase
     ? `<div class="lgplan" style="background:#f5f9ff;border-color:#cfdcef">이 건은 <a class="lk" onclick="czOpenCase('${ownCase.id}')">RCA ${esc(ownCase.CaseNo)}</a>(으)로 관리 중입니다 · 현재 단계 ${esc(ownCase.Stage)}</div>`
     : '';
-  // ② 실행 기록 쓰기
-  const comp = `<div class="lgc"><div class="ch">✎ 실행 기록 남기기 <span class="muted" style="font-weight:normal">— 실제로 한 일과 결과만 적습니다. 저장한 기록을 고치면 수정 이력이 남습니다.</span></div>
-    <div class="cg"><label>실행일<input type="date" id="lgDate" value="${today()}" max="${today()}"></label>
-      <label>구분<select id="lgKind">${opts(LOG_KINDS, LOG_KINDS[0])}</select></label>
-      <label>상대방<input id="lgParty" list="lgParties" placeholder="예: 대성정밀 박OO 과장"></label>
+  // ② 기록 쓰기
+  const C = lgCfg(),
+    K = C.kinds();
+  const comp = `<div class="lgc"><div class="ch">✎ ${C.ch} <span class="muted" style="font-weight:normal">— ${C.hint} 저장한 기록을 고치면 수정 이력이 남습니다.</span></div>
+    <div class="dtrow"><label><span>일시 <span class="muted" style="font-weight:normal">(시간은 선택)</span></span>${dtpHTML('lgAt', C.now ? nowMin() : today(), '')}</label>
+      <label>구분<select id="lgKind">${opts(K, K.includes('인터뷰') ? '인터뷰' : K[0])}</select></label></div>
+    <div class="cgp"><label>상대방 · 참석<input id="lgParty" list="lgParties" placeholder="예: 대성정밀 박OO 과장 / 생산팀 · 생산기술팀"></label>
       <label>방법<select id="lgMethod">${opts(LOG_METHODS, '', true)}</select></label></div>
     <datalist id="lgParties">${lgPartyList()}</datalist>
-    <div class="cg2"><label>실행 내용 *<textarea id="lgText" placeholder="무엇을 했는가 — 예: 출하 대기 재고 300개 전수 선별, 협력사에 불량 시료 5개 전달"></textarea></label>
+    <div class="cg2"><label>${C.text} *<textarea id="lgText" placeholder="${C.ph}"></textarea></label>
       <label>결과 · 합의 사항<textarea id="lgResult" placeholder="예: 불량 4개 추가 검출 / 협력사 귀책 인정, 선별비 부담 합의"></textarea></label></div>
-    <div class="cf"><label class="b s" style="cursor:pointer">📎 증빙 첨부<input type="file" accept="image/*" multiple style="display:none" onchange="lgAddFiles([...this.files]);this.value=''"></label>
+    <div class="cf"><label class="b s" style="cursor:pointer">📎 증빙 첨부<input type="file" accept="${RD_ACCEPT}" multiple style="display:none" onchange="lgAddFiles([...this.files]);this.value=''"></label>
       <span>메일 · 성적서 · 현장 사진 (캡처 후 Ctrl+V 가능)</span>${lgThumbs(tl.draftPh, 'lgRmDraft')}
       <span style="flex:1"></span><button type="button" class="b" onclick="lgClear()">취소</button><button type="button" class="b p" onclick="addLog()">저장</button></div></div>`;
   const warn =
     pend || pendEd
       ? `<div class="lgpend">${pend ? `새 기록 ${pend}건` : ''}${pend && pendEd ? ' · ' : ''}${pendEd ? `수정 ${pendEd}건` : ''}이 아직 저장되지 않았습니다. 창 아래 <b>저장</b>을 누르면 함께 저장됩니다.</div>`
       : '';
-  const head = `<div class="lgh">실행 기록 <span class="bg mut" style="font-weight:normal">직접 기록 ${nOwn}${nAuto ? ` · 자동 ${nAuto}` : ''}</span><span style="flex:1"></span>
+  const head = `<div class="lgh">${C.head} <span class="bg mut" style="font-weight:normal">직접 기록 ${nOwn}${nAuto ? ` · 자동 ${nAuto}` : ''}</span><span style="flex:1"></span>
     <label><input type="checkbox" ${tl.hideAuto ? 'checked' : ''} onchange="tl.hideAuto=this.checked;renderLogs()"> 자동 기록 숨기기</label><button type="button" class="b s" onclick="lgPrint()">기록 출력</button></div>`;
   const item = (x) => {
     const own = x._i != null,
@@ -7770,8 +7837,9 @@ function renderLogsInner(b) {
     ].join(' ');
     const who = [x.party, x.method].filter(Boolean).join(' · ');
     const del = `<a class="lk" style="font-size:11px;color:var(--bad)" onclick="delLog(${x._i})">삭제</a>`;
-    const acts =
-      own && !ed && !vo && x.void
+    const acts = x.sys
+      ? ''
+      : own && !ed && !vo && x.void
         ? mv(x) + del
         : own && !ed && !vo
           ? `${mv(x)}<a class="lk" style="font-size:11px" onclick="lgEdit(${x._i})">수정</a> ${
@@ -7782,16 +7850,14 @@ function renderLogsInner(b) {
             : '';
     if (ed)
       return `<li class="ed"><div class="lh"><b>기록 수정</b>${saved ? ' <span class="muted" style="font-size:11.5px">— 원문은 이력으로 보존됩니다</span>' : ''}</div>
-      <div class="cg" style="margin-top:6px"><label>실행일<input type="date" id="leDate" value="${esc(x.date)}" max="${today()}"></label><label>구분<select id="leKind">${opts(
-        LOG_KINDS.includes(x.kind) ? LOG_KINDS : [x.kind, ...LOG_KINDS],
-        x.kind,
-      )}</select></label>
-        <label>상대방<input id="leParty" list="lgParties" value="${esc(x.party)}"></label><label>방법<select id="leMethod">${opts(LOG_METHODS, x.method || '', true)}</select></label></div>
-      <div class="cg2"><label>실행 내용<textarea id="leText">${esc(x.text)}</textarea></label><label>결과 · 합의 사항<textarea id="leResult">${esc(x.result)}</textarea></label></div>
-      <div class="cf"><label class="b s" style="cursor:pointer">📎 증빙 추가<input type="file" accept="image/*" multiple style="display:none" onchange="lgAddFiles([...this.files],'edit');this.value=''"></label>${lgThumbs(tl.editPh, 'lgRmEdit')}</div>
-      ${saved ? `<label class="lgreason">수정 사유 *<input id="leReason" placeholder="예: 협력사 회신 메일 확인 후 수량 정정"></label>` : ''}
+      <div class="dtrow" style="margin-top:6px"><label><span>일시 <span class="muted" style="font-weight:normal">(시간은 선택)</span></span>${dtpHTML('leAt', lgAtOf(x), x.band)}</label>
+        <label>구분<select id="leKind">${opts(K.includes(x.kind) ? K : [x.kind, ...K], x.kind)}</select></label></div>
+      <div class="cgp"><label>상대방 · 참석<input id="leParty" list="lgParties" value="${esc(x.party)}"></label><label>방법<select id="leMethod">${opts(LOG_METHODS, x.method || '', true)}</select></label></div>
+      <div class="cg2"><label>${C.text}<textarea id="leText">${esc(x.text)}</textarea></label><label>결과 · 합의 사항<textarea id="leResult">${esc(x.result)}</textarea></label></div>
+      <div class="cf"><label class="b s" style="cursor:pointer">📎 증빙 추가<input type="file" accept="${RD_ACCEPT}" multiple style="display:none" onchange="lgAddFiles([...this.files],'edit');this.value=''"></label>${lgThumbs(tl.editPh, 'lgRmEdit')}</div>
+      ${saved ? `<label class="lgreason">수정 사유 ${C.reason ? '*' : '<span class="muted" style="font-weight:normal">(선택)</span>'}<input id="leReason" placeholder="예: 협력사 회신 메일 확인 후 수량 정정"></label>` : ''}
       <div class="row" style="margin-top:6px;justify-content:flex-end"><button type="button" class="b s" onclick="tl.edit=null;tl.editPh=null;renderLogs(false)">취소</button><button type="button" class="b s p" onclick="saveLog(${x._i})">저장</button></div></li>`;
-    return `<li class="${x.auto ? 'au' : ''} ${x._new ? 'nw' : ''} ${x.void ? 'vd' : ''}"><div class="lh"><b>${esc(x.date)}</b> <span class="bg ${LOG_CLS[x.kind] || 'mut'}">${esc(x.kind)}</span>${
+    return `<li class="${x.auto ? 'au' : ''} ${x._new ? 'nw' : ''} ${x.void ? 'vd' : ''}"><div class="lh"><b>${esc(lgWhen(x))}</b> <span class="bg ${lgKindCls(x.kind)}">${esc(x.kind)}</span>${
       x.src ? ` <span class="bg mut" style="font-weight:normal">${esc(x.src)}</span>` : ''
     }${
       who ? ` <span style="font-size:12px">${esc(who)}</span>` : ''
@@ -7808,7 +7874,7 @@ function renderLogsInner(b) {
           ? `<div class="lhist">${hist
               .map(
                 (h, k) =>
-                  `<div><b>${k + 1}차 원문</b> <span class="muted">${esc(loc(h.at))} 수정 · ${esc(h.by || '')} · 사유: ${esc(h.reason || '-')}</span><br>${esc(h.date)} · ${esc(h.kind)}${h.party ? ' · ' + esc(h.party) : ''}${h.method ? ' · ' + esc(h.method) : ''}<br>${nl(h.text)}${
+                  `<div><b>${k + 1}차 원문</b> <span class="muted">${esc(loc(h.at))} 수정 · ${esc(h.by || '')} · 사유: ${esc(h.reason || '-')}</span><br>${esc(lgWhen(h))} · ${esc(h.kind)}${h.party ? ' · ' + esc(h.party) : ''}${h.method ? ' · ' + esc(h.method) : ''}<br>${nl(h.text)}${
                     h.result ? `<br>결과: ${nl(h.result)}` : ''
                   }</div>`,
               )
@@ -7825,13 +7891,16 @@ function renderLogsInner(b) {
       ? `<ul class="logs">${L.map(item).join('')}</ul>`
       : '<div class="muted" style="font-size:12px;padding:6px 2px">아직 기록이 없습니다.</div>');
 }
-// 실행 기록 순서 (최근 것이 위): 실행일 → 직접 쓴 기록이 자동 기록보다 위 → 손으로 정한 순서(ord) → 작성 시각
+// 기록 순서 (최근 것이 위): 날짜 → 직접 쓴 기록이 자동 기록보다 위 → 손으로 정한 순서(ord) → 시각 · 시간대 → 작성 시각
+// 시각을 모르는 기록은 그날의 끝(맨 위)으로 봄
 const lgOrd = (x) => (x.ord == null ? 1e9 : x.ord);
+const lgTk = (x) => x.time || TBAND_T[x.band] || '24:00';
 function lgCmpDesc(a, c) {
   return (
     (c.date || '').localeCompare(a.date || '') ||
     (a.auto ? 1 : 0) - (c.auto ? 1 : 0) ||
     (a.ord != null || c.ord != null ? lgOrd(c) - lgOrd(a) : 0) ||
+    lgTk(c).localeCompare(lgTk(a)) ||
     (c.at || '').localeCompare(a.at || '')
   );
 }
@@ -7866,11 +7935,12 @@ const lgTogHist = (id) => {
 function tlPushDraft() {
   const t = $('#lgText').value.trim();
   if (!t) {
-    toast('실행 내용을 입력하세요');
+    toast(`${lgCfg().text}을 입력하세요`);
     $('#lgText').focus();
     return false;
   }
-  const d = $('#lgDate').value || today();
+  const dv = dtpVal('lgAt'),
+    d = dv.at.slice(0, 10) || today();
   if (d > today()) {
     toast('실행일은 오늘 이후일 수 없습니다. 실제로 한 일만 기록합니다.');
     return false;
@@ -7878,6 +7948,8 @@ function tlPushDraft() {
   tl.own.push({
     id: uid(),
     date: d,
+    time: dv.at.slice(11, 16),
+    band: dv.band,
     kind: $('#lgKind').value,
     party: $('#lgParty').value.trim(),
     method: $('#lgMethod').value,
@@ -7916,16 +7988,19 @@ function saveLog(i) {
   const x = tl.own[i],
     t = $('#leText').value.trim();
   if (!t) {
-    toast('실행 내용을 입력하세요');
+    toast(`${lgCfg().text}을 입력하세요`);
     return;
   }
-  const d = $('#leDate').value || x.date;
+  const dv = dtpVal('leAt'),
+    d = dv.at.slice(0, 10) || x.date;
   if (d > today()) {
     toast('실행일은 오늘 이후일 수 없습니다');
     return;
   }
   const nv = {
     date: d,
+    time: dv.at ? dv.at.slice(11, 16) : x.time || '',
+    band: dv.at ? dv.band : x.band || '',
     kind: $('#leKind').value,
     party: $('#leParty').value.trim(),
     method: $('#leMethod').value,
@@ -7934,7 +8009,7 @@ function saveLog(i) {
     photos: [...tl.editPh],
   };
   const same =
-    ['date', 'kind', 'party', 'method', 'text', 'result'].every((k) => String(x[k] || '') === String(nv[k] || '')) &&
+    ['date', 'time', 'band', 'kind', 'party', 'method', 'text', 'result'].every((k) => String(x[k] || '') === String(nv[k] || '')) &&
     JSON.stringify(x.photos || []) === JSON.stringify(nv.photos);
   if (same) {
     tl.edit = null;
@@ -7944,7 +8019,7 @@ function saveLog(i) {
   }
   if (!x._new) {
     const r = ($('#leReason')?.value || '').trim();
-    if (!r) {
+    if (!r && lgCfg().reason) {
       toast('수정 사유를 입력하세요');
       $('#leReason')?.focus();
       return;
@@ -7956,6 +8031,8 @@ function saveLog(i) {
         by: db.settings.owners[0] || '',
         reason: r,
         date: x.date,
+        time: x.time || '',
+        band: x.band || '',
         kind: x.kind,
         party: x.party || '',
         method: x.method || '',
@@ -7967,7 +8044,7 @@ function saveLog(i) {
     x.editedAt = now();
     x._dirty = true;
   }
-  if (nv.date !== x.date) delete x.ord; // 실행일을 고치면 손으로 정한 순서는 풀림
+  if (nv.date !== x.date || nv.time !== (x.time || '') || nv.band !== (x.band || '')) delete x.ord; // 일시를 고치면 손으로 정한 순서는 풀림
   Object.assign(x, nv);
   delete x.next;
   delete x.nextDate;
@@ -7997,7 +8074,7 @@ async function delLog(i) {
   if (
     !(await askConfirm({
       title: x._new ? '저장 전 기록을 삭제할까요?' : '이 기록을 삭제할까요?',
-      items: [`${esc(x.date)} · ${esc(x.kind)}${x.void ? ' · 취소됨' : ''}`, esc(x.text.slice(0, 60)) + (x.text.length > 60 ? '…' : '')],
+      items: [`${esc(lgWhen(x))} · ${esc(x.kind)}${x.void ? ' · 취소됨' : ''}`, esc(x.text.slice(0, 60)) + (x.text.length > 60 ? '…' : '')],
       note: x._new ? '' : '삭제하면 실행 기록과 기록 출력에서 바로 사라집니다.',
       ok: '삭제',
       danger: true,
@@ -8020,13 +8097,7 @@ function tlCommit() {
   recs.forEach((r) => {
     phCache[r.id] = r;
   }); // 저장을 기다리지 않고 화면에 바로 보이게
-  if (recs.length) {
-    photoPut(recs)
-      .then(() => {
-        photoStr = null;
-      })
-      .catch((e) => toast('증빙 사진 저장 실패: ' + e.message));
-  }
+  attStore(recs, '증빙');
   tl.newPh = {};
   tl.draftPh = [];
   return { logs };
@@ -8062,9 +8133,9 @@ async function lgPrint() {
   <h1>조사 · 진행 실행 기록</h1><div class="s">${esc(title)} · 출력 ${loc(now())} · 출력자 ${esc(db.settings.owners[0] || '')}${
     unsaved ? ` · <b>저장 전 기록 ${unsaved}건 제외</b>` : ''
   }</div>
-  <table><tr><th>실행일</th><th>구분</th><th>상대방 · 방법</th><th>실행 내용</th><th>결과 · 합의</th><th>증빙</th><th>작성</th><th>비고</th></tr>
+  <table><tr><th>일시</th><th>구분</th><th>상대방 · 방법</th><th>실행 내용</th><th>결과 · 합의</th><th>증빙</th><th>작성</th><th>비고</th></tr>
   ${L.map(
-    (l) => `<tr class="${l.auto ? 'au' : ''} ${l.void ? 'vd' : ''}"><td>${esc(l.date)}</td><td>${esc(l.auto ? '시스템' : l.kind)}${
+    (l) => `<tr class="${l.auto ? 'au' : ''} ${l.void ? 'vd' : ''}"><td>${esc(lgWhen(l))}</td><td>${esc(l.auto ? '시스템' : l.kind)}${
       l.src && !l.auto ? '<br>' + esc(l.src) : ''
     }</td><td>${esc([l.party, l.method].filter(Boolean).join(' · '))}</td>
     <td class="pre">${esc(l.text)}</td><td class="pre">${esc(l.result || '')}</td><td>${(l.photos || []).map((id) => '#' + pn[id]).join(' ')}</td>
@@ -8085,9 +8156,9 @@ async function lgPrint() {
           .flatMap((l) =>
             l.hist.map(
               (h) =>
-                `<tr><td>${esc(l.date)} ${esc(l.kind)}</td><td>${esc(loc(h.at))} ${esc(h.by || '')}</td>
+                `<tr><td>${esc(lgWhen(l))} ${esc(l.kind)}</td><td>${esc(loc(h.at))} ${esc(h.by || '')}</td>
                   <td>${esc(h.reason || '')}</td>
-                    <td class="pre">${esc(h.date)} · ${esc(h.kind)}${h.party ? ' · ' + esc(h.party) : ''}\n${esc(h.text)}${
+                    <td class="pre">${esc(lgWhen(h))} · ${esc(h.kind)}${h.party ? ' · ' + esc(h.party) : ''}\n${esc(h.text)}${
                       h.result ? '\n결과: ' + esc(h.result) : ''
                     }</td></tr>`,
             ),
@@ -8098,7 +8169,13 @@ async function lgPrint() {
   ${
     ids.length
       ? `<h3>증빙 자료</h3><div class="ph">${ids
-          .map((id) => (P[id] ? `<div><img src="${P[id].data}"><br><b>#${pn[id]}</b> ${esc(P[id].caption || P[id].name || '')}</div>` : ''))
+          .map((id) =>
+            P[id]
+              ? isDocRec(P[id])
+                ? `<div><b>#${pn[id]}</b> 📎 ${esc(P[id].name || '')} <span class="s">(문서 파일 — 화면에서 열기)</span></div>`
+                : `<div><img src="${P[id].data}"><br><b>#${pn[id]}</b> ${esc(P[id].caption || P[id].name || '')}</div>`
+              : '',
+          )
           .join('')}</div>`
       : ''
   }
@@ -17539,11 +17616,12 @@ document.addEventListener('paste', (e) => {
   }
   const lb = $('#logBox');
   if (lb && $('#modal').classList.contains('on') && lb.contains(document.activeElement)) {
-    const fs = [...(e.clipboardData?.files || [])].filter((f) => f.type.startsWith('image/'));
+    const fs = [...(e.clipboardData?.files || [])];
     if (fs.length) {
       e.preventDefault();
-      lgAddFiles(fs, tl.edit != null ? 'edit' : undefined);
-      toast(`증빙 ${fs.length}장 첨부`);
+      lgAddFiles(fs, tl.edit != null ? 'edit' : undefined).then((n) => {
+        if (n) toast(`증빙 ${n}개 첨부`);
+      });
     }
     return;
   }
