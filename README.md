@@ -189,6 +189,7 @@ qis/web/src/js/NN-*.js     스크립트 (번호 순서로 한 <script> 안에 �
 ```
 
 고친 뒤 `python scripts/build_web.py`로 합치고 **src/ 와 index.html 을 함께 커밋**합니다. 둘이 다르면 시험(`tests/test_web_build.py`)이 실패합니다.
+JS 원본은 포매터로 줄을 맞춥니다: `npx prettier@3 --write "qis/web/src/js/*.js"` (설정 `.prettierrc`). 화면 조각(템플릿)은 한 줄에 몰아 쓰지 않습니다 — 큰 `${ 식 }` 은 줄을 바꿔 씁니다. 리팩토링 전후의 화면 비교는 `python tests/layout_snapshot.py`.
 
 ## 저작권
 

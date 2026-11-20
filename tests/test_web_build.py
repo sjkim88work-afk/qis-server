@@ -39,7 +39,7 @@ def test_sidebar_breakpoint_is_the_same_in_css_and_js():
     src = ROOT / "qis" / "web" / "src"
     css = (src / "css" / "25-renewal.css").read_text(encoding="utf-8")
     js = (src / "js" / "05-routing.js").read_text(encoding="utf-8")
-    m = re.search(r"NAV_MQ=.*?matchMedia\('\(min-width:(\d+)px\)'\)", js)
+    m = re.search(r"NAV_MQ\s*=.*?matchMedia\(['\"]\(min-width:(\d+)px\)['\"]\)", js)
     assert m, "NAV_MQ 를 찾지 못함"
     bp = m.group(1)
     assert re.search(r"@media screen and \(min-width:%spx\)\{\s*body:not\(\.mob\)\{display:grid" % bp, css), bp
@@ -47,3 +47,20 @@ def test_sidebar_breakpoint_is_the_same_in_css_and_js():
     assert lows == {bp}, lows      # 사이드바 관련 구간은 모두 같은 값에서 시작
     names = sorted(p.name for p in (src / "css").glob("*.css"))
     assert names.index("25-renewal.css") < names.index("30-mobile.css")      # 휴대폰 규칙이 맨 뒤에서 이김
+
+
+def test_js_source_lines_stay_readable():
+    """JS 원본의 줄 길이 지키기 — 화면 조각을 한 줄에 몰아 쓰면 읽기 · 고치기가 느려진다 (2026-11 리팩토링).
+    남아 있는 긴 줄은 긴 안내 문구 · 한 줄 입력 묶음뿐이다. 새로 늘리지 않는다."""
+    src = ROOT / "qis" / "web" / "src" / "js"
+    long300, worst = 0, (0, "")
+    for p in sorted(src.glob("*.js")):
+        for n, line in enumerate(p.read_text(encoding="utf-8").split("\n"), 1):
+            if len(line) > 300:
+                long300 += 1
+            if len(line) > worst[0]:
+                worst = (len(line), f"{p.name}:{n}")
+    assert worst[0] <= 1000, worst                     # 가장 긴 줄
+    assert long300 <= 95, long300                      # 300자를 넘는 줄 수 (줄이는 것은 좋음 · 늘리지 않음)
+    for p in src.glob("*.js"):
+        assert len(p.read_text(encoding="utf-8").split("\n")) <= 1500, p.name      # 파일 하나는 1,500줄 이하
