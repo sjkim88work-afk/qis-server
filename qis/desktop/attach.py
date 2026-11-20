@@ -25,6 +25,46 @@ OPEN_MIME_EXT = {"application/pdf": ".pdf", "image/png": ".png", "image/jpeg": "
 OPEN_EXT = {".pdf", ".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".txt", ".csv"}
 OPEN_DIR = "QIS_열어보기"
 
+# 저장할 때 붙이는 확장자 — 파일 이름에 확장자가 없으면 내용의 형식으로 정함
+SAVE_MIME_EXT = {
+    **OPEN_MIME_EXT,
+    "image/svg+xml": ".svg", "image/tiff": ".tif", "application/zip": ".zip", "application/x-zip-compressed": ".zip",
+    "application/json": ".json", "text/html": ".html", "application/x-sqlite3": ".sqlite", "application/sql": ".sql",
+    "message/rfc822": ".eml", "application/vnd.ms-outlook": ".msg",
+    "application/msword": ".doc", "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx",
+    "application/vnd.ms-excel": ".xls", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": ".xlsx",
+    "application/vnd.ms-excel.sheet.macroenabled.12": ".xlsm",
+    "application/vnd.ms-powerpoint": ".ppt", "application/vnd.openxmlformats-officedocument.presentationml.presentation": ".pptx",
+    "application/x-hwp": ".hwp", "application/haansofthwp": ".hwp", "application/vnd.hancom.hwp": ".hwp", "application/vnd.hancom.hwpx": ".hwpx",
+}
+SAME_EXT = ({".jpg", ".jpeg"}, {".htm", ".html"}, {".tif", ".tiff"})      # 같은 형식으로 보는 확장자
+_EXT_RE = re.compile(r"\.[a-z0-9]{1,8}")
+
+
+def save_name(name: str, data_url) -> tuple[str, str]:
+    """저장 창에 넣을 파일 이름과 지켜야 할 확장자. 이름에 확장자가 없으면 내용의 형식에서 찾는다 (모르면 "")."""
+    n = _safe_name(name)
+    ext = Path(n).suffix.lower()
+    if _EXT_RE.fullmatch(ext):
+        return n, ext
+    ext = SAVE_MIME_EXT.get(_mime_of(data_url), "")
+    return (n[:112] + ext if ext else n), ext
+
+
+def keep_ext(p: Path, ext: str) -> Path:
+    """사용자가 저장 창에서 이름을 바꾸며 확장자를 빼거나 다르게 쓰면 원래 확장자를 붙인다.
+    확장자가 없거나 다르면 파일이 열리지 않기 때문 (PPT · 엑셀 · 메일 파일 등). 같은 이름이 있으면 덮어쓰지 않고 (1) 을 붙인다."""
+    if not ext:
+        return p
+    cur = p.suffix.lower()
+    if cur == ext or any(cur in g and ext in g for g in SAME_EXT):
+        return p
+    q, k = p.with_name(p.name + ext), 1
+    while q.exists():
+        q = p.with_name(f"{p.name} ({k}){ext}")
+        k += 1
+    return q
+
 
 def _mime_of(d: str) -> str:
     head = d.split(",", 1)[0][5:] if isinstance(d, str) and d.startswith("data:") else ""
@@ -70,9 +110,12 @@ def save_file(ask, name: str, data_url) -> str | None:
     """data URL 을 사용자가 고른 위치에 저장. ask(name, types) 는 저장 창을 띄워 경로를 돌려주는 함수."""
     try:
         data = _decode_data_url(data_url)
-        p = ask(_safe_name(name))
+        n, ext = save_name(name, data_url)
+        # 저장 창에 파일 형식을 알려 줌 — 이름만 바꿔 써도 확장자가 붙음
+        p = ask(n, (f"{ext[1:].upper()} 파일 (*{ext})", "모든 파일 (*.*)") if ext else ())
         if not p:
             return None
+        p = keep_ext(Path(p), ext)
         p.write_bytes(data)
         return f"저장했습니다: {p.name}"
     except Exception as e:
