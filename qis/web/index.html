@@ -3511,18 +3511,10 @@ function mobSev() {
 async function mobAddPhotos(inp) {
   const fs = [...inp.files].filter((f) => f.type.startsWith('image/'));
   inp.value = '';
-  const S = db.settings;
   for (const f of fs) {
     try {
-      const im = await readImg(f);
-      mob.photos.push({
-        id: uid(),
-        name: f.name || '사진.jpg',
-        caption: '',
-        data: shrink(im, num(S.photoMax) || 1600, (num(S.photoQ) || 80) / 100),
-        thumb: shrink(im, 320, 0.7),
-        createdAt: now(),
-      });
+      const { isNew, ...r } = await attImgRec(f, '사진.jpg');
+      mob.photos.push(r);
     } catch (e) {
       toast(e.message);
     }
@@ -4873,8 +4865,7 @@ async function issFLoad(i) {
   if (eb && issF.ed) eb.innerHTML = issFHTML(issF.ed.ids, 'ed');
 }
 async function issFAdd(files, to) {
-  const S = db.settings,
-    L = to === 'ed' && issF.ed ? issF.ed.ids : issF.nw;
+  const L = to === 'ed' && issF.ed ? issF.ed.ids : issF.nw;
   let n = 0;
   for (const f of files) {
     if (f.size > 20 * 1048576) {
@@ -4882,27 +4873,8 @@ async function issFAdd(files, to) {
       continue;
     }
     try {
-      let r;
-      if ((f.type || '').startsWith('image/')) {
-        const im = await readImg(f);
-        r = {
-          id: uid(),
-          name: f.name || '붙여넣은 이미지.jpg',
-          mime: 'image/jpeg',
-          caption: '',
-          data: shrink(im, num(S.photoMax) || 1600, (num(S.photoQ) || 80) / 100),
-          thumb: shrink(im, 320, 0.7),
-          createdAt: now(),
-          isNew: true,
-        };
-      } else {
-        const data = await fileToURL(f);
-        if (!isFileURL(data)) {
-          toast(`${f.name}: 파일을 읽지 못했습니다`);
-          continue;
-        }
-        r = { id: uid(), kind: 'doc', name: f.name, mime: f.type || '', size: f.size, data, thumb: '', createdAt: now(), isNew: true };
-      }
+      const r = (f.type || '').startsWith('image/') ? { ...(await attImgRec(f)), mime: 'image/jpeg' } : await attDocRec(f);
+      if (!r) continue;
       issFC[r.id] = r;
       L.push(r.id);
       n++;
@@ -4952,12 +4924,10 @@ function issFOpen(id) {
 function issFPut(ids) {
   const add = ids.map((x) => issFC[x]).filter((r) => r && r.isNew);
   if (!add.length) return;
-  photoPut(add.map(({ isNew, ...r }) => r))
-    .then(() => {
-      photoStr = null;
-      if (typeof photoDir !== 'undefined' && photoDir) syncPhotoFiles(false);
-    })
-    .catch((e) => toast('첨부 파일 저장 실패: ' + e.message));
+  attStore(
+    add.map(({ isNew, ...r }) => r),
+    '첨부 파일',
+  );
   add.forEach((r) => {
     r.isNew = false;
   });
@@ -5337,11 +5307,7 @@ async function delIssue(id) {
       touch(c);
     }
   });
-  if (ph.length) {
-    photoDel(ph).catch(() => {});
-    ph.forEach((x) => db.deleted.push({ id: x, at: now() }));
-    photoStr = null;
-  }
+  attDrop(ph);
   removeRec('issues', id);
   if ($('#modal').classList.contains('on')) closeModal(true);
   if (state.issId === id) state.issId = null;
@@ -5489,12 +5455,8 @@ function issSaveLog(id, k) {
   if (fe) {
     issFPut(fe.ids);
     if (fDel) {
-      photoDel(fe.del).catch(() => {});
-      fe.del.forEach((x) => {
-        db.deleted.push({ id: x, at: now() });
-        delete issFC[x];
-      });
-      photoStr = null;
+      attDrop(fe.del);
+      fe.del.forEach((x) => delete issFC[x]);
     }
     if (fe.ids.length) l.photos = fe.ids.slice();
     else delete l.photos;
@@ -7737,19 +7699,9 @@ async function lgAddFiles(files, target) {
     if (files.length) toast('이미지 파일만 첨부할 수 있습니다 (메일·문서는 화면 캡처로 첨부)');
     return;
   }
-  const S = db.settings;
   for (const f of imgs) {
     try {
-      const im = await readImg(f);
-      const r = {
-        id: uid(),
-        name: f.name || '붙여넣은 이미지.jpg',
-        caption: '',
-        data: shrink(im, num(S.photoMax) || 1600, (num(S.photoQ) || 80) / 100),
-        thumb: shrink(im, 320, 0.7),
-        createdAt: now(),
-        isNew: true,
-      };
+      const r = await attImgRec(f);
       tl.newPh[r.id] = r;
       (target === 'edit' ? tl.editPh : tl.draftPh).push(r.id);
     } catch (e) {
@@ -9010,11 +8962,7 @@ async function delDefect(id) {
   });
   czUnlinkDefectAll(id);
   // 사진 파일
-  if (ph.length) {
-    photoDel(ph).catch(() => {});
-    ph.forEach((i) => db.deleted.push({ id: i, at: now() }));
-    photoStr = null;
-  }
+  attDrop(ph);
   removeRec('defects', id);
   if ($('#modal').classList.contains('on')) closeModal(true);
   save();
@@ -10401,20 +10349,8 @@ function dkRender(k) {
 async function dkAdd(k, files) {
   const K = DOCK[k];
   for (const f of files) {
-    if (f.size > 20 * 1048576) {
-      toast(`${f.name}: 20MB를 넘는 파일은 첨부할 수 없습니다`);
-      continue;
-    }
-    try {
-      const data = await fileToURL(f);
-      if (!isFileURL(data)) {
-        toast(`${f.name}: 파일을 읽지 못했습니다`);
-        continue;
-      }
-      K.L.push({ id: uid(), kind: 'doc', name: f.name, mime: f.type || '', size: f.size, data, thumb: '', createdAt: now(), isNew: true });
-    } catch (e) {
-      toast(`${f.name}: 파일을 읽지 못했습니다`);
-    }
+    const r = await attDocRec(f, 20);
+    if (r) K.L.push(r);
   }
   mfDirty = true;
   dkRender(k);
@@ -10446,18 +10382,8 @@ function dkOpen(k, i) {
 function dkCommit(k, n) {
   const K = DOCK[k],
     add = K.L.filter((r) => r.isNew).map(({ isNew, ...r }) => r);
-  if (add.length)
-    photoPut(add)
-      .then(() => {
-        photoStr = null;
-        if (photoDir) syncPhotoFiles(false);
-      })
-      .catch((e) => toast('첨부 파일 저장 실패: ' + e.message));
-  if (K.D.length) {
-    photoDel(K.D).catch(() => {});
-    K.D.forEach((i) => db.deleted.push({ id: i, at: now() }));
-    photoStr = null;
-  }
+  attStore(add, '첨부 파일');
+  attDrop(K.D);
   n[K.field] = K.L.map((r) => r.id);
   if (!n[K.field].length) delete n[K.field];
   K.L.forEach((r) => (r.isNew = false));
@@ -10534,20 +10460,8 @@ function renderConc() {
 }
 async function concAdd(files) {
   for (const f of files) {
-    if (f.size > 15 * 1048576) {
-      toast(`${f.name}: 15MB를 넘는 파일은 첨부할 수 없습니다`);
-      continue;
-    }
-    try {
-      const data = await fileToURL(f);
-      if (!isFileURL(data)) {
-        toast(`${f.name}: 파일을 읽지 못했습니다`);
-        continue;
-      }
-      curConc.push({ id: uid(), kind: 'doc', name: f.name, mime: f.type || '', size: f.size, data, thumb: '', createdAt: now(), isNew: true });
-    } catch (e) {
-      toast(`${f.name}: 파일을 읽지 못했습니다`);
-    }
+    const r = await attDocRec(f, 15);
+    if (r) curConc.push(r);
   }
   mfDirty = true;
   renderConc();
@@ -10590,18 +10504,8 @@ async function docOpenRec(r) {
 }
 function concCommit(n) {
   const add = curConc.filter((r) => r.isNew).map(({ isNew, ...r }) => r);
-  if (add.length)
-    photoPut(add)
-      .then(() => {
-        photoStr = null;
-        if (photoDir) syncPhotoFiles(false);
-      })
-      .catch((e) => toast('문서 저장 실패: ' + e.message));
-  if (curConcDel.length) {
-    photoDel(curConcDel).catch(() => {});
-    curConcDel.forEach((i) => db.deleted.push({ id: i, at: now() }));
-    photoStr = null;
-  }
+  attStore(add, '문서');
+  attDrop(curConcDel);
   n.concDocs = curConc.map((r) => r.id);
   if (!n.concDocs.length) delete n.concDocs;
   curConc.forEach((r) => (r.isNew = false));
@@ -11667,11 +11571,7 @@ async function delNcr(id) {
   if (state.tab !== 'ncr') closeModal(true);
   {
     const docs = ncrDocIds(n);
-    if (docs.length) {
-      photoDel(docs).catch(() => {});
-      docs.forEach((i) => db.deleted.push({ id: i, at: now() }));
-      photoStr = null;
-    }
+    attDrop(docs);
   }
   czUnlinkNcrAll(id);
   removeRec('ncrs', id);
@@ -16862,6 +16762,58 @@ async function photosJSON(metaOnly) {
   const a = await photoList();
   return JSON.stringify(a.map((p) => (metaOnly || phIsPending(p) ? phMeta(p) : p)));
 }
+
+// ── 첨부 공통 부품 — 사진 · 기록 증빙 · NCR 문서 · 특채 문서 · 이슈 기록 파일이 함께 씀 ──
+// 이미지 파일 → 첨부 한 건: 설정의 최대 크기 · 품질로 줄이고 작은 그림(thumb)을 함께 만듦. 못 읽으면 오류를 던짐
+async function attImgRec(f, fallbackName) {
+  const S = db.settings,
+    im = await readImg(f);
+  return {
+    id: uid(),
+    name: f.name || fallbackName || '붙여넣은 이미지.jpg',
+    caption: '',
+    data: shrink(im, num(S.photoMax) || 1600, (num(S.photoQ) || 80) / 100),
+    thumb: shrink(im, 320, 0.7),
+    createdAt: now(),
+    isNew: true,
+  };
+}
+// 문서 파일 → 첨부 한 건 (내용 그대로). 너무 크거나 못 읽으면 안내를 띄우고 null
+async function attDocRec(f, maxMB) {
+  maxMB = maxMB || 20;
+  if (f.size > maxMB * 1048576) {
+    toast(`${f.name}: ${maxMB}MB를 넘는 파일은 첨부할 수 없습니다`);
+    return null;
+  }
+  try {
+    const data = await fileToURL(f);
+    if (!isFileURL(data)) {
+      toast(`${f.name}: 파일을 읽지 못했습니다`);
+      return null;
+    }
+    return { id: uid(), kind: 'doc', name: f.name, mime: f.type || '', size: f.size, data, thumb: '', createdAt: now(), isNew: true };
+  } catch (e) {
+    toast(`${f.name}: 파일을 읽지 못했습니다`);
+    return null;
+  }
+}
+// 새 첨부를 저장소에 넣음 (기다리지 않음 — 실패하면 안내). 사진 폴더를 쓰면 파일도 맞춤
+function attStore(recs, label) {
+  if (!recs.length) return;
+  photoPut(recs)
+    .then(() => {
+      photoStr = null;
+      if (typeof photoDir !== 'undefined' && photoDir) syncPhotoFiles(false);
+    })
+    .catch((e) => toast(`${label} 저장 실패: ` + e.message));
+}
+// 첨부를 저장소에서 지우고 삭제 표시를 남김 (다른 PC 에도 삭제가 전해짐)
+function attDrop(ids) {
+  if (!ids || !ids.length) return;
+  photoDel(ids).catch(() => {});
+  ids.forEach((i) => db.deleted.push({ id: i, at: now() }));
+  photoStr = null;
+}
 /* ================= SQLite 파일 (QIS.sqlite) =================
    지금 데이터를 SQLite DB 파일 하나로 만듦 — DB Browser for SQLite · Excel/Power BI(ODBC)에서 SQL로 조회
    · 원본은 그대로 브라우저 저장소. 이 파일은 읽기용 사본 (백업 폴더가 있으면 자동 백업 때 같이 덮어씀)
@@ -17541,19 +17493,9 @@ async function addPhotoFiles(files) {
     return;
   }
   mfDirty = true;
-  const S = db.settings;
   for (const f of imgs) {
     try {
-      const im = await readImg(f);
-      curPhotos.push({
-        id: uid(),
-        name: f.name || '붙여넣은 이미지.jpg',
-        caption: '',
-        data: shrink(im, num(S.photoMax) || 1600, (num(S.photoQ) || 80) / 100),
-        thumb: shrink(im, 320, 0.7),
-        createdAt: now(),
-        isNew: true,
-      });
+      curPhotos.push(await attImgRec(f));
     } catch (e) {
       toast(e.message);
     }

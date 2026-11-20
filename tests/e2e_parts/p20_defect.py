@@ -49,3 +49,24 @@ def run(c):
     ok("NCR 발행" in r["b"]["route"] and "NCR 발행" in r["b"]["btn"] and "RCA" not in r["b"]["route"], f"불량 등록 창(협력사): NCR 발행 단계는 남음 ({r['b']['route']})")
     ok("RCA" not in r["c"]["route"] and "RCA" not in r["c"]["btn"], f"불량 등록 창(사내): RCA 단추가 없음 ({r['c']['route']} / {r['c']['btn']})")
     ok("FAR 요청" in r["log"] and "RCA" in r["log"] and "FAR" in r["cell"], f"불량 진행 창 · 목록의 후속 조치 칸에는 FAR · RCA 가 그대로 있음 ({r['cell'].strip()[:30]})")
+
+    # 첨부 공통 부품: 불량 사진 · 실행 기록 증빙 · 휴대폰 사진이 같은 모양의 기록을 만듦 (줄인 그림 + 작은 그림) · 특채 문서는 내용 그대로
+    r = A.evaluate("""async()=>{const wait=ms=>window.__settle(ms),q=s=>document.querySelector(s),out={};
+      const bin=atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='),u=new Uint8Array(bin.length);for(let k=0;k<bin.length;k++)u[k]=bin.charCodeAt(k);
+      const png=()=>new File([u],'현장.png',{type:'image/png'}),pdf=new File(['%PDF-1.4'],'특채.pdf',{type:'application/pdf'});
+      const good=r=>!!r&&/^data:image\\//.test(r.data)&&/^data:image\\//.test(r.thumb)&&!!r.id&&!!r.createdAt;
+      const id=db.defects.find(d=>!d.deleted).id;
+      editDefect(id);await wait(400);const n0=curPhotos.length;await addPhotoFiles([png()]);const p=curPhotos[curPhotos.length-1];
+      out.photo={n:curPhotos.length-n0,ok:good(p),name:p.name,isNew:p.isNew===true,dirty:mfDirty};mfDirty=false;closeModal(true);
+      openLog(id);await wait(400);await lgAddFiles([png()]);const lid=tl.draftPh[tl.draftPh.length-1],l=tl.newPh[lid];
+      out.log={ok:good(l),isNew:l&&l.isNew===true,shown:document.querySelectorAll('#logBox .lgph img').length>0};await lgAddFiles([pdf]);out.log.onlyImg=tl.draftPh.length===1;tl.draftPh=[];tl.newPh={};mfDirty=false;closeModal(true);
+      const im=await attImgRec(png(),'사진.jpg');out.rec={keys:Object.keys(im).sort().join(),ok:good(im)};
+      const dc=await attDocRec(pdf,20);out.doc={kind:dc.kind,name:dc.name,mime:dc.mime,size:dc.size,data:/^data:application\\/pdf;base64,/.test(dc.data),thumb:dc.thumb,isNew:dc.isNew};
+      const big=await attDocRec({name:'큰파일.zip',size:21*1048576,type:''},20);out.big=big===null&&/20MB/.test(q('#toast').textContent);
+      const d0=db.deleted.length;attDrop([]);const d1=db.deleted.length;attDrop(['zz-none']);out.drop=d1===d0&&db.deleted.length===d0+1&&db.deleted[db.deleted.length-1].id==='zz-none';db.deleted.pop();
+      return out}""".replace("\\\\", "\\"))
+    ok(r["photo"]["n"] == 1 and r["photo"]["ok"] and r["photo"]["name"] == "현장.png" and r["photo"]["isNew"] and r["photo"]["dirty"], f"불량 사진 추가: 줄인 그림 + 작은 그림 ({r['photo']})")
+    ok(r["log"]["ok"] and r["log"]["isNew"] and r["log"]["shown"] and r["log"]["onlyImg"], f"실행 기록 증빙: 이미지만 받음 · 바로 보임 ({r['log']})")
+    ok(r["rec"]["ok"] and r["rec"]["keys"] == "caption,createdAt,data,id,isNew,name,thumb", f"첨부 공통 부품(이미지): 기록 모양 ({r['rec']['keys']})")
+    ok(r["doc"] == {"kind": "doc", "name": "특채.pdf", "mime": "application/pdf", "size": 8, "data": True, "thumb": "", "isNew": True}, f"첨부 공통 부품(문서): 내용 그대로 ({r['doc']})")
+    ok(r["big"] and r["drop"], "첨부 공통 부품: 20MB 넘으면 거절 · 지울 때 삭제 표시를 남김")

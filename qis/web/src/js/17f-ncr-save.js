@@ -460,11 +460,7 @@ async function delNcr(id) {
   if (state.tab !== 'ncr') closeModal(true);
   {
     const docs = ncrDocIds(n);
-    if (docs.length) {
-      photoDel(docs).catch(() => {});
-      docs.forEach((i) => db.deleted.push({ id: i, at: now() }));
-      photoStr = null;
-    }
+    attDrop(docs);
   }
   czUnlinkNcrAll(id);
   removeRec('ncrs', id);

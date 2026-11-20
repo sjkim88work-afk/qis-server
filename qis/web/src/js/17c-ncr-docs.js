@@ -41,20 +41,8 @@ function dkRender(k) {
 async function dkAdd(k, files) {
   const K = DOCK[k];
   for (const f of files) {
-    if (f.size > 20 * 1048576) {
-      toast(`${f.name}: 20MB를 넘는 파일은 첨부할 수 없습니다`);
-      continue;
-    }
-    try {
-      const data = await fileToURL(f);
-      if (!isFileURL(data)) {
-        toast(`${f.name}: 파일을 읽지 못했습니다`);
-        continue;
-      }
-      K.L.push({ id: uid(), kind: 'doc', name: f.name, mime: f.type || '', size: f.size, data, thumb: '', createdAt: now(), isNew: true });
-    } catch (e) {
-      toast(`${f.name}: 파일을 읽지 못했습니다`);
-    }
+    const r = await attDocRec(f, 20);
+    if (r) K.L.push(r);
   }
   mfDirty = true;
   dkRender(k);
@@ -86,18 +74,8 @@ function dkOpen(k, i) {
 function dkCommit(k, n) {
   const K = DOCK[k],
     add = K.L.filter((r) => r.isNew).map(({ isNew, ...r }) => r);
-  if (add.length)
-    photoPut(add)
-      .then(() => {
-        photoStr = null;
-        if (photoDir) syncPhotoFiles(false);
-      })
-      .catch((e) => toast('첨부 파일 저장 실패: ' + e.message));
-  if (K.D.length) {
-    photoDel(K.D).catch(() => {});
-    K.D.forEach((i) => db.deleted.push({ id: i, at: now() }));
-    photoStr = null;
-  }
+  attStore(add, '첨부 파일');
+  attDrop(K.D);
   n[K.field] = K.L.map((r) => r.id);
   if (!n[K.field].length) delete n[K.field];
   K.L.forEach((r) => (r.isNew = false));
@@ -174,20 +152,8 @@ function renderConc() {
 }
 async function concAdd(files) {
   for (const f of files) {
-    if (f.size > 15 * 1048576) {
-      toast(`${f.name}: 15MB를 넘는 파일은 첨부할 수 없습니다`);
-      continue;
-    }
-    try {
-      const data = await fileToURL(f);
-      if (!isFileURL(data)) {
-        toast(`${f.name}: 파일을 읽지 못했습니다`);
-        continue;
-      }
-      curConc.push({ id: uid(), kind: 'doc', name: f.name, mime: f.type || '', size: f.size, data, thumb: '', createdAt: now(), isNew: true });
-    } catch (e) {
-      toast(`${f.name}: 파일을 읽지 못했습니다`);
-    }
+    const r = await attDocRec(f, 15);
+    if (r) curConc.push(r);
   }
   mfDirty = true;
   renderConc();
@@ -230,18 +196,8 @@ async function docOpenRec(r) {
 }
 function concCommit(n) {
   const add = curConc.filter((r) => r.isNew).map(({ isNew, ...r }) => r);
-  if (add.length)
-    photoPut(add)
-      .then(() => {
-        photoStr = null;
-        if (photoDir) syncPhotoFiles(false);
-      })
-      .catch((e) => toast('문서 저장 실패: ' + e.message));
-  if (curConcDel.length) {
-    photoDel(curConcDel).catch(() => {});
-    curConcDel.forEach((i) => db.deleted.push({ id: i, at: now() }));
-    photoStr = null;
-  }
+  attStore(add, '문서');
+  attDrop(curConcDel);
   n.concDocs = curConc.map((r) => r.id);
   if (!n.concDocs.length) delete n.concDocs;
   curConc.forEach((r) => (r.isNew = false));

@@ -162,18 +162,10 @@ function mobSev() {
 async function mobAddPhotos(inp) {
   const fs = [...inp.files].filter((f) => f.type.startsWith('image/'));
   inp.value = '';
-  const S = db.settings;
   for (const f of fs) {
     try {
-      const im = await readImg(f);
-      mob.photos.push({
-        id: uid(),
-        name: f.name || '사진.jpg',
-        caption: '',
-        data: shrink(im, num(S.photoMax) || 1600, (num(S.photoQ) || 80) / 100),
-        thumb: shrink(im, 320, 0.7),
-        createdAt: now(),
-      });
+      const { isNew, ...r } = await attImgRec(f, '사진.jpg');
+      mob.photos.push(r);
     } catch (e) {
       toast(e.message);
     }

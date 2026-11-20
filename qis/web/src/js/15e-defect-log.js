@@ -220,19 +220,9 @@ async function lgAddFiles(files, target) {
     if (files.length) toast('이미지 파일만 첨부할 수 있습니다 (메일·문서는 화면 캡처로 첨부)');
     return;
   }
-  const S = db.settings;
   for (const f of imgs) {
     try {
-      const im = await readImg(f);
-      const r = {
-        id: uid(),
-        name: f.name || '붙여넣은 이미지.jpg',
-        caption: '',
-        data: shrink(im, num(S.photoMax) || 1600, (num(S.photoQ) || 80) / 100),
-        thumb: shrink(im, 320, 0.7),
-        createdAt: now(),
-        isNew: true,
-      };
+      const r = await attImgRec(f);
       tl.newPh[r.id] = r;
       (target === 'edit' ? tl.editPh : tl.draftPh).push(r.id);
     } catch (e) {
