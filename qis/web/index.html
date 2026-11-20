@@ -6447,6 +6447,7 @@ function renderDash() {
     }
   </div>`;
 }
+// ── 불량 — 목록 (조건 · 후속 조치 칸 · 표) ──
 /* ================= 불량 관리 ================= */
 function filteredDefects() {
   const f = state.df,
@@ -6667,7 +6668,7 @@ function refreshDT() {
     if (own) sevMemo = null;
   }
 }
-
+// ── 불량 — 등록 · 수정 창 (화면) ──
 function editDefect(id, copy, preset) {
   const S = db.settings;
   if (!preset) issPend = null;
@@ -6834,6 +6835,7 @@ function editDefect(id, copy, preset) {
   respChanged(true);
 }
 const FAR_PH_MAX = 6;
+// ── FAR(귀책 조사) — 목록 · 요청/회신/판정 창 · 저장 ──
 function invPhotoIds(d) {
   return [...new Set([...(d.photos || []), ...(d.logs || []).filter((l) => !l.void).flatMap((l) => l.photos || [])])];
 }
@@ -7216,6 +7218,7 @@ function saveInv(id, keep) {
   return true;
 }
 let icaCurId = null;
+// ── 사내 대책 — 창 · 저장 · 출력 / FAR 요청서 출력 / 불량 창 안의 칸 연동 ──
 function editIca(id) {
   const d = db.defects.find((x) => x.id === id);
   if (!d) return;
@@ -7512,6 +7515,7 @@ const LOG_CLS = {
 const lastLog = (d) => (d.logs || []).slice().sort(lgCmpDesc)[0];
 const defLabel = (d) => `${d.date} ${d.partName || d.partNo || (d.fgName || d.fgNo ? '[완성품] ' + (d.fgName || d.fgNo) : '')}`;
 const ncrOfDefect = (d) => (d.ncrId ? db.ncrs.find((n) => n.id === d.ncrId) : null);
+// ── 불량 · NCR 실행 기록 — 자동 이벤트 · 기록 작성/수정/취소 · 출력 · 불량 진행 창 ──
 function autoEvents(d, n, lbl) {
   const E = [],
     add = (date, text, src) => {
@@ -8245,6 +8249,7 @@ let curCosts = [],
   curClaim = {},
   costCtx = null,
   curBase = {};
+// ── 불량 — 실패비용 · 구상 칸 ──
 function costInit(d, inForm) {
   curCosts = JSON.parse(JSON.stringify(d.costs || []));
   curClaim = JSON.parse(JSON.stringify(d.claim || {}));
@@ -8531,6 +8536,7 @@ function openCost(id) {
   );
   costInit(d, false);
 }
+// ── 불량 — 심각도 칸 · 품번 찾기 · 저장 · 삭제 · CSV ──
 function sevDraft() {
   const f = $('#mf');
   const o = {
@@ -9667,6 +9673,7 @@ function impCommit() {
   toast(`${rs.length}건 등록 완료${nNew ? ` · 새 협력사 ${nNew}곳` : ''}${nRec ? ` · NCR 권고 ${nRec}건 (대시보드 확인)` : ''}`);
   offerUndo(snap, `엑셀로 불량 ${rs.length}건을 등록했습니다`);
 }
+// ── NCR — 발행 시작 · 목록 (통보 · 독촉 · 회신 접수 · 표) ──
 /* ================= NCR / 8D ================= */
 let curLinks = [];
 async function ncrFromDefect(id, extra = []) {
@@ -10078,6 +10085,7 @@ function renderNcr() {
   <div class="help" style="margin-top:8px">기준: 협력사 통보일 = 대책 요청일 (통보 전에는 회신 지연을 따지지 않고, 발행 후 ${NOTIFY_GRACE}일 넘게 미통보면 ‘통보 지연’) · 요청 후 D3 봉쇄 ${num(S.d3Days) || 1}일 · 8D ${num(S.reply8D) || 7}일 / 간이 ${num(S.replySimple) || 5}일 내 대책서 회신 · 발행 후 D+${S.verifyDays} 내 유효성 검증. 상태는 입력한 날짜·판정으로 자동 결정됩니다 (회신일 입력 → 대책서 검토, 타당성 ‘적정’ → 승인(검증대기), 검증일+결과 ‘유효’ → 종결).</div></div>
   <div class="card" id="ntab">${ncrTable()}</div>`;
 }
+// ── NCR — 창 (화면) ──
 function editNcr(id, preset, mode) {
   const S = db.settings;
   const n = id ? { ...db.ncrs.find((x) => x.id === id) } : { issueDate: today(), owner: S.owners[0] || '', ...(preset || {}) };
@@ -10350,6 +10358,7 @@ const DOCK = {
   notice: { field: 'noticeDocs', box: 'noticeBox', add: '+ 발송한 통보서 첨부', L: [], D: [] },
   reply: { field: 'replyDocs', box: 'replyBox', add: '+ 대책서 파일 첨부', L: [], D: [] },
 };
+// ── NCR — 첨부 문서 (통보서 · 대책서 · 특채 문서) ──
 function dkInit(k, ids) {
   const K = DOCK[k];
   K.L = [];
@@ -10615,6 +10624,7 @@ const NCR_MODES = {
 let ncrModeCur = 'issue',
   ncrCurId = null,
   ncrCurNo = '';
+// ── NCR — 창의 탭 · 단계 화면 · 요구 유형 · 대책서 평가 ──
 // solo: 목록의 단추(발행 정보 · 회신 · 검증)로 단계를 골라 연 창 — 그 단계만 보이고, 단계 전환 줄은 넣지 않음
 function ncrTabsBar(id, n, solo) {
   const fl = id ? ncrFlags(n) : {},
@@ -10963,6 +10973,7 @@ const FAR_ITEMS = ['외관 관찰', '치수 측정', '파단면·단면 분석',
 const FAR_VERDICT = ['협력사 귀책 인정', '귀책 불인정', '원인 불명·재현 안 됨', '추가 분석 필요'];
 const FAR_REVIEW = ['수용', '재분석 요청', '반박 자료 준비'];
 const farOn = (n) => !!(n && n.far && n.far.reqDate);
+// ── NCR — FAR 맞춤 · D3 봉쇄 · 검증 LOT · 재고 ──
 function farState(n) {
   if (!farOn(n)) return '';
   const f = n.far;
@@ -11194,6 +11205,7 @@ function renderStock() {
       )
       .join('')}</tbody></table>`;
 }
+// ── NCR — 작성 양식 · 기본값 · 연결 불량 · 저장 · 삭제 · 8D 출력 · CSV ──
 // 불량 내용 서술의 작성 양식 (발행 근거 ‘불량’) — 연결 불량의 내용으로 채움. 새 NCR 에는 기본으로 들어감
 function descTplDefect(d, lot) {
   const fg =
@@ -18037,8 +18049,8 @@ function modalFoot(btns) {
 }
 function openModal(title, body, btns) {
   delete $('#modal').dataset.iss; // 이슈 상세 창 표시 (11-issue.js issShow 가 다시 붙임)
-  delete $('#modal').dataset.inv; // FAR 창의 단계 표시 (15-defect.js editInv 가 다시 붙임)
-  delete $('#modal').dataset.cz; // RCA 상세 창 표시 (27-rca-8d.js czShow 가 다시 붙임)
+  delete $('#modal').dataset.inv; // FAR 창의 단계 표시 (15c-far.js editInv 가 다시 붙임)
+  delete $('#modal').dataset.cz; // RCA 상세 창 표시 (27c-rca-views.js czShow 가 다시 붙임)
   $('#mt').textContent = title;
   $('#mbody').innerHTML = `<form id="mf" onsubmit="return false">${body}</form>`;
   modalFoot(btns);
@@ -18097,6 +18109,7 @@ window.addEventListener('storage', (e) => {
     toast('다른 탭에서 변경된 내용을 불러왔습니다');
   }
 });
+// ── RCA — 항목 정의 · 단계 · 게이트 ──
 /* ================= RCA · 사내 8D =================
    Case · Action · 단계 게이트(IATF) · 원인분석 워크시트
    부품·협력사·불량유형·담당자는 개인 QMS 기준정보를 그대로 씁니다.
@@ -18620,6 +18633,7 @@ const GUIDE = [
   ['왜 못 걸렀나', 'eta'],
 ];
 let anaSeq = 0;
+// ── RCA — 원인분석 도구 (5Why · FTA · 워크시트) ──
 function blankAna(key) {
   const r5 = () => ['', '', '', '', ''];
   const D = {
@@ -19206,6 +19220,7 @@ function czFkey(el) {
       .join('') + (el.type === 'checkbox' ? `[value="${CSS.escape(el.value)}"]` : '')
   );
 }
+// ── RCA — 창 · 목록 · 상세 화면 · 귀책 결론 · 조치 · 이력 ──
 function czSoft() {
   if (czMouse) {
     czPending = true;
@@ -20062,6 +20077,7 @@ function czViewActions() {
 }
 
 /* ---------- 생성 · 수정 ---------- */
+// ── RCA — 만들기 · 값 저장 · 단계 이동 · 불량/NCR 연결 · 동기화 ──
 function czCreateCase(d) {
   const c = Object.assign(
     {
@@ -20594,6 +20610,7 @@ const czCaseBadge = (o) => {
     ? `<a class="bg ${czOpen(c) ? 'inf' : 'ok'}" style="cursor:pointer;font-size:10.5px" onclick="czOpenCase('${c.id}')" title="${esc(c.Title)} · ${esc(c.Stage)}">RCA ${esc(c.CaseNo)}</a>`
     : '';
 };
+// ── RCA — 대시보드 항목 · 보고서 · CSV ──
 function czDashItems() {
   const t = today(),
     open = db.cases.filter((c) => c.Status === '진행중' || c.Status === '보류'),

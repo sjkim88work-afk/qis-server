@@ -130,7 +130,7 @@ def take(out_path):
                 shot("part:edit", f"()=>editPart('{pid}')", 450); pg.evaluate(close)
                 shot("part:new", "()=>editPart()", 450); pg.evaluate(close)
                 shot("receipts", "()=>{go('sup');editReceipts()}", 450); pg.evaluate(close)
-                for fn in ("openImport", "openMasterImport", "openBomImport", "openRcvImport", "showUsage"):
+                for fn in ("openImport", "openBomImport", "openRcvImport", "showUsage"):
                     shot(f"win:{fn}", f"()=>{fn}()", 450); pg.evaluate(close)
                 # 휴대폰 화면
                 pg.evaluate("()=>go('dash')")
