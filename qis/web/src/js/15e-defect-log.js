@@ -118,6 +118,24 @@ function caseReadonly(kind, obj) {
     ...ds.flatMap((d) => [...autoEvents(d, null, defLabel(d)), ...(d.logs || []).map((l) => ({ ...l, src: defLabel(d), ro: true, _did: d.id }))]),
   ];
 }
+// 기록 창에 함께 보이는 읽기 전용 기록 — 한 건의 흐름(이슈 → 불량 → NCR)을 이어서 봄
+//   불량 · NCR 창: 자동 기록 + 서로의 기록(caseReadonly) + 이 건이 나온 이슈의 기록
+//   이슈 창: 이 이슈에서 만든 불량 · NCR 의 자동 기록과 실행 기록
+// 보고서 · ‘마지막 진행’ 계산(caseEntries)에는 넣지 않음 — 화면과 기록 출력에서만 이어 보임
+function tlReadonly() {
+  const o = tl.obj;
+  if (!o) return [];
+  if (tl.kind === 'issue') {
+    const L = issLinks(o);
+    return [
+      ...L.ds.flatMap((d) => [...autoEvents(d, null, defLabel(d)), ...(d.logs || []).map((l) => ({ ...l, src: defLabel(d), ro: true }))]),
+      ...L.ns.flatMap((n) => [...autoEvents(null, n), ...(n.logs || []).map((l) => ({ ...l, src: n.no, ro: true }))]),
+    ];
+  }
+  const ds = tl.kind === 'defect' ? [o] : (o.defectIds || []).map((i) => db.defects.find((d) => d.id === i)).filter(Boolean);
+  const iss = [...new Set(ds.map((d) => d.issueId).filter(Boolean))].map(issById).filter(Boolean);
+  return [...caseReadonly(tl.kind, o), ...iss.flatMap((i) => (i.logs || []).map(logNorm).map((l) => ({ ...l, src: `이슈 ${i.no}`, ro: true })))];
+}
 function caseEntries(kind, obj) {
   return [...(obj.logs || []), ...caseReadonly(kind, obj)];
 }
@@ -227,7 +245,7 @@ function tlPersist(msg) {
   return true;
 }
 async function tlLoadThumbs() {
-  const ids = [...tl.own, ...caseReadonly(tl.kind, tl.obj)].flatMap((l) => l.photos || []).filter((i) => !phCache[i] && !tl.newPh[i]);
+  const ids = [...tl.own, ...tlReadonly()].flatMap((l) => l.photos || []).filter((i) => !phCache[i] && !tl.newPh[i]);
   if (!ids.length) return;
   try {
     (await photoGetMany(ids)).forEach((r) => {
@@ -296,7 +314,7 @@ function lgOpenDoc(id) {
   if (r) docOpenRec(r);
 }
 function lgViewPh(id) {
-  const all = [...new Set([...tl.own, ...caseReadonly(tl.kind, tl.obj)].flatMap((l) => l.photos || []).concat(tl.draftPh, tl.editPh || []))]
+  const all = [...new Set([...tl.own, ...tlReadonly()].flatMap((l) => l.photos || []).concat(tl.draftPh, tl.editPh || []))]
     .map(phRec)
     .filter((r) => r && !isDocRec(r));
   const i = all.findIndex((r) => r.id === id);
@@ -330,7 +348,7 @@ function lgPartyList() {
 }
 function renderLogsInner(b) {
   const ownL = tl.own.map((x, i) => ({ ...x, _i: i }));
-  let L = [...ownL, ...caseReadonly(tl.kind, tl.obj)];
+  let L = [...ownL, ...tlReadonly()];
   if (tl.hideAuto) L = L.filter((e) => !e.auto);
   L.sort(lgCmpDesc);
   // 같은 날 직접 쓴 기록이 2건 이상이면 ▲▼로 순서를 바꿀 수 있음 (화면은 최근 것이 위)
@@ -676,7 +694,7 @@ async function lgPrint() {
   const w = reportWin(),
     o = tl.obj,
     isN = tl.kind === 'ncr' || tl.kind === 'issue'; // 번호(no)가 있는 문서
-  const L = [...tl.own.filter((x) => !x._new), ...caseReadonly(tl.kind, o)].sort((a, c) => lgCmpDesc(c, a));
+  const L = [...tl.own.filter((x) => !x._new), ...tlReadonly()].sort((a, c) => lgCmpDesc(c, a));
   const ids = [...new Set(L.flatMap((l) => l.photos || []))];
   let P = {};
   try {
@@ -775,7 +793,7 @@ function openLog(id) {
         claimStatus(d) ? ` <span class="bg ${CLAIM_CLS[claimStatus(d)]}">구상 ${claimStatus(d)}</span>` : ''
       }</div></div>
     ${routeHTML(d)}
-    <div class="sec">조사 · 진행 기록 <span class="muted" style="font-weight:normal;font-size:12px">— 실제로 한 일과 결과만 남기는 증빙용 기록 · NCR·대책서·구상 진행(자동)이 함께 표시</span></div>
+    <div class="sec">조사 · 진행 기록 <span class="muted" style="font-weight:normal;font-size:12px">— 실제로 한 일과 결과만 남기는 증빙용 기록 · 이슈 기록 · NCR·대책서·구상 진행(자동)이 함께 표시</span></div>
       <div id="logBox"></div>`,
     [
       ...(a3ReadyDefect(d) ? [{ label: 'A3 보고서', fn: () => a3Report('defect', id) }] : []),

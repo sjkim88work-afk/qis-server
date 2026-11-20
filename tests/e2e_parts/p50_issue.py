@@ -146,4 +146,21 @@ def run(c):
     ok(a_["hist"] == [{"at": "2026-11-06T10:00", "by": "김", "reason": "오타", "date": "2026-11-05", "time": "", "band": "오후", "kind": "회의", "party": "생산", "method": "", "text": "예전 기룩", "result": "", "photos": []}] and a_["void"]["reason"] == "중복", "예전 이슈 기록 → 수정 이력(원문 · 사유) · 취소 사유를 그대로 가져옴")
     ok(r["b"]["date"] == "2026-11-05" and r["b"]["band"] == "야간" and r["b"]["sys"] is True and r["same"], "프로그램이 남긴 기록은 표시(sys) · 이미 공통 구조면 그대로 (여러 번 해도 같음)")
     ok(r["mig"] == "2026-11-05|생산팀|예전 기록;2026-11-08||새 구조", f"데이터를 열 때 이슈 기록을 공통 구조로 맞춤 ({r['mig']})")
+    # 기록 이어 보기: 불량 진행 창에 그 불량이 나온 이슈의 기록 · 이슈 창에 그 이슈에서 만든 불량의 기록 (읽기 전용)
+    r = A.evaluate("""async()=>{const wait=ms=>window.__settle(ms),o={};mfDirty=false;closeModal(true);
+      const i={id:'lnk1',no:'ISS-LNK',title:'이어 보기',at:'2026-11-10T09:00',urg:'보통',logs:[],photos:[],defectIds:['lnkd'],caseIds:[],createdAt:now()};issLog(i,'발견','이슈에서 쓴 기록',{at:i.at});db.issues.push(i);
+      const d={id:'lnkd',date:'2026-11-11',source:'공정',partNo:'P-1',type:'치수',qty:2,resp:'협력사',issueId:'lnk1',photos:[],logs:[{id:'dl1',date:'2026-11-12',kind:LOG_KINDS[0],party:'',method:'',text:'불량에서 쓴 기록',result:'',photos:[],by:'',at:now()}]};db.defects.push(d);
+      const li=t=>[...document.querySelectorAll('#modal ul.logs li')].find(e=>e.textContent.includes(t));
+      openLog('lnkd');await wait(350);const a=li('이슈에서 쓴 기록');
+      o.def={shown:!!a,src:a?/이슈 ISS-LNK/.test(a.querySelector('.lh').textContent):false,acts:a?a.querySelectorAll('a.lk').length:-1,ro:a?/원본에서 수정/.test(a.textContent):false,own:li('불량에서 쓴 기록').querySelectorAll('a.lk').length,
+        order:[...document.querySelectorAll('#modal ul.logs li:not(.au) .lt')].map(e=>e.textContent.trim()).join('>')};
+      o.report=caseEntries('defect',d).some(e=>e.text==='이슈에서 쓴 기록');mfDirty=false;closeModal(true);
+      go('issue');issOpen('lnk1');await wait(350);const b=li('불량에서 쓴 기록');
+      o.iss={shown:!!b,acts:b?b.querySelectorAll('a.lk').length:-1,src:b?b.querySelector('.lh').textContent.includes('P-1'):false,auto:[...document.querySelectorAll('#modal ul.logs li.au')].some(e=>/불량 등록/.test(e.textContent)),own:li('이슈에서 쓴 기록').querySelectorAll('a.lk').length};
+      document.querySelector('#modal .lgh input[type=checkbox]').click();await wait(150);o.hide=document.querySelectorAll('#modal ul.logs li.au').length;tl.hideAuto=false;
+      mfDirty=false;closeModal(true);db.issues=db.issues.filter(x=>x.id!=='lnk1');db.defects=db.defects.filter(x=>x.id!=='lnkd');go('dash');return o}""")
+    ok(r["def"]["shown"] and r["def"]["src"] and r["def"]["acts"] == 0 and r["def"]["ro"] and r["def"]["own"] >= 2, f"불량 진행 창: 이슈의 기록이 ‘이슈 ISS-LNK’ 표시와 함께 읽기 전용으로 보임 ({r['def']})")
+    ok(r["def"]["order"] == "불량에서 쓴 기록>이슈에서 쓴 기록", f"이슈 기록과 불량 기록이 한 줄로 이어짐 — 최근 것이 위 ({r['def']['order']})")
+    ok(not r["report"], "보고서 · 마지막 진행 계산에는 이슈 기록을 넣지 않음 (화면 · 기록 출력에서만 이어 보임)")
+    ok(r["iss"]["shown"] and r["iss"]["acts"] == 0 and r["iss"]["src"] and r["iss"]["auto"] and r["iss"]["own"] >= 2 and r["hide"] == 0, f"이슈 창: 이 이슈에서 만든 불량의 기록 · 자동 기록이 읽기 전용으로 보임 · 자동 기록 숨기기 ({r['iss']})")
     ok(not A._errs, f"이슈 기록 첨부: 화면 오류 없음 {A._errs[:2]}")

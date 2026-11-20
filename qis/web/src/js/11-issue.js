@@ -464,7 +464,7 @@ function issDetailHTML(i) {
     <div id="issPh" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px"></div>
   </div>
   <div style="display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start">
-    <div class="card" style="flex:999 1 520px;min-width:0"><h3 style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap"><span style="white-space:nowrap">기록</span><span class="muted" style="font-weight:normal;font-size:12px;flex:1 1 200px">발견부터 분류까지 한 일 — 최근 것이 위. 내용은 수정할 수 있고(수정 이력이 남음), 잘못 쓴 기록은 사유와 함께 취소 처리</span></h3>
+    <div class="card" style="flex:999 1 520px;min-width:0"><h3 style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap"><span style="white-space:nowrap">기록</span><span class="muted" style="font-weight:normal;font-size:12px;flex:1 1 200px">발견부터 종결까지 한 일 — 최근 것이 위. 이 이슈에서 만든 불량 · NCR 의 기록도 함께 보입니다</span></h3>
       <div id="logBox"></div>
     </div>
     <div style="flex:1 1 380px;min-width:0;display:flex;flex-direction:column;gap:14px">
