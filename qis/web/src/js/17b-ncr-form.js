@@ -37,7 +37,7 @@ function editNcr(id, preset, mode) {
     .map(sevOf)
     .sort((a, b) => 'ABC'.indexOf(a.grade) - 'ABC'.indexOf(b.grade) || b.score - a.score)[0];
   curNcrSev = sevD || null;
-  const body = `${id ? ncrTrack(n) : ''}${
+  const body = `${id ? ncrTrack(n, !mode) : ''}${
     sevD
       ? `<div class="banner" style="background:${
           sevD.grade === 'A' ? 'var(--badb)' : sevD.grade === 'B' ? 'var(--warnb)' : 'var(--mut)'
@@ -103,7 +103,7 @@ function editNcr(id, preset, mode) {
   </div>
 <div class="ntp" data-p="t">
   <div class="sec">협력사 통보 <span class="muted" style="font-weight:normal;font-size:12px">통보서를 실제로 보낸 날 — 넣으면 대책 요청일 · 회신 기한이 통보일 기준으로 맞춰집니다</span></div>
-  <div class="help" style="margin:0 0 8px">순서: ① 발행 정보 → ② 통보서 내용 → 창 아래 ‘저장 후 통보서 출력’으로 통보서를 보냄 → 여기에 통보일 · 방법을 기록하고 보낸 파일을 첨부</div>
+  <div class="help" style="margin:0 0 8px">순서: 발행 정보 → 통보서 내용 → 창 아래 ‘저장 후 통보서 출력’으로 통보서를 보냄 → 여기에 통보일 · 방법을 기록하고 보낸 파일을 첨부</div>
   <div class="fg">
     <label>통보 여부<select name="notifyYN" onchange="ncrNotify('yn')">${opts(['미통보', '통보 완료'], ncrNotified(n) ? '통보 완료' : '미통보')}</select></label>
     <label>통보일<input type="date" name="notifyDate" value="${esc(n.notifyDate || '')}" data-prev="${esc(n.notifyDate || '')}" onchange="ncrNotify('date')"></label>

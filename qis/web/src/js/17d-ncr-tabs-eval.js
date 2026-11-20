@@ -1,28 +1,16 @@
 // ── NCR — 창의 탭 · 단계 화면 · 요구 유형 · 대책서 평가 ──
 // solo: 목록의 단추(발행 정보 · 회신 · 검증)로 단계를 골라 연 창 — 그 단계만 보이고, 단계 전환 줄은 넣지 않음
-function ncrTabsBar(id, n, solo) {
+function ncrTabsBar(id, n) {
   const fl = id ? ncrFlags(n) : {},
-    dot = { reply: fl.d3Late || fl.replyLate, verify: fl.verifyLate };
-  const lg = (n.logs || []).length;
-  const modes =
-    id && !solo
-      ? `<div class="nmodes" id="ncrModes" role="tablist" aria-label="NCR 화면">${Object.entries(NCR_MODES)
-          .map(
-            ([k, m]) =>
-              `<button type="button" data-m="${k}" onclick="ncrMode('${k}')">${m.l}${dot[k] ? '<i class="tdot" title="기한 경과"></i>' : ''}</button>`,
-          )
-          .join('')}</div>`
-      : '';
+    lg = (n.logs || []).length;
   const dotT = { t: id && notifyLate(n), r: fl.replyLate, b: fl.d3Late, c: fl.verifyLate };
-  return (
-    modes +
-    `<div class="dtabs" id="ncrTabs" role="tablist">${NCR_TABS.map(
-      ([k, l]) =>
-        `<button type="button" role="tab" data-t="${k}" onclick="ncrTab('${k}')">${l}${
-          k === 'd' && lg ? ` <span class="mono" style="opacity:.7">${lg}</span>` : ''
-        }${dotT[k] ? '<i class="tdot" title="기한 경과"></i>' : ''}</button>`,
-    ).join('')}</div>`
-  );
+  // 단계 전환은 창 위쪽의 단계 줄(ncrTrack nav)이 맡음 — 여기는 그 단계 안의 탭만
+  return `<div class="dtabs" id="ncrTabs" role="tablist">${NCR_TABS.map(
+    ([k, l]) =>
+      `<button type="button" role="tab" data-t="${k}" onclick="ncrTab('${k}')">${l}${
+        k === 'd' && lg ? ` <span class="mono" style="opacity:.7">${lg}</span>` : ''
+      }${dotT[k] ? '<i class="tdot" title="기한 경과"></i>' : ''}</button>`,
+  ).join('')}</div>`;
 }
 function ncrModeDefault(n, id) {
   if (!id) return 'issue';
@@ -40,10 +28,11 @@ function ncrMode(m, tab) {
   ncrModeCur = m;
   const M = NCR_MODES[m],
     tabs = M.tabs.filter((k) => k !== 'd' || ncrCurId);
+  const nav = $('#ncrNav'); // 단계 줄이 있으면 ‘진행 기록’은 그 줄의 단추로 엶 (탭 줄에서는 뺌)
   document.querySelectorAll('#ncrTabs [data-t]').forEach((b) => {
-    b.style.display = tabs.includes(b.dataset.t) ? '' : 'none';
+    b.style.display = tabs.includes(b.dataset.t) && !(nav && b.dataset.t === 'd') ? '' : 'none';
   });
-  document.querySelectorAll('#ncrModes [data-m]').forEach((b) => b.setAttribute('aria-selected', b.dataset.m === m ? 'true' : 'false'));
+  document.querySelectorAll('#ncrNav [data-m]').forEach((b) => b.setAttribute('aria-current', b.dataset.m === m ? 'step' : 'false'));
   const mt = $('#mt');
   if (mt && ncrCurId) {
     const st = mt.querySelector('.qstamp');
@@ -104,7 +93,7 @@ function ncrTab(k, fromMode) {
   f.querySelectorAll('.ntp').forEach((el) => {
     el.hidden = el.dataset.p !== k;
   });
-  document.querySelectorAll('#ncrTabs [data-t]').forEach((b) => b.setAttribute('aria-selected', b.dataset.t === k ? 'true' : 'false'));
+  document.querySelectorAll('#ncrTabs [data-t], #ncrNav .qlog').forEach((b) => b.setAttribute('aria-selected', b.dataset.t === k ? 'true' : 'false'));
   const mb = $('#mbody');
   if (mb) {
     const t = $('#ncrTabs');
@@ -144,8 +133,13 @@ function applyReqType(changed) {
     if (ev) ev.style.display = info ? 'none' : '';
   }
   {
-    const mb = document.querySelector('#ncrModes [data-m="reply"]');
-    if (mb) mb.style.display = info ? 'none' : '';
+    // 요구 유형을 바꾸면 단계 줄을 다시 그림 (단순 통보는 회신 · 검증 단계가 없음)
+    const nv = $('#ncrNav'),
+      n0 = ncrCurId && db.ncrs.find((x) => x.id === ncrCurId);
+    if (nv && n0 && changed) {
+      nv.outerHTML = ncrTrack({ ...n0, reqType: t }, true);
+      document.querySelectorAll('#ncrNav [data-m]').forEach((b) => b.setAttribute('aria-current', b.dataset.m === ncrModeCur ? 'step' : 'false'));
+    }
     if (info && ncrModeCur === 'reply') ncrMode('issue');
   }
   {
