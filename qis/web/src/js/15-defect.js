@@ -101,8 +101,7 @@ function editDefect(id,copy,preset){
     <label class="row" style="flex-direction:row;align-items:center;gap:6px;margin-top:16px"><input type="checkbox" name="closedChk" ${d.closed?'checked':''} onchange="$('#closeRsn').style.display=this.checked?'':'none'"> 수동 종결 (예외)</label>
     <label class="full" id="closeRsn" style="${d.closed?'':'display:none'}">수동 종결 사유 (필수 · 진행 기록에 남습니다)<input name="closedReason" value="${esc(d.closed?.reason)}" placeholder="예: 중복 등록, 고객 특채 확정, 오판정 확인 등"></label>
   </div>
-  <div class="help" style="margin-top:6px">진행 단계는 자동으로 정해집니다 — 귀책 <b>미정</b>이면 FAR·RCA 조사 후 판정, <b>협력사</b>(A·B)는 NCR → 대책서 승인 시 완료, <b>사내</b>는 사내 대책(A: 8D · B: 간이) 완료 시 완료, <b>공동</b>은 분담 비율 입력 후 처리 완료일로 완료, 그 밖(C등급·고객 귀책)은 <b>처리 완료일</b> 입력 시 완료. 유효성 검증은 완료와 별도로 표시됩니다.</div>
-  ${invSummary(d,id)}
+  <div class="help" style="margin-top:6px">진행 단계는 자동으로 정해집니다 — 귀책 <b>미정</b>이면 FAR 화면에서 판정, <b>협력사</b>(A·B)는 NCR → 대책서 승인 시 완료, <b>사내</b>는 사내 대책(A: 8D · B: 간이) 완료 시 완료, <b>공동</b>은 분담 비율 입력 후 처리 완료일로 완료, 그 밖(C등급·고객 귀책)은 <b>처리 완료일</b> 입력 시 완료. 유효성 검증은 완료와 별도로 표시됩니다.</div>
   ${id?(()=>{const n=(d.logs||[]).length,l=lastLog(d),nx=[];return `<div class="banner" style="background:var(--pri2);border-color:#c9d8f2;color:#1d2433;margin-top:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">📝 <b>조사 · 진행 기록 ${n}건</b>${l?` <span class="muted">최근 ${esc(l.date)} ${esc(l.kind)}: ${esc(l.text.slice(0,40))}${l.text.length>40?'…':''}</span>`:' <span class="muted">아직 없음</span>'}${nx.length?` <span class="bg warn">다음 행동: ${esc(nx[0].text)}</span>`:''}<span style="flex:1"></span><button type="button" class="b s p" onclick="gotoProgress('${d.id}')">진행 보기 · 기록 추가</button></div>`})():''}
   ${id?'<div id="routeBox"></div>':''}
   <details id="sevWrap" ${(()=>{try{return localStorage.getItem('qms_sevOpen')==='0'?'':'open'}catch(e){return 'open'}})()} ontoggle="try{localStorage.setItem('qms_sevOpen',this.open?'1':'0')}catch(e){}" style="margin-top:14px"><summary class="sec" style="cursor:pointer;list-style:revert">심각도 평가 <span id="sevSum"></span> <span class="muted" style="font-weight:normal;font-size:12px">유출 단계·반복성은 자동, 영향도·범위는 유형·수량으로 초기값 → 필요 시 조정</span></summary>
@@ -126,15 +125,6 @@ function editDefect(id,copy,preset){
   {const el=$('#mf').resp;if(el)el.addEventListener('change',renderSev)}
   ['disposition','qty','partNo','resp'].forEach(k=>{const el=$('#mf')[k];if(el)el.addEventListener('change',()=>{const ae=document.activeElement;if(!$('#costBox')?.contains(ae))renderCostBox()})});
   respChanged(true);
-}
-function invSummary(d,id){
-  const iv=d.inv||{},r=d.resp||'협력사',cs=defCase(d);
-  if(r!=='미정'&&!d.inv)return '';
-  const st=iv.verdict?`<span class="bg ok">판정: ${esc(iv.verdict)}${iv.verdictDate?' · '+esc(iv.verdictDate):''}</span>${VERDICT_RESP[iv.verdict]!==r?` <span class="bg warn">귀책을 ‘${esc(r)}’(으)로 직접 변경함</span>`:''}`:(()=>{const ii=invInfo(d);return `<span class="bg ${ii.cls}">${esc(ii.label)}</span>`})();
-  const facts=[iv.farReq&&`FAR 요청 ${iv.farReq}`,iv.farRecv&&`FAR 회신 ${iv.farRecv}`,cs?`RCA ${cs.CaseNo} · ${cs.Stage}`:(iv.rca||'').trim()&&'사내 분석 메모 있음',iv.share!==''&&iv.share!=null&&iv.verdict==='공동'&&`협력사 부담 ${iv.share}%`].filter(Boolean);
-  return `<div class="sec">귀책 조사 <span class="muted" style="font-weight:normal;font-size:12px">FAR · 사내 분석 · 판정은 ‘FAR’ 탭에서 따로 진행합니다</span></div>
-  <div class="route" style="margin-top:0"><div class="ri"><div class="tx">${st}${facts.length?` <span class="muted">${esc(facts.join(' · '))}</span>`:''}${!iv.verdict&&d.date?`<br><span class="muted" style="font-size:12px">원인 불명 검토 기한 ${esc(ntfDue(d))}</span>`:''}</div>
-  ${id?`<button type="button" class="b s p" onclick="routeGo(&quot;editInv('${id}')&quot;)">귀책 조사 열기</button>`:'<span class="muted" style="font-size:12px">저장하면 귀책 조사를 시작할 수 있습니다</span>'}</div></div>`;
 }
 const FAR_PH_MAX=6;
 function invPhotoIds(d){return [...new Set([...(d.photos||[]),...(d.logs||[]).filter(l=>!l.void).flatMap(l=>l.photos||[])])]}
@@ -769,7 +759,7 @@ function setSevF(k,v){curSev[k]=v;curSev._touched[k]=true;mfDirty=true;renderSev
 function renderSev(){
   const b=$('#sevBox');if(!b)return;setTimeout(icaSync,0);
   const d=sevDraft(),v=sevOf(d),S=db.settings;
-  const rb=$('#routeBox');if(rb&&curSev._id){const o=db.defects.find(x=>x.id===curSev._id);if(o)rb.innerHTML=routeHTML({...o,...d,resp:$('#mf').resp.value,id:o.id,ncrId:o.ncrId,caseId:o.caseId})}
+  const rb=$('#routeBox');if(rb&&curSev._id){const o=db.defects.find(x=>x.id===curSev._id);if(o)rb.innerHTML=routeHTML({...o,...d,resp:$('#mf').resp.value,id:o.id,ncrId:o.ncrId,caseId:o.caseId},true)}
   const lv=(k,cur,auto)=>`<div class="row" style="gap:4px">${SEV_F[k][1].map((l,i)=>auto?`<span class="bg ${cur===i+1?'inf':'mut'}" style="${cur===i+1?'font-weight:bold':'opacity:.55'}">${i+1} ${l}</span>`:`<button type="button" class="b s ${cur===i+1?'p':''}" onclick="setSevF('${k}',${i+1})">${i+1} ${l}</button>`).join('')}</div>`;
   const note={impact:curSev._touched.impact?'직접 선택':`유형 ‘${esc(d.type)}’ 기본값`,stage:`발생처 ‘${esc(d.source)}’ 기준 (자동)`,scope:curSev._touched.scope?'직접 선택':'수량·비율 기준 자동',repeat:`동일 협력사·유형 ${S.repeatWindow}일 내 ${v.rp.n}회${v.rp.re?' · 대책 종결 후 재발':''} (자동)`};
   b.innerHTML=`<table class="ct"><tbody>${['impact','stage','scope','repeat'].map(k=>`<tr><td style="width:84px"><b>${SEV_F[k][0]}</b></td><td>${lv(k,v.f[k],k==='stage'||k==='repeat')}</td><td class="muted" style="font-size:11.5px">${note[k]}</td><td class="n" style="width:40px"><b>${v.f[k]}</b></td></tr>`).join('')}
