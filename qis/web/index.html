@@ -72,7 +72,6 @@ tr:hover td{background:#fafbfd}
 .bg.svA{background:#c0392b;color:#fff;font-weight:700}.bg.svB{background:#d9822b;color:#fff;font-weight:700}.bg.svC{background:#8a94a3;color:#fff;font-weight:700}
 .kpi.go{cursor:pointer;transition:box-shadow .15s}.kpi.go:hover{box-shadow:0 0 0 2px var(--pri) inset}
 tr.late>td{background:var(--badb)}
-ol.isl{list-style:none;margin:0;padding:0}ol.isl li{display:grid;grid-template-columns:86px 74px minmax(0,1fr) auto;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);align-items:start;line-height:1.55}ol.isl li.void>div{text-decoration:line-through;opacity:.6}ol.isl .mono{font-size:12.5px;color:var(--sub)}
 /* 불량 목록의 ‘조사 · 진행 기록’ 단추 — 누르기 쉬운 크기 */
 a.bg.lgchip{display:inline-flex;align-items:center;gap:4px;min-height:26px;padding:2px 11px;margin-top:5px;font-size:13.5px;font-weight:600;border-radius:13px;cursor:pointer}a.bg.lgchip:hover{box-shadow:0 0 0 1px currentColor inset}
 /* 일시 입력 (날짜 + 시각 입력 · 오전 · 오후 · 야간 · 시간 모름 + 시각) · 같은 날 순서 바꾸기 ▲▼ */
@@ -80,14 +79,6 @@ a.bg.lgchip{display:inline-flex;align-items:center;gap:4px;min-height:26px;paddi
 .dtrow{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:8px}.fg label.w2{grid-column:span 2}
 @media(max-width:560px){.dtrow{grid-template-columns:1fr}.fg label.w2{grid-column:1/-1}.dtp{flex-wrap:wrap}.dtp>input[type=date]{flex:1 1 100%}}
 .mv{display:inline-flex;gap:2px;vertical-align:middle}.mv button.b.s{padding:0 5px;height:20px;min-height:0;min-width:24px;font-size:9px;line-height:1;flex:1}.mv button:disabled{opacity:.3;cursor:default}
-.isfl{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:6px}.isfl:empty{display:none}
-.isfl .f{position:relative;display:inline-flex;align-items:center;max-width:100%;border:1px solid var(--line);border-radius:6px;background:var(--card);font-size:12.5px}
-.isfl .f.ld{padding:5px 8px;color:var(--mu,#6b7689)}.isfl .f.im{border:0}.isfl .f.im img{width:64px;height:48px;object-fit:cover;border-radius:4px;border:1px solid var(--line);cursor:zoom-in;display:block}
-.isfl .f .o{display:inline-flex;align-items:center;gap:6px;padding:4px 8px;cursor:pointer;min-width:0;color:inherit;text-decoration:none}.isfl .f .o b{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:260px}
-.isfl .dk{font:600 10.5px/1 var(--f-mono,monospace);color:#fff;background:var(--pri);border-radius:3px;padding:4px 5px;flex:none}
-.isfl .x{position:absolute;top:-6px;right:-6px;background:#fff;border:1px solid var(--line);border-radius:50%;width:16px;height:16px;font-size:10px;line-height:14px;text-align:center;cursor:pointer;color:var(--bad)}
-ol.isl li.void .isfl{opacity:.6}
-.isadd{margin-top:12px}.isadd textarea{min-height:56px;width:100%}   /* 이슈의 기록 작성 칸 — 모양은 실행 기록 작성 칸(.lgc)과 같음 */
 button.isr{font:inherit;text-align:left;padding:10px 12px;border-radius:8px;border:1px solid var(--line);background:var(--card);cursor:pointer;display:flex;justify-content:space-between;gap:8px;align-items:baseline;color:inherit}button.isr.on{border:2px solid var(--pri);background:var(--pri2)}button.isr .muted{font-size:12px}
 .isprev{background:var(--mut);border-radius:8px;padding:12px;margin-top:10px}.isprev ul{margin:6px 0 10px;padding-left:18px;font-size:13px;line-height:1.6}
 a.isf{display:flex;gap:8px;align-items:center;padding:9px 10px;border:1px solid var(--line);border-radius:6px;cursor:pointer;color:inherit;text-decoration:none;font-size:13px}a.isf:hover{background:var(--pri2)}
@@ -158,7 +149,7 @@ ul.logs li.nw{outline:2px solid #f0d49b;background:#fffbef}
 ul.logs{list-style:none;margin:10px 0 0;padding:0 0 0 14px;border-left:2px solid #d4dbe6}
 ul.logs li{position:relative;margin:0 0 10px;padding:6px 10px;background:#f7f8fa;border-radius:6px}
 ul.logs li:before{content:'';position:absolute;left:-21px;top:11px;width:10px;height:10px;border-radius:50%;background:#fff;border:2px solid var(--pri)}
-ul.logs .lh{display:flex;gap:6px;align-items:center;flex-wrap:wrap}ul.logs .lt{margin-top:4px;line-height:1.55;font-size:12.5px}
+ul.logs .lh{display:flex;gap:6px;align-items:center;flex-wrap:wrap}ul.logs .lh .la{white-space:nowrap}ul.logs .lt{margin-top:4px;line-height:1.55;font-size:12.5px}
 ul.logs li.au{background:none;padding:2px 10px}ul.logs li.au:before{border-color:#b8c0cc;width:8px;height:8px;left:-20px;top:8px}ul.logs li.au .lt{color:var(--sub);font-size:12px;margin-top:1px}
 ul.logs .nx{margin-top:5px;font-size:12px;color:#7a5410;background:#fff7e0;border-radius:4px;padding:3px 7px;display:inline-flex;gap:5px;align-items:center}ul.logs .nx.dn{color:var(--sub);background:var(--mut);text-decoration:line-through}
 .route{border:1px solid var(--line);border-radius:8px;margin-top:10px;background:#fff}
@@ -1070,6 +1061,48 @@ function defaultDB() {
     bom: { updatedAt: '', rows: [] },
   };
 }
+// 예전 구조의 이슈 기록(at · who · rec · edits)을 공통 구조로 읽음. 이미 공통 구조면 그대로 (여러 번 해도 같음)
+function logNorm(l) {
+  if (!l || typeof l !== 'object' || l.date !== undefined) return l;
+  const at = String(l.at || ''),
+    { who, rec, edits, at: _at, ...rest } = l;
+  const o = {
+    ...rest,
+    date: at.slice(0, 10),
+    time: at.slice(11, 16),
+    band: at.length > 10 ? '' : ['오전', '오후', '야간'].includes(l.band) ? l.band : '',
+    party: who || '',
+    method: '',
+    result: '',
+    photos: Array.isArray(l.photos) ? l.photos : [],
+    at: rec || (at.length > 10 ? at : ''),
+  };
+  if (Array.isArray(edits) && edits.length)
+    o.hist = edits.map((e) => {
+      const pv = e.prev || {},
+        pa = String(pv.at || '');
+      return {
+        at: e.at || '',
+        by: e.by || '',
+        reason: e.reason || '',
+        date: pa.slice(0, 10),
+        time: pa.slice(11, 16),
+        band: pa.length > 10 ? '' : pv.band || '',
+        kind: pv.kind || l.kind,
+        party: pv.who || '',
+        method: '',
+        text: pv.text || '',
+        result: '',
+        photos: [],
+      };
+    });
+  if (['분류', '종결', '다시 열기'].includes(l.kind)) o.sys = true; // 프로그램이 남긴 기록
+  return o;
+}
+function issNorm(i) {
+  if (i && Array.isArray(i.logs)) i.logs = i.logs.map(logNorm);
+  return i;
+}
 function migrate(d) {
   const def = defaultDB();
   d = d || {};
@@ -1094,6 +1127,7 @@ function migrate(d) {
     });
   });
   d.deleted = Array.isArray(d.deleted) ? d.deleted.filter((t) => t && t.id) : [];
+  d.issues.forEach(issNorm); // 이슈 기록을 공통 기록 구조로 (불량 · NCR 실행 기록과 같음)
   if (d.settings.logo && !isImgURL(d.settings.logo)) d.settings.logo = '';
   Object.keys(d.settings.signs).forEach((k) => {
     if (!isImgURL(d.settings.signs[k])) delete d.settings.signs[k];
@@ -1390,6 +1424,7 @@ function srvSetLocal(coll, id, data) {
   }
   if (coll === 'suppliers') ensureContacts(data);
   if (coll === 'defects' && !Array.isArray(data.photos)) data.photos = [];
+  if (coll === 'issues') issNorm(data); // 예전 판이 보낸 이슈 기록도 공통 구조로 읽음
   const o = (db[coll] || []).find((r) => r.id === id);
   if (o) {
     Object.keys(o).forEach((k) => delete o[k]);
@@ -4649,42 +4684,6 @@ function dtpVal(id) {
     t = b ? '' : ($('#' + id + 'T') || {}).value || '';
   return { at: d ? (t ? d + 'T' + t : d) : '', band: TBANDS.includes(b) ? b : '' };
 }
-function dtpSet(id, at, band) {
-  const v = String(at || ''),
-    t = v.slice(11, 16);
-  $('#' + id + 'D').value = v.slice(0, 10);
-  $('#' + id + 'T').value = t;
-  $('#' + id + 'B').value = t ? '' : TBANDS.includes(band) ? band : '?';
-  dtpSync(id);
-}
-// 기록 순서: 날짜 → (손으로 정한 순서 ord) → 시각 · 시간대 → 입력한 순서. 시간 모름은 그날의 끝
-const issTk = (l) => String(l.at || '').slice(11, 16) || TBAND_T[l.band] || '24:00';
-function issCmp(a, b) {
-  const da = String(a.at || '').slice(0, 10),
-    db2 = String(b.at || '').slice(0, 10);
-  if (da !== db2) return da.localeCompare(db2);
-  if (a.ord != null || b.ord != null)
-    return (a.ord == null ? 1e9 : a.ord) - (b.ord == null ? 1e9 : b.ord) || (a.rec || '').localeCompare(b.rec || '');
-  return issTk(a).localeCompare(issTk(b)) || (a.rec || '').localeCompare(b.rec || '');
-}
-// 같은 날의 기록 순서를 한 칸 옮김 (dir: -1 위로 · +1 아래로). 날짜가 다른 기록과는 바꿀 수 없음
-function issMove(id, k, dir) {
-  const i = issById(id),
-    l = i && i.logs[k];
-  if (!l) return;
-  const day = String(l.at || '').slice(0, 10);
-  const L = i.logs.filter((x) => String(x.at || '').slice(0, 10) === day).sort(issCmp),
-    a = L.indexOf(l),
-    b = a + dir;
-  if (b < 0 || b >= L.length) return;
-  [L[a], L[b]] = [L[b], L[a]];
-  L.forEach((x, n) => {
-    x.ord = n;
-  });
-  touch(i);
-  save();
-  render();
-}
 function issLinks(i) {
   const ds = (i.defectIds || []).map((x) => db.defects.find((d) => d.id === x)).filter(Boolean);
   const ns = [...new Set(ds.map((d) => d.ncrId).filter(Boolean))].map((x) => db.ncrs.find((n) => n.id === x)).filter(Boolean);
@@ -4711,10 +4710,27 @@ function issOpenFollow(i) {
     ...L.cs.filter(czOpen).map((c) => `${c.CaseNo} — ${c.Stage}`),
   ];
 }
+// 이슈에 기록 한 건을 넣음 (등록 · 분류 · 종결 때 프로그램이 씀). x: { at:'YYYY-MM-DD[THH:MM]', band, who }
+const ISS_SYS = ['분류', '종결', '다시 열기']; // 프로그램이 남긴 기록 — 수정 · 취소 불가
 function issLog(i, kind, text, x) {
-  (i.logs = i.logs || []).push(Object.assign({ id: uid(), at: nowMin(), kind, who: '', text: String(text || ''), by: czMe(), rec: now() }, x || {}));
+  x = x || {};
+  const at = String(x.at || nowMin());
+  (i.logs = i.logs || []).push({
+    id: uid(),
+    date: at.slice(0, 10),
+    time: at.slice(11, 16),
+    band: at.length > 10 ? '' : TBANDS.includes(x.band) ? x.band : '',
+    kind,
+    party: x.who || '',
+    method: '',
+    text: String(text || ''),
+    result: '',
+    photos: [],
+    by: czMe(),
+    at: now(),
+    ...(ISS_SYS.includes(kind) ? { sys: true } : {}),
+  });
 }
-
 function renderIssue() {
   setTimeout(issSync, 0); // 이슈 상세 창이 열려 있으면 새 내용으로 다시 그림
   const f = (state.isf = state.isf || { status: 'open', src: '', hot: false, q: '' }),
@@ -4816,135 +4832,13 @@ function issOpen(id) {
   render();
   issShow(id);
 }
-// 기록의 첨부 파일 — 이미지 · PDF · 엑셀 · 메일 등. 저장소는 사진 · NCR 문서와 같음 (기록의 photos 에 id 를 둠)
-let issF = { id: null, nw: [], ed: null }; // nw: 새 기록에 붙일 파일 id · ed: {k,ids,del} 수정 중인 기록
-const issFC = {}; // id → 파일 (새로 고른 파일은 isNew)
-const issFImg = (r) => /^image\//i.test(r.mime || '') || /^data:image\//.test(r.thumb || r.data || '');
-function issFReset(id) {
-  [...issF.nw, ...(issF.ed ? issF.ed.ids : [])].forEach((x) => {
-    if (issFC[x] && issFC[x].isNew) delete issFC[x];
-  });
-  issF = { id: id || null, nw: [], ed: null };
-}
-function issFHTML(ids, rm) {
-  return (ids || []).length
-    ? `<div class="isfl">${ids
-        .map((id, k) => {
-          const r = issFC[id],
-            x = rm ? `<a class="x" onclick="issFRm('${rm}',${k})" title="빼기" aria-label="첨부 빼기">✕</a>` : '';
-          if (!r) return `<span class="f ld">📎 불러오는 중</span>`;
-          if (r.gone) return `<span class="f ld" title="이 PC에서 파일을 찾지 못했습니다">📎 파일 없음${x}</span>`;
-          return issFImg(r)
-            ? `<span class="f im"><img src="${r.thumb || r.data}" alt="${esc(r.name || '첨부 이미지')}" title="${esc(r.name || '')}" onclick="issFOpen('${id}')">${x}</span>`
-            : `<span class="f"><a class="o" onclick="issFOpen('${id}')" title="${esc(r.name)} — 열기"><span class="dk">${docIcon(r)}</span><b>${esc(r.name)}</b>${
-                r.size ? `<span class="muted">${fmtBytes(r.size)}</span>` : ''
-              }</a>${x}</span>`;
-        })
-        .join('')}</div>`
-    : '';
-}
-async function issFLoad(i) {
-  const ids = logPhotoIds(i.logs).filter((x) => !issFC[x]);
-  if (!ids.length) return;
-  try {
-    const rs = await photoGetMany(ids);
-    rs.forEach((r) => {
-      issFC[r.id] = r;
-    });
-    ids.forEach((x) => {
-      if (!issFC[x]) issFC[x] = { id: x, gone: true };
-    });
-  } catch (e) {
-    return;
-  }
-  document.querySelectorAll('#modal [data-isf]').forEach((b) => {
-    const l = (i.logs || []).find((x) => x.id === b.dataset.isf);
-    if (l) b.innerHTML = issFHTML(l.photos);
-  });
-  const eb = $('#ieF');
-  if (eb && issF.ed) eb.innerHTML = issFHTML(issF.ed.ids, 'ed');
-}
-async function issFAdd(files, to) {
-  const L = to === 'ed' && issF.ed ? issF.ed.ids : issF.nw;
-  let n = 0;
-  for (const f of files) {
-    if (f.size > 20 * 1048576) {
-      toast(`${f.name}: 20MB를 넘는 파일은 첨부할 수 없습니다`);
-      continue;
-    }
-    try {
-      const r = (f.type || '').startsWith('image/') ? { ...(await attImgRec(f)), mime: 'image/jpeg' } : await attDocRec(f);
-      if (!r) continue;
-      issFC[r.id] = r;
-      L.push(r.id);
-      n++;
-    } catch (e) {
-      toast(`${f.name}: 파일을 읽지 못했습니다`);
-    }
-  }
-  if (n) {
-    mfDirty = true;
-    issFDraw();
-  }
-  return n;
-}
-function issFRm(to, k) {
-  const e = to === 'ed' ? issF.ed : null,
-    L = e ? e.ids : issF.nw,
-    id = L[k];
-  if (id == null) return;
-  L.splice(k, 1);
-  if (issFC[id] && issFC[id].isNew) delete issFC[id];
-  else if (e) e.del.push(id);
-  mfDirty = true;
-  issFDraw();
-}
-function issFDraw() {
-  const a = $('#isF');
-  if (a) a.innerHTML = issFHTML(issF.nw, 'nw');
-  const b = $('#ieF');
-  if (b && issF.ed) b.innerHTML = issFHTML(issF.ed.ids, 'ed');
-}
-function issFOpen(id) {
-  const r = issFC[id];
-  if (!r || r.gone) return;
-  if (!issFImg(r)) return docOpenRec(r);
-  const i = issById(issF.id),
-    all = [...new Set([...(i ? logPhotoIds(i.logs) : []), ...issF.nw, ...(issF.ed ? issF.ed.ids : [])])]
-      .map((x) => issFC[x])
-      .filter((x) => x && !x.gone && issFImg(x));
-  const k = all.findIndex((x) => x.id === id);
-  if (k >= 0)
-    lbOpen(
-      all.map((x) => ({ ...x, caption: x.caption || x.name || '' })),
-      k,
-    );
-}
-// 새로 고른 파일을 저장소에 넣음 (기록 저장과 함께)
-function issFPut(ids) {
-  const add = ids.map((x) => issFC[x]).filter((r) => r && r.isNew);
-  if (!add.length) return;
-  attStore(
-    add.map(({ isNew, ...r }) => r),
-    '첨부 파일',
-  );
-  add.forEach((r) => {
-    r.isNew = false;
-  });
-}
-const issFBtn = (to) =>
-  `<label class="b s" style="cursor:pointer">📎 파일 첨부<input type="file" multiple accept="${RD_ACCEPT}" style="display:none" onchange="issFAdd([...this.files],'${to}');this.value=''"></label><span class="muted" style="font-size:12px">메일 · 성적서 · 사진 (캡처 후 Ctrl+V 가능)</span>`;
 function issShow(id, keep) {
   const i = issById(id),
     m = $('#modal');
   if (!i) return;
-  // 다시 그릴 때: 쓰던 기록 입력 · 스크롤 위치 유지
-  const KEEP = ['isK', 'isAtD', 'isAtB', 'isAtT', 'isWho', 'isTx', 'ieK', 'ieAtD', 'ieAtB', 'ieAtT', 'ieWho', 'ieTx', 'ieWhy'];
-  if (!keep || m.dataset.iss !== id) {
-    state.issEditK = null;
-    issFReset(id);
-  }
-  const old = keep && m.dataset.iss === id ? { v: KEEP.map((k) => ($('#' + k) ? $('#' + k).value : null)), top: $('#mbody').scrollTop } : null;
+  // 다시 그릴 때(keep): 쓰던 기록 입력 · 수정 중인 기록 · 스크롤 위치를 지킴 — 기록 부품(tl)의 상태는 그대로 두고 화면만 다시 그림
+  const same = !!keep && m.dataset.iss === id && tl.kind === 'issue' && tl.obj && tl.obj.id === id;
+  const old = same ? { v: LOG_DRAFT.map((k) => ($('#' + k) ? $('#' + k).value : null)), top: $('#mbody').scrollTop, dirty: mfDirty } : null;
   openModal(`${i.no} 이슈`, issDetailHTML(i), [
     ...(RO
       ? []
@@ -4957,15 +4851,20 @@ function issShow(id, keep) {
     ...(RO ? [] : [{ label: '저장', cls: 'p', fn: () => issSaveAll(id) }]),
   ]);
   m.dataset.iss = id;
-  if (old) {
-    KEEP.forEach((k, n) => {
-      if ($('#' + k) && old.v[n] != null) $('#' + k).value = old.v[n];
-    });
-    dtpSync('isAt');
-    dtpSync('ieAt');
-    $('#mbody').scrollTop = old.top;
-    mfDirty = !!(old.v[KEEP.indexOf('isTx')] || '').trim() || state.issEditK != null || issF.nw.length > 0;
+  const ro = RO || !!i.closedAt;
+  if (!same) {
+    tlInit('issue', i, { ro });
+    return;
   }
+  tlResync(i, { ro });
+  renderLogs(false);
+  LOG_DRAFT.forEach((k, n) => {
+    if ($('#' + k) && old.v[n] != null) $('#' + k).value = old.v[n];
+  });
+  dtpSync('lgAt');
+  dtpSync('leAt');
+  $('#mbody').scrollTop = old.top;
+  mfDirty = tl.edit != null || tlDraftHas();
 }
 // 화면을 다시 그린 뒤: 상세 창이 떠 있으면 갱신, 아무 창도 없으면 '보고 있던 이슈' 표시를 지움
 function issSync() {
@@ -5115,23 +5014,7 @@ function issDetailHTML(i) {
     L = issLinks(i),
     r = ISS_ROUTES.find((x) => x.k === state.issRoute) || ISS_ROUTES[0],
     ro = RO || !!i.closedAt;
-  const logs = (i.logs || []).map((l, k) => ({ ...l, _k: k })).sort(issCmp);
-  // 같은 날 기록이 2건 이상이면 ▲▼로 순서를 바꿀 수 있음 (날짜가 다른 기록과는 못 바꿈)
-  const dayOf = (l) => String(l.at || '').slice(0, 10),
-    days = {};
-  logs.forEach((l) => {
-    (days[dayOf(l)] = days[dayOf(l)] || []).push(l._k);
-  });
-  const mv = (l) => {
-    const D = days[dayOf(l)],
-      n = D.indexOf(l._k);
-    if (ro || D.length < 2) return '';
-    return `<span class="mv"><button type="button" class="b s" ${n ? '' : 'disabled'} onclick="issMove('${i.id}',${l._k},-1)" title="같은 날 안에서 위로" aria-label="위로">▲</button><button type="button" class="b s" ${n < D.length - 1 ? '' : 'disabled'} onclick="issMove('${i.id}',${l._k},1)" title="같은 날 안에서 아래로" aria-label="아래로">▼</button></span>`;
-  };
-  setTimeout(() => {
-    issPhotos(i);
-    issFLoad(i);
-  }, 0);
+  setTimeout(() => issPhotos(i), 0);
   const kv = (k, v, s) =>
     `<div><div class="muted" style="font-size:12px">${k}</div><div style="font-weight:600;margin-top:2px">${v}</div>${
       s ? `<div style="font-size:12.5px">${s}</div>` : ''
@@ -5176,76 +5059,8 @@ function issDetailHTML(i) {
     <div id="issPh" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px"></div>
   </div>
   <div style="display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start">
-    <div class="card" style="flex:999 1 520px;min-width:0"><h3 style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap"><span style="white-space:nowrap">기록</span><span class="muted" style="font-weight:normal;font-size:12px;flex:1 1 200px">발견부터 분류까지 한 일을 시간순으로 — 내용은 수정할 수 있고(수정 이력이 남음), 잘못 쓴 기록은 사유와 함께 취소</span></h3>
-      <ol class="isl">${
-        logs
-          .map((l) => {
-            const can = !ro && !l.void && !ISS_SYS.includes(l.kind),
-              ed = l.edits || [];
-            if (can && state.issEditK === l._k)
-              return `<li class="ised"><div style="grid-column:1/-1"><div class="dtrow">
-          <label class="fgl"><span>일시 <span class="muted" style="font-weight:normal">(시간은 선택)</span></span>${dtpHTML('ieAt', l.at, l.band)}</label>
-          <label class="fgl">구분<select id="ieK">${opts(
-            ISS_KINDS.includes(l.kind) ? ISS_KINDS : [l.kind, ...ISS_KINDS],
-            l.kind,
-          )}</select></label></div>
-          <label class="fgl" style="margin-top:8px">상대방 · 참석<input id="ieWho" value="${esc(l.who || '')}"></label>
-          <label class="fgl" style="margin-top:8px">내용<textarea id="ieTx" style="min-height:120px;width:100%">${esc(l.text)}</textarea></label>
-          <div class="row" style="gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px">${issFBtn('ed')}</div><div id="ieF">${issFHTML(
-            issF.ed ? issF.ed.ids : l.photos,
-            'ed',
-          )}</div>
-          <label class="fgl" style="margin-top:8px">수정 사유 <span class="muted" style="font-weight:normal">(선택 — 적으면 기록 아래에 남습니다)</span><input id="ieWhy" placeholder="예: 오타 수정, 협력사 회신 내용 보완"></label>
-          <div class="row" style="justify-content:flex-end;gap:8px;margin-top:8px"><button type="button" class="b" onclick="issEditLog('${i.id}',null)">취소</button><button type="button" class="b p" onclick="issSaveLog('${i.id}',${l._k})">수정 저장</button></div></div></li>`;
-            return `<li class="${l.void ? 'void' : ''}"><span class="mono" title="${
-              l.at && String(l.at).length > 10 ? '' : l.band ? '정확한 시각 모름 — ' + esc(l.band) : '시간 모름'
-            }">${esc(issAt(l.at, l.band).slice(5))}</span><span><span class="bg ${ISS_KCLS[l.kind] || 'mut'}">${esc(l.kind)}</span></span><div>${
-              l.who ? `<div class="muted" style="font-size:12px">${esc(l.who)}</div>` : ''
-            }<div>${nl(issTidy(l.text))}</div><div data-isf="${l.id}">${issFHTML(l.photos)}</div>${
-              l.void ? `<div class="muted" style="font-size:12px">취소 ${esc(issAt(l.void.at))} — ${esc(l.void.reason)}</div>` : ''
-            }${
-              ed.length
-                ? `<details class="muted" style="font-size:12px;margin-top:4px"><summary style="cursor:pointer">수정 ${ed.length}회 · 최근 ${esc(issAt(ed[ed.length - 1].at))}${
-                    ed[ed.length - 1].by ? ' ' + esc(ed[ed.length - 1].by) : ''
-                  }${ed[ed.length - 1].reason ? ' — ' + esc(ed[ed.length - 1].reason) : ''}</summary>${ed
-                    .slice()
-                    .reverse()
-                    .map(
-                      (e) =>
-                        `<div style="border-left:2px solid var(--line);padding:2px 0 2px 8px;margin-top:6px"><div>${esc(issAt(e.at))}${e.by ? ' ' + esc(e.by) : ''} 수정${
-                          e.reason ? ' — ' + esc(e.reason) : ' (사유 없음)'
-                        }</div><div>수정 전: ${esc(issAt(e.prev.at, e.prev.band).slice(5))} · ${esc(e.prev.kind)}${
-                          e.prev.who ? ' · ' + esc(e.prev.who) : ''
-                        }</div><div style="white-space:pre-wrap">${esc(issTidy(e.prev.text))}</div>${
-                          e.files
-                            ? `<div>첨부 ${[e.files.add ? `추가 ${e.files.add}` : '', e.files.del ? `삭제 ${e.files.del}` : '']
-                                .filter(Boolean)
-                                .join(' · ')}</div>`
-                            : ''
-                        }</div>`,
-                    )
-                    .join('')}</details>`
-                : ''
-            }</div>${
-              can
-                ? `<span class="noprint" style="display:flex;flex-direction:column;gap:4px">${mv(l)}<button type="button" class="b s" onclick="issEditLog('${i.id}',${l._k})" title="이 기록의 내용 고치기">수정</button><button type="button" class="b s" onclick="issVoid('${i.id}',${l._k})" title="잘못 쓴 기록을 취소선으로 남기고 무효 처리">기록 취소</button></span>`
-                : `<span class="noprint">${mv(l)}</span>`
-            }</li>`;
-          })
-          .join('') || '<li class="muted">기록이 없습니다</li>'
-      }</ol>
-      ${
-        ro
-          ? ''
-          : `<div class="lgc isadd noprint"><div class="ch">✎ 기록 남기기 <span class="muted" style="font-weight:normal">— 확인한 사실과 결정 사항을 적습니다. 저장한 기록을 고치면 수정 이력이 남습니다.</span></div>
-        <div class="dtrow">
-        <label><span>일시 <span class="muted" style="font-weight:normal">(시간은 선택)</span></span>${dtpHTML('isAt', nowMin(), '')}</label>
-        <label>구분<select id="isK">${opts(ISS_KINDS, '인터뷰')}</select></label></div>
-        <label style="margin-top:8px">상대방 · 참석<input id="isWho" placeholder="예: 생산팀 · 생산기술팀"></label>
-        <label style="margin-top:8px">내용 *<textarea id="isTx" placeholder="확인한 사실 · 원인 추정 · 결정 사항"></textarea></label>
-        <div class="cf">${issFBtn('nw')}<span style="flex:1"></span><button type="button" class="b" onclick="issClearLog()">취소</button><button type="button" class="b p" onclick="issAddLog('${i.id}')">저장</button></div>
-          <div id="isF">${issFHTML(issF.nw, 'nw')}</div></div>`
-      }
+    <div class="card" style="flex:999 1 520px;min-width:0"><h3 style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap"><span style="white-space:nowrap">기록</span><span class="muted" style="font-weight:normal;font-size:12px;flex:1 1 200px">발견부터 분류까지 한 일 — 최근 것이 위. 내용은 수정할 수 있고(수정 이력이 남음), 잘못 쓴 기록은 사유와 함께 취소 처리</span></h3>
+      <div id="logBox"></div>
     </div>
     <div style="flex:1 1 380px;min-width:0;display:flex;flex-direction:column;gap:14px">
       ${
@@ -5340,158 +5155,16 @@ async function issLb(id, k) {
     );
   } catch (e) {}
 }
-function issAddLog(id) {
-  const i = issById(id);
-  if (!i) return false;
-  const t = ($('#isTx').value || '').trim();
-  if (!t) {
-    toast('내용을 입력하세요');
-    $('#isTx').focus();
-    return false;
-  }
-  const dv = dtpVal('isAt');
-  if (!dv.at) {
-    toast('날짜를 입력하세요');
-    $('#isAtD').focus();
-    return false;
-  }
-  if (dv.at.slice(0, 10) > today()) {
-    toast('기록 날짜는 오늘 이후일 수 없습니다');
-    return false;
-  }
-  const fs = issF.nw.slice();
-  issFPut(fs);
-  issF.nw = [];
-  issLog(i, $('#isK').value, t, { at: dv.at, band: dv.band, who: ($('#isWho').value || '').trim(), ...(fs.length ? { photos: fs } : {}) });
-  $('#isTx').value = '';
-  touch(i);
-  save();
-  render();
-  toast('기록했습니다');
-  return true;
-}
-// 기록 작성 칸의 ‘취소’ — 쓰던 내용을 지움
-function issClearLog() {
-  const had = ['isTx', 'isWho'].some((k) => ($('#' + k).value || '').trim()) || issF.nw.length > 0;
-  issF.nw.forEach((x) => {
-    delete issFC[x];
-  });
-  issF.nw = [];
-  issFDraw();
-  $('#isTx').value = '';
-  $('#isWho').value = '';
-  dtpSet('isAt', nowMin(), '');
-  if (state.issEditK == null) mfDirty = false;
-  if (had) toast('쓰던 내용을 지웠습니다');
-}
-// 상세 창의 ‘저장’ — 쓰던 기록(새 기록 · 수정 중인 기록)을 저장하고 창을 닫음. ‘닫기’는 저장하지 않음
+// 상세 창의 ‘저장’ — 쓰던 기록(새 기록 · 수정 중인 기록)이 있으면 저장하고 창을 닫음. ‘닫기’는 저장하지 않음
 function issSaveAll(id) {
-  if (state.issEditK != null && $('#ieTx') && !issSaveLog(id, state.issEditK)) return;
-  if ($('#isTx') && (($('#isTx').value || '').trim() || issF.nw.length) && !issAddLog(id)) return;
+  if (tl.edit != null) {
+    toast('수정 중인 기록을 먼저 저장하거나 취소하세요');
+    return;
+  }
+  if (tlDraftHas() && !addLog()) return;
   mfDirty = false;
   closeModal(true);
   toast('저장했습니다');
-}
-// 기록 수정 — 내용 · 일시 · 구분 · 상대를 고침. 수정 전 내용과 사유(선택)는 기록에 남음
-const ISS_SYS = ['분류', '종결', '다시 열기']; // 프로그램이 남긴 기록 — 수정 · 취소 불가
-const issTidy = (t) =>
-  String(t || '')
-    .replace(/[ \t]+\n/g, '\n')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim(); // 붙여 넣은 메일의 빈 줄 여러 개 → 하나
-function issEditLog(id, k) {
-  ['ieK', 'ieAtD', 'ieAtB', 'ieAtT', 'ieWho', 'ieTx', 'ieWhy'].forEach((x) => {
-    const e = $('#' + x);
-    if (e) e.removeAttribute('id');
-  }); // 다른 기록의 편집 내용이 넘어오지 않게
-  if (issF.ed)
-    issF.ed.ids.forEach((x) => {
-      if (issFC[x] && issFC[x].isNew) delete issFC[x];
-    });
-  const l0 = k != null && issById(id) ? issById(id).logs[k] : null;
-  issF.ed = l0 ? { k, ids: (l0.photos || []).slice(), del: [] } : null;
-  state.issEditK = k;
-  issShow(id, true);
-  if (k != null) {
-    const t = $('#ieTx');
-    if (t) {
-      t.focus();
-      t.scrollIntoView({ block: 'center' });
-    }
-  }
-}
-function issSaveLog(id, k) {
-  const i = issById(id),
-    l = i && i.logs[k];
-  if (!l || l.void || ISS_SYS.includes(l.kind)) return false;
-  const dv = dtpVal('ieAt'),
-    o = {
-      kind: $('#ieK').value,
-      at: dv.at || l.at,
-      band: dv.at ? dv.band : l.band || '',
-      who: ($('#ieWho').value || '').trim(),
-      text: ($('#ieTx').value || '').trim(),
-    },
-    why = ($('#ieWhy').value || '').trim();
-  if (!o.text) {
-    toast('내용을 입력하세요');
-    $('#ieTx').focus();
-    return false;
-  }
-  if (o.at.slice(0, 10) > today()) {
-    toast('기록 일시는 오늘 이후일 수 없습니다');
-    return false;
-  }
-  const prev = { kind: l.kind, at: l.at, band: l.band || '', who: l.who || '', text: l.text };
-  const fe = issF.ed && issF.ed.k === k ? issF.ed : null,
-    fAdd = fe ? fe.ids.filter((x) => issFC[x] && issFC[x].isNew).length : 0,
-    fDel = fe ? fe.del.length : 0;
-  state.issEditK = null;
-  issF.ed = null;
-  if (!fAdd && !fDel && ['kind', 'at', 'band', 'who', 'text'].every((f) => o[f] === prev[f])) {
-    issShow(id, true);
-    return true;
-  } // 바뀐 것 없음
-  if (fe) {
-    issFPut(fe.ids);
-    if (fDel) {
-      attDrop(fe.del);
-      fe.del.forEach((x) => delete issFC[x]);
-    }
-    if (fe.ids.length) l.photos = fe.ids.slice();
-    else delete l.photos;
-  }
-  (l.edits = l.edits || []).push({ at: nowMin(), by: czMe(), reason: why, prev, ...(fAdd || fDel ? { files: { add: fAdd, del: fDel } } : {}) });
-  if (o.at !== prev.at || o.band !== prev.band) {
-    const D = [prev.at, o.at].map((x) => String(x || '').slice(0, 10));
-    i.logs.forEach((x) => {
-      if (D.includes(String(x.at || '').slice(0, 10))) delete x.ord;
-    });
-  }
-  Object.assign(l, o); // 일시를 고치면 그날의 손으로 정한 순서는 풀리고 다시 시간순
-  touch(i);
-  save();
-  render();
-  toast('기록을 수정했습니다');
-  return true;
-}
-async function issVoid(id, k) {
-  const i = issById(id),
-    l = i && i.logs[k];
-  if (!l) return;
-  const r = await askConfirm({
-    title: '이 기록을 취소할까요?',
-    msg: `${esc(issAt(l.at, l.band))} ${esc(l.kind)} — ${esc(l.text.slice(0, 60))}`,
-    note: '지우지 않고 취소선과 사유가 남습니다.',
-    ok: '기록 취소',
-    danger: false,
-    input: { label: '취소 사유', ph: '예: 다른 건 내용을 잘못 입력' },
-  });
-  if (!r) return;
-  l.void = { at: nowMin(), by: czMe(), reason: r };
-  touch(i);
-  save();
-  render();
 }
 let issPend = null; // 이슈에서 연 불량 등록 창 — 저장하면 이슈에 연결
 async function issRoute(id, k) {
@@ -7503,13 +7176,19 @@ const LOGCFG = {
     hint: '확인한 사실과 결정 사항을 적습니다.',
     text: '내용',
     ph: '확인한 사실 · 원인 추정 · 결정 사항',
-    head: '기록',
+    head: '남긴 기록',
   },
 };
 const lgCfg = () => LOGCFG[tl.kind] || LOGCFG.defect;
 // 기록의 일시 표시: 날짜 + 시각 (없으면 시간대, 그것도 없으면 날짜만)
 const lgWhen = (x) => (x.date || '') + (x.time ? ' ' + x.time : x.band ? ' ' + x.band : '');
 const lgAtOf = (x) => (x.date || '') + (x.time ? 'T' + x.time : '');
+// 붙여 넣은 메일의 빈 줄 여러 개 → 하나 (보여 줄 때만)
+const lgTidy = (t) =>
+  String(t || '')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
 const lgKindCls = (k) => LOG_CLS[k] || (typeof ISS_KCLS !== 'undefined' && ISS_KCLS[k]) || 'mut';
 function autoEvents(d, n, lbl) {
   const E = [],
@@ -7568,6 +7247,7 @@ function autoEvents(d, n, lbl) {
   return E;
 }
 function caseReadonly(kind, obj) {
+  if (kind === 'issue') return [];
   if (kind === 'defect') {
     const n = ncrOfDefect(obj);
     return [...autoEvents(obj, null), ...(n ? autoEvents(null, n) : []), ...(n ? (n.logs || []).map((l) => ({ ...l, src: 'NCR', ro: true })) : [])];
@@ -7602,11 +7282,13 @@ let tl = {
 };
 const LOG_METHODS = ['전화', '메일', '방문', '회의', '메신저', '공문', '기타'];
 const phCache = {};
-function tlInit(kind, obj) {
+// opt.ro: 읽기 전용 (종결한 이슈 등) — 작성 칸 · 수정 단추를 내지 않음
+function tlInit(kind, obj, opt) {
   tl = {
-    own: JSON.parse(JSON.stringify(obj.logs || [])),
+    own: JSON.parse(JSON.stringify(obj.logs || [])).map(logNorm),
     kind,
     obj,
+    ro: !!(opt && opt.ro),
     edit: null,
     voiding: null,
     hist: new Set(),
@@ -7636,6 +7318,24 @@ function tlInit(kind, obj) {
       if (mfDirty && !tlDraftHas() && tl.edit == null) tl.other = true;
     });
   }
+}
+// 창을 다시 그린 뒤 (이슈 창): 저장된 기록을 다시 읽음 — 프로그램이 넣은 기록(분류 · 종결)이 빠지지 않게. 수정 중인 기록은 그대로 둠
+function tlResync(obj, opt) {
+  tl.obj = obj;
+  tl.ro = !!(opt && opt.ro);
+  if (tl.own.some((x) => x._new || x._dirty)) return;
+  const idOf = (k) => (k != null && tl.own[k] ? tl.own[k].id : null),
+    eid = idOf(tl.edit),
+    vid = idOf(tl.voiding);
+  tl.own = JSON.parse(JSON.stringify(obj.logs || [])).map(logNorm);
+  curLogs = tl.own;
+  const at = (id) => {
+    const k = id ? tl.own.findIndex((x) => x.id === id) : -1;
+    return k < 0 ? null : k;
+  };
+  tl.edit = at(eid);
+  if (tl.edit == null) tl.editPh = null;
+  tl.voiding = at(vid);
 }
 // 쓰다 만 기록이 있나
 function tlDraftHas() {
@@ -7781,7 +7481,7 @@ function renderLogsInner(b) {
   const mv = (x) => {
     const D = ownDay[x.date || ''] || [],
       n = D.indexOf(x._i);
-    if (D.length < 2 || tl.edit != null || tl.voiding != null) return '';
+    if (tl.ro || D.length < 2 || tl.edit != null || tl.voiding != null) return '';
     return `<span class="mv"><button type="button" class="b s" ${n ? '' : 'disabled'} onclick="lgMove(${x._i},-1)" title="같은 날 안에서 위로" aria-label="위로">▲</button><button type="button" class="b s" ${n < D.length - 1 ? '' : 'disabled'} onclick="lgMove(${x._i},1)" title="같은 날 안에서 아래로" aria-label="아래로">▼</button></span> `;
   };
   const nOwn = L.filter((x) => !x.auto).length,
@@ -7789,7 +7489,7 @@ function renderLogsInner(b) {
     pend = tl.own.filter((x) => x._new).length,
     pendEd = tl.own.filter((x) => x._dirty && !x._new).length;
   const ownCase =
-    typeof czOwns === 'function' && czOwns(tl.obj, tl.kind)
+    tl.kind !== 'issue' && typeof czOwns === 'function' && czOwns(tl.obj, tl.kind)
       ? (() => {
           const id = tl.obj.caseId || (db.ncrs.find((n) => n.id === tl.obj.ncrId) || {}).caseId;
           return czById('cases', id);
@@ -7806,7 +7506,9 @@ function renderLogsInner(b) {
   // ② 기록 쓰기
   const C = lgCfg(),
     K = C.kinds();
-  const comp = `<div class="lgc"><div class="ch">✎ ${C.ch} <span class="muted" style="font-weight:normal">— ${C.hint} 저장한 기록을 고치면 수정 이력이 남습니다.</span></div>
+  const comp = tl.ro
+    ? ''
+    : `<div class="lgc"><div class="ch">✎ ${C.ch} <span class="muted" style="font-weight:normal">— ${C.hint} 저장한 기록을 고치면 수정 이력이 남습니다.</span></div>
     <div class="dtrow"><label><span>일시 <span class="muted" style="font-weight:normal">(시간은 선택)</span></span>${dtpHTML('lgAt', C.now ? nowMin() : today(), '')}</label>
       <label>구분<select id="lgKind">${opts(K, K.includes('인터뷰') ? '인터뷰' : K[0])}</select></label></div>
     <div class="cgp"><label>상대방 · 참석<input id="lgParty" list="lgParties" placeholder="예: 대성정밀 박OO 과장 / 생산팀 · 생산기술팀"></label>
@@ -7837,17 +7539,18 @@ function renderLogsInner(b) {
     ].join(' ');
     const who = [x.party, x.method].filter(Boolean).join(' · ');
     const del = `<a class="lk" style="font-size:11px;color:var(--bad)" onclick="delLog(${x._i})">삭제</a>`;
-    const acts = x.sys
-      ? ''
-      : own && !ed && !vo && x.void
-        ? mv(x) + del
-        : own && !ed && !vo
-          ? `${mv(x)}<a class="lk" style="font-size:11px" onclick="lgEdit(${x._i})">수정</a> ${
-              x._new ? '' : `<a class="lk" style="font-size:11px;color:var(--bad)" onclick="tl.voiding=${x._i};renderLogs()">취소 처리</a> `
-            }${del}`
-          : x.ro && !x.auto
-            ? '<span class="muted" style="font-size:11px">원본에서 수정</span>'
-            : '';
+    const acts =
+      x.sys || tl.ro
+        ? ''
+        : own && !ed && !vo && x.void
+          ? mv(x) + del
+          : own && !ed && !vo
+            ? `${mv(x)}<a class="lk" style="font-size:11px" onclick="lgEdit(${x._i})">수정</a> ${
+                x._new ? '' : `<a class="lk" style="font-size:11px;color:var(--bad)" onclick="tl.voiding=${x._i};renderLogs()">취소 처리</a> `
+              }${del}`
+            : x.ro && !x.auto
+              ? '<span class="muted" style="font-size:11px">원본에서 수정</span>'
+              : '';
     if (ed)
       return `<li class="ed"><div class="lh"><b>기록 수정</b>${saved ? ' <span class="muted" style="font-size:11.5px">— 원문은 이력으로 보존됩니다</span>' : ''}</div>
       <div class="dtrow" style="margin-top:6px"><label><span>일시 <span class="muted" style="font-weight:normal">(시간은 선택)</span></span>${dtpHTML('leAt', lgAtOf(x), x.band)}</label>
@@ -7861,8 +7564,8 @@ function renderLogsInner(b) {
       x.src ? ` <span class="bg mut" style="font-weight:normal">${esc(x.src)}</span>` : ''
     }${
       who ? ` <span style="font-size:12px">${esc(who)}</span>` : ''
-    } <span class="muted" style="font-size:11px">${esc(x.by || '')}</span> ${tags}<span style="flex:1"></span>${acts}</div>
-      <div class="lt">${nl(x.text)}</div>${x.result ? `<div class="lr"><b>결과</b> ${nl(x.result)}</div>` : ''}${lgThumbs(x.photos)}
+    } <span class="muted" style="font-size:11px">${esc(x.by || '')}</span> ${tags}<span style="flex:1"></span>${acts ? `<span class="la">${acts}</span>` : ''}</div>
+      <div class="lt">${nl(lgTidy(x.text))}</div>${x.result ? `<div class="lr"><b>결과</b> ${nl(x.result)}</div>` : ''}${lgThumbs(x.photos)}
       ${x.void ? `<div class="lv">취소 ${esc(loc(x.void.at))} ${esc(x.void.by || '')} — 사유: ${esc(x.void.reason)}</div>` : ''}
       ${
         vo
@@ -8044,7 +7747,13 @@ function saveLog(i) {
     x.editedAt = now();
     x._dirty = true;
   }
-  if (nv.date !== x.date || nv.time !== (x.time || '') || nv.band !== (x.band || '')) delete x.ord; // 일시를 고치면 손으로 정한 순서는 풀림
+  // 일시를 고치면 그날(전 날짜 · 새 날짜)의 손으로 정한 순서는 풀리고 다시 시각 순서
+  if (nv.date !== x.date || nv.time !== (x.time || '') || nv.band !== (x.band || '')) {
+    const days = [x.date, nv.date];
+    tl.own.forEach((y) => {
+      if (days.includes(y.date)) delete y.ord;
+    });
+  }
   Object.assign(x, nv);
   delete x.next;
   delete x.nextDate;
@@ -8106,7 +7815,7 @@ function tlCommit() {
 async function lgPrint() {
   const w = reportWin(),
     o = tl.obj,
-    isN = tl.kind === 'ncr';
+    isN = tl.kind === 'ncr' || tl.kind === 'issue'; // 번호(no)가 있는 문서
   const L = [...tl.own.filter((x) => !x._new), ...caseReadonly(tl.kind, o)].sort((a, c) => lgCmpDesc(c, a));
   const ids = [...new Set(L.flatMap((l) => l.photos || []))];
   let P = {};
@@ -8122,7 +7831,12 @@ async function lgPrint() {
       if (!pn[id]) pn[id] = ++k;
     }),
   );
-  const title = isN ? `${o.no} · ${supName(o.supplierId) || ''}` : `${defLabel(o)} · ${supName(o.supplierId) || ''}`;
+  const title =
+    tl.kind === 'issue'
+      ? `${o.no} · ${o.title || ''}`
+      : isN
+        ? `${o.no} · ${supName(o.supplierId) || ''}`
+        : `${defLabel(o)} · ${supName(o.supplierId) || ''}`;
   const unsaved = tl.own.filter((x) => x._new || x._dirty).length;
   const html = reportFrame(`<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>실행기록_${esc(isN ? o.no : o.date)}</title><style>
   body{font-family:'Malgun Gothic','맑은 고딕',sans-serif;font-size:11px;color:#111;margin:24px}h1{font-size:17px;margin:6px 0 2px}.s{color:#555}
@@ -17598,22 +17312,6 @@ function closeLb() {
   $('#lbimg').src = '';
 }
 document.addEventListener('paste', (e) => {
-  const ia =
-    $('#modal').classList.contains('on') &&
-    $('#modal').dataset.iss &&
-    document.activeElement &&
-    document.activeElement.closest &&
-    document.activeElement.closest('.isadd,.ised');
-  if (ia) {
-    const fs = [...(e.clipboardData?.files || [])];
-    if (fs.length) {
-      e.preventDefault();
-      issFAdd(fs, ia.classList.contains('ised') ? 'ed' : 'nw').then((n) => {
-        if (n) toast(`파일 ${n}개 첨부`);
-      });
-    }
-    return;
-  }
   const lb = $('#logBox');
   if (lb && $('#modal').classList.contains('on') && lb.contains(document.activeElement)) {
     const fs = [...(e.clipboardData?.files || [])];

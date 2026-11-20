@@ -733,22 +733,6 @@ function closeLb() {
   $('#lbimg').src = '';
 }
 document.addEventListener('paste', (e) => {
-  const ia =
-    $('#modal').classList.contains('on') &&
-    $('#modal').dataset.iss &&
-    document.activeElement &&
-    document.activeElement.closest &&
-    document.activeElement.closest('.isadd,.ised');
-  if (ia) {
-    const fs = [...(e.clipboardData?.files || [])];
-    if (fs.length) {
-      e.preventDefault();
-      issFAdd(fs, ia.classList.contains('ised') ? 'ed' : 'nw').then((n) => {
-        if (n) toast(`파일 ${n}개 첨부`);
-      });
-    }
-    return;
-  }
   const lb = $('#logBox');
   if (lb && $('#modal').classList.contains('on') && lb.contains(document.activeElement)) {
     const fs = [...(e.clipboardData?.files || [])];

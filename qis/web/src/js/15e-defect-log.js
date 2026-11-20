@@ -36,13 +36,19 @@ const LOGCFG = {
     hint: '확인한 사실과 결정 사항을 적습니다.',
     text: '내용',
     ph: '확인한 사실 · 원인 추정 · 결정 사항',
-    head: '기록',
+    head: '남긴 기록',
   },
 };
 const lgCfg = () => LOGCFG[tl.kind] || LOGCFG.defect;
 // 기록의 일시 표시: 날짜 + 시각 (없으면 시간대, 그것도 없으면 날짜만)
 const lgWhen = (x) => (x.date || '') + (x.time ? ' ' + x.time : x.band ? ' ' + x.band : '');
 const lgAtOf = (x) => (x.date || '') + (x.time ? 'T' + x.time : '');
+// 붙여 넣은 메일의 빈 줄 여러 개 → 하나 (보여 줄 때만)
+const lgTidy = (t) =>
+  String(t || '')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
 const lgKindCls = (k) => LOG_CLS[k] || (typeof ISS_KCLS !== 'undefined' && ISS_KCLS[k]) || 'mut';
 function autoEvents(d, n, lbl) {
   const E = [],
@@ -101,6 +107,7 @@ function autoEvents(d, n, lbl) {
   return E;
 }
 function caseReadonly(kind, obj) {
+  if (kind === 'issue') return [];
   if (kind === 'defect') {
     const n = ncrOfDefect(obj);
     return [...autoEvents(obj, null), ...(n ? autoEvents(null, n) : []), ...(n ? (n.logs || []).map((l) => ({ ...l, src: 'NCR', ro: true })) : [])];
@@ -135,11 +142,13 @@ let tl = {
 };
 const LOG_METHODS = ['전화', '메일', '방문', '회의', '메신저', '공문', '기타'];
 const phCache = {};
-function tlInit(kind, obj) {
+// opt.ro: 읽기 전용 (종결한 이슈 등) — 작성 칸 · 수정 단추를 내지 않음
+function tlInit(kind, obj, opt) {
   tl = {
-    own: JSON.parse(JSON.stringify(obj.logs || [])),
+    own: JSON.parse(JSON.stringify(obj.logs || [])).map(logNorm),
     kind,
     obj,
+    ro: !!(opt && opt.ro),
     edit: null,
     voiding: null,
     hist: new Set(),
@@ -169,6 +178,24 @@ function tlInit(kind, obj) {
       if (mfDirty && !tlDraftHas() && tl.edit == null) tl.other = true;
     });
   }
+}
+// 창을 다시 그린 뒤 (이슈 창): 저장된 기록을 다시 읽음 — 프로그램이 넣은 기록(분류 · 종결)이 빠지지 않게. 수정 중인 기록은 그대로 둠
+function tlResync(obj, opt) {
+  tl.obj = obj;
+  tl.ro = !!(opt && opt.ro);
+  if (tl.own.some((x) => x._new || x._dirty)) return;
+  const idOf = (k) => (k != null && tl.own[k] ? tl.own[k].id : null),
+    eid = idOf(tl.edit),
+    vid = idOf(tl.voiding);
+  tl.own = JSON.parse(JSON.stringify(obj.logs || [])).map(logNorm);
+  curLogs = tl.own;
+  const at = (id) => {
+    const k = id ? tl.own.findIndex((x) => x.id === id) : -1;
+    return k < 0 ? null : k;
+  };
+  tl.edit = at(eid);
+  if (tl.edit == null) tl.editPh = null;
+  tl.voiding = at(vid);
 }
 // 쓰다 만 기록이 있나
 function tlDraftHas() {
@@ -314,7 +341,7 @@ function renderLogsInner(b) {
   const mv = (x) => {
     const D = ownDay[x.date || ''] || [],
       n = D.indexOf(x._i);
-    if (D.length < 2 || tl.edit != null || tl.voiding != null) return '';
+    if (tl.ro || D.length < 2 || tl.edit != null || tl.voiding != null) return '';
     return `<span class="mv"><button type="button" class="b s" ${n ? '' : 'disabled'} onclick="lgMove(${x._i},-1)" title="같은 날 안에서 위로" aria-label="위로">▲</button><button type="button" class="b s" ${n < D.length - 1 ? '' : 'disabled'} onclick="lgMove(${x._i},1)" title="같은 날 안에서 아래로" aria-label="아래로">▼</button></span> `;
   };
   const nOwn = L.filter((x) => !x.auto).length,
@@ -322,7 +349,7 @@ function renderLogsInner(b) {
     pend = tl.own.filter((x) => x._new).length,
     pendEd = tl.own.filter((x) => x._dirty && !x._new).length;
   const ownCase =
-    typeof czOwns === 'function' && czOwns(tl.obj, tl.kind)
+    tl.kind !== 'issue' && typeof czOwns === 'function' && czOwns(tl.obj, tl.kind)
       ? (() => {
           const id = tl.obj.caseId || (db.ncrs.find((n) => n.id === tl.obj.ncrId) || {}).caseId;
           return czById('cases', id);
@@ -339,7 +366,9 @@ function renderLogsInner(b) {
   // ② 기록 쓰기
   const C = lgCfg(),
     K = C.kinds();
-  const comp = `<div class="lgc"><div class="ch">✎ ${C.ch} <span class="muted" style="font-weight:normal">— ${C.hint} 저장한 기록을 고치면 수정 이력이 남습니다.</span></div>
+  const comp = tl.ro
+    ? ''
+    : `<div class="lgc"><div class="ch">✎ ${C.ch} <span class="muted" style="font-weight:normal">— ${C.hint} 저장한 기록을 고치면 수정 이력이 남습니다.</span></div>
     <div class="dtrow"><label><span>일시 <span class="muted" style="font-weight:normal">(시간은 선택)</span></span>${dtpHTML('lgAt', C.now ? nowMin() : today(), '')}</label>
       <label>구분<select id="lgKind">${opts(K, K.includes('인터뷰') ? '인터뷰' : K[0])}</select></label></div>
     <div class="cgp"><label>상대방 · 참석<input id="lgParty" list="lgParties" placeholder="예: 대성정밀 박OO 과장 / 생산팀 · 생산기술팀"></label>
@@ -370,17 +399,18 @@ function renderLogsInner(b) {
     ].join(' ');
     const who = [x.party, x.method].filter(Boolean).join(' · ');
     const del = `<a class="lk" style="font-size:11px;color:var(--bad)" onclick="delLog(${x._i})">삭제</a>`;
-    const acts = x.sys
-      ? ''
-      : own && !ed && !vo && x.void
-        ? mv(x) + del
-        : own && !ed && !vo
-          ? `${mv(x)}<a class="lk" style="font-size:11px" onclick="lgEdit(${x._i})">수정</a> ${
-              x._new ? '' : `<a class="lk" style="font-size:11px;color:var(--bad)" onclick="tl.voiding=${x._i};renderLogs()">취소 처리</a> `
-            }${del}`
-          : x.ro && !x.auto
-            ? '<span class="muted" style="font-size:11px">원본에서 수정</span>'
-            : '';
+    const acts =
+      x.sys || tl.ro
+        ? ''
+        : own && !ed && !vo && x.void
+          ? mv(x) + del
+          : own && !ed && !vo
+            ? `${mv(x)}<a class="lk" style="font-size:11px" onclick="lgEdit(${x._i})">수정</a> ${
+                x._new ? '' : `<a class="lk" style="font-size:11px;color:var(--bad)" onclick="tl.voiding=${x._i};renderLogs()">취소 처리</a> `
+              }${del}`
+            : x.ro && !x.auto
+              ? '<span class="muted" style="font-size:11px">원본에서 수정</span>'
+              : '';
     if (ed)
       return `<li class="ed"><div class="lh"><b>기록 수정</b>${saved ? ' <span class="muted" style="font-size:11.5px">— 원문은 이력으로 보존됩니다</span>' : ''}</div>
       <div class="dtrow" style="margin-top:6px"><label><span>일시 <span class="muted" style="font-weight:normal">(시간은 선택)</span></span>${dtpHTML('leAt', lgAtOf(x), x.band)}</label>
@@ -394,8 +424,8 @@ function renderLogsInner(b) {
       x.src ? ` <span class="bg mut" style="font-weight:normal">${esc(x.src)}</span>` : ''
     }${
       who ? ` <span style="font-size:12px">${esc(who)}</span>` : ''
-    } <span class="muted" style="font-size:11px">${esc(x.by || '')}</span> ${tags}<span style="flex:1"></span>${acts}</div>
-      <div class="lt">${nl(x.text)}</div>${x.result ? `<div class="lr"><b>결과</b> ${nl(x.result)}</div>` : ''}${lgThumbs(x.photos)}
+    } <span class="muted" style="font-size:11px">${esc(x.by || '')}</span> ${tags}<span style="flex:1"></span>${acts ? `<span class="la">${acts}</span>` : ''}</div>
+      <div class="lt">${nl(lgTidy(x.text))}</div>${x.result ? `<div class="lr"><b>결과</b> ${nl(x.result)}</div>` : ''}${lgThumbs(x.photos)}
       ${x.void ? `<div class="lv">취소 ${esc(loc(x.void.at))} ${esc(x.void.by || '')} — 사유: ${esc(x.void.reason)}</div>` : ''}
       ${
         vo
@@ -577,7 +607,13 @@ function saveLog(i) {
     x.editedAt = now();
     x._dirty = true;
   }
-  if (nv.date !== x.date || nv.time !== (x.time || '') || nv.band !== (x.band || '')) delete x.ord; // 일시를 고치면 손으로 정한 순서는 풀림
+  // 일시를 고치면 그날(전 날짜 · 새 날짜)의 손으로 정한 순서는 풀리고 다시 시각 순서
+  if (nv.date !== x.date || nv.time !== (x.time || '') || nv.band !== (x.band || '')) {
+    const days = [x.date, nv.date];
+    tl.own.forEach((y) => {
+      if (days.includes(y.date)) delete y.ord;
+    });
+  }
   Object.assign(x, nv);
   delete x.next;
   delete x.nextDate;
@@ -639,7 +675,7 @@ function tlCommit() {
 async function lgPrint() {
   const w = reportWin(),
     o = tl.obj,
-    isN = tl.kind === 'ncr';
+    isN = tl.kind === 'ncr' || tl.kind === 'issue'; // 번호(no)가 있는 문서
   const L = [...tl.own.filter((x) => !x._new), ...caseReadonly(tl.kind, o)].sort((a, c) => lgCmpDesc(c, a));
   const ids = [...new Set(L.flatMap((l) => l.photos || []))];
   let P = {};
@@ -655,7 +691,12 @@ async function lgPrint() {
       if (!pn[id]) pn[id] = ++k;
     }),
   );
-  const title = isN ? `${o.no} · ${supName(o.supplierId) || ''}` : `${defLabel(o)} · ${supName(o.supplierId) || ''}`;
+  const title =
+    tl.kind === 'issue'
+      ? `${o.no} · ${o.title || ''}`
+      : isN
+        ? `${o.no} · ${supName(o.supplierId) || ''}`
+        : `${defLabel(o)} · ${supName(o.supplierId) || ''}`;
   const unsaved = tl.own.filter((x) => x._new || x._dirty).length;
   const html = reportFrame(`<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>실행기록_${esc(isN ? o.no : o.date)}</title><style>
   body{font-family:'Malgun Gothic','맑은 고딕',sans-serif;font-size:11px;color:#111;margin:24px}h1{font-size:17px;margin:6px 0 2px}.s{color:#555}

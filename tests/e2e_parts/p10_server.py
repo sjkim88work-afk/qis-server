@@ -72,7 +72,7 @@ def run(c):
     ok(C.locator("#view button:has-text('이슈 등록'):visible").count() == 0 and "서버 이슈 시험" in C.inner_text("#view"), "조회: 이슈 보기만 (등록 버튼 없음)")
     # 이슈 삭제: 조회는 삭제 버튼 없음 · 작성자 삭제 → 사진 휴지통 · 연결된 불량은 남고 연결만 끊김 · B 반영
     C.evaluate("i=>issOpen(i)", iid); settle(C, 300)
-    ok(" 이슈" in C.locator("#modal.on #mt").inner_text() and C.locator("#modal.on .isl").count() == 1, "이슈 상세는 창(팝업)으로 열림")
+    ok(" 이슈" in C.locator("#modal.on #mt").inner_text() and C.locator("#modal.on #logBox ul.logs").count() == 1 and C.locator("#modal.on #logBox .lgc").count() == 0 and C.locator("#modal.on #logBox ul.logs a.lk").count() == 0, "이슈 상세는 창(팝업)으로 열림 · 조회 권한은 기록 작성 칸 · 수정 단추 없음")
     ok(C.locator("#modal button:has-text('삭제'):visible").count() == 0, "조회: 이슈 삭제 버튼 없음")
     C.evaluate("closeModal()"); settle(C, 200)
     ok(C.evaluate("state.issId===null && !document.querySelector('#modal').classList.contains('on')"), "상세 창 닫기 → 목록")
@@ -80,33 +80,36 @@ def run(c):
     A.evaluate("i=>issOpen(i)", iid); settle(A, 300)
     ok(A.locator("#mfoot button:has-text('삭제'):visible").count() == 1, "작성자: 이슈 상세에 삭제 버튼")
     # 상세 창에서 기록 추가 → 창이 그대로 열린 채 갱신 · 수정 창을 닫으면 상세로 돌아옴
-    A.fill("#isTx", "창에서 쓴 기록"); A.click("#modal .isadd button.p:has-text('저장')"); settle(A, 400)
-    ok(A.locator("#modal.on").count() == 1 and "창에서 쓴 기록" in A.inner_text("#modal .isl"), "상세 창에서 기록 추가 → 창 유지 · 갱신")
-    # 기록 수정: 사유 없이도 저장 · 사유를 적으면 이력에 남음 · 수정 전 내용 보관
-    A.click("#modal .isl li:has-text('창에서 쓴 기록') button:has-text('수정')"); settle(A, 300)
-    A.fill("#ieTx", "창에서 쓴 기록 (고침)"); A.click("#modal button:has-text('수정 저장')"); settle(A, 400)
-    ok(A.evaluate("i=>{const l=issById(i).logs.find(x=>x.text==='창에서 쓴 기록 (고침)');return !!l&&l.edits.length===1&&l.edits[0].reason===''&&l.edits[0].prev.text==='창에서 쓴 기록'}", iid), "기록 수정: 사유 없이 저장 · 수정 전 내용 보관")
-    A.click("#modal .isl li:has-text('창에서 쓴 기록 (고침)') button:has-text('수정')"); settle(A, 300)
-    A.fill("#ieTx", "창에서 쓴 기록 (두 번 고침)"); A.fill("#ieWhy", "오타 수정"); A.click("#modal button:has-text('수정 저장')"); settle(A, 400)
-    ok(A.evaluate("i=>{const l=issById(i).logs.find(x=>x.text==='창에서 쓴 기록 (두 번 고침)');return !!l&&l.edits.length===2&&l.edits[1].reason==='오타 수정'}", iid) and "수정 2회" in A.inner_text("#modal .isl") and "오타 수정" in A.inner_text("#modal .isl"), "기록 수정: 사유가 이력에 남고 화면에 표시")
-    A.click("#modal .isl li:has-text('두 번 고침') button:has-text('수정')"); settle(A, 300); A.click("#modal button:has-text('수정 저장')"); settle(A, 300)
-    ok(A.evaluate("i=>issById(i).logs.find(x=>x.text==='창에서 쓴 기록 (두 번 고침)').edits.length===2", iid), "바꾼 것 없이 저장 → 이력 늘지 않음")
+    A.fill("#lgText", "창에서 쓴 기록"); A.click("#modal .lgc button.p:has-text('저장')"); settle(A, 400)
+    ok(A.locator("#modal.on").count() == 1 and "창에서 쓴 기록" in A.inner_text("#modal ul.logs"), "상세 창에서 기록 추가 → 창 유지 · 갱신")
+    ok(A.evaluate("i=>{const l=issById(i).logs.find(x=>x.text==='창에서 쓴 기록');return !!l&&l.date===today()&&/^\\d\\d:\\d\\d$/.test(l.time)&&l.party===''&&l.result===''&&!('who' in l)&&!('rec' in l)}", iid), "이슈 기록은 공통 구조로 저장 (date · time · party · result)")
+    # 기록 수정: 이슈는 사유 없이도 저장 · 사유를 적으면 이력에 남음 · 수정 전 내용 보관
+    A.click("#modal ul.logs li:has-text('창에서 쓴 기록') a:text-is('수정')"); settle(A, 300)
+    A.fill("#leText", "창에서 쓴 기록 (고침)"); A.click("#modal ul.logs li.ed button.p"); settle(A, 400)
+    ok(A.evaluate("i=>{const l=issById(i).logs.find(x=>x.text==='창에서 쓴 기록 (고침)');return !!l&&l.hist.length===1&&l.hist[0].reason===''&&l.hist[0].text==='창에서 쓴 기록'}", iid), "기록 수정: 사유 없이 저장 · 수정 전 내용 보관")
+    A.click("#modal ul.logs li:has-text('창에서 쓴 기록 (고침)') a:text-is('수정')"); settle(A, 300)
+    A.fill("#leText", "창에서 쓴 기록 (두 번 고침)"); A.fill("#leReason", "오타 수정"); A.click("#modal ul.logs li.ed button.p"); settle(A, 400)
+    A.click("#modal ul.logs li:has-text('두 번 고침') a:has-text('이력')"); settle(A, 200)
+    ok(A.evaluate("i=>{const l=issById(i).logs.find(x=>x.text==='창에서 쓴 기록 (두 번 고침)');return !!l&&l.hist.length===2&&l.hist[1].reason==='오타 수정'}", iid) and "수정 2회" in A.inner_text("#modal ul.logs") and "오타 수정" in A.inner_text("#modal ul.logs"), "기록 수정: 사유가 이력에 남고 화면에 표시")
+    A.click("#modal ul.logs li:has-text('두 번 고침') a:text-is('수정')"); settle(A, 300); A.click("#modal ul.logs li.ed button.p"); settle(A, 300)
+    ok(A.evaluate("i=>issById(i).logs.find(x=>x.text==='창에서 쓴 기록 (두 번 고침)').hist.length===2", iid), "바꾼 것 없이 저장 → 이력 늘지 않음")
     A.click("#mfoot button:has-text('수정')"); settle(A, 300)
     ok(A.locator("#mt").inner_text().endswith("수정"), "상세 → 수정 창")
     A.evaluate("closeModal(true)"); settle(A, 300)
-    ok(A.locator("#modal.on .isl").count() == 1, "수정 창 닫기 → 상세 창으로 돌아옴")
+    ok(A.locator("#modal.on #logBox ul.logs").count() == 1, "수정 창 닫기 → 상세 창으로 돌아옴")
     # 창 아래 단추: 삭제는 왼쪽 끝에 따로 · 상세 창에 저장 단추 · 삭제는 확인을 물음
     r = A.evaluate("""() => {const k=[...document.querySelector('#mfoot').children],lab=k.map(e=>e.className.includes('mfsp')?'|':e.textContent).join(','),
-      d=k[0].getBoundingClientRect(),n=k[2].getBoundingClientRect();return {lab,gap:n.left-d.right,tx:document.querySelector('#isTx').value}}""")
+      d=k[0].getBoundingClientRect(),n=k[2].getBoundingClientRect();return {lab,gap:n.left-d.right,tx:document.querySelector('#lgText').value}}""")
     ok(r["lab"] == "삭제,|,수정,닫기,저장" and r["gap"] > 100, f"이슈 상세: 삭제는 왼쪽 끝 · 저장 단추 있음 ({r['lab']}, 간격 {round(r['gap'])}px)")
     ok(r["tx"] == "", "기록 추가 후 입력 칸 비움")
-    r2 = A.evaluate("""() => {const b=[...document.querySelectorAll('#modal .isadd .cf button')].map(x=>x.textContent).join(),lgc=document.querySelector('#modal .isadd').classList.contains('lgc');
-      document.querySelector('#isTx').value='지울 내용';document.querySelector('#isWho').value='누구';issClearLog();return {b,lgc,v:document.querySelector('#isTx').value+document.querySelector('#isWho').value,on:document.querySelector('#modal').classList.contains('on')}}""")
-    ok(r2["b"] == "취소,저장" and r2["lgc"] and r2["v"] == "" and r2["on"], f"이슈 기록 작성 칸: 실행 기록과 같은 모양 · 취소 · 저장 ({r2['b']})")
+    r2 = A.evaluate("""() => {const b=[...document.querySelectorAll('#modal .lgc .cf button')].map(x=>x.textContent).join(),lab=[...document.querySelectorAll('#modal .lgc label')].map(x=>x.textContent.trim().slice(0,12)).join('|');
+      document.querySelector('#lgText').value='지울 내용';document.querySelector('#lgParty').value='누구';lgClear();return {b,lab,v:document.querySelector('#lgText').value+document.querySelector('#lgParty').value,on:document.querySelector('#modal').classList.contains('on'),dirty:mfDirty}}""")
+    ok(r2["b"] == "취소,저장" and r2["v"] == "" and r2["on"] and not r2["dirty"], f"이슈 기록 작성 칸: 취소 · 저장 ({r2['b']})")
+    ok("방법" in r2["lab"] and "결과 · 합의 사항" in r2["lab"] and "상대방 · 참석" in r2["lab"] and "내용 *" in r2["lab"], f"이슈 기록 작성 칸: 방법 · 결과 · 합의 사항 칸이 있음 ({r2['lab']})")
     r = A.evaluate("""async i => {const o=window.askConfirm;let n=0;window.askConfirm=async()=>{n++;return false};
       document.querySelector('#mfoot button.d').click();await new Promise(r=>setTimeout(r,300));window.askConfirm=o;return {n,alive:!!issById(i)}}""", iid)
     ok(r["n"] == 1 and r["alive"], "이슈 삭제: 확인을 묻고, 취소하면 지우지 않음")
-    A.fill("#isTx", "저장 단추로 쓴 기록"); A.click("#mfoot button.p"); settle(A, 500)
+    A.fill("#lgText", "저장 단추로 쓴 기록"); A.click("#mfoot button.p"); settle(A, 500)
     ok(A.evaluate("i=>!document.querySelector('#modal').classList.contains('on')&&issById(i).logs.filter(x=>x.text==='저장 단추로 쓴 기록').length===1", iid), "이슈 상세 저장 단추: 쓰던 기록 저장 후 창 닫음")
     r = A.evaluate("""() => {const lab=()=>[...document.querySelector('#mfoot').children].map(e=>e.className.includes('mfsp')?'|':e.textContent).join(',');
       editDefect(db.defects[0].id);const d=lab();mfDirty=false;closeModal(true);editNcr(db.ncrs[0].id,null,'issue');const n=lab();mfDirty=false;closeModal(true);return {d,n}}""")

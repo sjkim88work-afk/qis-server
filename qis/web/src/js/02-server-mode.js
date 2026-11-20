@@ -62,6 +62,7 @@ function srvSetLocal(coll, id, data) {
   }
   if (coll === 'suppliers') ensureContacts(data);
   if (coll === 'defects' && !Array.isArray(data.photos)) data.photos = [];
+  if (coll === 'issues') issNorm(data); // 예전 판이 보낸 이슈 기록도 공통 구조로 읽음
   const o = (db[coll] || []).find((r) => r.id === id);
   if (o) {
     Object.keys(o).forEach((k) => delete o[k]);
