@@ -59,14 +59,15 @@ def run(c):
       editDefect(id);await wait(400);const n0=curPhotos.length;await addPhotoFiles([png()]);const p=curPhotos[curPhotos.length-1];
       out.photo={n:curPhotos.length-n0,ok:good(p),name:p.name,isNew:p.isNew===true,dirty:mfDirty};mfDirty=false;closeModal(true);
       openLog(id);await wait(400);await lgAddFiles([png()]);const lid=tl.draftPh[tl.draftPh.length-1],l=tl.newPh[lid];
-      out.log={ok:good(l),isNew:l&&l.isNew===true,shown:document.querySelectorAll('#logBox .lgph img').length>0};await lgAddFiles([pdf]);out.log.onlyImg=tl.draftPh.length===1;tl.draftPh=[];tl.newPh={};mfDirty=false;closeModal(true);
+      out.log={ok:good(l),isNew:l&&l.isNew===true,shown:document.querySelectorAll('#logBox .lgph img').length>0};await lgAddFiles([pdf]);
+      out.log.doc=tl.draftPh.length===2&&document.querySelectorAll('#logBox .lgc .lgph .t.dc').length===1&&/특채.pdf/.test(q('#logBox .lgc .lgph').textContent);tl.draftPh=[];tl.newPh={};mfDirty=false;closeModal(true);
       const im=await attImgRec(png(),'사진.jpg');out.rec={keys:Object.keys(im).sort().join(),ok:good(im)};
       const dc=await attDocRec(pdf,20);out.doc={kind:dc.kind,name:dc.name,mime:dc.mime,size:dc.size,data:/^data:application\\/pdf;base64,/.test(dc.data),thumb:dc.thumb,isNew:dc.isNew};
       const big=await attDocRec({name:'큰파일.zip',size:21*1048576,type:''},20);out.big=big===null&&/20MB/.test(q('#toast').textContent);
       const d0=db.deleted.length;attDrop([]);const d1=db.deleted.length;attDrop(['zz-none']);out.drop=d1===d0&&db.deleted.length===d0+1&&db.deleted[db.deleted.length-1].id==='zz-none';db.deleted.pop();
       return out}""".replace("\\\\", "\\"))
     ok(r["photo"]["n"] == 1 and r["photo"]["ok"] and r["photo"]["name"] == "현장.png" and r["photo"]["isNew"] and r["photo"]["dirty"], f"불량 사진 추가: 줄인 그림 + 작은 그림 ({r['photo']})")
-    ok(r["log"]["ok"] and r["log"]["isNew"] and r["log"]["shown"] and r["log"]["onlyImg"], f"실행 기록 증빙: 이미지만 받음 · 바로 보임 ({r['log']})")
+    ok(r["log"]["ok"] and r["log"]["isNew"] and r["log"]["shown"] and r["log"]["doc"], f"실행 기록 증빙: 이미지 + 문서 파일 · 바로 보임 ({r['log']})")
     ok(r["rec"]["ok"] and r["rec"]["keys"] == "caption,createdAt,data,id,isNew,name,thumb", f"첨부 공통 부품(이미지): 기록 모양 ({r['rec']['keys']})")
     ok(r["doc"] == {"kind": "doc", "name": "특채.pdf", "mime": "application/pdf", "size": 8, "data": True, "thumb": "", "isNew": True}, f"첨부 공통 부품(문서): 내용 그대로 ({r['doc']})")
     ok(r["big"] and r["drop"], "첨부 공통 부품: 20MB 넘으면 거절 · 지울 때 삭제 표시를 남김")
@@ -76,3 +77,24 @@ def run(c):
       lbOpen([{id:'a',name:'image',data:px},{id:'b',name:'현장.png',data:'data:image/jpeg;base64,/9j/4AAQ'},{id:'c',name:'',data:px}],0);o.push(document.querySelector('#lbdl').getAttribute('download'));
       lbMove(1);o.push(document.querySelector('#lbdl').getAttribute('download'));lbMove(1);o.push(document.querySelector('#lbdl').getAttribute('download'));closeLb();return o}""")
     ok(r == ["image.png", "현장.jpg", "photo.png"], f"원본 저장 이름: 내용 형식의 확장자 ({r})")
+    # 기록 공통 구조: 일시(시각 · 시간대는 선택) · 같은 날은 시각 순서(최근이 위, 시간 모름은 맨 위) · 수정하면 원문의 일시도 이력에 남음
+    r = A.evaluate("""async()=>{const wait=ms=>window.__settle(ms),q=s=>document.querySelector(s),out={};
+      const d={id:'dlu1',date:'2026-11-10',source:'수입검사',partNo:'P-1',type:'치수',qty:1,resp:'협력사',logs:[{id:'old1',date:'2026-11-10',kind:'조사',party:'',method:'',text:'예전 기록 (시각 없음)',result:'',photos:[],by:'t',at:'2026-11-10T01:00:00.000Z'}],photos:[],createdAt:now()};db.defects.push(d);
+      openLog('dlu1');await wait(400);
+      out.form={dtp:!!q('#lgAtD')&&!!q('#lgAtB')&&!!q('#lgAtT'),band:q('#lgAtB').value,tHidden:q('#lgAtT').style.display==='none',lab:[...document.querySelectorAll('#logBox .lgc label')].map(e=>e.textContent.trim().slice(0,7)).join('|')};
+      const add=async(b,t,tx)=>{q('#lgAtD').value='2026-11-10';q('#lgAtB').value=b;dtpBand('lgAt');if(t)q('#lgAtT').value=t;q('#lgText').value=tx;addLog();await wait(250)};
+      await add('','14:30','오후 두 시 반');await add('오전','','오전 기록');await add('?','','시간 모름 기록');
+      const cur=()=>db.defects.find(x=>x.id==='dlu1'),rec=tx=>cur().logs.find(l=>l.text===tx);
+      out.saved={t:rec('오후 두 시 반').time,b:rec('오후 두 시 반').band,t2:rec('오전 기록').time,b2:rec('오전 기록').band,t3:rec('시간 모름 기록').time,b3:rec('시간 모름 기록').band,date:rec('오전 기록').date};
+      const texts=()=>[...document.querySelectorAll('#logBox ul.logs li:not(.au) .lt')].map(e=>e.textContent.trim());
+      out.order=texts().join('>');out.when=[...document.querySelectorAll('#logBox ul.logs li:not(.au) .lh b')].map(e=>e.textContent).join('|');
+      lgEdit(tl.own.findIndex(x=>x.text==='오전 기록'));await wait(200);q('#leAtB').value='';dtpBand('leAt');q('#leAtT').value='16:00';saveLog(tl.edit);await wait(200);
+      out.needReason=/수정 사유/.test(q('#toast').textContent)&&tl.edit!=null;q('#leReason').value='시각 확인';saveLog(tl.edit);await wait(300);
+      const e=rec('오전 기록');out.edit={t:e.time,b:e.band,h:(e.hist||[]).length,hb:e.hist[0].band,ht:e.hist[0].time};out.order2=texts().join('>');
+      mfDirty=false;closeModal(true);db.defects=db.defects.filter(x=>x.id!=='dlu1');return out}""")
+    ok(r["form"]["dtp"] and r["form"]["band"] == "?" and r["form"]["tHidden"], f"실행 기록 작성 칸: 일시(날짜 + 시각 선택) — 처음은 ‘시간 모름’ ({r['form']['lab']})")
+    ok(r["saved"] == {"t": "14:30", "b": "", "t2": "", "b2": "오전", "t3": "", "b3": "", "date": "2026-11-10"}, f"기록에 시각 · 시간대가 저장됨 ({r['saved']})")
+    ok(r["order"] == "시간 모름 기록>예전 기록 (시각 없음)>오후 두 시 반>오전 기록" or r["order"] == "예전 기록 (시각 없음)>시간 모름 기록>오후 두 시 반>오전 기록", f"같은 날 순서: 시간 모름 → 늦은 시각 → 이른 시각 ({r['order']})")
+    ok("2026-11-10 14:30" in r["when"] and "2026-11-10 오전" in r["when"], f"기록에 일시가 보임 ({r['when']})")
+    ok(r["needReason"] and r["edit"] == {"t": "16:00", "b": "", "h": 1, "hb": "오전", "ht": ""}, f"시각 수정: 사유 필수 · 원문의 시간대가 이력에 남음 ({r['edit']})")
+    ok(r["order2"].index("오전 기록") < r["order2"].index("오후 두 시 반"), f"시각을 16:00 으로 고치면 14:30 보다 위 ({r['order2']})")
