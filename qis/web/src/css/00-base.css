@@ -64,6 +64,13 @@ a.bg.lgchip{display:inline-flex;align-items:center;gap:4px;min-height:26px;paddi
 .dtrow{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:8px}.fg label.w2{grid-column:span 2}
 @media(max-width:560px){.dtrow{grid-template-columns:1fr}.fg label.w2{grid-column:1/-1}.dtp{flex-wrap:wrap}.dtp>input[type=date]{flex:1 1 100%}}
 .mv{display:inline-flex;gap:2px;vertical-align:middle}.mv button.b.s{padding:0 5px;height:20px;min-height:0;min-width:24px;font-size:9px;line-height:1;flex:1}.mv button:disabled{opacity:.3;cursor:default}
+.isfl{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:6px}.isfl:empty{display:none}
+.isfl .f{position:relative;display:inline-flex;align-items:center;max-width:100%;border:1px solid var(--line);border-radius:6px;background:var(--card);font-size:12.5px}
+.isfl .f.ld{padding:5px 8px;color:var(--mu,#6b7689)}.isfl .f.im{border:0}.isfl .f.im img{width:64px;height:48px;object-fit:cover;border-radius:4px;border:1px solid var(--line);cursor:zoom-in;display:block}
+.isfl .f .o{display:inline-flex;align-items:center;gap:6px;padding:4px 8px;cursor:pointer;min-width:0;color:inherit;text-decoration:none}.isfl .f .o b{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:260px}
+.isfl .dk{font:600 10.5px/1 var(--f-mono,monospace);color:#fff;background:var(--pri);border-radius:3px;padding:4px 5px;flex:none}
+.isfl .x{position:absolute;top:-6px;right:-6px;background:#fff;border:1px solid var(--line);border-radius:50%;width:16px;height:16px;font-size:10px;line-height:14px;text-align:center;cursor:pointer;color:var(--bad)}
+ol.isl li.void .isfl{opacity:.6}
 .isadd{margin-top:12px}.isadd textarea{min-height:56px;width:100%}   /* 이슈의 기록 작성 칸 — 모양은 실행 기록 작성 칸(.lgc)과 같음 */
 button.isr{font:inherit;text-align:left;padding:10px 12px;border-radius:8px;border:1px solid var(--line);background:var(--card);cursor:pointer;display:flex;justify-content:space-between;gap:8px;align-items:baseline;color:inherit}button.isr.on{border:2px solid var(--pri);background:var(--pri2)}button.isr .muted{font-size:12px}
 .isprev{background:var(--mut);border-radius:8px;padding:12px;margin-top:10px}.isprev ul{margin:6px 0 10px;padding-left:18px;font-size:13px;line-height:1.6}

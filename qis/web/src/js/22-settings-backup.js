@@ -380,7 +380,7 @@ async function restoreFromFolder(){
   await restoreReplace(inc);
   // 데이터만 든 최신 백업이면, 없는 사진은 사진이 든 날짜별 백업에서 채움
   if(!inc.photos){const full=L.filter(x=>BK_RE.test(x.n)&&!/사진제외/.test(x.n));let added=0;
-    for(const x of full){try{const need=new Set([...(db.issues||[]).flatMap(i=>i.photos||[]),...db.defects.flatMap(d=>[...(d.photos||[]),...logPhotoIds(d.logs)]),...db.ncrs.flatMap(n=>[...ncrDocIds(n),...logPhotoIds(n.logs)])]);if(!need.size)break;const have=new Set((await photoGetMany([...need])).filter(r=>!phIsPending(r)).map(r=>r.id));
+    for(const x of full){try{const need=new Set([...(db.issues||[]).flatMap(i=>[...(i.photos||[]),...logPhotoIds(i.logs)]),...db.defects.flatMap(d=>[...(d.photos||[]),...logPhotoIds(d.logs)]),...db.ncrs.flatMap(n=>[...ncrDocIds(n),...logPhotoIds(n.logs)])]);if(!need.size)break;const have=new Set((await photoGetMany([...need])).filter(r=>!phIsPending(r)).map(r=>r.id));
       const miss=[...need].filter(i=>!have.has(i));if(!miss.length)break;const j=JSON.parse(await x.f.text());const ph=(j.photos||[]).filter(p=>p&&miss.includes(p.id));
       if(ph.length){added+=await applyPhotos(ph,false)}}catch(e){console.warn(e)}}
     if(added)toast(`복원 완료 — 사진 ${added}장은 ${full[0]?.n||'날짜별 백업'} 등에서 채웠습니다`)}
