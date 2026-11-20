@@ -14,11 +14,11 @@ def run(c):
     r = A.evaluate("""async () => {
       mfDirty=false;closeModal(true);const wait=ms=>window.__settle(ms),o={};
       const n=db.ncrs[0],n0=(n.logs||[]).length;state.tab='ncr';render();editNcr(n.id,null,'issue');ncrTab('d');await wait(150);
-      o.btn=[...document.querySelectorAll('#modal .lgc .cf button')].map(x=>x.textContent).join();
+      if(!document.querySelector('#lgText'))lgOpen();o.btn=[...document.querySelectorAll('#modal .lgc .cf button')].map(x=>x.textContent).join();
       const ev=(el)=>el.dispatchEvent(new Event('input',{bubbles:true}));
-      document.querySelector('#lgText').value='NCR 진행 기록 시험';ev(document.querySelector('#lgText'));addLog();await wait(200);
+      if(!document.querySelector('#lgText'))lgOpen();document.querySelector('#lgText').value='NCR 진행 기록 시험';ev(document.querySelector('#lgText'));addLog();await wait(200);
       o.saved=(n.logs||[]).length===n0+1&&n.logs.some(l=>l.text==='NCR 진행 기록 시험');o.open=document.querySelector('#modal').classList.contains('on');o.dirty1=mfDirty;
-      const t=document.querySelector('#mf [name=title]');t.value=t.value+' ';ev(t);document.querySelector('#lgText').value='둘째 기록';ev(document.querySelector('#lgText'));addLog();await wait(200);o.dirty2=mfDirty;
+      const t=document.querySelector('#mf [name=title]');t.value=t.value+' ';ev(t);if(!document.querySelector('#lgText'))lgOpen();document.querySelector('#lgText').value='둘째 기록';ev(document.querySelector('#lgText'));addLog();await wait(200);o.dirty2=mfDirty;
       n.logs=n.logs.filter(l=>!/NCR 진행 기록 시험|둘째 기록/.test(l.text));mfDirty=false;closeModal(true);
       return o}""")
     ok(r["btn"] == "취소,저장" and r["saved"] and r["open"], "NCR 진행 기록: 같은 작성 칸 · 저장하면 창을 닫지 않고 바로 저장")

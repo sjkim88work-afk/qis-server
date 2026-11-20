@@ -52,8 +52,8 @@ def run(c):
       saveIssue(null,false);await wait(300);const i=db.issues.find(x=>x.title==='시간 선택 시험');o.at=i.at;o.band=i.band;o.show=issAt(i.at,i.band);
       o.log0=i.logs[0].date+'/'+i.logs[0].time+'/'+i.logs[0].band;
       issOpen(i.id);await wait(200);
-      const add=async(b,t,tx)=>{q('#lgAtD').value='2026-11-10';q('#lgAtB').value=b;dtpBand('lgAt');if(t)q('#lgAtT').value=t;q('#lgText').value=tx;addLog();await wait(200)};
-      o.def={band:q('#lgAtB').value,time:/^\\d\\d:\\d\\d$/.test(q('#lgAtT').value),kind:q('#lgKind').value};
+      const add=async(b,t,tx)=>{if(!q('#lgText'))lgOpen();q('#lgAtD').value='2026-11-10';q('#lgAtB').value=b;dtpBand('lgAt');if(t)q('#lgAtT').value=t;q('#lgText').value=tx;addLog();await wait(200)};
+      lgOpen();o.def={band:q('#lgAtB').value,time:/^\\d\\d:\\d\\d$/.test(q('#lgAtT').value),kind:q('#lgKind').value};
       await add('?','','모름');await add('','14:20','시각');await add('오전','','오전');await add('오후','','오후');
       const cur=()=>issById(i.id),rec=t=>cur().logs.find(l=>l.text===t);
       const TXT=()=>[...document.querySelectorAll('#modal ul.logs li .lt')].map(e=>e.textContent.trim()).join('>');
@@ -66,8 +66,8 @@ def run(c):
       o.edited=rec('모름').time+'/'+cur().logs.filter(l=>l.date==='2026-11-10').map(l=>l.ord==null?'-':l.ord).join('')+'/'+rec('모름').hist[0].time+rec('모름').hist[0].band+'/'+rec('모름').hist[0].reason;o.order4=TXT();
       // 프로그램이 남긴 기록(분류 · 종결)은 고칠 수 없음 · 종결한 이슈는 읽기 전용
       issLog(cur(),'분류','불량 등록 — 시험');touch(cur());save();render();await wait(250);
-      const sysLi=[...document.querySelectorAll('#modal ul.logs li')].find(e=>e.textContent.includes('불량 등록 — 시험'));o.sys={flag:rec('불량 등록 — 시험').sys===true,acts:sysLi.querySelectorAll('a.lk').length};
-      cur().closedAt=today();cur().closeReason='시험';render();await wait(250);o.closed={comp:document.querySelectorAll('#modal #logBox .lgc').length,acts:document.querySelectorAll('#modal ul.logs a.lk').length,n:document.querySelectorAll('#modal ul.logs li').length};
+      const sysLi=[...document.querySelectorAll('#modal ul.logs li')].find(e=>e.textContent.includes('불량 등록 — 시험'));o.sys={flag:rec('불량 등록 — 시험').sys===true,acts:sysLi.querySelectorAll('.la button,.la summary').length};
+      cur().closedAt=today();cur().closeReason='시험';render();await wait(250);o.closed={comp:document.querySelectorAll('#modal #logBox .lgc').length,acts:document.querySelectorAll('#modal ul.logs .la button,#modal ul.logs .la summary').length,n:document.querySelectorAll('#modal ul.logs li').length};
       mfDirty=false;closeModal(true);removeRec('issues',i.id);save();
       // 불량 실행 기록: 같은 실행일끼리 순서 바꾸기
       const d=db.defects[0],keep=JSON.stringify(d.logs||[]),t0=today();
@@ -122,7 +122,7 @@ def run(c):
       return {names:got.map(g=>g.name).sort().join(),histPh:h.photos.length,all:logPhotoIds(i.logs).length}}""")
     ok(r["names"] == "성적서.xlsx,회의록.pdf" and r["histPh"] == 2 and r["all"] == 4, f"수정 저장: 이미지 빼고 엑셀 추가 — 원문의 첨부 2개는 이력에 남음 ({r})")
     # 붙여넣기 (캡처 그림) · 취소
-    r = A.evaluate("""async()=>{const wait=ms=>window.__settle(ms);document.querySelector('#lgText').focus();
+    r = A.evaluate("""async()=>{const wait=ms=>window.__settle(ms);lgOpen();document.querySelector('#lgText').focus();
       const bin=atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='),u=new Uint8Array(bin.length);for(let k=0;k<bin.length;k++)u[k]=bin.charCodeAt(k);
       const dt=new DataTransfer();dt.items.add(new File([u],'capture.png',{type:'image/png'}));
       document.querySelector('#lgText').dispatchEvent(new ClipboardEvent('paste',{clipboardData:dt,bubbles:true,cancelable:true}));await wait(500);
@@ -152,15 +152,35 @@ def run(c):
       const d={id:'lnkd',date:'2026-11-11',source:'공정',partNo:'P-1',type:'치수',qty:2,resp:'협력사',issueId:'lnk1',photos:[],logs:[{id:'dl1',date:'2026-11-12',kind:LOG_KINDS[0],party:'',method:'',text:'불량에서 쓴 기록',result:'',photos:[],by:'',at:now()}]};db.defects.push(d);
       const li=t=>[...document.querySelectorAll('#modal ul.logs li')].find(e=>e.textContent.includes(t));
       openLog('lnkd');await wait(350);const a=li('이슈에서 쓴 기록');
-      o.def={shown:!!a,src:a?/이슈 ISS-LNK/.test(a.querySelector('.lh').textContent):false,acts:a?a.querySelectorAll('a.lk').length:-1,ro:a?/원본에서 수정/.test(a.textContent):false,own:li('불량에서 쓴 기록').querySelectorAll('a.lk').length,
+      o.def={shown:!!a,src:a?/이슈 ISS-LNK/.test(a.querySelector('.lh').textContent):false,acts:a?a.querySelectorAll('.la button,.la summary').length:-1,ro:a?/원본에서 수정/.test(a.textContent):false,own:li('불량에서 쓴 기록').querySelectorAll('.la button,.la summary').length,
         order:[...document.querySelectorAll('#modal ul.logs li:not(.au) .lt')].map(e=>e.textContent.trim()).join('>')};
       o.report=caseEntries('defect',d).some(e=>e.text==='이슈에서 쓴 기록');mfDirty=false;closeModal(true);
       go('issue');issOpen('lnk1');await wait(350);const b=li('불량에서 쓴 기록');
-      o.iss={shown:!!b,acts:b?b.querySelectorAll('a.lk').length:-1,src:b?b.querySelector('.lh').textContent.includes('P-1'):false,auto:[...document.querySelectorAll('#modal ul.logs li.au')].some(e=>/불량 등록/.test(e.textContent)),own:li('이슈에서 쓴 기록').querySelectorAll('a.lk').length};
+      o.iss={shown:!!b,acts:b?b.querySelectorAll('.la button,.la summary').length:-1,src:b?b.querySelector('.lh').textContent.includes('P-1'):false,auto:[...document.querySelectorAll('#modal ul.logs li.au')].some(e=>/불량 등록/.test(e.textContent)),own:li('이슈에서 쓴 기록').querySelectorAll('.la button,.la summary').length};
       document.querySelector('#modal .lgh input[type=checkbox]').click();await wait(150);o.hide=document.querySelectorAll('#modal ul.logs li.au').length;tl.hideAuto=false;
       mfDirty=false;closeModal(true);db.issues=db.issues.filter(x=>x.id!=='lnk1');db.defects=db.defects.filter(x=>x.id!=='lnkd');go('dash');return o}""")
     ok(r["def"]["shown"] and r["def"]["src"] and r["def"]["acts"] == 0 and r["def"]["ro"] and r["def"]["own"] >= 2, f"불량 진행 창: 이슈의 기록이 ‘이슈 ISS-LNK’ 표시와 함께 읽기 전용으로 보임 ({r['def']})")
     ok(r["def"]["order"] == "불량에서 쓴 기록>이슈에서 쓴 기록", f"이슈 기록과 불량 기록이 한 줄로 이어짐 — 최근 것이 위 ({r['def']['order']})")
     ok(not r["report"], "보고서 · 마지막 진행 계산에는 이슈 기록을 넣지 않음 (화면 · 기록 출력에서만 이어 보임)")
     ok(r["iss"]["shown"] and r["iss"]["acts"] == 0 and r["iss"]["src"] and r["iss"]["auto"] and r["iss"]["own"] >= 2 and r["hide"] == 0, f"이슈 창: 이 이슈에서 만든 불량의 기록 · 자동 기록이 읽기 전용으로 보임 · 자동 기록 숨기기 ({r['iss']})")
+    # 기록 칸의 배치: 목록이 먼저 · 작성 칸은 ‘기록 남기기’로 엶 · 취소 처리와 삭제는 ⋯ 메뉴 안
+    r = A.evaluate("""async()=>{const wait=ms=>window.__settle(ms),q=s=>document.querySelector(s),o={};mfDirty=false;closeModal(true);
+      const i={id:'lay1',no:'ISS-LAY',title:'배치',at:'2026-11-10T09:00',urg:'보통',logs:[],photos:[],defectIds:[],caseIds:[],createdAt:now()};db.issues.push(i);go('issue');issOpen('lay1');await wait(300);
+      o.empty={form:!!q('#modal .lgc'),btn:!!q('#lgOpenBtn')};
+      q('#lgText').value='첫 기록';addLog();await wait(300);
+      o.closed={form:!!q('#modal .lgc'),btn:!!q('#lgOpenBtn'),btnText:q('#lgOpenBtn').textContent.trim()};
+      q('#lgOpenBtn').click();await wait(150);const f=q('#modal .lgc'),l=q('#modal ul.logs'),h=q('#modal .lgh');
+      o.open={form:!!f,btn:!!q('#lgOpenBtn'),focus:document.activeElement===q('#lgText'),order:h.getBoundingClientRect().top<f.getBoundingClientRect().top&&f.getBoundingClientRect().top<l.getBoundingClientRect().top};
+      lgClear();await wait(150);
+      const li=q('#modal ul.logs li'),m=li.querySelector('details.lgm');
+      o.acts={edit:[...li.querySelectorAll('.la>button')].map(b=>b.textContent).join(),inline:[...li.querySelectorAll('.la>a,.la>button')].some(b=>/삭제|취소 처리/.test(b.textContent)),menu:[...m.querySelectorAll('.mn button')].map(b=>b.textContent.trim().split(' —')[0]).join(),hidden:!m.open};
+      m.querySelector('summary').click();await wait(100);o.menuOpen=m.open&&m.querySelector('.mn').getBoundingClientRect().height>40;
+      q('#modal #mt').click();await wait(100);o.outside=!m.open;
+      o.emoji=/[\\u{1F4CE}\\u{270E}]/u.test(q('#logBox').textContent);
+      mfDirty=false;closeModal(true);db.issues=db.issues.filter(x=>x.id!=='lay1');save();go('dash');return o}""")
+    ok(r["empty"] == {"form": True, "btn": False}, "기록이 없는 건은 작성 칸이 처음부터 열려 있음")
+    ok(r["closed"] == {"form": False, "btn": True, "btnText": "기록 남기기"}, f"기록을 저장하면 작성 칸을 접고 ‘기록 남기기’ 단추를 보임 ({r['closed']})")
+    ok(r["open"] == {"form": True, "btn": False, "focus": True, "order": True}, f"‘기록 남기기’ → 작성 칸이 목록 위에 열리고 내용 칸에 커서 ({r['open']})")
+    ok(r["acts"] == {"edit": "수정", "inline": False, "menu": "취소 처리,삭제", "hidden": True}, f"기록의 단추: ‘수정’만 밖에 · ‘취소 처리’ · ‘삭제’는 ⋯ 메뉴 안 ({r['acts']})")
+    ok(r["menuOpen"] and r["outside"] and not r["emoji"], "⋯ 메뉴: 누르면 열리고 바깥을 누르면 닫힘 · 그림 문자 아이콘 없음")
     ok(not A._errs, f"이슈 기록 첨부: 화면 오류 없음 {A._errs[:2]}")

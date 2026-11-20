@@ -5,7 +5,7 @@ import os      # noqa: F401
 import signal      # noqa: F401
 import time      # noqa: F401
 
-from e2e_lib import ROOT, URL, ok, settle, start      # noqa: F401
+from e2e_lib import ROOT, URL, logform, ok, settle, start      # noqa: F401
 
 
 def run(c):
@@ -15,20 +15,20 @@ def run(c):
     A.evaluate("i=>{state.tab='defect';render();openLog(i)}", did); settle(A, 500)
     n0 = A.evaluate("tl.own.length")
     for t in ("삭제 시험 기록 1", "삭제 시험 기록 2"):
-        A.fill("#lgText", t); A.click("#modal .lgc button.p:has-text('저장')"); settle(A, 250)
-    r = A.evaluate("""i=>{const d=db.defects.find(x=>x.id===i),b=[...document.querySelectorAll('#modal .lgc .cf button')].map(x=>x.textContent).join();
+        logform(A); A.fill("#lgText", t); A.click("#modal .lgc button.p:has-text('저장')"); settle(A, 250)
+    r = A.evaluate("""i=>{lgOpen();const d=db.defects.find(x=>x.id===i),b=[...document.querySelectorAll('#modal .lgc .cf button')].map(x=>x.textContent).join();
       return {b,open:document.querySelector('#modal').classList.contains('on'),saved:(d.logs||[]).filter(l=>/삭제 시험 기록/.test(l.text)).length,pend:tl.own.filter(x=>x._new).length,dirty:mfDirty,empty:document.querySelector('#lgText').value===''}}""", did)
     ok(r["b"] == "취소,저장", f"실행 기록 작성 칸: 취소 · 저장 단추 ({r['b']})")
     ok(r["open"] and r["saved"] == 2 and r["pend"] == 0 and not r["dirty"] and r["empty"], f"작성 칸의 저장 → 창을 닫지 않고 바로 저장 · 작성 칸 비움 ({r})")
-    A.fill("#lgText", "쓰다 만 내용"); A.fill("#lgParty", "누구"); A.click("#modal .lgc .cf button:has-text('취소')"); settle(A, 200)
-    ok(A.evaluate("document.querySelector('#lgText').value+document.querySelector('#lgParty').value") == "" and not A.evaluate("mfDirty") and A.locator("#modal.on").count() == 1, "작성 칸의 취소 → 쓰던 내용만 지움 (창은 그대로)")
+    logform(A); A.fill("#lgText", "쓰다 만 내용"); A.fill("#lgParty", "누구"); A.click("#modal .lgc .cf button:has-text('취소')"); settle(A, 200)
+    ok(A.evaluate("!document.querySelector('#modal .lgc')&&!!document.querySelector('#lgOpenBtn')") and not A.evaluate("mfDirty") and A.locator("#modal.on").count() == 1, "작성 칸의 취소 → 쓰던 내용만 지움 (창은 그대로)")
     A.click("#mfoot button.p:has-text('저장')"); settle(A, 900)
     A.evaluate("i=>openLog(i)", did); settle(A, 500)
     ok(A.evaluate("tl.own.length") == n0 + 2 and A.evaluate("tl.own.every(x=>!x._new)"), "실행 기록 2건 저장됨")
     A.evaluate("()=>{const k=tl.own.findIndex(x=>x.text==='삭제 시험 기록 1');tl.own[k].void={at:now(),by:'t',reason:'시험'};renderLogs(false)}"); settle(A, 150)
-    ok(A.locator("#modal ul.logs li.vd a:has-text('삭제')").count() == 1, "취소 처리된 기록에 삭제 단추")
-    A.click("#modal ul.logs li.vd a:has-text('삭제')"); settle(A, 300)   # 확인 창은 이 시험 화면에서 자동 승인(위에서 askConfirm 대체)
-    A.click("#modal ul.logs li:has-text('삭제 시험 기록 2') a:has-text('삭제')"); settle(A, 300)
+    ok(A.locator("#modal ul.logs li.vd .lgm .mn button").count() == 1 and A.locator("#modal ul.logs li.vd .lgm .mn button.d").count() == 1, "취소 처리된 기록: ⋯ 메뉴에 삭제만 있음")
+    A.click("#modal ul.logs li.vd .lgm summary"); A.click("#modal ul.logs li.vd .lgm .mn button.d"); settle(A, 300)   # 확인 창은 이 시험 화면에서 자동 승인(위에서 askConfirm 대체)
+    A.click("#modal ul.logs li:has-text('삭제 시험 기록 2') .lgm summary"); A.click("#modal ul.logs li:has-text('삭제 시험 기록 2') .lgm .mn button.d"); settle(A, 300)
     A.click("#mfoot button.p:has-text('저장')"); settle(A, 900)
     ok(A.evaluate("i=>(db.defects.find(d=>d.id===i).logs||[]).filter(l=>/삭제 시험 기록/.test(l.text)).length", did) == 0, "실행 기록 삭제 → 저장 후 사라짐")
     ok(A.evaluate("i=>(db.defects.find(d=>d.id===i).logs||[]).length", did) == n0, "다른 기록은 그대로")
@@ -81,8 +81,8 @@ def run(c):
     r = A.evaluate("""async()=>{const wait=ms=>window.__settle(ms),q=s=>document.querySelector(s),out={};
       const d={id:'dlu1',date:'2026-11-10',source:'수입검사',partNo:'P-1',type:'치수',qty:1,resp:'협력사',logs:[{id:'old1',date:'2026-11-10',kind:'조사',party:'',method:'',text:'예전 기록 (시각 없음)',result:'',photos:[],by:'t',at:'2026-11-10T01:00:00.000Z'}],photos:[],createdAt:now()};db.defects.push(d);
       openLog('dlu1');await wait(400);
-      out.form={dtp:!!q('#lgAtD')&&!!q('#lgAtB')&&!!q('#lgAtT'),band:q('#lgAtB').value,tHidden:q('#lgAtT').style.display==='none',lab:[...document.querySelectorAll('#logBox .lgc label')].map(e=>e.textContent.trim().slice(0,7)).join('|')};
-      const add=async(b,t,tx)=>{q('#lgAtD').value='2026-11-10';q('#lgAtB').value=b;dtpBand('lgAt');if(t)q('#lgAtT').value=t;q('#lgText').value=tx;addLog();await wait(250)};
+      lgOpen();out.form={dtp:!!q('#lgAtD')&&!!q('#lgAtB')&&!!q('#lgAtT'),band:q('#lgAtB').value,tHidden:q('#lgAtT').style.display==='none',lab:[...document.querySelectorAll('#logBox .lgc label')].map(e=>e.textContent.trim().slice(0,7)).join('|')};
+      const add=async(b,t,tx)=>{if(!q('#lgText'))lgOpen();q('#lgAtD').value='2026-11-10';q('#lgAtB').value=b;dtpBand('lgAt');if(t)q('#lgAtT').value=t;q('#lgText').value=tx;addLog();await wait(250)};
       await add('','14:30','오후 두 시 반');await add('오전','','오전 기록');await add('?','','시간 모름 기록');
       const cur=()=>db.defects.find(x=>x.id==='dlu1'),rec=tx=>cur().logs.find(l=>l.text===tx);
       out.saved={t:rec('오후 두 시 반').time,b:rec('오후 두 시 반').band,t2:rec('오전 기록').time,b2:rec('오전 기록').band,t3:rec('시간 모름 기록').time,b3:rec('시간 모름 기록').band,date:rec('오전 기록').date};

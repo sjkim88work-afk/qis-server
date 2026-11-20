@@ -36,7 +36,7 @@ const LOGCFG = {
     hint: '확인한 사실과 결정 사항을 적습니다.',
     text: '내용',
     ph: '확인한 사실 · 원인 추정 · 결정 사항',
-    head: '남긴 기록',
+    head: '',
   },
 };
 const lgCfg = () => LOGCFG[tl.kind] || LOGCFG.defect;
@@ -49,6 +49,11 @@ const lgTidy = (t) =>
     .replace(/[ \t]+\n/g, '\n')
     .replace(/\n{3,}/g, '\n\n')
     .trim();
+const LG_ICO = {
+  plus: '<svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
+  clip: '<svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5l-8.6 8.6a5.5 5.5 0 0 1-7.8-7.8l8.6-8.6a3.7 3.7 0 0 1 5.2 5.2l-8.5 8.5a1.8 1.8 0 0 1-2.6-2.6l7.8-7.8"/></svg>',
+  more: '<svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>',
+};
 const lgKindCls = (k) => LOG_CLS[k] || (typeof ISS_KCLS !== 'undefined' && ISS_KCLS[k]) || 'mut';
 function autoEvents(d, n, lbl) {
   const E = [],
@@ -384,9 +389,10 @@ function renderLogsInner(b) {
   // ② 기록 쓰기
   const C = lgCfg(),
     K = C.kinds();
-  const comp = tl.ro
+  const open = !tl.ro && (tl.open || tlDraftHas() || !tl.own.length);
+  const comp = !open
     ? ''
-    : `<div class="lgc"><div class="ch">✎ ${C.ch} <span class="muted" style="font-weight:normal">— ${C.hint} 저장한 기록을 고치면 수정 이력이 남습니다.</span></div>
+    : `<div class="lgc"><div class="ch">${C.ch} <span class="muted" style="font-weight:normal">— ${C.hint} 저장한 기록을 고치면 수정 이력이 남습니다.</span></div>
     <div class="dtrow"><label><span>일시 <span class="muted" style="font-weight:normal">(시간은 선택)</span></span>${dtpHTML('lgAt', C.now ? nowMin() : today(), '')}</label>
       <label>구분<select id="lgKind">${opts(K, K.includes('인터뷰') ? '인터뷰' : K[0])}</select></label></div>
     <div class="cgp"><label>상대방 · 참석<input id="lgParty" list="lgParties" placeholder="예: 대성정밀 박OO 과장 / 생산팀 · 생산기술팀"></label>
@@ -394,7 +400,7 @@ function renderLogsInner(b) {
     <datalist id="lgParties">${lgPartyList()}</datalist>
     <div class="cg2"><label>${C.text} *<textarea id="lgText" placeholder="${C.ph}"></textarea></label>
       <label>결과 · 합의 사항<textarea id="lgResult" placeholder="예: 불량 4개 추가 검출 / 협력사 귀책 인정, 선별비 부담 합의"></textarea></label></div>
-    <div class="cf"><label class="b s" style="cursor:pointer">📎 증빙 첨부<input type="file" accept="${RD_ACCEPT}" multiple style="display:none" onchange="lgAddFiles([...this.files]);this.value=''"></label>
+    <div class="cf"><label class="b s" style="cursor:pointer">${LG_ICO.clip} 증빙 첨부<input type="file" accept="${RD_ACCEPT}" multiple style="display:none" onchange="lgAddFiles([...this.files]);this.value=''"></label>
       <span>메일 · 성적서 · 현장 사진 (캡처 후 Ctrl+V 가능)</span>${lgThumbs(tl.draftPh, 'lgRmDraft')}
       <span style="flex:1"></span><button type="button" class="b" onclick="lgClear()">취소</button><button type="button" class="b p" onclick="addLog()">저장</button></div></div>`;
   const warn =
@@ -402,7 +408,9 @@ function renderLogsInner(b) {
       ? `<div class="lgpend">${pend ? `새 기록 ${pend}건` : ''}${pend && pendEd ? ' · ' : ''}${pendEd ? `수정 ${pendEd}건` : ''}이 아직 저장되지 않았습니다. 창 아래 <b>저장</b>을 누르면 함께 저장됩니다.</div>`
       : '';
   const head = `<div class="lgh">${C.head} <span class="bg mut" style="font-weight:normal">직접 기록 ${nOwn}${nAuto ? ` · 자동 ${nAuto}` : ''}</span><span style="flex:1"></span>
-    <label><input type="checkbox" ${tl.hideAuto ? 'checked' : ''} onchange="tl.hideAuto=this.checked;renderLogs()"> 자동 기록 숨기기</label><button type="button" class="b s" onclick="lgPrint()">기록 출력</button></div>`;
+    <label><input type="checkbox" ${tl.hideAuto ? 'checked' : ''} onchange="tl.hideAuto=this.checked;renderLogs()"> 자동 기록 숨기기</label><button type="button" class="b s" onclick="lgPrint()">기록 출력</button>${
+      tl.ro || open ? '' : `<button type="button" class="b s p" id="lgOpenBtn" onclick="lgOpen()">${LG_ICO.plus} ${C.ch}</button>`
+    }</div>`;
   const item = (x) => {
     const own = x._i != null,
       ed = own && tl.edit === x._i,
@@ -416,16 +424,18 @@ function renderLogsInner(b) {
       lgLate(x) ? `<span class="bg warn" title="실행일보다 늦게 작성">사후 기록 · 작성 ${loc(x.at, 10).slice(5)}</span>` : '',
     ].join(' ');
     const who = [x.party, x.method].filter(Boolean).join(' · ');
-    const del = `<a class="lk" style="font-size:11px;color:var(--bad)" onclick="delLog(${x._i})">삭제</a>`;
+    // ‘취소 처리’ · ‘삭제’는 ⋯ 메뉴 안에 둠 — 잘못 누르지 않게 ‘수정’과 떨어뜨림
+    const menu = (canVoid) =>
+      `<details class="lgm"><summary title="더 보기" aria-label="더 보기">${LG_ICO.more}</summary><div class="mn" role="menu">${
+        canVoid ? `<button type="button" role="menuitem" onclick="tl.voiding=${x._i};renderLogs()">취소 처리 <span>— 기록은 남음</span></button>` : ''
+      }<button type="button" role="menuitem" class="d" onclick="delLog(${x._i})">삭제 <span>— 되돌릴 수 없음</span></button></div></details>`;
     const acts =
       x.sys || tl.ro
         ? ''
         : own && !ed && !vo && x.void
-          ? mv(x) + del
+          ? mv(x) + menu(false)
           : own && !ed && !vo
-            ? `${mv(x)}<a class="lk" style="font-size:11px" onclick="lgEdit(${x._i})">수정</a> ${
-                x._new ? '' : `<a class="lk" style="font-size:11px;color:var(--bad)" onclick="tl.voiding=${x._i};renderLogs()">취소 처리</a> `
-              }${del}`
+            ? `${mv(x)}<button type="button" class="b s" onclick="lgEdit(${x._i})">수정</button>${menu(!x._new)}`
             : x.ro && !x.auto
               ? '<span class="muted" style="font-size:11px">원본에서 수정</span>'
               : '';
@@ -435,10 +445,10 @@ function renderLogsInner(b) {
         <label>구분<select id="leKind">${opts(K.includes(x.kind) ? K : [x.kind, ...K], x.kind)}</select></label></div>
       <div class="cgp"><label>상대방 · 참석<input id="leParty" list="lgParties" value="${esc(x.party)}"></label><label>방법<select id="leMethod">${opts(LOG_METHODS, x.method || '', true)}</select></label></div>
       <div class="cg2"><label>${C.text}<textarea id="leText">${esc(x.text)}</textarea></label><label>결과 · 합의 사항<textarea id="leResult">${esc(x.result)}</textarea></label></div>
-      <div class="cf"><label class="b s" style="cursor:pointer">📎 증빙 추가<input type="file" accept="${RD_ACCEPT}" multiple style="display:none" onchange="lgAddFiles([...this.files],'edit');this.value=''"></label>${lgThumbs(tl.editPh, 'lgRmEdit')}</div>
+      <div class="cf"><label class="b s" style="cursor:pointer">${LG_ICO.clip} 증빙 추가<input type="file" accept="${RD_ACCEPT}" multiple style="display:none" onchange="lgAddFiles([...this.files],'edit');this.value=''"></label>${lgThumbs(tl.editPh, 'lgRmEdit')}</div>
       ${saved ? `<label class="lgreason">수정 사유 ${C.reason ? '*' : '<span class="muted" style="font-weight:normal">(선택)</span>'}<input id="leReason" placeholder="예: 협력사 회신 메일 확인 후 수량 정정"></label>` : ''}
       <div class="row" style="margin-top:6px;justify-content:flex-end"><button type="button" class="b s" onclick="tl.edit=null;tl.editPh=null;renderLogs(false)">취소</button><button type="button" class="b s p" onclick="saveLog(${x._i})">저장</button></div></li>`;
-    return `<li class="${x.auto ? 'au' : ''} ${x._new ? 'nw' : ''} ${x.void ? 'vd' : ''}"><div class="lh"><b>${esc(lgWhen(x))}</b> <span class="bg ${lgKindCls(x.kind)}">${esc(x.kind)}</span>${
+    return `<li class="${x.auto ? 'au' : ''} ${x._new ? 'nw' : ''} ${x.void ? 'vd' : ''} ${x.ro && !x.auto ? 'rd' : ''}"><div class="lh"><b>${esc(lgWhen(x))}</b> <span class="bg ${lgKindCls(x.kind)}">${esc(x.kind)}</span>${
       x.src ? ` <span class="bg mut" style="font-weight:normal">${esc(x.src)}</span>` : ''
     }${
       who ? ` <span style="font-size:12px">${esc(who)}</span>` : ''
@@ -465,9 +475,9 @@ function renderLogsInner(b) {
   };
   b.innerHTML =
     plan +
+    head +
     comp +
     warn +
-    head +
     (L.length
       ? `<ul class="logs">${L.map(item).join('')}</ul>`
       : '<div class="muted" style="font-size:12px;padding:6px 2px">아직 기록이 없습니다.</div>');
@@ -547,14 +557,27 @@ function tlPushDraft() {
 // 작성 칸의 ‘저장’ — 기록을 바로 저장하고 작성 칸을 비움
 function addLog() {
   if (!tlPushDraft()) return false;
+  tl.open = false; // 저장하면 작성 칸을 접음 — 새 기록은 목록 맨 위에 보임
   renderLogs(false);
   tlPersist('기록을 저장했습니다');
   return true;
 }
 // 작성 칸의 ‘취소’ — 쓰던 내용을 지움
+// ‘기록 남기기’ — 작성 칸을 엶
+function lgOpen() {
+  tl.open = true;
+  renderLogs();
+  const t = $('#lgText');
+  if (t) t.focus();
+}
 function lgClear() {
   const had = tlDraftHas();
   tl.draftPh = [];
+  tl.open = false;
+  ['lgText', 'lgResult', 'lgParty'].forEach((k) => {
+    const el = document.getElementById(k);
+    if (el) el.value = '';
+  });
   renderLogs(false);
   mfDirty = (tl.kind === 'ncr' && !!tl.other) || tl.edit != null || tl.own.some((x) => x._new || x._dirty);
   if (had) toast('쓰던 내용을 지웠습니다');
@@ -854,3 +877,13 @@ let curCosts = [],
   curClaim = {},
   costCtx = null,
   curBase = {};
+
+// 기록의 ⋯ 메뉴: 바깥을 누르거나 Esc 를 누르면 닫음
+document.addEventListener('click', (ev) => {
+  document.querySelectorAll('details.lgm[open]').forEach((d) => {
+    if (!d.contains(ev.target)) d.open = false;
+  });
+});
+document.addEventListener('keydown', (ev) => {
+  if (ev.key === 'Escape') document.querySelectorAll('details.lgm[open]').forEach((d) => (d.open = false));
+});
