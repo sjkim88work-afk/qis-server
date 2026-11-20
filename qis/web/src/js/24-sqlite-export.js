@@ -3,257 +3,793 @@
    · 원본은 그대로 브라우저 저장소. 이 파일은 읽기용 사본 (백업 폴더가 있으면 자동 백업 때 같이 덮어씀)
    · 표마다 원래 항목 + 앱이 계산한 값(x_ 로 시작: 협력사명 · 심각도 등급 · 진행 상태 · 비용 합계 등)
    · SQLite 엔진(sql.js)은 앱과 같은 곳의 lib/ 에서, 없으면(파일로 연 경우) 인터넷(cdnjs)에서 처음 한 번 받음 */
-const SQLJS_VER='1.10.3';let _SQL=null;
-function loadScriptOnce(src){return new Promise((res,rej)=>{if(window.initSqlJs)return res();const s=document.createElement('script');s.src=src;s.onload=()=>res();s.onerror=()=>{s.remove();rej(new Error('가져오기 실패: '+src))};document.head.appendChild(s)})}
-async function loadSql(){
-  if(_SQL)return _SQL;
-  const bases=[...(/^https?:$/.test(location.protocol)?['lib/']:[]),`https://cdnjs.cloudflare.com/ajax/libs/sql.js/${SQLJS_VER}/`];let last;
-  for(const b of bases){try{await loadScriptOnce(b+'sql-wasm.js');_SQL=await window.initSqlJs({locateFile:f=>b+f});return _SQL}catch(e){last=e;try{delete window.initSqlJs}catch(_){}}}
-  throw new Error('SQLite 엔진을 불러오지 못했습니다 — 처음 한 번은 인터넷 연결이 필요합니다 ('+(last&&last.message||'')+')');
+const SQLJS_VER = '1.10.3';
+let _SQL = null;
+function loadScriptOnce(src) {
+  return new Promise((res, rej) => {
+    if (window.initSqlJs) return res();
+    const s = document.createElement('script');
+    s.src = src;
+    s.onload = () => res();
+    s.onerror = () => {
+      s.remove();
+      rej(new Error('가져오기 실패: ' + src));
+    };
+    document.head.appendChild(s);
+  });
 }
-const sqlId=k=>'"'+String(k).replace(/[^A-Za-z0-9_가-힣]/g,'_').replace(/"/g,'')+'"';
-const sqlVal=v=>v==null||v===''?null:typeof v==='boolean'?(v?1:0):typeof v==='number'?(isFinite(v)?v:null):typeof v==='object'?JSON.stringify(v):String(v);
+async function loadSql() {
+  if (_SQL) return _SQL;
+  const bases = [...(/^https?:$/.test(location.protocol) ? ['lib/'] : []), `https://cdnjs.cloudflare.com/ajax/libs/sql.js/${SQLJS_VER}/`];
+  let last;
+  for (const b of bases) {
+    try {
+      await loadScriptOnce(b + 'sql-wasm.js');
+      _SQL = await window.initSqlJs({ locateFile: (f) => b + f });
+      return _SQL;
+    } catch (e) {
+      last = e;
+      try {
+        delete window.initSqlJs;
+      } catch (_) {}
+    }
+  }
+  throw new Error('SQLite 엔진을 불러오지 못했습니다 — 처음 한 번은 인터넷 연결이 필요합니다 (' + ((last && last.message) || '') + ')');
+}
+const sqlId = (k) =>
+  '"' +
+  String(k)
+    .replace(/[^A-Za-z0-9_가-힣]/g, '_')
+    .replace(/"/g, '') +
+  '"';
+const sqlVal = (v) =>
+  v == null || v === ''
+    ? null
+    : typeof v === 'boolean'
+      ? v
+        ? 1
+        : 0
+      : typeof v === 'number'
+        ? isFinite(v)
+          ? v
+          : null
+        : typeof v === 'object'
+          ? JSON.stringify(v)
+          : String(v);
 // 레코드 목록 → 표 (열 = 모든 레코드의 항목 합집합, 숫자뿐이면 REAL, 배열 · 객체는 JSON 글자)
-function sqlTable(sdb,name,rows,first){
-  const cols=[...new Set([...(first||[]),...rows.flatMap(r=>Object.keys(r))])].filter(k=>!k.startsWith('_'));
-  if(!cols.length)cols.push('id');
-  const typ=k=>{let num=0,oth=0;rows.forEach(r=>{const v=r[k];if(v==null||v==='')return;(typeof v==='number'||typeof v==='boolean')?num++:oth++});return num&&!oth?'REAL':'TEXT'};
-  sdb.run(`CREATE TABLE ${sqlId(name)} (${cols.map(k=>`${sqlId(k)} ${typ(k)}${k==='id'&&rows.every(r=>r.id)&&new Set(rows.map(r=>r.id)).size===rows.length?' PRIMARY KEY':''}`).join(', ')})`);
-  if(!rows.length)return 0;
-  const st=sdb.prepare(`INSERT INTO ${sqlId(name)} (${cols.map(sqlId).join(',')}) VALUES (${cols.map(()=>'?').join(',')})`);
-  rows.forEach(r=>st.run(cols.map(k=>sqlVal(r[k]))));st.free();return rows.length;
+function sqlTable(sdb, name, rows, first) {
+  const cols = [...new Set([...(first || []), ...rows.flatMap((r) => Object.keys(r))])].filter((k) => !k.startsWith('_'));
+  if (!cols.length) cols.push('id');
+  const typ = (k) => {
+    let num = 0,
+      oth = 0;
+    rows.forEach((r) => {
+      const v = r[k];
+      if (v == null || v === '') return;
+      typeof v === 'number' || typeof v === 'boolean' ? num++ : oth++;
+    });
+    return num && !oth ? 'REAL' : 'TEXT';
+  };
+  sdb.run(
+    `CREATE TABLE ${sqlId(name)} (${cols.map((k) => `${sqlId(k)} ${typ(k)}${k === 'id' && rows.every((r) => r.id) && new Set(rows.map((r) => r.id)).size === rows.length ? ' PRIMARY KEY' : ''}`).join(', ')})`,
+  );
+  if (!rows.length) return 0;
+  const st = sdb.prepare(`INSERT INTO ${sqlId(name)} (${cols.map(sqlId).join(',')}) VALUES (${cols.map(() => '?').join(',')})`);
+  rows.forEach((r) => st.run(cols.map((k) => sqlVal(r[k]))));
+  st.free();
+  return rows.length;
 }
-async function buildSqlite(){
-  const SQL=await loadSql(),sdb=new SQL.Database(),n={};
-  const omit=(o,ks)=>{const c={...o};ks.forEach(k=>delete c[k]);return c};
-  const sup=id=>supById(id),costSum=d=>(d.costs||[]).reduce((a,c)=>a+num(c.amt),0);
+async function buildSqlite() {
+  const SQL = await loadSql(),
+    sdb = new SQL.Database(),
+    n = {};
+  const omit = (o, ks) => {
+    const c = { ...o };
+    ks.forEach((k) => delete c[k]);
+    return c;
+  };
+  const sup = (id) => supById(id),
+    costSum = (d) => (d.costs || []).reduce((a, c) => a + num(c.amt), 0);
   sdb.run('BEGIN');
-  n.suppliers=sqlTable(sdb,'suppliers',db.suppliers.map(s=>{const p=primaryOf(s);return {...omit(s,['contacts','contactLog']),x_contact:p?p.name:'',x_phone:p?(p.mobile||p.phone):'',x_email:p?p.email:'',x_parts:db.parts.filter(q=>q.supplierId===s.id).length}}),['id','code','name']);
-  n.supplier_contacts=sqlTable(sdb,'supplier_contacts',db.suppliers.flatMap(s=>(s.contacts||[]).map(c=>({supplier_id:s.id,x_supplier:s.name,...c}))),['supplier_id','x_supplier']);
-  n.supplier_contact_log=sqlTable(sdb,'supplier_contact_log',db.suppliers.flatMap(s=>(s.contactLog||[]).map(c=>({supplier_id:s.id,x_supplier:s.name,...c}))),['supplier_id','x_supplier']);
-  n.parts=sqlTable(sdb,'parts',db.parts.map(p=>({...p,x_supplier:sup(p.supplierId)?.name||'',x_supplier_code:sup(p.supplierId)?.code||'',x_currency:curOf(p),x_price_krw:p.price===''||p.price==null?null:partKRW(p),x_bom_products:bomPartUse(p).fgs.size,x_is_bom_product:bomPartUse(p).fg?1:0})),['id','partNo','name','model']);
-  n.defects=sqlTable(sdb,'defects',db.defects.map(d=>{const v=sevOf(d),st=defStage(d),nc=d.ncrId?db.ncrs.find(x=>x.id===d.ncrId):null;
-    return {...omit(d,['costs','photos','sevLock']),x_month:(d.date||'').slice(0,7),x_supplier:sup(d.supplierId)?.name||'',x_supplier_code:sup(d.supplierId)?.code||'',x_grade:v.grade,x_score:v.score,x_stage:st.label,x_done:st.done?1:0,x_ncr_no:nc?nc.no:'',x_ncr_status:nc?ncrStatus(nc):'',x_cost_total:costSum(d),x_photos:(d.photos||[]).length,x_ppm_lot:num(d.inspQty)?num(d.qty)/num(d.inspQty)*1e6:null}}),['id','date','source','partNo','partName','qty','inspQty']);
-  n.defect_costs=sqlTable(sdb,'defect_costs',db.defects.flatMap(d=>(d.costs||[]).map((c,i)=>({defect_id:d.id,seq:i+1,...c}))),['defect_id','seq']);
-  n.defect_photos=sqlTable(sdb,'defect_photos',db.defects.flatMap(d=>(d.photos||[]).map((p,i)=>({defect_id:d.id,seq:i+1,photo_id:typeof p==='string'?p:(p&&p.id)||''}))),['defect_id','seq','photo_id']);
-  n.ncrs=sqlTable(sdb,'ncrs',db.ncrs.map(x=>({...x,x_status:ncrStatus(x),x_supplier:sup(x.supplierId)?.name||'',x_supplier_code:sup(x.supplierId)?.code||'',x_month:(x.issueDate||'').slice(0,7),x_defects:(x.defectIds||[]).length,x_eval_score:x.evalScore??null})),['id','no','issueDate','reqType']);
-  n.receipts=sqlTable(sdb,'receipts',db.receipts.map(r=>({...r,x_supplier:sup(r.supplierId)?.name||'',x_supplier_code:sup(r.supplierId)?.code||''})),['id','kind','month','date','supplierId','partNo','qty']);
-  n.rca_cases=sqlTable(sdb,'rca_cases',db.cases||[],['id','CaseNo','Title','Stage']);
-  n.rca_actions=sqlTable(sdb,'rca_actions',db.actions||[],['id','CaseId','Title','ActionStatus']);
-  n.reviews=sqlTable(sdb,'reviews',db.reviews||[]);
-  n.bom_products=sqlTable(sdb,'bom_products',[...bomIx().byFg.keys()].map(f=>({fgNo:f,...bomFg(f),x_rows:(bomIx().byFg.get(f)||[]).length})),['fgNo','name','model']);
-  n.bom_rows=sqlTable(sdb,'bom_rows',db.bom.rows.map(r=>({...r,x_total_qty:bTot(r),x_level:bomLv(r)})),['fgNo','seq','level','partNo','partName','parentNo','qty']);
+  n.suppliers = sqlTable(
+    sdb,
+    'suppliers',
+    db.suppliers.map((s) => {
+      const p = primaryOf(s);
+      return {
+        ...omit(s, ['contacts', 'contactLog']),
+        x_contact: p ? p.name : '',
+        x_phone: p ? p.mobile || p.phone : '',
+        x_email: p ? p.email : '',
+        x_parts: db.parts.filter((q) => q.supplierId === s.id).length,
+      };
+    }),
+    ['id', 'code', 'name'],
+  );
+  n.supplier_contacts = sqlTable(
+    sdb,
+    'supplier_contacts',
+    db.suppliers.flatMap((s) => (s.contacts || []).map((c) => ({ supplier_id: s.id, x_supplier: s.name, ...c }))),
+    ['supplier_id', 'x_supplier'],
+  );
+  n.supplier_contact_log = sqlTable(
+    sdb,
+    'supplier_contact_log',
+    db.suppliers.flatMap((s) => (s.contactLog || []).map((c) => ({ supplier_id: s.id, x_supplier: s.name, ...c }))),
+    ['supplier_id', 'x_supplier'],
+  );
+  n.parts = sqlTable(
+    sdb,
+    'parts',
+    db.parts.map((p) => ({
+      ...p,
+      x_supplier: sup(p.supplierId)?.name || '',
+      x_supplier_code: sup(p.supplierId)?.code || '',
+      x_currency: curOf(p),
+      x_price_krw: p.price === '' || p.price == null ? null : partKRW(p),
+      x_bom_products: bomPartUse(p).fgs.size,
+      x_is_bom_product: bomPartUse(p).fg ? 1 : 0,
+    })),
+    ['id', 'partNo', 'name', 'model'],
+  );
+  n.defects = sqlTable(
+    sdb,
+    'defects',
+    db.defects.map((d) => {
+      const v = sevOf(d),
+        st = defStage(d),
+        nc = d.ncrId ? db.ncrs.find((x) => x.id === d.ncrId) : null;
+      return {
+        ...omit(d, ['costs', 'photos', 'sevLock']),
+        x_month: (d.date || '').slice(0, 7),
+        x_supplier: sup(d.supplierId)?.name || '',
+        x_supplier_code: sup(d.supplierId)?.code || '',
+        x_grade: v.grade,
+        x_score: v.score,
+        x_stage: st.label,
+        x_done: st.done ? 1 : 0,
+        x_ncr_no: nc ? nc.no : '',
+        x_ncr_status: nc ? ncrStatus(nc) : '',
+        x_cost_total: costSum(d),
+        x_photos: (d.photos || []).length,
+        x_ppm_lot: num(d.inspQty) ? (num(d.qty) / num(d.inspQty)) * 1e6 : null,
+      };
+    }),
+    ['id', 'date', 'source', 'partNo', 'partName', 'qty', 'inspQty'],
+  );
+  n.defect_costs = sqlTable(
+    sdb,
+    'defect_costs',
+    db.defects.flatMap((d) => (d.costs || []).map((c, i) => ({ defect_id: d.id, seq: i + 1, ...c }))),
+    ['defect_id', 'seq'],
+  );
+  n.defect_photos = sqlTable(
+    sdb,
+    'defect_photos',
+    db.defects.flatMap((d) =>
+      (d.photos || []).map((p, i) => ({ defect_id: d.id, seq: i + 1, photo_id: typeof p === 'string' ? p : (p && p.id) || '' })),
+    ),
+    ['defect_id', 'seq', 'photo_id'],
+  );
+  n.ncrs = sqlTable(
+    sdb,
+    'ncrs',
+    db.ncrs.map((x) => ({
+      ...x,
+      x_status: ncrStatus(x),
+      x_supplier: sup(x.supplierId)?.name || '',
+      x_supplier_code: sup(x.supplierId)?.code || '',
+      x_month: (x.issueDate || '').slice(0, 7),
+      x_defects: (x.defectIds || []).length,
+      x_eval_score: x.evalScore ?? null,
+    })),
+    ['id', 'no', 'issueDate', 'reqType'],
+  );
+  n.receipts = sqlTable(
+    sdb,
+    'receipts',
+    db.receipts.map((r) => ({ ...r, x_supplier: sup(r.supplierId)?.name || '', x_supplier_code: sup(r.supplierId)?.code || '' })),
+    ['id', 'kind', 'month', 'date', 'supplierId', 'partNo', 'qty'],
+  );
+  n.rca_cases = sqlTable(sdb, 'rca_cases', db.cases || [], ['id', 'CaseNo', 'Title', 'Stage']);
+  n.rca_actions = sqlTable(sdb, 'rca_actions', db.actions || [], ['id', 'CaseId', 'Title', 'ActionStatus']);
+  n.reviews = sqlTable(sdb, 'reviews', db.reviews || []);
+  n.bom_products = sqlTable(
+    sdb,
+    'bom_products',
+    [...bomIx().byFg.keys()].map((f) => ({ fgNo: f, ...bomFg(f), x_rows: (bomIx().byFg.get(f) || []).length })),
+    ['fgNo', 'name', 'model'],
+  );
+  n.bom_rows = sqlTable(
+    sdb,
+    'bom_rows',
+    db.bom.rows.map((r) => ({ ...r, x_total_qty: bTot(r), x_level: bomLv(r) })),
+    ['fgNo', 'seq', 'level', 'partNo', 'partName', 'parentNo', 'qty'],
+  );
   // 협력사 × 월: 불량수량(협력사 · 공동 귀책) · 입고수량 · PPM — 앱의 협력사 품질 화면과 같은 규칙
-  const sm=[];db.suppliers.forEach(s=>{const my=db.defects.filter(d=>d.supplierId===s.id&&(!d.resp||d.resp==='협력사'||d.resp==='공동'));
-    const ms=new Set([...my.map(d=>(d.date||'').slice(0,7)),...db.receipts.filter(r=>r.supplierId===s.id).map(r=>r.month)].filter(Boolean));
-    [...ms].sort().forEach(m=>{const dq=my.filter(d=>(d.date||'').startsWith(m)),q=dq.reduce((a,d)=>a+num(d.qty),0),rc=rcvSum(s.id,m);
-      sm.push({supplier_id:s.id,supplier:s.name,supplier_code:s.code||'',month:m,defect_count:dq.length,defect_qty:q,receipt_qty:rc,ppm:rc?q/rc*1e6:null,ncr_count:db.ncrs.filter(x=>x.supplierId===s.id&&(x.issueDate||'').startsWith(m)).length})})});
-  n.supplier_month=sqlTable(sdb,'supplier_month',sm);
+  const sm = [];
+  db.suppliers.forEach((s) => {
+    const my = db.defects.filter((d) => d.supplierId === s.id && (!d.resp || d.resp === '협력사' || d.resp === '공동'));
+    const ms = new Set(
+      [...my.map((d) => (d.date || '').slice(0, 7)), ...db.receipts.filter((r) => r.supplierId === s.id).map((r) => r.month)].filter(Boolean),
+    );
+    [...ms].sort().forEach((m) => {
+      const dq = my.filter((d) => (d.date || '').startsWith(m)),
+        q = dq.reduce((a, d) => a + num(d.qty), 0),
+        rc = rcvSum(s.id, m);
+      sm.push({
+        supplier_id: s.id,
+        supplier: s.name,
+        supplier_code: s.code || '',
+        month: m,
+        defect_count: dq.length,
+        defect_qty: q,
+        receipt_qty: rc,
+        ppm: rc ? (q / rc) * 1e6 : null,
+        ncr_count: db.ncrs.filter((x) => x.supplierId === s.id && (x.issueDate || '').startsWith(m)).length,
+      });
+    });
+  });
+  n.supplier_month = sqlTable(sdb, 'supplier_month', sm);
   sdb.run(`CREATE TABLE "settings" ("key" TEXT PRIMARY KEY, "value" TEXT)`);
-  {const st=sdb.prepare('INSERT INTO settings VALUES (?,?)');Object.entries(db.settings).forEach(([k,v])=>{if(k==='logo'||k==='signs')return;st.run([k,sqlVal(v)])});st.free()}
+  {
+    const st = sdb.prepare('INSERT INTO settings VALUES (?,?)');
+    Object.entries(db.settings).forEach(([k, v]) => {
+      if (k === 'logo' || k === 'signs') return;
+      st.run([k, sqlVal(v)]);
+    });
+    st.free();
+  }
   sdb.run(`CREATE TABLE "about" ("key" TEXT PRIMARY KEY, "value" TEXT)`);
-  [['app','QIS'],['app_version',APP_VER],['exported_at',now()],['note','QIS 데이터의 읽기용 사본. x_ 로 시작하는 열은 앱이 계산한 값. 수정해도 앱에는 반영되지 않음']].forEach(r=>sdb.run('INSERT INTO about VALUES (?,?)',r));
+  [
+    ['app', 'QIS'],
+    ['app_version', APP_VER],
+    ['exported_at', now()],
+    ['note', 'QIS 데이터의 읽기용 사본. x_ 로 시작하는 열은 앱이 계산한 값. 수정해도 앱에는 반영되지 않음'],
+  ].forEach((r) => sdb.run('INSERT INTO about VALUES (?,?)', r));
   // 자주 쓰는 조회 — 데이터에 있는 열만 써서 만듦 (없는 항목은 빈 값)
-  const colsOf=t=>new Set(sdb.exec(`PRAGMA table_info(${sqlId(t)})`)[0]?.values.map(v=>v[1])||[]);
-  const mkView=(name,t,F,tail='')=>{const C=colsOf(t);sdb.run(`CREATE VIEW ${name} AS SELECT ${F.map(([c,a,e])=>`${C.has(c)?(e||sqlId(c)):'NULL'} AS ${sqlId(a||c)}`).join(', ')} FROM ${sqlId(t)} ${tail}`)};
-  mkView('v_defects','defects',[['date'],['x_month','month'],['source'],['partNo'],['partName'],['model'],['x_supplier','supplier'],['type'],['qty'],['inspQty','lot_qty'],['x_grade','grade'],['resp'],['disposition'],['x_stage','stage'],['x_ncr_no','ncr_no'],['x_ncr_status','ncr_status'],['x_cost_total','cost'],['spec'],['actual'],['desc']]);
-  mkView('v_ncr_open','ncrs',[['no'],['issueDate'],['x_supplier','supplier'],['partNo'],['partName'],['reqType'],['x_status','status'],['dueDate'],['replyDate'],['verifyDue']],`WHERE ${colsOf('ncrs').has('x_status')?'"x_status"':"''"} <> '종결'`);
-  {const C=colsOf('defects');if(C.has('x_month'))sdb.run(`CREATE VIEW v_monthly AS SELECT x_month AS month, COUNT(*) AS defects, ${C.has('qty')?'SUM(qty)':'0'} AS qty, SUM(x_cost_total) AS cost, SUM(x_grade='A') AS grade_a FROM defects GROUP BY x_month`)}
+  const colsOf = (t) => new Set(sdb.exec(`PRAGMA table_info(${sqlId(t)})`)[0]?.values.map((v) => v[1]) || []);
+  const mkView = (name, t, F, tail = '') => {
+    const C = colsOf(t);
+    sdb.run(
+      `CREATE VIEW ${name} AS SELECT ${F.map(([c, a, e]) => `${C.has(c) ? e || sqlId(c) : 'NULL'} AS ${sqlId(a || c)}`).join(', ')} FROM ${sqlId(t)} ${tail}`,
+    );
+  };
+  mkView('v_defects', 'defects', [
+    ['date'],
+    ['x_month', 'month'],
+    ['source'],
+    ['partNo'],
+    ['partName'],
+    ['model'],
+    ['x_supplier', 'supplier'],
+    ['type'],
+    ['qty'],
+    ['inspQty', 'lot_qty'],
+    ['x_grade', 'grade'],
+    ['resp'],
+    ['disposition'],
+    ['x_stage', 'stage'],
+    ['x_ncr_no', 'ncr_no'],
+    ['x_ncr_status', 'ncr_status'],
+    ['x_cost_total', 'cost'],
+    ['spec'],
+    ['actual'],
+    ['desc'],
+  ]);
+  mkView(
+    'v_ncr_open',
+    'ncrs',
+    [
+      ['no'],
+      ['issueDate'],
+      ['x_supplier', 'supplier'],
+      ['partNo'],
+      ['partName'],
+      ['reqType'],
+      ['x_status', 'status'],
+      ['dueDate'],
+      ['replyDate'],
+      ['verifyDue'],
+    ],
+    `WHERE ${colsOf('ncrs').has('x_status') ? '"x_status"' : "''"} <> '종결'`,
+  );
+  {
+    const C = colsOf('defects');
+    if (C.has('x_month'))
+      sdb.run(
+        `CREATE VIEW v_monthly AS SELECT x_month AS month, COUNT(*) AS defects, ${C.has('qty') ? 'SUM(qty)' : '0'} AS qty, SUM(x_cost_total) AS cost, SUM(x_grade='A') AS grade_a FROM defects GROUP BY x_month`,
+      );
+  }
   sdb.run('COMMIT');
-  const out=sdb.export();sdb.close();return {bytes:out,n};
+  const out = sdb.export();
+  sdb.close();
+  return { bytes: out, n };
 }
-let sqliteBusy=false;
+let sqliteBusy = false;
 // toDir: 백업 폴더가 있으면 QIS.sqlite로 덮어쓰기, 없으면 내려받기 · quiet: 자동 백업 때 조용히
-async function exportSqlite(quiet){
-  if(RO||sqliteBusy)return;sqliteBusy=true;
-  try{
-    if(!quiet)toast('SQLite 파일을 만드는 중…');
-    const {bytes,n}=await buildSqlite(),blob=new Blob([bytes],{type:'application/vnd.sqlite3'});
-    let where='';
-    if(backupDir||(!quiet&&lazyH.backupDir&&await ensureDir('backupDir'))){
-      if(!await permOK(backupDir,false))throw new Error('백업 폴더 사용이 허용되지 않았습니다');
-      const fh=await backupDir.getFileHandle('QIS.sqlite',{create:true}),w=await fh.createWritable();await w.write(blob);await w.close();where=`‘${backupDir.name}’ 폴더의 QIS.sqlite`;
-    }else if(!quiet){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='QIS.sqlite';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),5000);where='내려받기한 QIS.sqlite'}
-    else return;
-    db.meta.lastSqlite=now();db.meta.lastSqliteN=n;if(!quiet)save();
-    if(!quiet)toast(`${where} — 불량 ${n.defects} · NCR ${n.ncrs} · 부품 ${n.parts} · 입고 ${n.receipts} (${(bytes.length/1048576).toFixed(1)}MB)`);
-    if(state.tab==='data')render();
-  }catch(e){console.error(e);if(!quiet)toast('SQLite 만들기 실패: '+e.message)}
-  finally{sqliteBusy=false}
+async function exportSqlite(quiet) {
+  if (RO || sqliteBusy) return;
+  sqliteBusy = true;
+  try {
+    if (!quiet) toast('SQLite 파일을 만드는 중…');
+    const { bytes, n } = await buildSqlite(),
+      blob = new Blob([bytes], { type: 'application/vnd.sqlite3' });
+    let where = '';
+    if (backupDir || (!quiet && lazyH.backupDir && (await ensureDir('backupDir')))) {
+      if (!(await permOK(backupDir, false))) throw new Error('백업 폴더 사용이 허용되지 않았습니다');
+      const fh = await backupDir.getFileHandle('QIS.sqlite', { create: true }),
+        w = await fh.createWritable();
+      await w.write(blob);
+      await w.close();
+      where = `‘${backupDir.name}’ 폴더의 QIS.sqlite`;
+    } else if (!quiet) {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'QIS.sqlite';
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+      where = '내려받기한 QIS.sqlite';
+    } else return;
+    db.meta.lastSqlite = now();
+    db.meta.lastSqliteN = n;
+    if (!quiet) save();
+    if (!quiet)
+      toast(`${where} — 불량 ${n.defects} · NCR ${n.ncrs} · 부품 ${n.parts} · 입고 ${n.receipts} (${(bytes.length / 1048576).toFixed(1)}MB)`);
+    if (state.tab === 'data') render();
+  } catch (e) {
+    console.error(e);
+    if (!quiet) toast('SQLite 만들기 실패: ' + e.message);
+  } finally {
+    sqliteBusy = false;
+  }
 }
-async function fullJSON(withPhotos=true){
-  const base=JSON.stringify(db);
-  if(!withPhotos)return base;
-  let ph='[]';try{ph=await photosJSON(withPhotos==='meta')}catch(e){toast('사진을 읽지 못해 사진 없이 저장합니다: '+e.message)}
-  return base.slice(0,-1)+',"photos":'+ph+'}';
+async function fullJSON(withPhotos = true) {
+  const base = JSON.stringify(db);
+  if (!withPhotos) return base;
+  let ph = '[]';
+  try {
+    ph = await photosJSON(withPhotos === 'meta');
+  } catch (e) {
+    toast('사진을 읽지 못해 사진 없이 저장합니다: ' + e.message);
+  }
+  return base.slice(0, -1) + ',"photos":' + ph + '}';
 }
 /* ---- 사진 · 첨부 폴더 (이 PC에서 지정한 폴더) ----
    이 PC의 IndexedDB는 화면 표시용 사본이고, 사진 본체는 폴더의 파일로 옮겨 QMS_data.json에는 사진 정보만 남긴다.
    다른 PC에서 아직 받지 못한 사진은 고정된 회색 자리표시 이미지(PH_IMG)로 두었다가 파일이 도착하면 바꾼다. */
-const PH_IMG='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAkCAIAAABAJy5dAAAANElEQVR42u3OQQkAAAgEsOvf0I9Pc1hDYbAAS/WcEiEhISEhISEhISEhISEhISEhIaFPoQXCU6TAPfWPWAAAAABJRU5ErkJggg==';
-const PH_PEND='personalQMS_phPending';
-let phFiles=null,phBusy=false,phAgain=false;
-const phName=id=>id+'.jpg';
-const phIsPending=p=>!p||p.data===PH_IMG||(isDocRec(p)?!isFileURL(p.data):!isImgURL(p.data));
-const phMeta=({data,thumb,pending,...m})=>({...m,file:m.file||phName(m.id)});
-const PH_DELQ='personalQMS_phDelQ';
-function phDelQ(){try{return new Set(JSON.parse(localStorage.getItem(PH_DELQ)||'[]'))}catch(e){return new Set()}}
-function phDelQSet(s){try{localStorage.setItem(PH_DELQ,JSON.stringify([...s]))}catch(e){}}
+const PH_IMG =
+  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAkCAIAAABAJy5dAAAANElEQVR42u3OQQkAAAgEsOvf0I9Pc1hDYbAAS/WcEiEhISEhISEhISEhISEhISEhIaFPoQXCU6TAPfWPWAAAAABJRU5ErkJggg==';
+const PH_PEND = 'personalQMS_phPending';
+let phFiles = null,
+  phBusy = false,
+  phAgain = false;
+const phName = (id) => id + '.jpg';
+const phIsPending = (p) => !p || p.data === PH_IMG || (isDocRec(p) ? !isFileURL(p.data) : !isImgURL(p.data));
+const phMeta = ({ data, thumb, pending, ...m }) => ({ ...m, file: m.file || phName(m.id) });
+const PH_DELQ = 'personalQMS_phDelQ';
+function phDelQ() {
+  try {
+    return new Set(JSON.parse(localStorage.getItem(PH_DELQ) || '[]'));
+  } catch (e) {
+    return new Set();
+  }
+}
+function phDelQSet(s) {
+  try {
+    localStorage.setItem(PH_DELQ, JSON.stringify([...s]));
+  } catch (e) {}
+}
 /* 사진 파일 이름: <NCR번호>_<YYYYMMDD>_<연번>.jpg  (NCR 발행 전: 미발행_<품번>_…, 날짜 = 사진 첨부일)
    NCR이 발행되거나 번호가 바뀌면 다음 동기화 때 새 이름으로 바꾼다 */
-function phOwners(){
-  const m={},put=(ids,no,part)=>(ids||[]).forEach(i=>{if(!m[i])m[i]={no,part}});
-  const logIds=o=>(o.logs||[]).flatMap(l=>[...(l.photos||[]),...(l.hist||[]).flatMap(h=>h.photos||[])]);
-  const nById=new Map(db.ncrs.map(n=>[n.id,n]));
-  db.ncrs.forEach(n=>{put(logIds(n),n.no,n.partNo);put(ncrDocIds(n),n.no,n.partNo)});
-  db.defects.forEach(d=>{const n=d.ncrId&&nById.get(d.ncrId);put(d.photos,n?n.no:'',d.partNo);put(logIds(d),n?n.no:'',d.partNo)});
-  (db.issues||[]).forEach(i=>{put(i.photos,i.no,i.partNo);put(logIds(i),i.no,i.partNo)});
+function phOwners() {
+  const m = {},
+    put = (ids, no, part) =>
+      (ids || []).forEach((i) => {
+        if (!m[i]) m[i] = { no, part };
+      });
+  const logIds = (o) => (o.logs || []).flatMap((l) => [...(l.photos || []), ...(l.hist || []).flatMap((h) => h.photos || [])]);
+  const nById = new Map(db.ncrs.map((n) => [n.id, n]));
+  db.ncrs.forEach((n) => {
+    put(logIds(n), n.no, n.partNo);
+    put(ncrDocIds(n), n.no, n.partNo);
+  });
+  db.defects.forEach((d) => {
+    const n = d.ncrId && nById.get(d.ncrId);
+    put(d.photos, n ? n.no : '', d.partNo);
+    put(logIds(d), n ? n.no : '', d.partNo);
+  });
+  (db.issues || []).forEach((i) => {
+    put(i.photos, i.no, i.partNo);
+    put(logIds(i), i.no, i.partNo);
+  });
   return m;
 }
-const phSafe=v=>String(v||'').trim().replace(/[\\/:*?"<>|\s]+/g,'-').replace(/^-+|-+$/g,'');
-function phPrefix(r,o){
-  const day=(loc(r.createdAt,10)||today()).replace(/-/g,'');
-  const head=o&&phSafe(o.no)?phSafe(o.no):`미발행_${phSafe(o&&o.part)||'사진'}`;
+const phSafe = (v) =>
+  String(v || '')
+    .trim()
+    .replace(/[\\/:*?"<>|\s]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+function phPrefix(r, o) {
+  const day = (loc(r.createdAt, 10) || today()).replace(/-/g, '');
+  const head = o && phSafe(o.no) ? phSafe(o.no) : `미발행_${phSafe(o && o.part) || '사진'}`;
   return `${head}_${day}`;
 }
-function phNextName(pre,files){
-  let mx=0;const rx=new RegExp('^'+pre.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'_(\\d+)\\.jpg$','i');
-  files.forEach(n=>{const m=rx.exec(n);if(m)mx=Math.max(mx,+m[1])});
-  return `${pre}_${String(mx+1).padStart(2,'0')}.jpg`;
+function phNextName(pre, files) {
+  let mx = 0;
+  const rx = new RegExp('^' + pre.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '_(\\d+)\\.jpg$', 'i');
+  files.forEach((n) => {
+    const m = rx.exec(n);
+    if (m) mx = Math.max(mx, +m[1]);
+  });
+  return `${pre}_${String(mx + 1).padStart(2, '0')}.jpg`;
 }
-function phDocName(pre,r,files){
-  const nm=`${pre}_${phSafe(r.name)||'첨부'}`;
-  return files.has(nm)?`${pre}_${String(r.id).slice(-5)}_${phSafe(r.name)||'첨부'}`:nm;
+function phDocName(pre, r, files) {
+  const nm = `${pre}_${phSafe(r.name) || '첨부'}`;
+  return files.has(nm) ? `${pre}_${String(r.id).slice(-5)}_${phSafe(r.name) || '첨부'}` : nm;
 }
-function phPend(){try{return new Set(JSON.parse(localStorage.getItem(PH_PEND)||'[]'))}catch(e){return new Set()}}
-function phPendSet(s){try{localStorage.setItem(PH_PEND,JSON.stringify([...s]))}catch(e){}}
-function phPendAdd(ids){if(!ids.length)return;const s=phPend();ids.forEach(i=>s.add(i));phPendSet(s)}
-const fileToURL=f=>new Promise((res,rej)=>{const fr=new FileReader();fr.onload=()=>res(fr.result);fr.onerror=()=>rej(fr.error);fr.readAsDataURL(f)});
-const urlToImg=u=>new Promise((res,rej)=>{const im=new Image();im.onload=()=>res(im);im.onerror=()=>rej(new Error('사진 파일을 열 수 없습니다'));im.src=u});
-async function syncPhotoFiles(relist){
-  if(!photoDir)return;
-  if(phBusy){phAgain=true;return}
-  phBusy=true;let wrote=0,removed=0,loaded=0,renamed=0;
-  try{
-    if(!await permOK(photoDir,false)){permLost('photoDir',photoDir);return}
-    if(relist||!phFiles){const s=new Set();for await(const [n,h] of photoDir.entries())if(h.kind==='file')s.add(n);phFiles=s}
-    const files=phFiles,keys=new Set(await pTx('readonly',s=>s.getAllKeys())),pend=phPend(),own=phOwners(),live=new Set();
+function phPend() {
+  try {
+    return new Set(JSON.parse(localStorage.getItem(PH_PEND) || '[]'));
+  } catch (e) {
+    return new Set();
+  }
+}
+function phPendSet(s) {
+  try {
+    localStorage.setItem(PH_PEND, JSON.stringify([...s]));
+  } catch (e) {}
+}
+function phPendAdd(ids) {
+  if (!ids.length) return;
+  const s = phPend();
+  ids.forEach((i) => s.add(i));
+  phPendSet(s);
+}
+const fileToURL = (f) =>
+  new Promise((res, rej) => {
+    const fr = new FileReader();
+    fr.onload = () => res(fr.result);
+    fr.onerror = () => rej(fr.error);
+    fr.readAsDataURL(f);
+  });
+const urlToImg = (u) =>
+  new Promise((res, rej) => {
+    const im = new Image();
+    im.onload = () => res(im);
+    im.onerror = () => rej(new Error('사진 파일을 열 수 없습니다'));
+    im.src = u;
+  });
+async function syncPhotoFiles(relist) {
+  if (!photoDir) return;
+  if (phBusy) {
+    phAgain = true;
+    return;
+  }
+  phBusy = true;
+  let wrote = 0,
+    removed = 0,
+    loaded = 0,
+    renamed = 0;
+  try {
+    if (!(await permOK(photoDir, false))) {
+      permLost('photoDir', photoDir);
+      return;
+    }
+    if (relist || !phFiles) {
+      const s = new Set();
+      for await (const [n, h] of photoDir.entries()) if (h.kind === 'file') s.add(n);
+      phFiles = s;
+    }
+    const files = phFiles,
+      keys = new Set(await pTx('readonly', (s) => s.getAllKeys())),
+      pend = phPend(),
+      own = phOwners(),
+      live = new Set();
     // 1) 이 PC의 사진 → 정해진 이름의 파일로 저장 · 이름이 바뀌어야 하면 새 이름으로 옮김 (자리표시 이미지는 절대 쓰지 않음)
-    for(const id of keys){
-      const r=await photoGet(id);if(!r)continue;
-      const cur=r.file||(files.has(phName(id))?phName(id):'');
-      if(pend.has(id)||phIsPending(r)){if(cur)live.add(cur);continue}
-      const pre=phPrefix(r,own[id]);
-      if(cur&&files.has(cur)&&cur.startsWith(pre+'_')){live.add(cur);if(r.file!==cur)await photoPut([{...r,file:cur}]);continue}
-      const nm=isDocRec(r)?phDocName(pre,r,files):phNextName(pre,files);
-      const w=await (await photoDir.getFileHandle(nm,{create:true})).createWritable();
-      await w.write(await (await fetch(r.data)).blob());await w.close();files.add(nm);live.add(nm);
-      if(cur&&files.has(cur)){try{await photoDir.removeEntry(cur);files.delete(cur)}catch(e){}renamed++}else wrote++;
-      await photoPut([{...r,file:nm}]);delete phCache[id];
+    for (const id of keys) {
+      const r = await photoGet(id);
+      if (!r) continue;
+      const cur = r.file || (files.has(phName(id)) ? phName(id) : '');
+      if (pend.has(id) || phIsPending(r)) {
+        if (cur) live.add(cur);
+        continue;
+      }
+      const pre = phPrefix(r, own[id]);
+      if (cur && files.has(cur) && cur.startsWith(pre + '_')) {
+        live.add(cur);
+        if (r.file !== cur) await photoPut([{ ...r, file: cur }]);
+        continue;
+      }
+      const nm = isDocRec(r) ? phDocName(pre, r, files) : phNextName(pre, files);
+      const w = await (await photoDir.getFileHandle(nm, { create: true })).createWritable();
+      await w.write(await (await fetch(r.data)).blob());
+      await w.close();
+      files.add(nm);
+      live.add(nm);
+      if (cur && files.has(cur)) {
+        try {
+          await photoDir.removeEntry(cur);
+          files.delete(cur);
+        } catch (e) {}
+        renamed++;
+      } else wrote++;
+      await photoPut([{ ...r, file: nm }]);
+      delete phCache[id];
     }
     // 2) 지운 사진 → 파일도 삭제 (지금 쓰는 사진의 파일은 남김)
-    const dq=phDelQ();
-    for(const n of [...dq]){if(!live.has(n)&&files.has(n)){try{await photoDir.removeEntry(n);files.delete(n);removed++}catch(e){continue}}dq.delete(n)}
+    const dq = phDelQ();
+    for (const n of [...dq]) {
+      if (!live.has(n) && files.has(n)) {
+        try {
+          await photoDir.removeEntry(n);
+          files.delete(n);
+          removed++;
+        } catch (e) {
+          continue;
+        }
+      }
+      dq.delete(n);
+    }
     phDelQSet(dq);
     // 3) 다른 PC에서 올린 사진 ← 파일에서 가져오기
-    for(const id of [...pend]){
-      if(!keys.has(id)){pend.delete(id);continue}
-      const r=await photoGet(id);if(!phIsPending(r)){pend.delete(id);continue}
-      const nm=r.file||phName(id);if(!files.has(nm))continue;
-      try{const data=await fileToURL(await (await photoDir.getFileHandle(nm)).getFile());
-        if(isDocRec(r)?!isFileURL(data):!isImgURL(data))continue;
-        await photoPut([{...r,pending:undefined,file:nm,data,thumb:isDocRec(r)?'':shrink(await urlToImg(data),320,.7)}]);
-        delete phCache[id];pend.delete(id);loaded++}catch(e){}
+    for (const id of [...pend]) {
+      if (!keys.has(id)) {
+        pend.delete(id);
+        continue;
+      }
+      const r = await photoGet(id);
+      if (!phIsPending(r)) {
+        pend.delete(id);
+        continue;
+      }
+      const nm = r.file || phName(id);
+      if (!files.has(nm)) continue;
+      try {
+        const data = await fileToURL(await (await photoDir.getFileHandle(nm)).getFile());
+        if (isDocRec(r) ? !isFileURL(data) : !isImgURL(data)) continue;
+        await photoPut([{ ...r, pending: undefined, file: nm, data, thumb: isDocRec(r) ? '' : shrink(await urlToImg(data), 320, 0.7) }]);
+        delete phCache[id];
+        pend.delete(id);
+        loaded++;
+      } catch (e) {}
     }
     phPendSet(pend);
-    if(loaded||wrote||renamed)photoStr=null;
-    if(wrote||renamed)save();  // 바뀐 파일 이름을 기록
+    if (loaded || wrote || renamed) photoStr = null;
+    if (wrote || renamed) save(); // 바뀐 파일 이름을 기록
     phDirtySet(false);
-    if(loaded){toast(`사진 폴더에서 사진 ${loaded}장을 불러왔습니다`);if(!$('#cfm.on'))render()}
-  }catch(e){toast('사진 폴더 동기화 실패: '+e.message)}
-  finally{phBusy=false;updateSaveInfo();if(phAgain){phAgain=false;setTimeout(()=>syncPhotoFiles(false),500)}}
-  return {wrote,renamed,removed,loaded};
+    if (loaded) {
+      toast(`사진 폴더에서 사진 ${loaded}장을 불러왔습니다`);
+      if (!$('#cfm.on')) render();
+    }
+  } catch (e) {
+    toast('사진 폴더 동기화 실패: ' + e.message);
+  } finally {
+    phBusy = false;
+    updateSaveInfo();
+    if (phAgain) {
+      phAgain = false;
+      setTimeout(() => syncPhotoFiles(false), 500);
+    }
+  }
+  return { wrote, renamed, removed, loaded };
 }
-function photoBadge(d){
-  const n=(d.photos||[]).length;
-  return n?`<a class="bg inf" style="cursor:pointer" onclick="viewDefectPhotos('${d.id}')" title="사진 보기">📷 ${n}</a>`:'';
+function photoBadge(d) {
+  const n = (d.photos || []).length;
+  return n ? `<a class="bg inf" style="cursor:pointer" onclick="viewDefectPhotos('${d.id}')" title="사진 보기">📷 ${n}</a>` : '';
 }
-let curPhotos=[],curRemoved=[];
-function initPhotoBox(ids){
-  curPhotos=[];curRemoved=[];
-  const box=$('#photoBox');if(!box)return;
-  box.addEventListener('dragover',e=>{e.preventDefault();box.classList.add('drag')});
-  box.addEventListener('dragleave',()=>box.classList.remove('drag'));
-  box.addEventListener('drop',e=>{e.preventDefault();box.classList.remove('drag');addPhotoFiles([...e.dataTransfer.files])});
+let curPhotos = [],
+  curRemoved = [];
+function initPhotoBox(ids) {
+  curPhotos = [];
+  curRemoved = [];
+  const box = $('#photoBox');
+  if (!box) return;
+  box.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    box.classList.add('drag');
+  });
+  box.addEventListener('dragleave', () => box.classList.remove('drag'));
+  box.addEventListener('drop', (e) => {
+    e.preventDefault();
+    box.classList.remove('drag');
+    addPhotoFiles([...e.dataTransfer.files]);
+  });
   renderPhotoBox();
-  if(ids.length){
-    box.insertAdjacentHTML('afterbegin','<div class="muted" id="phLoading">사진 불러오는 중…</div>');
-    photoGetMany(ids).then(rs=>{curPhotos=[...rs.map(r=>({...r,isNew:false})),...curPhotos.filter(p=>p.isNew)];renderPhotoBox()})
-      .catch(e=>{toast('사진 가져오기 실패: '+e.message);renderPhotoBox()});
+  if (ids.length) {
+    box.insertAdjacentHTML('afterbegin', '<div class="muted" id="phLoading">사진 불러오는 중…</div>');
+    photoGetMany(ids)
+      .then((rs) => {
+        curPhotos = [...rs.map((r) => ({ ...r, isNew: false })), ...curPhotos.filter((p) => p.isNew)];
+        renderPhotoBox();
+      })
+      .catch((e) => {
+        toast('사진 가져오기 실패: ' + e.message);
+        renderPhotoBox();
+      });
   }
 }
-function renderPhotoBox(){
-  const b=$('#photoBox');if(!b)return;
-  b.innerHTML=curPhotos.map((p,i)=>`<div class="ph"><img src="${p.thumb||p.data}" onclick="lbOpen(curPhotos,${i})" title="크게 보기"><input placeholder="설명 (예: 불량부위, 라벨)" value="${esc(p.caption)}" oninput="curPhotos[${i}].caption=this.value;curPhotos[${i}].dirty=true"><button type="button" class="b s d" onclick="removePhoto(${i})">삭제</button></div>`).join('')
-   +`<label class="ph add">＋ 사진 추가<span class="muted">클릭 · 끌어놓기<br>Ctrl+V 붙여넣기</span><input type="file" accept="image/*" multiple style="display:none" onchange="addPhotoFiles([...this.files]);this.value=''"></label>`;
+function renderPhotoBox() {
+  const b = $('#photoBox');
+  if (!b) return;
+  b.innerHTML =
+    curPhotos
+      .map(
+        (p, i) =>
+          `<div class="ph"><img src="${p.thumb || p.data}" onclick="lbOpen(curPhotos,${i})" title="크게 보기"><input placeholder="설명 (예: 불량부위, 라벨)" value="${esc(p.caption)}" oninput="curPhotos[${i}].caption=this.value;curPhotos[${i}].dirty=true"><button type="button" class="b s d" onclick="removePhoto(${i})">삭제</button></div>`,
+      )
+      .join('') +
+    `<label class="ph add">＋ 사진 추가<span class="muted">클릭 · 끌어놓기<br>Ctrl+V 붙여넣기</span><input type="file" accept="image/*" multiple style="display:none" onchange="addPhotoFiles([...this.files]);this.value=''"></label>`;
 }
-async function removePhoto(i){
-  const p=curPhotos[i];if(!p)return;
-  if(!await askConfirm({title:'사진을 삭제할까요?',msg:`<div style="display:flex;gap:10px;align-items:center"><img src="${p.thumb||p.data}" style="width:90px;height:64px;object-fit:cover;border-radius:4px"><span>${esc(p.caption||p.name||'')}</span></div>`,note:p.isNew?'':'불량 창에서 <b>저장</b>을 눌러야 최종 삭제됩니다. 취소하면 사진이 유지됩니다.'}))return;
-  if(!p.isNew)curRemoved.push(p.id);curPhotos.splice(i,1);mfDirty=true;renderPhotoBox();
-}
-function readImg(file){return new Promise((res,rej)=>{const fr=new FileReader();fr.onload=()=>{const im=new Image();im.onload=()=>res(im);im.onerror=()=>rej(new Error(`'${file.name}'을(를) 열 수 없습니다 (HEIC 등은 JPG로 변환 후 첨부)`));im.src=fr.result};fr.onerror=()=>rej(fr.error);fr.readAsDataURL(file)})}
-function shrink(im,max,q){
-  const sc=Math.min(1,max/Math.max(im.naturalWidth,im.naturalHeight));
-  const c=document.createElement('canvas');c.width=Math.max(1,Math.round(im.naturalWidth*sc));c.height=Math.max(1,Math.round(im.naturalHeight*sc));
-  const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(im,0,0,c.width,c.height);
-  return c.toDataURL('image/jpeg',q);
-}
-async function addPhotoFiles(files){
-  const imgs=files.filter(f=>f.type.startsWith('image/'));
-  if(!imgs.length){if(files.length)toast('이미지 파일만 첨부할 수 있습니다');return}
-  mfDirty=true;
-  const S=db.settings;
-  for(const f of imgs){
-    try{const im=await readImg(f);curPhotos.push({id:uid(),name:f.name||'붙여넣은 이미지.jpg',caption:'',data:shrink(im,num(S.photoMax)||1600,(num(S.photoQ)||80)/100),thumb:shrink(im,320,.7),createdAt:now(),isNew:true})}
-    catch(e){toast(e.message)}
-  }
+async function removePhoto(i) {
+  const p = curPhotos[i];
+  if (!p) return;
+  if (
+    !(await askConfirm({
+      title: '사진을 삭제할까요?',
+      msg: `<div style="display:flex;gap:10px;align-items:center"><img src="${p.thumb || p.data}" style="width:90px;height:64px;object-fit:cover;border-radius:4px"><span>${esc(p.caption || p.name || '')}</span></div>`,
+      note: p.isNew ? '' : '불량 창에서 <b>저장</b>을 눌러야 최종 삭제됩니다. 취소하면 사진이 유지됩니다.',
+    }))
+  )
+    return;
+  if (!p.isNew) curRemoved.push(p.id);
+  curPhotos.splice(i, 1);
+  mfDirty = true;
   renderPhotoBox();
 }
-async function viewDefectPhotos(id){
-  const d=db.defects.find(x=>x.id===id);if(!d)return;
-  try{const rs=await photoGetMany(d.photos);if(!rs.length){toast('저장된 사진을 찾을 수 없습니다');return}lbOpen(rs.map(r=>({...r,caption:`${d.date} ${d.partName||d.partNo} · ${r.caption||''}`})),0)}
-  catch(e){toast('사진 가져오기 실패: '+e.message)}
-}
-let lbList=[],lbIdx=0;
-function lbOpen(list,i){lbList=list;lbIdx=i;lbShow();$('#lb').classList.add('on')}
-function lbShow(){
-  const p=lbList[lbIdx];if(!p)return;
-  $('#lbimg').src=p.data||p.thumb;
-  $('#lbcap').textContent=`${lbIdx+1} / ${lbList.length}  ${p.caption||''}`;
-  const a=$('#lbdl');a.href=p.data||p.thumb;a.download=(p.name||'photo').replace(/\.[^.]+$/,'')+'.jpg';
-}
-function lbMove(k){if(!lbList.length)return;lbIdx=(lbIdx+k+lbList.length)%lbList.length;lbShow()}
-function closeLb(){$('#lb').classList.remove('on');$('#lbimg').src=''}
-document.addEventListener('paste',e=>{
-  const ia=$('#modal').classList.contains('on')&&$('#modal').dataset.iss&&document.activeElement&&document.activeElement.closest&&document.activeElement.closest('.isadd,.ised');
-  if(ia){const fs=[...(e.clipboardData?.files||[])];if(fs.length){e.preventDefault();issFAdd(fs,ia.classList.contains('ised')?'ed':'nw').then(n=>{if(n)toast(`파일 ${n}개 첨부`)})}return}
-  const lb=$('#logBox');
-  if(lb&&$('#modal').classList.contains('on')&&lb.contains(document.activeElement)){const fs=[...(e.clipboardData?.files||[])].filter(f=>f.type.startsWith('image/'));
-    if(fs.length){e.preventDefault();lgAddFiles(fs,tl.edit!=null?'edit':undefined);toast(`증빙 ${fs.length}장 첨부`)}return}
-  if(!$('#photoBox')||!$('#modal').classList.contains('on'))return;
-  const fs=[...(e.clipboardData?.files||[])].filter(f=>f.type.startsWith('image/'));
-  if(fs.length){e.preventDefault();addPhotoFiles(fs);toast(`사진 ${fs.length}장 붙여넣음`)}
-});
-function oneLineLabels(root){
-  (root||document).querySelectorAll('.fg>label:not(.full):not(.row)').forEach(l=>{
-    if(l.querySelector(':scope>.lt'))return;const lead=[];
-    for(const n of [...l.childNodes]){if(n.nodeType===1&&(n.matches('input,select,textarea,button,div')||n.querySelector('input,select,textarea,button')))break;lead.push(n)}
-    if(!lead.some(n=>n.nodeType===1||n.textContent.trim()))return;
-    const w=document.createElement('span');w.className='lt';l.insertBefore(w,lead[0]);lead.forEach(n=>w.appendChild(n));
-    const t=w.textContent.replace(/\s+/g,' ').trim();if(t)w.title=t;
+function readImg(file) {
+  return new Promise((res, rej) => {
+    const fr = new FileReader();
+    fr.onload = () => {
+      const im = new Image();
+      im.onload = () => res(im);
+      im.onerror = () => rej(new Error(`'${file.name}'을(를) 열 수 없습니다 (HEIC 등은 JPG로 변환 후 첨부)`));
+      im.src = fr.result;
+    };
+    fr.onerror = () => rej(fr.error);
+    fr.readAsDataURL(file);
   });
 }
-{let q=0;new MutationObserver(()=>{if(q)return;q=requestAnimationFrame(()=>{q=0;oneLineLabels()})}).observe(document.body,{childList:true,subtree:true})}
-if(navigator.storage&&navigator.storage.persist)navigator.storage.persist().catch(()=>{});
-
+function shrink(im, max, q) {
+  const sc = Math.min(1, max / Math.max(im.naturalWidth, im.naturalHeight));
+  const c = document.createElement('canvas');
+  c.width = Math.max(1, Math.round(im.naturalWidth * sc));
+  c.height = Math.max(1, Math.round(im.naturalHeight * sc));
+  const x = c.getContext('2d');
+  x.fillStyle = '#fff';
+  x.fillRect(0, 0, c.width, c.height);
+  x.drawImage(im, 0, 0, c.width, c.height);
+  return c.toDataURL('image/jpeg', q);
+}
+async function addPhotoFiles(files) {
+  const imgs = files.filter((f) => f.type.startsWith('image/'));
+  if (!imgs.length) {
+    if (files.length) toast('이미지 파일만 첨부할 수 있습니다');
+    return;
+  }
+  mfDirty = true;
+  const S = db.settings;
+  for (const f of imgs) {
+    try {
+      const im = await readImg(f);
+      curPhotos.push({
+        id: uid(),
+        name: f.name || '붙여넣은 이미지.jpg',
+        caption: '',
+        data: shrink(im, num(S.photoMax) || 1600, (num(S.photoQ) || 80) / 100),
+        thumb: shrink(im, 320, 0.7),
+        createdAt: now(),
+        isNew: true,
+      });
+    } catch (e) {
+      toast(e.message);
+    }
+  }
+  renderPhotoBox();
+}
+async function viewDefectPhotos(id) {
+  const d = db.defects.find((x) => x.id === id);
+  if (!d) return;
+  try {
+    const rs = await photoGetMany(d.photos);
+    if (!rs.length) {
+      toast('저장된 사진을 찾을 수 없습니다');
+      return;
+    }
+    lbOpen(
+      rs.map((r) => ({ ...r, caption: `${d.date} ${d.partName || d.partNo} · ${r.caption || ''}` })),
+      0,
+    );
+  } catch (e) {
+    toast('사진 가져오기 실패: ' + e.message);
+  }
+}
+let lbList = [],
+  lbIdx = 0;
+function lbOpen(list, i) {
+  lbList = list;
+  lbIdx = i;
+  lbShow();
+  $('#lb').classList.add('on');
+}
+function lbShow() {
+  const p = lbList[lbIdx];
+  if (!p) return;
+  $('#lbimg').src = p.data || p.thumb;
+  $('#lbcap').textContent = `${lbIdx + 1} / ${lbList.length}  ${p.caption || ''}`;
+  const a = $('#lbdl');
+  a.href = p.data || p.thumb;
+  a.download = (p.name || 'photo').replace(/\.[^.]+$/, '') + '.jpg';
+}
+function lbMove(k) {
+  if (!lbList.length) return;
+  lbIdx = (lbIdx + k + lbList.length) % lbList.length;
+  lbShow();
+}
+function closeLb() {
+  $('#lb').classList.remove('on');
+  $('#lbimg').src = '';
+}
+document.addEventListener('paste', (e) => {
+  const ia =
+    $('#modal').classList.contains('on') &&
+    $('#modal').dataset.iss &&
+    document.activeElement &&
+    document.activeElement.closest &&
+    document.activeElement.closest('.isadd,.ised');
+  if (ia) {
+    const fs = [...(e.clipboardData?.files || [])];
+    if (fs.length) {
+      e.preventDefault();
+      issFAdd(fs, ia.classList.contains('ised') ? 'ed' : 'nw').then((n) => {
+        if (n) toast(`파일 ${n}개 첨부`);
+      });
+    }
+    return;
+  }
+  const lb = $('#logBox');
+  if (lb && $('#modal').classList.contains('on') && lb.contains(document.activeElement)) {
+    const fs = [...(e.clipboardData?.files || [])].filter((f) => f.type.startsWith('image/'));
+    if (fs.length) {
+      e.preventDefault();
+      lgAddFiles(fs, tl.edit != null ? 'edit' : undefined);
+      toast(`증빙 ${fs.length}장 첨부`);
+    }
+    return;
+  }
+  if (!$('#photoBox') || !$('#modal').classList.contains('on')) return;
+  const fs = [...(e.clipboardData?.files || [])].filter((f) => f.type.startsWith('image/'));
+  if (fs.length) {
+    e.preventDefault();
+    addPhotoFiles(fs);
+    toast(`사진 ${fs.length}장 붙여넣음`);
+  }
+});
+function oneLineLabels(root) {
+  (root || document).querySelectorAll('.fg>label:not(.full):not(.row)').forEach((l) => {
+    if (l.querySelector(':scope>.lt')) return;
+    const lead = [];
+    for (const n of [...l.childNodes]) {
+      if (n.nodeType === 1 && (n.matches('input,select,textarea,button,div') || n.querySelector('input,select,textarea,button'))) break;
+      lead.push(n);
+    }
+    if (!lead.some((n) => n.nodeType === 1 || n.textContent.trim())) return;
+    const w = document.createElement('span');
+    w.className = 'lt';
+    l.insertBefore(w, lead[0]);
+    lead.forEach((n) => w.appendChild(n));
+    const t = w.textContent.replace(/\s+/g, ' ').trim();
+    if (t) w.title = t;
+  });
+}
+{
+  let q = 0;
+  new MutationObserver(() => {
+    if (q) return;
+    q = requestAnimationFrame(() => {
+      q = 0;
+      oneLineLabels();
+    });
+  }).observe(document.body, { childList: true, subtree: true });
+}
+if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});

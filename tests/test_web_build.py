@@ -39,7 +39,7 @@ def test_sidebar_breakpoint_is_the_same_in_css_and_js():
     src = ROOT / "qis" / "web" / "src"
     css = (src / "css" / "25-renewal.css").read_text(encoding="utf-8")
     js = (src / "js" / "05-routing.js").read_text(encoding="utf-8")
-    m = re.search(r"NAV_MQ=.*?matchMedia\('\(min-width:(\d+)px\)'\)", js)
+    m = re.search(r"NAV_MQ\s*=.*?matchMedia\(['\"]\(min-width:(\d+)px\)['\"]\)", js)
     assert m, "NAV_MQ 를 찾지 못함"
     bp = m.group(1)
     assert re.search(r"@media screen and \(min-width:%spx\)\{\s*body:not\(\.mob\)\{display:grid" % bp, css), bp
