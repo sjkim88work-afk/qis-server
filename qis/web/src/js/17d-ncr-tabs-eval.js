@@ -92,14 +92,6 @@ function ncrFoot(m) {
   B.push({ label: id ? '저장' : '발행', cls: 'p', fn: () => saveNcr(id) });
   modalFoot(B);
 }
-function ncrTabDefault(n, id) {
-  if (!id) return 'a';
-  const st = ncrStatus(n);
-  if (['대책요청', '대책서 검토', '보완요청'].includes(st)) return 'b';
-  if (n.reqType === '단순 통보' && !n.verifyDate) return 'a';
-  if (['승인(검증대기)', '검증 무효', '종결'].includes(st)) return 'c';
-  return 'a';
-}
 function ncrTab(k, fromMode) {
   const f = $('#mf');
   if (!f) return;

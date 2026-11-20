@@ -48,19 +48,6 @@ function filteredDefects() {
     )
     .sort((a, b) => (b.date || '').localeCompare(a.date || '') || (b.createdAt || '').localeCompare(a.createdAt || ''));
 }
-function ncrCell(d) {
-  const n = d.ncrId && db.ncrs.find((x) => x.id === d.ncrId);
-  if (n) return `<a class="bg inf" onclick="editNcr('${n.id}')" style="cursor:pointer">${esc(n.no)}</a>`;
-  if (invOpen(d))
-    return `<a class="bg inf" style="cursor:pointer" onclick="editDefect('${d.id}')" title="귀책 조사 중 — FAR·RCA 후 판정">조사 중</a>`;
-  if (d.resp === '사내') return `<span class="bg mut" title="사내 귀책 — 사내 대책으로 처리">사내</span>`;
-  if (d.resp === '미정' && d.inv?.verdict === '원인 불명') return `<span class="bg mut">원인 불명</span>`;
-  const r = ncrReasons(d);
-  return (
-    (r.length ? `<span class="bg warn" title="${esc(r.join(' / '))}">권고</span> ` : '') +
-    `<button class="b s noprint" onclick="ncrFromDefect('${d.id}')">발행</button>`
-  );
-}
 // 불량 목록의 후속 조치 칸 — 귀책에 맞는 FAR · RCA · NCR 진행 상태 또는 발행 버튼
 function actCell(d) {
   const L = [],
@@ -218,4 +205,13 @@ function refreshDT() {
   } finally {
     if (own) sevMemo = null;
   }
+}
+
+// FAR 창 · 사내 대책 창 위쪽의 불량 요약 상자 (품번 · 심각도 · 발생 내용 · ‘불량 열기’). badge: 심각도 뒤에 붙일 표시 · tail: 둘째 줄 끝에 붙일 글
+function defHeadBox(d, badge, tail) {
+  return `<div class="route" style="margin-top:0;margin-bottom:6px"><div class="ri"><div class="tx"><b>${esc(d.partNo || d.fgNo || '')} ${esc(d.partName || d.fgName || '')}</b> ${sevBadge(d)}${badge || ''}<br>
+    <span class="muted">${esc(d.date)} · ${esc(d.source || '')} · ${esc(d.type || '')} · ${num(d.qty).toLocaleString()}EA${tail || ''}</span>${
+      d.desc ? `<br><span style="font-size:12.5px">${esc(d.desc)}</span>` : ''
+    }</div>
+    <button type="button" class="b s" onclick="routeGo(&quot;editDefect('${d.id}')&quot;)">불량 열기</button></div></div>`;
 }

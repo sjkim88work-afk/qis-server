@@ -521,4 +521,3 @@ const GUIDE = [
   ['후보가 너무 많다', 'cem'],
   ['왜 못 걸렀나', 'eta'],
 ];
-let anaSeq = 0;

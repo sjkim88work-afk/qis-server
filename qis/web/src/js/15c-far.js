@@ -221,11 +221,7 @@ function editInv(id, focus, stage) {
     ? `FAR 회신 ${esc(iv.farRecv)}${iv.farVerdict ? ` · 협력사 분석 판정: ${esc(iv.farVerdict)}` : ''}${iv.farReview ? ` · 당사 검토: ${esc(iv.farReview)}` : ''}`
     : '';
   const body = `${invSteps(d)}
-  <div class="route" style="margin-top:0;margin-bottom:6px"><div class="ri"><div class="tx"><b>${esc(d.partNo || d.fgNo || '')} ${esc(d.partName || d.fgName || '')}</b> ${sevBadge(d)}<br>
-    <span class="muted">${esc(d.date)} · ${esc(d.source || '')} · ${esc(d.type || '')} · ${num(d.qty).toLocaleString()}EA · ${esc(supName(d.supplierId)) || '협력사 미지정'}</span>${
-      d.desc ? `<br><span style="font-size:12.5px">${esc(d.desc)}</span>` : ''
-    }</div>
-    <button type="button" class="b s" onclick="routeGo(&quot;editDefect('${id}')&quot;)">불량 열기</button></div></div>
+  ${defHeadBox(d, '', ` · ${esc(supName(d.supplierId)) || '협력사 미지정'}`)}
   <div class="ivs" data-s="req" ${sh('req')}>
   <div class="sec">FAR 요청 <span class="muted" style="font-weight:normal;font-size:12px">협력사에 원인 분석을 요청합니다. 귀책 인정 요구가 아닙니다</span></div>
   <div class="fg">

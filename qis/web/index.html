@@ -129,7 +129,6 @@ button.evb.on1{background:var(--okb);border-color:#8fd0b0;color:var(--ok);font-w
 .fgl{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--sub)}
 .fgl textarea{color:var(--ink);line-height:1.6}
 /* 진행 기록 */
-.logadd{display:flex;gap:6px;align-items:flex-start;flex-wrap:wrap}
 .lgplan{border:1px solid #f0d49b;background:#fffaf0;border-radius:8px;padding:8px 12px;margin-top:6px;font-size:12.5px}
 .lgph{display:flex;gap:6px;flex-wrap:wrap;margin-top:5px}.lgph .t{position:relative;display:inline-block}.lgph img{width:64px;height:48px;object-fit:cover;border-radius:4px;border:1px solid var(--line);cursor:zoom-in;display:block}
 .lgph .ld{display:inline-flex;width:64px;height:48px;align-items:center;justify-content:center;background:var(--mut);border-radius:4px}
@@ -142,13 +141,11 @@ ul.logs .lhist{margin-top:6px;border-top:1px dashed var(--line);padding-top:6px;
 .lgc{border:1px solid #cfdcef;background:#f5f9ff;border-radius:8px;padding:10px 12px;margin-top:6px}
 .lgc .ch{display:flex;align-items:center;gap:8px;font-weight:600;font-size:12.5px;color:var(--pri);margin-bottom:8px}
 .lgc .cg,ul.logs .cg{display:grid;grid-template-columns:140px 130px 1fr 120px;gap:8px}
-.lgc .cg.c3{grid-template-columns:repeat(3,minmax(0,1fr))}
 .lgc .cg2,ul.logs .cg2{display:grid;grid-template-columns:3fr 2fr;gap:8px;margin-top:8px}
 .lgc label,ul.logs li.ed label{display:flex;flex-direction:column;gap:3px;font-size:11.5px;color:var(--sub)}
 .lgc .cf label.b{flex-direction:row;color:inherit;font-size:12px}
 .lgc textarea,ul.logs li.ed textarea{min-height:52px}
 .lgc .cf,ul.logs .cf{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:11.5px;color:var(--sub);flex-wrap:wrap}
-.lgc .cz-own{margin-top:8px;font-size:12px;background:#fff;border:1px dashed #cfdcef;border-radius:6px;padding:6px 9px;color:var(--sub)}
 .lgh{display:flex;align-items:center;gap:8px;margin-top:14px;padding-bottom:4px;border-bottom:1px solid var(--line);font-size:12.5px;font-weight:600}
 .lgh label{font-weight:normal;color:var(--sub);display:flex;gap:4px;align-items:center}
 .lgpend{margin-top:8px;font-size:12px;background:var(--warnb);border:1px solid #f0d49b;color:#7a5410;border-radius:6px;padding:6px 10px}
@@ -4598,7 +4595,6 @@ const ISS_ROUTES = [
   },
   { k: 'close', l: '종결', w: '이상 없음 · 관찰만 필요할 때', cta: '이슈 종결', m: ['후속 건 없이 종결 — 사유가 기록에 남음 (다시 열 수 있음)'] },
 ];
-const ISS_RL = Object.fromEntries(ISS_ROUTES.map((r) => [r.k, r.l]));
 const issById = (id) => (db.issues || []).find((x) => x.id === id);
 const nowMin = () => {
   const d = new Date();
@@ -6459,19 +6455,6 @@ function filteredDefects() {
     )
     .sort((a, b) => (b.date || '').localeCompare(a.date || '') || (b.createdAt || '').localeCompare(a.createdAt || ''));
 }
-function ncrCell(d) {
-  const n = d.ncrId && db.ncrs.find((x) => x.id === d.ncrId);
-  if (n) return `<a class="bg inf" onclick="editNcr('${n.id}')" style="cursor:pointer">${esc(n.no)}</a>`;
-  if (invOpen(d))
-    return `<a class="bg inf" style="cursor:pointer" onclick="editDefect('${d.id}')" title="귀책 조사 중 — FAR·RCA 후 판정">조사 중</a>`;
-  if (d.resp === '사내') return `<span class="bg mut" title="사내 귀책 — 사내 대책으로 처리">사내</span>`;
-  if (d.resp === '미정' && d.inv?.verdict === '원인 불명') return `<span class="bg mut">원인 불명</span>`;
-  const r = ncrReasons(d);
-  return (
-    (r.length ? `<span class="bg warn" title="${esc(r.join(' / '))}">권고</span> ` : '') +
-    `<button class="b s noprint" onclick="ncrFromDefect('${d.id}')">발행</button>`
-  );
-}
 // 불량 목록의 후속 조치 칸 — 귀책에 맞는 FAR · RCA · NCR 진행 상태 또는 발행 버튼
 function actCell(d) {
   const L = [],
@@ -6629,6 +6612,15 @@ function refreshDT() {
   } finally {
     if (own) sevMemo = null;
   }
+}
+
+// FAR 창 · 사내 대책 창 위쪽의 불량 요약 상자 (품번 · 심각도 · 발생 내용 · ‘불량 열기’). badge: 심각도 뒤에 붙일 표시 · tail: 둘째 줄 끝에 붙일 글
+function defHeadBox(d, badge, tail) {
+  return `<div class="route" style="margin-top:0;margin-bottom:6px"><div class="ri"><div class="tx"><b>${esc(d.partNo || d.fgNo || '')} ${esc(d.partName || d.fgName || '')}</b> ${sevBadge(d)}${badge || ''}<br>
+    <span class="muted">${esc(d.date)} · ${esc(d.source || '')} · ${esc(d.type || '')} · ${num(d.qty).toLocaleString()}EA${tail || ''}</span>${
+      d.desc ? `<br><span style="font-size:12.5px">${esc(d.desc)}</span>` : ''
+    }</div>
+    <button type="button" class="b s" onclick="routeGo(&quot;editDefect('${d.id}')&quot;)">불량 열기</button></div></div>`;
 }
 // ── 불량 — 등록 · 수정 창 (화면) ──
 function editDefect(id, copy, preset) {
@@ -7020,11 +7012,7 @@ function editInv(id, focus, stage) {
     ? `FAR 회신 ${esc(iv.farRecv)}${iv.farVerdict ? ` · 협력사 분석 판정: ${esc(iv.farVerdict)}` : ''}${iv.farReview ? ` · 당사 검토: ${esc(iv.farReview)}` : ''}`
     : '';
   const body = `${invSteps(d)}
-  <div class="route" style="margin-top:0;margin-bottom:6px"><div class="ri"><div class="tx"><b>${esc(d.partNo || d.fgNo || '')} ${esc(d.partName || d.fgName || '')}</b> ${sevBadge(d)}<br>
-    <span class="muted">${esc(d.date)} · ${esc(d.source || '')} · ${esc(d.type || '')} · ${num(d.qty).toLocaleString()}EA · ${esc(supName(d.supplierId)) || '협력사 미지정'}</span>${
-      d.desc ? `<br><span style="font-size:12.5px">${esc(d.desc)}</span>` : ''
-    }</div>
-    <button type="button" class="b s" onclick="routeGo(&quot;editDefect('${id}')&quot;)">불량 열기</button></div></div>
+  ${defHeadBox(d, '', ` · ${esc(supName(d.supplierId)) || '협력사 미지정'}`)}
   <div class="ivs" data-s="req" ${sh('req')}>
   <div class="sec">FAR 요청 <span class="muted" style="font-weight:normal;font-size:12px">협력사에 원인 분석을 요청합니다. 귀책 인정 요구가 아닙니다</span></div>
   <div class="fg">
@@ -7187,11 +7175,7 @@ function editIca(id) {
   icaCurId = id;
   const cs = defCase(d),
     lv = icaLevel(d);
-  const body = `<div class="route" style="margin-top:0;margin-bottom:6px"><div class="ri"><div class="tx"><b>${esc(d.partNo || d.fgNo || '')} ${esc(d.partName || d.fgName || '')}</b> ${sevBadge(d)} <span class="bg mut">귀책 ${esc(d.resp || '-')}</span><br>
-    <span class="muted">${esc(d.date)} · ${esc(d.source || '')} · ${esc(d.type || '')} · ${num(d.qty).toLocaleString()}EA</span>${
-      d.desc ? `<br><span style="font-size:12.5px">${esc(d.desc)}</span>` : ''
-    }</div>
-    <button type="button" class="b s" onclick="routeGo(&quot;editDefect('${id}')&quot;)">불량 열기</button></div></div>
+  const body = `${defHeadBox(d, ` <span class="bg mut">귀책 ${esc(d.resp || '-')}</span>`, '')}
   ${
     cs
       ? ''
@@ -10621,14 +10605,6 @@ function ncrFoot(m) {
     });
   B.push({ label: id ? '저장' : '발행', cls: 'p', fn: () => saveNcr(id) });
   modalFoot(B);
-}
-function ncrTabDefault(n, id) {
-  if (!id) return 'a';
-  const st = ncrStatus(n);
-  if (['대책요청', '대책서 검토', '보완요청'].includes(st)) return 'b';
-  if (n.reqType === '단순 통보' && !n.verifyDate) return 'a';
-  if (['승인(검증대기)', '검증 무효', '종결'].includes(st)) return 'c';
-  return 'a';
 }
 function ncrTab(k, fromMode) {
   const f = $('#mf');
@@ -16416,10 +16392,6 @@ async function permOK(h, ask) {
   }
   return false;
 }
-function renderRecon() {
-  const b = $('#recon');
-  if (b) b.style.display = 'none';
-}
 const BK_RE = /^QMS_(자동)?백업_\d{4}-\d{2}-\d{2}(_[0-9A-Za-z가-힣]+)?\.json$/;
 const recCount = (o) => COLLS.reduce((a, c) => a + (Array.isArray(o && o[c]) ? o[c].length : 0), 0);
 const LATEST_BK = 'QIS_최신백업.json'; // 고칠 때마다(1분 안에) 덮어쓰는 최신 백업 — 데이터만 (사진은 날짜별 백업 · 사진 폴더)
@@ -18574,7 +18546,6 @@ const GUIDE = [
   ['후보가 너무 많다', 'cem'],
   ['왜 못 걸렀나', 'eta'],
 ];
-let anaSeq = 0;
 // ── RCA — 원인분석 도구 (5Why · FTA · 워크시트) ──
 function blankAna(key) {
   const r5 = () => ['', '', '', '', ''];
@@ -20546,12 +20517,6 @@ function czUnlinkNcrAll(id) {
     }
   });
 }
-const czCaseBadge = (o) => {
-  const c = o.caseId && czById('cases', o.caseId);
-  return c
-    ? `<a class="bg ${czOpen(c) ? 'inf' : 'ok'}" style="cursor:pointer;font-size:10.5px" onclick="czOpenCase('${c.id}')" title="${esc(c.Title)} · ${esc(c.Stage)}">RCA ${esc(c.CaseNo)}</a>`
-    : '';
-};
 // ── RCA — 대시보드 항목 · 보고서 · CSV ──
 function czDashItems() {
   const t = today(),
