@@ -59,6 +59,13 @@ def settle(pg, ms):
         pass
 
 
+def logform(pg):
+    """기록 작성 칸을 엶 — 접혀 있으면 ‘기록 남기기’ 단추를 누름 (기록이 없는 건은 처음부터 열려 있음)"""
+    if pg.locator("#lgText").count() == 0:
+        pg.click("#lgOpenBtn")
+        pg.wait_for_selector("#lgText")
+
+
 def login(b, user, pw):
     ctx = b.new_context(viewport={"width": 1400, "height": 900}, accept_downloads=True, bypass_csp=True)
     ctx.add_init_script(BUSY_JS)
