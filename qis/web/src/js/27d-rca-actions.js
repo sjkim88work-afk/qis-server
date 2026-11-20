@@ -525,9 +525,3 @@ function czUnlinkNcrAll(id) {
     }
   });
 }
-const czCaseBadge = (o) => {
-  const c = o.caseId && czById('cases', o.caseId);
-  return c
-    ? `<a class="bg ${czOpen(c) ? 'inf' : 'ok'}" style="cursor:pointer;font-size:10.5px" onclick="czOpenCase('${c.id}')" title="${esc(c.Title)} · ${esc(c.Stage)}">RCA ${esc(c.CaseNo)}</a>`
-    : '';
-};

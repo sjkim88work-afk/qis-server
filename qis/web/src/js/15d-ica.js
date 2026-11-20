@@ -5,11 +5,7 @@ function editIca(id) {
   icaCurId = id;
   const cs = defCase(d),
     lv = icaLevel(d);
-  const body = `<div class="route" style="margin-top:0;margin-bottom:6px"><div class="ri"><div class="tx"><b>${esc(d.partNo || d.fgNo || '')} ${esc(d.partName || d.fgName || '')}</b> ${sevBadge(d)} <span class="bg mut">귀책 ${esc(d.resp || '-')}</span><br>
-    <span class="muted">${esc(d.date)} · ${esc(d.source || '')} · ${esc(d.type || '')} · ${num(d.qty).toLocaleString()}EA</span>${
-      d.desc ? `<br><span style="font-size:12.5px">${esc(d.desc)}</span>` : ''
-    }</div>
-    <button type="button" class="b s" onclick="routeGo(&quot;editDefect('${id}')&quot;)">불량 열기</button></div></div>
+  const body = `${defHeadBox(d, ` <span class="bg mut">귀책 ${esc(d.resp || '-')}</span>`, '')}
   ${
     cs
       ? ''

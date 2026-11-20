@@ -1117,10 +1117,6 @@ async function permOK(h, ask) {
   }
   return false;
 }
-function renderRecon() {
-  const b = $('#recon');
-  if (b) b.style.display = 'none';
-}
 const BK_RE = /^QMS_(자동)?백업_\d{4}-\d{2}-\d{2}(_[0-9A-Za-z가-힣]+)?\.json$/;
 const recCount = (o) => COLLS.reduce((a, c) => a + (Array.isArray(o && o[c]) ? o[c].length : 0), 0);
 const LATEST_BK = 'QIS_최신백업.json'; // 고칠 때마다(1분 안에) 덮어쓰는 최신 백업 — 데이터만 (사진은 날짜별 백업 · 사진 폴더)

@@ -39,7 +39,6 @@ const ISS_ROUTES = [
   },
   { k: 'close', l: '종결', w: '이상 없음 · 관찰만 필요할 때', cta: '이슈 종결', m: ['후속 건 없이 종결 — 사유가 기록에 남음 (다시 열 수 있음)'] },
 ];
-const ISS_RL = Object.fromEntries(ISS_ROUTES.map((r) => [r.k, r.l]));
 const issById = (id) => (db.issues || []).find((x) => x.id === id);
 const nowMin = () => {
   const d = new Date();
