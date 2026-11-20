@@ -257,6 +257,48 @@ function defaultDB() {
     bom: { updatedAt: '', rows: [] },
   };
 }
+// 예전 구조의 이슈 기록(at · who · rec · edits)을 공통 구조로 읽음. 이미 공통 구조면 그대로 (여러 번 해도 같음)
+function logNorm(l) {
+  if (!l || typeof l !== 'object' || l.date !== undefined) return l;
+  const at = String(l.at || ''),
+    { who, rec, edits, at: _at, ...rest } = l;
+  const o = {
+    ...rest,
+    date: at.slice(0, 10),
+    time: at.slice(11, 16),
+    band: at.length > 10 ? '' : ['오전', '오후', '야간'].includes(l.band) ? l.band : '',
+    party: who || '',
+    method: '',
+    result: '',
+    photos: Array.isArray(l.photos) ? l.photos : [],
+    at: rec || (at.length > 10 ? at : ''),
+  };
+  if (Array.isArray(edits) && edits.length)
+    o.hist = edits.map((e) => {
+      const pv = e.prev || {},
+        pa = String(pv.at || '');
+      return {
+        at: e.at || '',
+        by: e.by || '',
+        reason: e.reason || '',
+        date: pa.slice(0, 10),
+        time: pa.slice(11, 16),
+        band: pa.length > 10 ? '' : pv.band || '',
+        kind: pv.kind || l.kind,
+        party: pv.who || '',
+        method: '',
+        text: pv.text || '',
+        result: '',
+        photos: [],
+      };
+    });
+  if (['분류', '종결', '다시 열기'].includes(l.kind)) o.sys = true; // 프로그램이 남긴 기록
+  return o;
+}
+function issNorm(i) {
+  if (i && Array.isArray(i.logs)) i.logs = i.logs.map(logNorm);
+  return i;
+}
 function migrate(d) {
   const def = defaultDB();
   d = d || {};
@@ -281,6 +323,7 @@ function migrate(d) {
     });
   });
   d.deleted = Array.isArray(d.deleted) ? d.deleted.filter((t) => t && t.id) : [];
+  d.issues.forEach(issNorm); // 이슈 기록을 공통 기록 구조로 (불량 · NCR 실행 기록과 같음)
   if (d.settings.logo && !isImgURL(d.settings.logo)) d.settings.logo = '';
   Object.keys(d.settings.signs).forEach((k) => {
     if (!isImgURL(d.settings.signs[k])) delete d.settings.signs[k];

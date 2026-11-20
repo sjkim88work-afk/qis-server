@@ -116,7 +116,7 @@ def take(out_path):
                         shot(f"ncr:{k}:stage:{stg}", f"()=>editNcr('{i}',null,'{stg}')", 600); pg.evaluate(close)
                 shot("ncr:new", "()=>editNcr()", 600); pg.evaluate(close)
                 shot("issue:open", "()=>{go('issue');issOpen('snapIss')}", 500)
-                shot("issue:editlog", "()=>issEditLog('snapIss',1)", 400); pg.evaluate(close)
+                shot("issue:editlog", "()=>lgEdit(1)", 400); pg.evaluate(close)
                 shot("issue:closed", "()=>issOpen('snapIss2')", 500); pg.evaluate(close)
                 shot("issue:new", "()=>editIssue()", 500); pg.evaluate(close)
                 shot("issue:edit", "()=>editIssue('snapIss')", 500); pg.evaluate(close)

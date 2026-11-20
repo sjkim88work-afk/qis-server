@@ -56,7 +56,6 @@ tr:hover td{background:#fafbfd}
 .bg.svA{background:#c0392b;color:#fff;font-weight:700}.bg.svB{background:#d9822b;color:#fff;font-weight:700}.bg.svC{background:#8a94a3;color:#fff;font-weight:700}
 .kpi.go{cursor:pointer;transition:box-shadow .15s}.kpi.go:hover{box-shadow:0 0 0 2px var(--pri) inset}
 tr.late>td{background:var(--badb)}
-ol.isl{list-style:none;margin:0;padding:0}ol.isl li{display:grid;grid-template-columns:86px 74px minmax(0,1fr) auto;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);align-items:start;line-height:1.55}ol.isl li.void>div{text-decoration:line-through;opacity:.6}ol.isl .mono{font-size:12.5px;color:var(--sub)}
 /* 불량 목록의 ‘조사 · 진행 기록’ 단추 — 누르기 쉬운 크기 */
 a.bg.lgchip{display:inline-flex;align-items:center;gap:4px;min-height:26px;padding:2px 11px;margin-top:5px;font-size:13.5px;font-weight:600;border-radius:13px;cursor:pointer}a.bg.lgchip:hover{box-shadow:0 0 0 1px currentColor inset}
 /* 일시 입력 (날짜 + 시각 입력 · 오전 · 오후 · 야간 · 시간 모름 + 시각) · 같은 날 순서 바꾸기 ▲▼ */
@@ -64,14 +63,6 @@ a.bg.lgchip{display:inline-flex;align-items:center;gap:4px;min-height:26px;paddi
 .dtrow{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:8px}.fg label.w2{grid-column:span 2}
 @media(max-width:560px){.dtrow{grid-template-columns:1fr}.fg label.w2{grid-column:1/-1}.dtp{flex-wrap:wrap}.dtp>input[type=date]{flex:1 1 100%}}
 .mv{display:inline-flex;gap:2px;vertical-align:middle}.mv button.b.s{padding:0 5px;height:20px;min-height:0;min-width:24px;font-size:9px;line-height:1;flex:1}.mv button:disabled{opacity:.3;cursor:default}
-.isfl{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:6px}.isfl:empty{display:none}
-.isfl .f{position:relative;display:inline-flex;align-items:center;max-width:100%;border:1px solid var(--line);border-radius:6px;background:var(--card);font-size:12.5px}
-.isfl .f.ld{padding:5px 8px;color:var(--mu,#6b7689)}.isfl .f.im{border:0}.isfl .f.im img{width:64px;height:48px;object-fit:cover;border-radius:4px;border:1px solid var(--line);cursor:zoom-in;display:block}
-.isfl .f .o{display:inline-flex;align-items:center;gap:6px;padding:4px 8px;cursor:pointer;min-width:0;color:inherit;text-decoration:none}.isfl .f .o b{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:260px}
-.isfl .dk{font:600 10.5px/1 var(--f-mono,monospace);color:#fff;background:var(--pri);border-radius:3px;padding:4px 5px;flex:none}
-.isfl .x{position:absolute;top:-6px;right:-6px;background:#fff;border:1px solid var(--line);border-radius:50%;width:16px;height:16px;font-size:10px;line-height:14px;text-align:center;cursor:pointer;color:var(--bad)}
-ol.isl li.void .isfl{opacity:.6}
-.isadd{margin-top:12px}.isadd textarea{min-height:56px;width:100%}   /* 이슈의 기록 작성 칸 — 모양은 실행 기록 작성 칸(.lgc)과 같음 */
 button.isr{font:inherit;text-align:left;padding:10px 12px;border-radius:8px;border:1px solid var(--line);background:var(--card);cursor:pointer;display:flex;justify-content:space-between;gap:8px;align-items:baseline;color:inherit}button.isr.on{border:2px solid var(--pri);background:var(--pri2)}button.isr .muted{font-size:12px}
 .isprev{background:var(--mut);border-radius:8px;padding:12px;margin-top:10px}.isprev ul{margin:6px 0 10px;padding-left:18px;font-size:13px;line-height:1.6}
 a.isf{display:flex;gap:8px;align-items:center;padding:9px 10px;border:1px solid var(--line);border-radius:6px;cursor:pointer;color:inherit;text-decoration:none;font-size:13px}a.isf:hover{background:var(--pri2)}
@@ -142,7 +133,7 @@ ul.logs li.nw{outline:2px solid #f0d49b;background:#fffbef}
 ul.logs{list-style:none;margin:10px 0 0;padding:0 0 0 14px;border-left:2px solid #d4dbe6}
 ul.logs li{position:relative;margin:0 0 10px;padding:6px 10px;background:#f7f8fa;border-radius:6px}
 ul.logs li:before{content:'';position:absolute;left:-21px;top:11px;width:10px;height:10px;border-radius:50%;background:#fff;border:2px solid var(--pri)}
-ul.logs .lh{display:flex;gap:6px;align-items:center;flex-wrap:wrap}ul.logs .lt{margin-top:4px;line-height:1.55;font-size:12.5px}
+ul.logs .lh{display:flex;gap:6px;align-items:center;flex-wrap:wrap}ul.logs .lh .la{white-space:nowrap}ul.logs .lt{margin-top:4px;line-height:1.55;font-size:12.5px}
 ul.logs li.au{background:none;padding:2px 10px}ul.logs li.au:before{border-color:#b8c0cc;width:8px;height:8px;left:-20px;top:8px}ul.logs li.au .lt{color:var(--sub);font-size:12px;margin-top:1px}
 ul.logs .nx{margin-top:5px;font-size:12px;color:#7a5410;background:#fff7e0;border-radius:4px;padding:3px 7px;display:inline-flex;gap:5px;align-items:center}ul.logs .nx.dn{color:var(--sub);background:var(--mut);text-decoration:line-through}
 .route{border:1px solid var(--line);border-radius:8px;margin-top:10px;background:#fff}
