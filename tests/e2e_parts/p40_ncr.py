@@ -82,19 +82,33 @@ def run(c):
     ok(r["blank"].startswith("1. 발견 일시/장소 (When/Where) : \n2. 불량 현상 (What) : ") and r["blank"].count("\n") == 4, "빈 새 NCR 에도 작성 양식이 기본으로")
     ok(r["audit"] == "" and r["back"] and r["keep"] == "직접 쓴 내용", "발행 근거를 바꾸면 손대지 않은 빈 양식만 지움 · 쓴 내용은 그대로")
     ok(r["existing"] == "", "기존 NCR 의 빈 서술 칸은 바꾸지 않음")
-    # A3 보고서: 단순 통보 종결 · 대책 승인 뒤에만 출력 단추가 나옴
-    r = A.evaluate("""() => {
-      mfDirty=false;closeModal(true);const lab=()=>[...document.querySelector('#mfoot').children].filter(e=>!e.className.includes('mfsp')).map(e=>e.textContent).join(',');
-      const mk=x=>{const n=Object.assign({id:uid(),issueDate:addDays(today(),-20),supplierId:db.suppliers[0].id,defectIds:[]},x);db.ncrs.push(n);return n},o={},has=(n,m)=>{editNcr(n.id,null,m);const v=lab().includes('A3 보고서');mfDirty=false;closeModal(true);return v};
-      const a=mk({no:'A3-INFO',reqType:'단순 통보'});o.info0=has(a,'issue');a.notifyDate=addDays(today(),-19);o.info1=has(a,'issue');
-      const b=mk({no:'A3-8D',reqType:'8D 보고서',notifyDate:addDays(today(),-19),requestDate:addDays(today(),-19)});o.d0=has(b,'issue')||has(b,'verify');
-      b.replyDate=addDays(today(),-10);b.validity='보완요청';o.d1=has(b,'issue')||has(b,'verify');b.validity='적정';b.approvedDate=addDays(today(),-9);o.d2=has(b,'issue')&&has(b,'verify');
-      const d=db.defects.find(x=>!x.deleted&&!x.ncrId)||db.defects[0],keep={ncrId:d.ncrId};
-      d.ncrId=b.id;b.validity='';openLog(d.id);o.def0=lab().includes('A3 보고서');mfDirty=false;closeModal(true);b.validity='적정';openLog(d.id);o.def1=lab().includes('A3 보고서');mfDirty=false;closeModal(true);
-      d.ncrId=keep.ncrId;db.ncrs=db.ncrs.filter(x=>x!==a&&x!==b);return o}""")
-    ok(not r["info0"] and r["info1"], "A3 보고서: 단순 통보는 통보(종결) 뒤에 단추가 나옴")
-    ok(not r["d0"] and not r["d1"] and r["d2"], "A3 보고서: 대책서 건은 대책 승인(적정) 뒤에 단추가 나옴")
-    ok(not r["def0"] and r["def1"], "불량 진행 창의 A3 보고서도 같은 기준")
+    # A3 보고서: 건이 종결된 뒤에만 · 진행 현황의 전체 이력에서 출력. NCR 창 · 불량 진행 창에는 ‘전체 이력 · A3 보고서’ 로 가는 단추만 있음
+    r = A.evaluate("""async() => {
+      const wait=ms=>new Promise(r=>setTimeout(r,ms)),q=s=>document.querySelector(s);
+      mfDirty=false;closeModal(true);const lab=()=>[...q('#mfoot').children].filter(e=>!e.className.includes('mfsp')).map(e=>e.textContent);
+      const mk=x=>{const n=Object.assign({id:uid(),issueDate:addDays(today(),-20),supplierId:db.suppliers[0].id,defectIds:[]},x);db.ncrs.push(n);return n},o={};
+      const b=mk({no:'A3-8D',reqType:'8D 보고서',notifyDate:addDays(today(),-19),requestDate:addDays(today(),-19),replyDate:addDays(today(),-10),validity:'적정',approvedDate:addDays(today(),-9)});
+      o.why0=a3Ready(progBundle('ncr',b.id));o.st0=ncrStatus(b);
+      editNcr(b.id,null,'issue');await wait(300);o.foot=lab();o.old=o.foot.includes('A3 보고서');
+      const go1=[...q('#mfoot').children].find(e=>e.textContent==='전체 이력 · A3 보고서');o.link=!!go1;go1&&go1.click();await wait(400);
+      o.tab=state.tab;o.modal=q('#modal').classList.contains('on');const a3=()=>[...document.querySelectorAll('.pgh button')].find(x=>x.textContent==='A3 보고서');
+      o.dis0=a3()?a3().disabled:null;o.msg=q('.pgh').textContent.includes('NCR 종결 뒤');
+      b.verifyDate=addDays(today(),-1);b.verifyResult='유효';o.st1=ncrStatus(b);o.why1=a3Ready(progBundle('ncr',b.id));
+      progOpen('ncr',b.id);await wait(400);o.done=!!state.pf.done;o.dis1=a3()?a3().disabled:null;o.print=[...document.querySelectorAll('.pgh button')].some(x=>x.textContent==='이력 출력');
+      o.rows=document.querySelectorAll('.pgl tbody tr[onclick]').length;o.th=[...document.querySelectorAll('.pgl thead th')].pop().textContent;
+      const c={id:'t_a3',CaseNo:'RCA-A3-1',Title:'t',Status:'진행중',Stage:CZ_STAGES[0],NcrId:b.id,DefectIds:[],Created:today()};db.cases.push(c);
+      o.why2=a3Ready(progBundle('ncr',b.id));c.Status='종결';o.why3=a3Ready(progBundle('rca',c.id));
+      const d=db.defects.find(x=>!x.deleted&&!x.ncrId)||db.defects[0];openLog(d.id);await wait(300);o.def=lab();mfDirty=false;closeModal(true);
+      // 고치던 내용이 있으면 이동 전에 물음: 취소하면 창이 그대로 남음
+      editNcr(b.id,null,'issue');await wait(300);mfDirty=true;const keepAsk=window.askConfirm;let asked=0;window.askConfirm=async()=>{asked++;return false};
+      await progOpen('ncr',b.id);await wait(200);o.asked=asked;o.stay=q('#modal').classList.contains('on');window.askConfirm=keepAsk;mfDirty=false;closeModal(true);
+      db.cases=db.cases.filter(x=>x!==c);db.ncrs=db.ncrs.filter(x=>x!==b);state.pf=null;go('ncr');return o}""")
+    ok(not r["old"] and r["link"] and r["tab"] == "prog" and not r["modal"], f"NCR 창: A3 단추 대신 ‘전체 이력 · A3 보고서’ → 진행 현황이 열림 ({r['foot']})")
+    ok(r["why0"] != "" and r["dis0"] is True and r["msg"], f"A3 보고서: 대책 승인만으로는 출력할 수 없음 — 흐린 단추와 이유 ({r['st0']} · {r['why0']})")
+    ok(r["st1"] == "종결" and r["why1"] == "" and r["dis1"] is False and r["done"] and r["print"] and r["th"] == "끝난 날" and r["rows"] >= 1, f"A3 보고서: NCR 종결 뒤에 출력 가능 · 끝난 건 목록에서 보임 ({r['st1']})")
+    ok(r["why2"] != "" and r["why3"] == "", f"A3 보고서: RCA 가 있으면 RCA 종결이 기준 ({r['why2']})")
+    ok("전체 이력 · A3 보고서" in r["def"] and "A3 보고서" not in r["def"], f"불량 진행 창: 같은 단추 ({r['def']})")
+    ok(r["asked"] == 1 and r["stay"], "고치던 내용이 있으면 전체 이력으로 가기 전에 물음 — 취소하면 창이 그대로")
     # 보완요청 · 반려 뒤: 목록에 ‘재회신 접수’ 단추 → 다시 검토 단계 → 재제출 평가를 마치면 그 결과로
     r = A.evaluate("""async () => {
       mfDirty=false;closeModal(true);const wait=ms=>window.__settle(ms),o0=window.askConfirm;window.askConfirm=async()=>true;const o={};

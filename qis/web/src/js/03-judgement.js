@@ -491,12 +491,12 @@ function icaVerify(d) {
 const defCase = (d) => (d && d.caseId && typeof czById === 'function' ? czById('cases', d.caseId) : null);
 const icaNeed = (d) => !d.ncrId && !d.closed && d.resp === '사내' && icaLevel(d) !== ICA_NONE && !defCase(d);
 const isDone = (d) => defStage(d).done;
-// A3 보고서는 결과 보고용 — 단순 통보는 통보(종결) 뒤, 대책서 건은 대책 승인(타당성 ‘적정’) 뒤, NCR 이 없는 불량은 처리 완료 뒤에 출력
-const a3ReadyNcr = (n) => !!n && (n.reqType === '단순 통보' ? ncrStatus(n) === '종결' : n.validity === '적정' || ncrStatus(n) === '종결');
-function a3ReadyDefect(d) {
-  if (!d) return false;
-  const n = d.ncrId && db.ncrs.find((x) => x.id === d.ncrId);
-  return n ? a3ReadyNcr(n) : isDone(d);
+// A3 보고서는 결과 보고용 — 건이 종결된 뒤에만 출력 (2026-11). 건의 종결 = 가장 위의 기록이 끝남:
+// RCA 가 있으면 RCA 종결, RCA 가 없고 NCR 이 있으면 NCR 종결, NCR 도 없으면 불량 처리 완료. 출력은 진행 현황의 전체 이력에서
+function a3Ready(B) {
+  if (B.rca) return B.rca.Status === '종결' ? '' : 'RCA 종결 뒤에 출력할 수 있습니다';
+  if (B.ncr) return ncrStatus(B.ncr) === '종결' ? '' : 'NCR 종결 뒤에 출력할 수 있습니다';
+  return B.defs.length && B.defs.every(isDone) ? '' : '불량 처리가 완료된 뒤에 출력할 수 있습니다';
 }
 function verifyInfo(n) {
   if (!n) return null;

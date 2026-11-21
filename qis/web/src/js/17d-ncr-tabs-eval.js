@@ -67,7 +67,7 @@ function ncrFoot(m) {
         if (nid) print8D(nid);
       },
     });
-  if (id && m !== 'reply' && a3ReadyNcr(n)) B.push({ label: 'A3 보고서', fn: () => a3Report('ncr', id) }); // 단순 통보 종결 · 대책 승인 뒤에만
+  if (id && m !== 'reply') B.push({ label: '전체 이력 · A3 보고서', fn: () => progOpen('ncr', id) }); // A3 는 진행 현황의 전체 이력에서 (건 종결 뒤)
   B.push({ label: '취소', fn: closeModal });
   if (id && m === 'issue' && RO) B.push({ label: '통보서 출력', fn: () => printNotice(id) }); // 조회 권한: 저장 없이 출력만
   if (m === 'issue')

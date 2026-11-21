@@ -820,7 +820,7 @@ function openLog(id) {
     <div class="sec">조사 · 진행 기록 <span class="muted" style="font-weight:normal;font-size:12px">— 실제로 한 일과 결과만 남기는 증빙용 기록 · 이슈 기록 · NCR·대책서·구상 진행(자동)이 함께 표시</span></div>
       <div id="logBox"></div>`,
     [
-      ...(a3ReadyDefect(d) ? [{ label: 'A3 보고서', fn: () => a3Report('defect', id) }] : []),
+      { label: '전체 이력 · A3 보고서', fn: () => progOpen('defect', id) },
       {
         label: '불량 정보 수정',
         fn: async () => {
