@@ -853,6 +853,7 @@ body:not(.mob) .pld textarea,body:not(.mob) .pld .card input{border-radius:3px;b
   body:not(.mob) .pld .pc1>.todot td:last-child{padding-right:12px}
 }
 @media (max-width:900px){.todot,.todot tbody,.todot tr,.todot td{display:block;width:auto!important}.todot thead{display:none}.todot td{border:0;padding:1px 12px!important;white-space:normal!important;text-align:left!important}.todot td:empty{display:none}.todot td.a{padding-top:4px!important}.todot tr{padding:7px 0;border-bottom:1px solid #eceef2}}
+.cz .btn.on{border-color:var(--ink);font-weight:600}.cz .btn.sm b{font-family:var(--f-mono,monospace);font-weight:600}
 /* ================= 휴대폰 화면 ================= */
 #mswitch{display:none;text-align:center;padding:14px 0 22px;font-size:13px}
 #mswitch a{display:none}
@@ -3600,7 +3601,7 @@ function go(t) {
   if (t === 'prog') {
     t = 'case';
     if (typeof czUi !== 'undefined') czUi.view = 'prog';
-  }
+  } else if (t === 'case' && typeof czUi !== 'undefined' && czUi.view === 'prog') czUi.view = 'cases'; // RCA 메뉴는 목록이 먼저
   state.tab = t;
   render();
   window.scrollTo(0, 0);
@@ -19274,11 +19275,11 @@ document.addEventListener(
 
 /* ---------- 상태 ---------- */
 const czUi = {
-  view: 'today',
+  view: 'cases',
   caseId: null,
   tab: 'basic',
   showGate: false,
-  filt: { q: '', stage: '', tier: '', status: '미종결', ball: '', late: '' },
+  filt: { q: '', stage: '', tier: '', status: '미종결', ball: '', late: '', todo: '' },
   actFilt: 'open',
   histOwn: false,
 };
@@ -19421,11 +19422,11 @@ function czRender() {
     v = czUi.view;
   const P = progCases(),
     pod = P.filter((c) => c.kind !== 'rca' && c.next && c.next.nextDate < today()).length;
+  // ‘오늘 할 일’ 탭은 없앰 (2026-11) — 대시보드의 ‘할 일’ 과 같은 내용. RCA 메뉴는 목록이 먼저
   const seg = [
-    ['today', '오늘 할 일', k.mine + k.chase + pod],
-    ['prog', '진행 중 전체', 0],
-    ['cases', 'RCA 목록', 0],
+    ['cases', 'RCA 목록', k.mine + k.chase],
     ['actions', '조치', k.lateActs],
+    ['prog', '진행 중 전체', pod],
   ];
   const bar = `<div class="cz"><div class="bar noprint"><div class="seg">${seg
     .map(
@@ -19436,7 +19437,7 @@ function czRender() {
     )
     .join('')}</div><span class="grow"></span><button class="btn pri" data-act="newCase">+ 새 RCA</button></div>`;
   if (v === 'prog') return bar + '</div>' + renderProg();
-  const body = v === 'cases' ? czViewCases() : v === 'actions' ? czViewActions() : czViewToday();
+  const body = v === 'actions' ? czViewActions() : czViewCases();
   return bar + body + '</div>';
 }
 function czStartCard() {
@@ -19444,74 +19445,6 @@ function czStartCard() {
     <p class="sub" style="margin:0">사내 문제의 원인분석(RCA)과 공정 개선 · 내부 8D를 관리합니다. 공 · 다음 행동 · 재확인일과 IATF 단계 게이트로 끝까지 추적합니다.<br>
     <b>불량 관리</b>의 진행 보기에서 ‘RCA 요청’을 누르면 불량 정보·심각도가 그대로 채워집니다.</p>
     <div class="btns"><button class="btn pri" data-act="newCase">RCA 바로 등록</button><button class="btn" onclick="go('defect')">불량 관리로 가기</button><button class="btn" onclick="state.setTab='backup';go('data')">QMS 백업 가져오기</button></div></div>`;
-}
-function czViewToday() {
-  const t = today(),
-    k = czCounts(),
-    open = db.cases.filter((c) => c.Status === '진행중' || c.Status === '보류');
-  const mine = open
-    .filter((c) => c.Ball === '나' && has(c.RecheckDate) && c.RecheckDate <= t)
-    .sort((a, b) => a.RecheckDate.localeCompare(b.RecheckDate));
-  const chase = open
-    .filter((c) => c.Ball !== '나' && has(c.RecheckDate) && c.RecheckDate <= t)
-    .sort((a, b) => a.RecheckDate.localeCompare(b.RecheckDate));
-  const due = db.actions
-    .filter((a) => !['완료', '취소'].includes(a.ActionStatus) && has(a.DueDate) && a.DueDate <= addDays(t, 3) && czCaseOpenId(a.CaseId))
-    .sort((a, b) => a.DueDate.localeCompare(b.DueDate));
-  const pd = progCases()
-    .filter((c) => c.kind !== 'rca' && c.next && diffDays(t, c.next.nextDate) <= 3)
-    .sort((a, b) => a.next.nextDate.localeCompare(b.next.nextDate));
-  const jd = db.defects.filter((d) => invOpen(d) && !czOwns(d, 'defect') && invInfo(d).k === 'judge');
-  const pItem = (c) =>
-    `<div class="list-item"><span class="bg ${c.kind === 'ncr' ? 'inf' : 'mut'}">${c.kind === 'ncr' ? 'NCR' : '불량'}</span><div class="grow"><div class="t" onclick="openCase('${c.kind}','${c.id}')">${esc(c.title)}</div>
-      <div class="d">${esc(c.next.next)} · ${esc(c.sup)}</div>
-        </div><span style="min-width:84px;text-align:right">${czDate(c.next.nextDate)}</span></div>`;
-  const caseItem = (c) => `<div class="list-item"><span class="badge ${czTierCls(c.Tier)}">${esc(c.Tier || '-')}</span>
-    <div class="grow"><div class="t" data-act="open" data-id="${c.id}">${esc(c.CaseNo)} · ${esc(c.Title || '(제목 없음)')}</div>
-      <div class="d">${esc(c.Stage)} · ${esc(c.NextAction || '다음 행동 미입력')}</div></div>
-    ${czBall(c.Ball)} <span style="min-width:84px;text-align:right">${czDate(c.RecheckDate)}</span><button class="btn sm" data-act="bump" data-id="${c.id}" title="재확인일을 오늘+2일로">+2일</button></div>`;
-  const actItem = (a) => {
-    const c = czById('cases', a.CaseId);
-    return `<div class="list-item"><div class="grow"><div class="t" data-act="open" data-id="${a.CaseId}" data-tab="actions">${esc(a.Title || '(내용 없음)')}</div>
-    <div class="d">${esc(a.Category)} · ${c ? esc(c.CaseNo) : ''} · ${esc(a.Assignee || a.ExternalOwner || '담당 미지정')}</div></div>
-    <span style="min-width:84px;text-align:right">${czDate(a.DueDate)}</span><button class="btn sm" data-act="actDone" data-id="${a.id}">완료</button></div>`;
-  };
-  return `<h1>오늘 할 일</h1><p class="sub">${t} · RCA · NCR · 불량의 오늘 챙길 일을 한 곳에 모았습니다. 기한이 지난 건부터 처리하세요.</p>
-    <div class="kpis">
-      <div class="kpi" data-act="czNav" data-v="cases"><div class="l">진행 중 RCA</div><div class="v">${k.open}</div></div>
-      <div class="kpi ${k.mine ? 'bad' : 'ok'}"><div class="l">오늘 내가 볼 RCA</div><div class="v">${k.mine}</div></div>
-      <div class="kpi ${k.lateActs ? 'bad' : 'ok'}" data-act="czNav" data-v="actions"><div class="l">기한 지난 조치</div>
-        <div class="v">${k.lateActs}</div></div>
-      <div class="kpi ${
-        pd.filter((c) => c.next.nextDate < t).length ? 'bad' : 'ok'
-      }" data-act="czNav" data-v="prog"><div class="l">협력사 · 불량 기한 초과</div><div class="v">${
-        pd.filter((c) => c.next.nextDate < t).length
-      }</div></div></div>
-    <div class="two"><div>
-      <div class="card"><h3>공이 나에게 있음 <span class="muted">${mine.length}건</span></h3>${
-        mine.length ? mine.map(caseItem).join('') : '<div class="empty">오늘 확인할 RCA가 없습니다.</div>'
-      }</div>
-      <div class="card"><h3>회신 독촉 필요 <span class="muted">공이 밖에 있고 재확인일 도래 · ${chase.length}건</span></h3>${
-        chase.length ? chase.map(caseItem).join('') : '<div class="empty">독촉할 RCA가 없습니다.</div>'
-      }</div></div>
-      <div><div class="card"><h3>협력사 · 불량 기한 <span class="muted">NCR 회신 · 유효성 · FAR · 사내 대책 · 3일 이내 ${pd.length}건</span></h3>${
-        pd.length ? pd.map(pItem).join('') : '<div class="empty">임박한 기한이 없습니다.</div>'
-      }</div>
-      <div class="card"><h3>기한 임박 · 초과 조치 <span class="muted">RCA 조치 · 3일 이내 ${due.length}건</span></h3>${
-        due.length ? due.map(actItem).join('') : '<div class="empty">임박한 조치가 없습니다.</div>'
-      }</div>
-      ${
-        jd.length
-          ? `<div class="card"><h3>귀책 판정 대기 <span class="muted">FAR 회신 · RCA 결과가 나온 귀책 미정 건 · ${jd.length}건</span></h3>${jd
-              .map(
-                (d) =>
-                  `<div class="list-item"><div class="grow"><div class="t" onclick="editDefect('${d.id}')">${esc(defLabel(d))}</div>
-                    <div class="d">${esc(supName(d.supplierId))} · FAR 회신 ${esc(d.inv.farRecv || '-')}</div></div></div>`,
-              )
-              .join('')}</div>`
-          : ''
-      }</div></div>
-    ${db.cases.length ? '' : czStartCard()}`;
 }
 function czViewCases() {
   const f = czUi.filt,
@@ -19522,6 +19455,13 @@ function czViewCases() {
   if (f.stage) rows = rows.filter((c) => c.Stage === f.stage);
   if (f.tier) rows = rows.filter((c) => c.Tier === f.tier);
   if (f.ball) rows = rows.filter((c) => c.Ball === f.ball);
+  // 오늘 볼 것: 재확인일이 된 진행 중 RCA — 공이 나에게 있으면 ‘내가 볼 것’, 밖에 있으면 ‘독촉’
+  const due = (c) => (c.Status === '진행중' || c.Status === '보류') && has(c.RecheckDate) && c.RecheckDate <= t;
+  if (f.todo === 'mine') rows = rows.filter((c) => due(c) && c.Ball === '나');
+  if (f.todo === 'chase') rows = rows.filter((c) => due(c) && c.Ball !== '나');
+  const kc = czCounts(),
+    todoBtn = (k, l, n) =>
+      `<button class="btn sm${f.todo === k ? ' on' : ''}" onclick="czUi.filt.todo=czUi.filt.todo==='${k}'?'':'${k}';render()" title="재확인일이 된 RCA 만 보기">${l} <b>${n}</b></button>`;
   if (f.q) {
     const q = f.q.toLowerCase();
     rows = rows.filter((c) => {
@@ -19540,7 +19480,7 @@ function czViewCases() {
       .map(([v, l]) => `<option value="${esc(v)}" ${f[key] === v ? 'selected' : ''}>${esc(l)}</option>`)
       .join('')}</select>`;
   return `<h1>RCA · 사내 8D</h1><p class="sub">사내 원인분석(RCA)과 내부 8D 목록입니다. 불량·NCR과 연결해 두면 비용·협력사 대책서 진행이 함께 보입니다.</p>
-    <div class="bar"><input type="text" placeholder="번호 · 제목 · 부품 · 협력사 검색" value="${esc(f.q)}" data-act="filtq" style="max-width:280px">
+    <div class="bar">${todoBtn('mine', '내가 볼 것', kc.mine)}${todoBtn('chase', '독촉', kc.chase)}<input type="text" placeholder="번호 · 제목 · 부품 · 협력사 검색" value="${esc(f.q)}" data-act="filtq" style="max-width:280px">
       ${sel('status', ['미종결', '진행중', '보류', '종결', '취소'], '상태 전체')}${sel('stage', CZ_STAGES, '단계 전체')}${sel(
         'tier',
         ['TIER 3', 'TIER 2', 'TIER 1', 'TIER 0'],
@@ -19565,7 +19505,9 @@ function czViewCases() {
       <td style="white-space:nowrap">${n ? `<span class="bg inf">${esc(n.no)}</span> ` : ''}${nd ? `<span class="bg mut">불량 ${nd}</span>` : ''}</td>
       <td><span class="badge ${czTierCls(c.Tier)}">${esc(c.Tier || '-')}</span></td><td>${esc(c.Stage)}</td>
         <td><span class="badge ${czStCls(c.Status)}">${esc(c.Status)}</span></td><td>${czBall(c.Ball)}</td>
-      <td style="max-width:240px">${esc(c.NextAction)}</td><td>${czDate(c.RecheckDate, closed)}</td><td style="white-space:nowrap">${
+      <td style="max-width:240px">${esc(c.NextAction)}</td><td style="white-space:nowrap">${czDate(c.RecheckDate, closed)}${
+        due(c) ? ` <button class="btn sm" data-act="bump" data-id="${c.id}" title="재확인일을 오늘+2일로">+2일</button>` : ''
+      }</td><td style="white-space:nowrap">${
         closed ? `<span class="muted">${esc(c.CloseDate || '')}</span>` : czDate(czTarget(c))
       }${lateBadge(lt) ? '<br>' + lateBadge(lt) : ''}</td><td class="num">${
         has(c.Created) ? diffDays(c.Created, closed && has(c.CloseDate) ? c.CloseDate : t) : ''
@@ -19573,7 +19515,8 @@ function czViewCases() {
             })
             .join('')
         : '<tr><td colspan="13" class="empty">조건에 맞는 RCA가 없습니다.</td></tr>'
-    }</tbody></table></div>`;
+    }</tbody></table></div>
+    ${db.cases.length ? '' : czStartCard()}`;
 }
 function czField(c, fd, missSet) {
   if (fd.showIf && !fd.showIf(c)) return '';

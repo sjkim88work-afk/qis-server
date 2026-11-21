@@ -73,7 +73,7 @@ function go(t) {
   if (t === 'prog') {
     t = 'case';
     if (typeof czUi !== 'undefined') czUi.view = 'prog';
-  }
+  } else if (t === 'case' && typeof czUi !== 'undefined' && czUi.view === 'prog') czUi.view = 'cases'; // RCA 메뉴는 목록이 먼저
   state.tab = t;
   render();
   window.scrollTo(0, 0);
