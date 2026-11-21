@@ -130,7 +130,7 @@ def run(c):
         badge:bgs.length>0&&bgs.every(b=>clear(cs(b).backgroundColor)),
         colored:[...document.querySelectorAll('.pl button.b')].filter(b=>cs(b).backgroundColor===pri).map(b=>b.textContent.trim()).join(),
         radius:parseFloat(cs(document.querySelector('.pl .tw button.b')).borderTopLeftRadius),
-        emoji:/[\u{1F4DD}\u{1F4F7}]/u.test(document.querySelector('.pl').textContent)}}""")
+        emoji:/[\\u{1F4DD}\\u{1F4F7}]/u.test(document.querySelector('.pl').textContent)}}""")
     ok(r["card"] == 0 and r["badge"], "불량 목록: 카드 테두리 없음 · 표 안의 배지는 배경 없는 글자")
     ok(r["colored"] == "+ 불량 등록" and r["radius"] <= 4 and not r["emoji"], f"불량 목록: 색 버튼은 ‘+ 불량 등록’ 한 개 · 모서리 {r['radius']}px · 그림 문자 없음 ({r['colored']})")
 
