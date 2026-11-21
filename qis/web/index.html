@@ -687,7 +687,7 @@ details>summary.sec:hover{color:var(--pri-d,#005F5D)}
   body:not(.mob) #ntab .tw td:first-child,body:not(.mob) #ntab .tw th:first-child{padding-left:10px}
   body:not(.mob) #ntab .tw td.noprint:has(.b:nth-of-type(3)){min-width:132px}
 }
-/* ── 현장 도구 모양 (.pl) — 카드 · 알약 배지 · 색 버튼을 줄임. 색은 이상이 있는 값에만. 지금은 불량 목록에만 적용 ── */
+/* ── 현장 도구 모양 (.pl) — 카드 · 알약 배지 · 색 버튼을 줄임. 색은 이상이 있는 값에만. 불량 · NCR · FAR 목록에 적용 ── */
 body:not(.mob) .pl .card{border:0;border-radius:0;box-shadow:none;background:none;padding:0;margin:0}
 body:not(.mob) .pl{background:var(--card);border:1px solid #d8dce3}
 body:not(.mob) .pl .pltool{padding:8px 12px;background:#f5f6f8;border-bottom:1px solid #d8dce3}
@@ -700,9 +700,9 @@ body:not(.mob) .pl .plsum{margin:0;padding:7px 12px;font-size:12px;color:var(--s
 body:not(.mob) .pl .plsum b{color:var(--ink)}
 body:not(.mob) .pl .tw{border:0;border-radius:0;max-height:calc(100vh - 230px)}
 body:not(.mob) .pl .tw table{font-size:13px;line-height:1.4}
-body:not(.mob) .pl #dtab .tw th{padding:6px 7px;background:#fff;border-bottom:1px solid #9aa2af;color:var(--sub);font-size:11.5px;font-weight:600;white-space:nowrap;vertical-align:bottom}
-body:not(.mob) .pl #dtab .tw td{padding:5px 7px;border-bottom:1px solid #eceef2}
-body:not(.mob) .pl #dtab .tw td:first-child,body:not(.mob) .pl #dtab .tw th:first-child{padding-left:12px}
+body:not(.mob) .pl #dtab .tw th,body:not(.mob) .pl #ntab .tw th,body:not(.mob) .pl #ivtab .tw th{padding:6px 5px;background:#fff;border-bottom:1px solid #9aa2af;color:var(--sub);font-size:11.5px;font-weight:600;white-space:normal;line-height:1.3;vertical-align:bottom}
+body:not(.mob) .pl #dtab .tw td,body:not(.mob) .pl #ntab .tw td,body:not(.mob) .pl #ivtab .tw td{padding:5px 5px;border-bottom:1px solid #eceef2}
+body:not(.mob) .pl #dtab .tw td:first-child,body:not(.mob) .pl #ntab .tw td:first-child,body:not(.mob) .pl #ivtab .tw td:first-child,body:not(.mob) .pl #dtab .tw th:first-child,body:not(.mob) .pl #ntab .tw th:first-child,body:not(.mob) .pl #ivtab .tw th:first-child{padding-left:12px}
 body:not(.mob) .pl .tw tbody tr:hover>td{background:#f5f7fa}
 body:not(.mob) .pl .tw td.n{font-family:var(--f-mono);font-size:12.5px}
 /* 배지 → 글자. 정상 값은 색이 없음 */
@@ -728,6 +728,11 @@ body:not(.mob) .pl button.lgchip{min-height:0;margin-top:2px;padding:0;border:0;
 body:not(.mob) .pl button.lgchip.on{color:var(--ink);text-decoration:underline;text-underline-offset:2px}
 body:not(.mob) .pl button.lgchip:hover{background:none;color:var(--pri)}
 body:not(.mob) .pl .tw td.noprint:last-child::before{display:none}
+body:not(.mob) .pl .pltool button.b.s.p{background:#fff;color:var(--ink);border-color:var(--ink);font-weight:600}
+body:not(.mob) .pl .pltool .help{margin-top:6px;font-size:12px;background:none;border:0;padding:0;color:var(--sub)}
+body:not(.mob) .pl .tw button.b.d{color:#b42318}
+body:not(.mob) .pl .tw td.mono,body:not(.mob) .pl .tw .mono{font-size:12.5px}
+body:not(.mob) .pl .card[id]>:first-child:not(.tw):not(.plsum){margin:0;padding:7px 12px;font-size:12px;color:var(--sub);border-bottom:1px solid #d8dce3}
 /* ================= 휴대폰 화면 ================= */
 #mswitch{display:none;text-align:center;padding:14px 0 22px;font-size:13px}
 #mswitch a{display:none}
@@ -6680,14 +6685,14 @@ function renderInv() {
     <div class="kpi ${ntf.length ? 'bad' : ''}"><div class="l">원인 불명 검토 기한 경과</div>
       <div class="v">${ntf.length}</div><div class="s">등록 + ${num(db.settings.ntfDays) || 30}일</div></div>
     <div class="kpi"><div class="l">이번 달 판정</div><div class="v">${doneM.length}</div><div class="s">${m}</div></div></div>
-  <div class="card noprint"><div class="row">${chip('open', '조사 중', open.length)}${chip(
+  <div class="pl"><div class="card noprint pltool"><div class="row">${chip('open', '조사 중', open.length)}${chip(
     'late',
     '기한 경과',
     all.filter((d) => invOpen(d) && (invInfo(d).late || (d.date && today() > ntfDue(d)))).length,
   )}${chip('done', '판정 완료', all.filter((d) => d.inv && d.inv.verdict).length)}${chip('all', '전체', all.length)}
     <input type="search" placeholder="검색 (부품·품명·유형·협력사·판정)" value="${esc(f.q)}" oninput="state.ivf.q=this.value;$('#ivtab').innerHTML=invTable()" style="flex:1;min-width:200px;max-width:360px"></div>
     <div class="help" style="margin-top:8px">귀책이 ‘미정’인 불량이 여기 모입니다. 격리·선별 후 협력사에 FAR(원인 분석)을 요청하고, 사내 분석(간단하면 메모, 큰 건은 RCA)을 함께 진행한 뒤 판정합니다. 판정하면 불량의 귀책이 바뀌고 협력사는 NCR, 사내는 사내 대책·RCA로 넘어갑니다.</div></div>
-  <div class="card" id="ivtab">${invTable()}</div>`;
+  <div class="card" id="ivtab">${invTable()}</div></div>`;
 }
 function invTable() {
   const rows = invRows();
@@ -9946,7 +9951,7 @@ function renderNcr() {
     ['검증 무효', '검증 무효'],
     ['종결', '종결'],
   ];
-  return `<div class="card noprint"><div class="row">
+  return `<div class="pl"><div class="card noprint pltool"><div class="row">
     <button class="b p" onclick="editNcr()">+ NCR 발행</button>
     <select onchange="state.nf.status=this.value;$('#ntab').innerHTML=ncrTable()">${sel
       .map(([v, l]) => `<option value="${v}" ${v === f.status ? 'selected' : ''}>${l}</option>`)
@@ -9965,7 +9970,7 @@ function renderNcr() {
     <span style="flex:1"></span><button class="b" onclick="exportNcrCSV()">엑셀 내보내기</button>
   </div>
   <div class="help" style="margin-top:8px">기준: 협력사 통보일 = 대책 요청일 (통보 전에는 회신 지연을 따지지 않고, 발행 후 ${NOTIFY_GRACE}일 넘게 미통보면 ‘통보 지연’) · 요청 후 D3 봉쇄 ${num(S.d3Days) || 1}일 · 8D ${num(S.reply8D) || 7}일 / 간이 ${num(S.replySimple) || 5}일 내 대책서 회신 · 발행 후 D+${S.verifyDays} 내 유효성 검증. 상태는 입력한 날짜·판정으로 자동 결정됩니다 (회신일 입력 → 대책서 검토, 타당성 ‘적정’ → 승인(검증대기), 검증일+결과 ‘유효’ → 종결).</div></div>
-  <div class="card" id="ntab">${ncrTable()}</div>`;
+  <div class="card" id="ntab">${ncrTable()}</div></div>`;
 }
 // ── NCR — 창 (화면) ──
 function editNcr(id, preset, mode) {
