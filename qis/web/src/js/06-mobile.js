@@ -500,7 +500,7 @@ function renderInner() {
   let navG = '';
   $('#nav').innerHTML = TABS.filter(([k]) => !(RO || SRV) || RO_TABS.includes(k))
     .map(([k, l]) => {
-      const n = k === 'case' ? czBadgeN() : k === 'inv' ? invLateN() : k === 'issue' ? issWaitN() : 0;
+      const n = k === 'case' ? czBadgeN() : k === 'prog' ? progBadgeN() : k === 'inv' ? invLateN() : k === 'issue' ? issWaitN() : 0;
       const g = NAV_GRP[k] || navG,
         gh = g !== navG ? `<div class="gh">${g}</div>` : '';
       navG = g;

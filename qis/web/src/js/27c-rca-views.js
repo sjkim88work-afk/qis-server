@@ -47,7 +47,6 @@ const czUi = {
   showGate: false,
   filt: { q: '', stage: '', tier: '', status: '미종결', ball: '', late: '', todo: '' },
   actFilt: 'open',
-  histOwn: false,
 };
 function czCounts() {
   const t = today(),
@@ -63,11 +62,15 @@ function czCounts() {
 }
 function czBadgeN() {
   const k = czCounts();
-  let p = 0;
+  return k.mine + k.chase + k.lateActs;
+}
+// 진행 현황 메뉴의 알림 숫자: 기한이 지난 건
+function progBadgeN() {
   try {
-    p = progCases().filter((c) => c.kind !== 'rca' && c.next && c.next.nextDate < today()).length;
-  } catch (e) {}
-  return k.mine + k.chase + k.lateActs + p;
+    return progCases().filter((c) => c.late.length).length;
+  } catch (e) {
+    return 0;
+  }
 }
 function czGo(v) {
   state.tab = 'case';
@@ -186,13 +189,10 @@ const czSup = (id) => (supName(id) ? esc(supName(id)) : '<span class="muted">-</
 function czRender() {
   const k = czCounts(),
     v = czUi.view;
-  const P = progCases(),
-    pod = P.filter((c) => c.kind !== 'rca' && c.next && c.next.nextDate < today()).length;
   // ‘오늘 할 일’ 탭은 없앰 (2026-11) — 대시보드의 ‘할 일’ 과 같은 내용. RCA 메뉴는 목록이 먼저
   const seg = [
     ['cases', 'RCA 목록', k.mine + k.chase],
     ['actions', '조치', k.lateActs],
-    ['prog', '진행 중 전체', pod],
   ];
   const bar = `<div class="cz"><div class="bar noprint"><div class="seg">${seg
     .map(
@@ -202,7 +202,6 @@ function czRender() {
         }</a>`,
     )
     .join('')}</div><span class="grow"></span><button class="btn pri" data-act="newCase">+ 새 RCA</button></div>`;
-  if (v === 'prog') return bar + '</div>' + renderProg();
   const body = v === 'actions' ? czViewActions() : czViewCases();
   return bar + body + '</div>';
 }
@@ -712,7 +711,8 @@ function czActRow(a, showCase) {
     )}</select></td><td><button class="btn sm danger" data-act="delAct" data-id="${a.id}" title="삭제">✕</button></td></tr>`;
 }
 // 이력 탭 — RCA에 남긴 기록 + 연결 NCR · 불량의 자동 이벤트 (기록 도입 전 건은 날짜로 추정해 표시)
-function czHistHTML(c) {
+// RCA 자체의 이력 줄 (연결 NCR · 불량 제외)
+function czHistRows(c) {
   const own = c.Log || [],
     L = own.map((x) => ({ date: x.date || String(x.at || '').slice(0, 10), at: x.at || '', type: x.type, text: x.text, by: x.by, src: 'RCA' }));
   if (!own.some((x) => x.type === '생성') && has(c.Created))
@@ -723,14 +723,10 @@ function czHistHTML(c) {
     if (a.ActionStatus === '완료' && has(a.DoneDate) && !own.some((x) => x.actId === a.id && x.type === '조치 완료'))
       L.push({ date: a.DoneDate, at: '', type: '조치 완료', text: `${a.Category} — ${a.Title || ''}`, src: 'RCA', est: true });
   });
-  if (!czUi.histOwn) {
-    const n = czNcr(c);
-    if (n) autoEvents(null, n).forEach((e) => L.push({ date: e.date, at: '', type: 'NCR', text: e.text, src: n.no }));
-    (c.DefectIds || [])
-      .map((i) => db.defects.find((d) => d.id === i))
-      .filter(Boolean)
-      .forEach((d) => autoEvents(d, null).forEach((e) => L.push({ date: e.date, at: '', type: '불량', text: e.text, src: defLabel(d) })));
-  }
+  return L;
+}
+function czHistHTML(c) {
+  const L = czHistRows(c);
   L.sort((a, b) => (b.date || '').localeCompare(a.date || '') || String(b.at).localeCompare(String(a.at)));
   const cls = {
     생성: 't0',
@@ -746,9 +742,7 @@ function czHistHTML(c) {
     NCR: 't1',
     불량: 't0',
   };
-  return `<div class="bar"><span class="muted">단계 진행 · 되돌림 · 다시 열기 · 조치 완료 · 귀책 판정이 자동으로 남습니다. 지우거나 고칠 수 없습니다.</span><span class="grow"></span><button class="btn sm" data-act="histAll">${
-    czUi.histOwn ? '연결 NCR · 불량 기록도 보기' : 'RCA 기록만 보기'
-  }</button></div>
+  return `<div class="bar"><span class="muted">단계 진행 · 되돌림 · 다시 열기 · 조치 완료 · 귀책 판정이 자동으로 남습니다. 지우거나 고칠 수 없습니다.</span><span class="grow"></span><button class="btn sm" onclick="progOpen('rca','${c.id}')" title="이슈 · 불량 · FAR · NCR 기록까지 한 줄로 봅니다 (진행 현황 화면)">전체 이력 보기</button></div>
     <div class="tw"><table class="t"><thead><tr><th style="width:96px">일자</th>
       <th style="width:90px">구분</th><th>내용</th><th style="width:140px">출처 · 기록자</th></tr></thead><tbody>
     ${

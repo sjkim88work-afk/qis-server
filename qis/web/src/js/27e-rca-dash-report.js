@@ -93,10 +93,6 @@ document.addEventListener('click', async (e) => {
       czUi.showGate = true;
       render();
       break;
-    case 'histAll':
-      czUi.histOwn = !czUi.histOwn;
-      render();
-      break;
     case 'delCase':
       czDelCase(czUi.caseId);
       break;
