@@ -194,3 +194,5 @@ body:not(.mob) .pld textarea,body:not(.mob) .pld .card input{border-radius:3px;b
 .pght td.mono .muted{font-size:11.5px}
 @media (max-width:1100px){.pgl{flex:1 1 100%;border-right:0;border-bottom:1px solid #d8dce3}}
 .pg .pgl td>b:first-child{white-space:normal}.pg .pgl .tw{overflow:visible}.pg .pgl table{table-layout:auto}
+.pgh button.b:disabled{opacity:.45;cursor:default}
+@media print{body.pgprint .pgl,body.pgprint .pltool,body.pgprint .pgf{display:none!important}body.pgprint .pgr{flex:1 1 100%}body.pgprint .pl{border:0}body.pgprint .pgw{display:block}}

@@ -143,9 +143,6 @@ document.addEventListener('click', async (e) => {
     case 'report':
       czReport();
       break;
-    case 'a3':
-      a3Report('case', czUi.caseId);
-      break;
     case 'csv':
       czCSV(el.dataset.list);
       break;

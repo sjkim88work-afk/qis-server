@@ -489,7 +489,7 @@ function czCaseHTML(c) {
       : ''
   }
       <h2>${esc(c.Title || '(제목 없음)')}</h2><select data-scope="case" data-f="Status">${czOptHTML(CZ_OPT.Status, c.Status)}</select>
-      <button class="btn" data-act="a3">A3 보고서</button><button class="btn" data-act="report">8D 보고서</button>
+      <button class="btn" onclick="progOpen('rca','${c.id}')" title="진행 현황에서 이 건의 전체 이력을 엽니다. A3 보고서는 건이 종결된 뒤에 거기서 출력합니다">전체 이력 · A3</button><button class="btn" data-act="report">8D 보고서</button>
       ${ps && !closed ? `<button class="btn" data-act="stagePrev">← ${esc(ps)}</button>` : ''}
       ${
         closed
