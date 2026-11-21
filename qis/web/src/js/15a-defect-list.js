@@ -203,7 +203,7 @@ function renderDefect() {
       .map(([v, l]) => `<option value="${v}" ${v === f.status ? 'selected' : ''}>${l}</option>`)
       .join('')}</select>
     <input placeholder="검색 (부품·납품일·내용·담당)" value="${esc(f.q)}" oninput="state.df.q=this.value;deb(refreshDT)" style="width:200px">
-    <span style="flex:1"></span><button class="b" onclick="exportDefectsCSV()">엑셀 내보내기</button>
+    <span style="flex:1"></span><details class="tbm"><summary>엑셀</summary><div class="mn">${RO ? '' : `<button type="button" onclick="this.closest('details').open=false;openImport()">엑셀 일괄 등록 <span>여러 건을 한 번에 넣기</span></button>`}<button type="button" onclick="this.closest('details').open=false;exportDefectsCSV()">엑셀 내보내기 <span>지금 보이는 목록</span></button></div></details>
   </div></div>
   <div class="card" id="dtab">${defectTable()}</div></div>`;
 }

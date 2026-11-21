@@ -343,8 +343,8 @@ function srvPanel() {
       '공유 · 내보내기',
       sv(
         '읽기 전용 공유',
-        '지금 데이터를 HTML 파일 하나로 만듭니다. 서버 밖으로 나가는 사본이니 받을 사람을 가려서 보내세요. 기준정보는 빼고 만듭니다.',
-        `<span style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">${btn('사진 제외', 'makeShareFile(false)')}</span>`,
+        '지금 데이터와 사진 · 첨부를 HTML 파일 하나로 만듭니다. 서버 밖으로 나가는 사본이니 받을 사람을 가려서 보내세요. 기준정보는 빼고 만듭니다. 사진이 많으면 파일이 큽니다.',
+        btn('만들기 (사진 포함)', 'makeShareFile()'),
       ) +
         sv(
           'SQL로 조회 (QIS.sqlite)',
