@@ -216,3 +216,6 @@ body:not(.mob) .pld textarea,body:not(.mob) .pld .card input{border-radius:3px;b
 .tbm>.mn button:hover,.tbm>.mn button:focus-visible{background:#f0f2f5}
 .tbm>.mn button span{margin-left:6px;font-size:var(--fs-sm);color:var(--sub)}
 .tbm.tbh>.mn{width:min(520px,80vw);padding:10px 12px;font-size:var(--fs-sm);line-height:1.6;color:var(--sub);white-space:normal;margin:0}
+/* 진행 현황: 표의 높이 제한을 없앰 — 목록이 길 때 상자 밖으로 넘치고 아래 글과 겹치던 것 (.pl .tw 의 max-height 가 남아 있었음) */
+body:not(.mob) .pl.pg .tw,.pl.pg .tw{max-height:none!important;overflow:visible}
+.pg .pgr .tw{overflow-x:auto}

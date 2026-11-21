@@ -176,7 +176,12 @@ const staleBadge = (n) =>
 const progName = (c) => {
   const o = c.obj;
   if (c.kind === 'rca') return o.Title || o.CaseNo;
-  if (c.kind === 'ncr') return `${o.partName || o.partNo || ''} ${o.title || ''}`.trim() || o.no;
+  if (c.kind === 'ncr') {
+    // 제목에 부품 이름이 이미 들어 있으면 한 번만 보임 (예: ‘이물 - SPRING CONTROL 1’)
+    const pn = o.partName || o.partNo || '',
+      t = o.title || '';
+    return (pn && t.includes(pn) ? t : `${pn} ${t}`.trim()) || o.no;
+  }
   return `${o.partName || o.partNo || o.fgName || '(부품 미정)'} ${o.type || ''}`.trim();
 };
 const progKind = (k) => (k === 'ncr' ? 'NCR' : k === 'rca' ? 'RCA' : '불량');

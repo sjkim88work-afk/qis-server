@@ -201,3 +201,15 @@ def run(c):
     ok(r["items"] == "엑셀 일괄 등록|엑셀 내보내기" and r["inView"] and r["imp"] and r["closed"], f"불량 목록의 ‘엑셀’ 메뉴: 일괄 등록 · 내보내기 ({r['items']} · {r['inView']} {r['imp']} {r['closed']})")
     A.set_viewport_size(vpT); settle(A, 300)
 
+    # 진행 현황: 건이 많아도 왼쪽 표가 상자 밖으로 넘치지 않고 아래 글과 겹치지 않음 (낮은 창)
+    vpP = A.viewport_size
+    A.set_viewport_size({"width": 1400, "height": 520}); settle(A, 300)
+    r = A.evaluate("""async()=>{const wait=ms=>new Promise(r=>setTimeout(r,ms));const base=db.defects.find(d=>!d.ncrId&&!isDone(d))||db.defects[0],add=[];
+      for(let i=0;i<14;i++){const d=Object.assign({},base,{id:'t_pg'+i,ncrId:'',caseId:'',issueId:'',doneDate:'',closed:undefined,logs:[],partName:'시험 부품 '+i});db.defects.push(d);add.push(d)}
+      pcMemo=null;state.pf=null;go('prog');await wait(400);const q=s=>document.querySelector(s),R=e=>e.getBoundingClientRect();
+      const box=R(q('.pl.pg')),tb=R(q('.pgl table')),help=R(q('.pgl .help')),tw=q('.pgl .tw');
+      const o={rows:document.querySelectorAll('.pgl tbody tr[onclick]').length,inBox:tb.bottom<=box.bottom+1,noOverlap:help.top>=tb.bottom-1,noInner:tw.scrollHeight<=tw.clientHeight+1};
+      db.defects=db.defects.filter(d=>!add.includes(d));pcMemo=null;state.pf=null;go('dash');return o}""")
+    ok(r["rows"] >= 14 and r["inBox"] and r["noOverlap"] and r["noInner"], f"진행 현황: 건 {r['rows']}줄 — 표가 상자 안에 있고 아래 글과 겹치지 않음 ({r})")
+    A.set_viewport_size(vpP); settle(A, 300)
+
