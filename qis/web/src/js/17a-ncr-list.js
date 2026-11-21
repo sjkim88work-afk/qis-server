@@ -389,7 +389,7 @@ function renderNcr() {
     ['검증 무효', '검증 무효'],
     ['종결', '종결'],
   ];
-  return `<div class="card noprint"><div class="row">
+  return `<div class="pl"><div class="card noprint pltool"><div class="row">
     <button class="b p" onclick="editNcr()">+ NCR 발행</button>
     <select onchange="state.nf.status=this.value;$('#ntab').innerHTML=ncrTable()">${sel
       .map(([v, l]) => `<option value="${v}" ${v === f.status ? 'selected' : ''}>${l}</option>`)
@@ -408,5 +408,5 @@ function renderNcr() {
     <span style="flex:1"></span><button class="b" onclick="exportNcrCSV()">엑셀 내보내기</button>
   </div>
   <div class="help" style="margin-top:8px">기준: 협력사 통보일 = 대책 요청일 (통보 전에는 회신 지연을 따지지 않고, 발행 후 ${NOTIFY_GRACE}일 넘게 미통보면 ‘통보 지연’) · 요청 후 D3 봉쇄 ${num(S.d3Days) || 1}일 · 8D ${num(S.reply8D) || 7}일 / 간이 ${num(S.replySimple) || 5}일 내 대책서 회신 · 발행 후 D+${S.verifyDays} 내 유효성 검증. 상태는 입력한 날짜·판정으로 자동 결정됩니다 (회신일 입력 → 대책서 검토, 타당성 ‘적정’ → 승인(검증대기), 검증일+결과 ‘유효’ → 종결).</div></div>
-  <div class="card" id="ntab">${ncrTable()}</div>`;
+  <div class="card" id="ntab">${ncrTable()}</div></div>`;
 }

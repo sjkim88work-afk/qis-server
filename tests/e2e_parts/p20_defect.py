@@ -134,3 +134,14 @@ def run(c):
     ok(r["card"] == 0 and r["badge"], "불량 목록: 카드 테두리 없음 · 표 안의 배지는 배경 없는 글자")
     ok(r["colored"] == "+ 불량 등록" and r["radius"] <= 4 and not r["emoji"], f"불량 목록: 색 버튼은 ‘+ 불량 등록’ 한 개 · 모서리 {r['radius']}px · 그림 문자 없음 ({r['colored']})")
 
+    # NCR · FAR 목록도 같은 모양 (.pl): 카드 테두리 없음 · 색 버튼은 등록 버튼 한 개
+    r = A.evaluate("""async()=>{const wait=ms=>new Promise(r=>setTimeout(r,ms));const cs=e=>getComputedStyle(e),o={};
+      for(const [tab,id] of [['ncr','ntab'],['inv','ivtab']]){go(tab);await wait(300);const pl=document.querySelector('.pl');
+        const pri=cs(document.documentElement).getPropertyValue('--pri').trim().toLowerCase();
+        const hex=c=>'#'+c.match(/\\d+/g).slice(0,3).map(x=>(+x).toString(16).padStart(2,'0')).join('');
+        o[tab]={pl:!!pl&&!!pl.querySelector('#'+id),card:pl?parseFloat(cs(pl.querySelector('#'+id)).borderTopWidth):-1,
+          colored:pl?[...pl.querySelectorAll('button.b')].filter(b=>hex(cs(b).backgroundColor)===pri).map(b=>b.textContent.trim()).join():'?'}}
+      go('defect');return o}""")
+    ok(r["ncr"]["pl"] and r["ncr"]["card"] == 0 and r["ncr"]["colored"] == "+ NCR 발행", f"NCR 목록: 현장 도구 모양 · 색 버튼은 ‘+ NCR 발행’ 한 개 ({r['ncr']['colored']})")
+    ok(r["inv"]["pl"] and r["inv"]["card"] == 0 and r["inv"]["colored"] == "", f"FAR 목록: 현장 도구 모양 · 색 버튼 없음 ({r['inv']['colored']})")
+

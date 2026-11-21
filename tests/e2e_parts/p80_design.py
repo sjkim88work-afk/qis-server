@@ -41,10 +41,10 @@ def run(c):
     DENS = """()=>{const q=s=>document.querySelector(s),cs=e=>getComputedStyle(e),td=q('#ntab .tw tbody td:nth-child(2)'),th=q('#ntab .tw thead th:nth-child(2)'),last=q('#ntab .tw tbody tr td:last-child'),w=q('#ntab .tw');
       return {tdPad:cs(td).paddingLeft,thFs:cs(th).fontSize,card:cs(q('#ntab')).paddingLeft,pos:cs(last).position,cls:last.className.includes('noprint'),over:w.scrollWidth-w.clientWidth}}"""
     d1 = A.evaluate(DENS)
-    ok(d1["tdPad"] == "7px" and d1["thFs"] == "11px" and d1["card"] == "20px", f"위쪽 탭(1399px): 표 칸 여백 7px · 머리글 11px 유지 (리뉴얼 전과 같음) ({d1['tdPad']} · {d1['thFs']})")
+    ok(d1["tdPad"] == "5px" and d1["thFs"] == "11.5px" and d1["card"] == "0px", f"위쪽 탭(1399px): NCR 표는 현장 도구 모양 — 칸 여백 5px · 머리글 11.5px · 카드 여백 없음 ({d1['tdPad']} · {d1['thFs']})")
     A.set_viewport_size({"width": 1400, "height": 900}); settle(A, 600)
     d2 = A.evaluate(DENS)
-    ok(A.evaluate(NAVST)["side"] and d2["tdPad"] == "5px" and d2["thFs"] == "11px" and d2["card"] == "12px", f"사이드바(1400px): NCR 표 칸 여백 5px · 카드 여백 12px ({d2['tdPad']} · {d2['card']})")
+    ok(A.evaluate(NAVST)["side"] and d2["tdPad"] == "5px" and d2["thFs"] == "11.5px" and d2["card"] == "0px", f"사이드바(1400px): NCR 표 칸 여백 5px · 카드 여백 없음 ({d2['tdPad']} · {d2['card']} · 넘침 {d2['over']}px)")
     ok(d2["pos"] == "sticky" and d2["cls"], "목록의 단추 칸(마지막 열)은 오른쪽에 고정")
     r = A.evaluate("""()=>{const w=document.querySelector('#ntab .tw');w.style.width='620px';w.scrollLeft=0;const td=w.querySelector('tbody tr td:last-child').getBoundingClientRect(),c=w.getBoundingClientRect(),b=w.querySelector('tbody tr td:last-child button').getBoundingClientRect();
       const o={over:w.scrollWidth-w.clientWidth,in:td.right<=c.right+1&&td.left>=c.left,btn:b.right<=c.right+1&&b.left>=c.left};w.style.width='';return o}""")

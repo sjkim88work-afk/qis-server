@@ -105,14 +105,14 @@ function renderInv() {
     <div class="kpi ${ntf.length ? 'bad' : ''}"><div class="l">원인 불명 검토 기한 경과</div>
       <div class="v">${ntf.length}</div><div class="s">등록 + ${num(db.settings.ntfDays) || 30}일</div></div>
     <div class="kpi"><div class="l">이번 달 판정</div><div class="v">${doneM.length}</div><div class="s">${m}</div></div></div>
-  <div class="card noprint"><div class="row">${chip('open', '조사 중', open.length)}${chip(
+  <div class="pl"><div class="card noprint pltool"><div class="row">${chip('open', '조사 중', open.length)}${chip(
     'late',
     '기한 경과',
     all.filter((d) => invOpen(d) && (invInfo(d).late || (d.date && today() > ntfDue(d)))).length,
   )}${chip('done', '판정 완료', all.filter((d) => d.inv && d.inv.verdict).length)}${chip('all', '전체', all.length)}
     <input type="search" placeholder="검색 (부품·품명·유형·협력사·판정)" value="${esc(f.q)}" oninput="state.ivf.q=this.value;$('#ivtab').innerHTML=invTable()" style="flex:1;min-width:200px;max-width:360px"></div>
     <div class="help" style="margin-top:8px">귀책이 ‘미정’인 불량이 여기 모입니다. 격리·선별 후 협력사에 FAR(원인 분석)을 요청하고, 사내 분석(간단하면 메모, 큰 건은 RCA)을 함께 진행한 뒤 판정합니다. 판정하면 불량의 귀책이 바뀌고 협력사는 NCR, 사내는 사내 대책·RCA로 넘어갑니다.</div></div>
-  <div class="card" id="ivtab">${invTable()}</div>`;
+  <div class="card" id="ivtab">${invTable()}</div></div>`;
 }
 function invTable() {
   const rows = invRows();
