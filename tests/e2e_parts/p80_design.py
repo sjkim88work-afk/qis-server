@@ -67,7 +67,7 @@ def run(c):
     # 대시보드 배치 (2026-11): 진행 현황이 먼저 → 수치 묶음 3개(지연 · 진행 중 · 이번 달 발생) → 오늘 챙길 일 → 월간 특이사항 → 그림표
     r = A.evaluate("""async()=>{const wait=ms=>window.__settle(ms),q=s=>document.querySelector(s),o={};go('dash');await wait(300);
       const top=e=>e?Math.round(e.getBoundingClientRect().top+scrollY):-1,card=t=>[...document.querySelectorAll('#view .card')].find(c=>(c.querySelector('h3')||{}).textContent&&c.querySelector('h3').textContent.includes(t));
-      o.order=[top(q('.pc1')),top(q('.kgs')),top(card('오늘 챙길 일')),top(card('월간 특이사항')),top(card('월별 불량 건수'))];
+      o.order=[top(q('.pc1')),top(q('.kgs')),top(card('할 일')),top(card('월간 특이사항')),top(card('월별 불량 건수'))];
       o.groups=[...document.querySelectorAll('.kgs .kg h4')].map(h=>h.firstChild.textContent.trim()).join('|');
       o.rows=[...document.querySelectorAll('.kgs .kg')].map(g=>g.querySelectorAll('.kpi').length).join('');o.tiles=document.querySelectorAll('#view .kpis').length;
       const row=t=>[...document.querySelectorAll('.kgs .kpi')].find(e=>e.querySelector('.l').firstChild.textContent.trim()===t),cs=e=>getComputedStyle(e);
@@ -80,7 +80,7 @@ def run(c):
       on.click();await wait(300);o.go=state.tab+'/'+(state.nf.status||'');go('dash');await wait(200);
       if(q('.pc1 h3 button.bg')){q('.pc1 h3 button.bg').click();await wait(300);o.goLate=state.tab+'/'+((state.pf||{}).late||'');state.pf.late=''}
       go('dash');return o}""")
-    ok(r["order"][1] < r["order"][0] and r["order"][2:] == sorted(r["order"][2:]) and r["order"][0] < r["order"][2] and min(r["order"]) > 0, f"대시보드 순서: 수치 → 진행 현황 → 오늘 챙길 일 → 월간 특이사항 → 그림표 ({r['order']})")
+    ok(r["order"][1] < r["order"][0] and r["order"][2:] == sorted(r["order"][2:]) and r["order"][0] == r["order"][2] and min(r["order"]) > 0, f"대시보드 순서: 수치 → 할 일 (표 한 개) → 월간 특이사항 → 그림표 ({r['order']})")
     ok(r["groups"].startswith("지연|진행 중|") and r["groups"].endswith("발생") and r["rows"] == "234" and r["tiles"] == 0 and r["noLateTile"], f"수치는 세 묶음 9줄 — 지연 2 · 진행 중 3 · 이번 달 발생 4 ({r['groups']})")
     ok(r["late"]["n"] == "1" and r["late"]["cls"] and r["late"]["color"] == "rgb(185, 50, 31)" and r["late"]["bg"] == "rgba(0, 0, 0, 0)", f"지연이 있으면 빨간 숫자 (바탕색 없음 · 이름 앞에 빨간 사각 표시) ({r['late']})")
     ok(r["zero"]["n"] == "0" and r["zero"]["cls"] and r["zero"]["color"] == "rgb(107, 118, 137)" and r["zero"]["bg"] == "rgba(0, 0, 0, 0)", f"값이 0 이면 회색으로 약하게 ({r['zero']})")
@@ -114,4 +114,15 @@ def run(c):
       o.ncrBg=[...document.querySelectorAll('#modal .bg')].filter(e=>e.offsetParent).every(b=>clear(cs(b).backgroundColor));o.ncrBtn=parseFloat(cs(q('#modal button.b')).borderTopLeftRadius);
       mfDirty=false;closeModal(true);return o}""")
     ok(r["modal"] == 4 and r["grp"] == 3 and r["num"] == "none" and r["bg"] and r["ncrBg"] and r["ncrBtn"] == 3, f"창: 모서리 4px · 묶음 3px · 번호 원 없음 · 배지는 글자 ({r})")
+
+    # 대시보드 ‘할 일’: 표 한 개 (구분 · 대상 · 내용 · 버튼). 같은 건은 한 번만. 예전의 두 목록(ul)은 없음
+    A.evaluate("()=>{state.dashAll=true;go('dash');render()}"); settle(A, 350)
+    r = A.evaluate("""()=>{const q=s=>document.querySelector(s),rows=[...document.querySelectorAll('.pc1 .todot tbody tr')];
+      const key=tr=>tr.cells[0].textContent.trim()+'|'+tr.cells[1].textContent.trim();
+      const o={th:[...document.querySelectorAll('.pc1 .todot th')].map(x=>x.textContent).join('|'),n:rows.length,uls:document.querySelectorAll('.pld ul.act,.pld ul.todo').length,
+        dup:rows.length-new Set(rows.map(key)).size,kinds:rows.every(tr=>tr.cells[0].textContent.trim()),btn:rows.some(tr=>tr.cells[3].querySelector('button')),
+        cards:[...document.querySelectorAll('.pld .card>h3')].filter(h=>/오늘 챙길 일|진행 현황/.test(h.textContent)).length};
+      state.dashAll=false;render();return o}""")
+    ok(r["th"].startswith("구분|대상|내용") and r["n"] >= 6 and r["uls"] == 0 and r["cards"] == 0, f"대시보드 할 일: 표 한 개 · {r['n']}줄 · 예전 목록 없음 ({r['th']})")
+    ok(r["dup"] == 0 and r["kinds"] and r["btn"], f"대시보드 할 일: 같은 줄 없음 · 줄마다 구분 있음 · 행동 버튼은 오른쪽 칸 ({r})")
 

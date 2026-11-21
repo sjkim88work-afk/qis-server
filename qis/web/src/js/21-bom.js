@@ -101,7 +101,7 @@ function bomImpactHTML(partNo, fgNo, pick) {
   ix.byPart.forEach((rs, p) => {
     if (mkey(p) === k) used = used.concat(rs);
   }); // 번호 표기 차이(대소문자 · 공백 · 하이픈) 무시
-  if (!used.length) return `<div class="bomx muted">📦 BOM에 없는 부품입니다 — 이 부품이 들어가는 제품을 알 수 없습니다.</div>`;
+  if (!used.length) return `<div class="bomx muted">BOM에 없는 부품입니다 — 이 부품이 들어가는 제품을 알 수 없습니다.</div>`;
   const fgsU = [...new Set(used.map((r) => r.fgNo))];
   const models = [...new Set(fgsU.map((f) => bomFg(f).model).filter(Boolean))].sort(kcmp);
   const fg = String(fgNo || '').trim(),
@@ -110,7 +110,7 @@ function bomImpactHTML(partNo, fgNo, pick) {
   // 처음엔 접어 두고(드롭다운), 누르면 제품 목록 표 — 열고 닫은 상태는 기억
   const open = !!bomImpactHTML.open;
   return `<details class="bomx bomdd" ${open ? 'open' : ''} ontoggle="bomImpactHTML.open=this.open">
-    <summary><b>📦 영향 범위</b> — 이 부품이 들어가는 제품 <b>${fgsU.length}개</b>${
+    <summary><b>영향 범위</b> — 이 부품이 들어가는 제품 <b>${fgsU.length}개</b>${
       models.length ? ` · 차종 <b>${models.map(esc).join(', ')}</b>` : ''
     } <span class="muted ddh">— 눌러서 제품 목록 보기</span></summary>
     <div class="tw" style="max-height:240px;margin-top:6px"><table class="sm"><thead><tr><th>차종</th>

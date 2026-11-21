@@ -150,3 +150,17 @@ body:not(.mob) .pld textarea,body:not(.mob) .pld .card input{border-radius:3px;b
   body:not(.mob) #modal label .bg{margin-left:6px}
   body:not(.mob) main .sgrp,body:not(.mob) main .snav,body:not(.mob) main .snav button,body:not(.mob) main .docbox,body:not(.mob) main .cbox,body:not(.mob) main .psum{border-radius:3px}
 }
+/* 대시보드 ‘할 일’ 표 */
+.todot{width:100%;border-collapse:collapse;font-size:13px}
+.todot th{position:static;padding:4px 8px;background:none;border-bottom:1px solid #9aa2af;color:var(--sub);font-size:11.5px;font-weight:600;text-align:left}
+.todot td{padding:5px 8px;border-bottom:1px solid #eceef2;vertical-align:top;line-height:1.5}
+.todot td.k{white-space:nowrap;width:1%;padding-right:16px}.todot td.w{white-space:nowrap;width:1%;padding-right:20px}.todot td.a{white-space:nowrap;text-align:right;width:1%}
+.todot tbody tr:hover>td{background:#f5f7fa}
+.todot td.a button.b{height:22px;min-height:0;padding:0 8px;font-size:12px;background:#fff;color:var(--ink);border:1px solid #b8bec9;border-radius:3px}
+@media screen{
+  body:not(.mob) main .kpis>.kpi.ok .v{color:var(--ink)}
+  body:not(.mob) .pld .pc1>.todot{margin:0;width:100%}
+  body:not(.mob) .pld .pc1>.todot th:first-child,body:not(.mob) .pld .pc1>.todot td:first-child{padding-left:12px}
+  body:not(.mob) .pld .pc1>.todot td:last-child{padding-right:12px}
+}
+@media (max-width:900px){.todot,.todot tbody,.todot tr,.todot td{display:block;width:auto!important}.todot thead{display:none}.todot td{border:0;padding:1px 0;white-space:normal!important;text-align:left!important}.todot tr{padding:6px 0;border-bottom:1px solid #eceef2}}

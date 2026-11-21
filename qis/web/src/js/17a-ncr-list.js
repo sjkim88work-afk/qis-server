@@ -146,7 +146,7 @@ function ncrNotifyCell(n) {
   if (n.notifyDate)
     return `<span class="nwi" title="협력사 통보일">${esc(n.notifyDate)}</span>${
       (n.noticeDocs || []).length
-        ? ` <span class="bg inf" title="발송한 통보서 파일 ${(n.noticeDocs || []).length}개">📎 ${(n.noticeDocs || []).length}</span>`
+        ? ` <span class="bg inf" title="발송한 통보서 파일 ${(n.noticeDocs || []).length}개">${LG_ICO.clip} ${(n.noticeDocs || []).length}</span>`
         : ''
     }${n.notifyMethod ? `<br><span class="muted" style="font-size:11.5px">${esc(n.notifyMethod)}</span>` : ''}${
       n.requestDate && n.requestDate !== n.notifyDate && n.reqType !== '단순 통보'
@@ -353,7 +353,7 @@ function ncrTable() {
       : ''
   }${!n.replyDate && nudgeLogs(n).length ? `<br><span class="muted" style="font-size:11.5px">독촉 ${nudgeLogs(n).length}회</span>` : ''}${
     (n.replyDocs || []).length
-      ? ` <span class="bg inf" title="협력사 대책서 파일 ${(n.replyDocs || []).length}개">📎 ${(n.replyDocs || []).length}</span>`
+      ? ` <span class="bg inf" title="협력사 대책서 파일 ${(n.replyDocs || []).length}개">${LG_ICO.clip} ${(n.replyDocs || []).length}</span>`
       : ''
   }${n.replyDate && n.dueDate && n.replyDate > n.dueDate ? ' <span class="bg warn">지연접수</span>' : ''}${
     n.evalVerdict

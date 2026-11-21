@@ -251,38 +251,92 @@ function renderProg() {
     </tbody></table></div>
     <div class="help" style="margin-top:6px">‘마지막 진행’은 직접 쓴 기록과 자동 이벤트(NCR 발행·대책 요청·회신·평가·구상 등) 중 가장 최근 날짜입니다. 행을 누르면 RCA는 RCA 상세, NCR은 NCR 화면, 불량은 진행 보기 창이 열립니다.</div></div>`;
 }
-function progCard() {
+// 대시보드의 ‘할 일’ — 표 한 개: 오늘 챙길 일(it: <li> 문장들) + 기한 임박 + 오래 정체된 건. 같은 건은 한 줄로 (정체는 내용 끝에 덧붙임)
+function todoCell(li) {
+  const t = document.createElement('template');
+  t.innerHTML = li.replace(/^<li[^>]*>/, '').replace(/<\/li>$/, '');
+  const f = t.content,
+    take = (sel) => {
+      const e = f.querySelector(sel);
+      if (!e) return '';
+      e.remove();
+      return e.outerHTML;
+    };
+  const kind = take('.bg');
+  // 대상: 구분 바로 뒤에 오는 링크만 (문장 가운데의 링크는 내용에 그대로 둠)
+  let who = '';
+  {
+    let n = f.firstChild;
+    while (n && n.nodeType === 3 && !n.textContent.trim()) n = n.nextSibling;
+    if (n && n.nodeType === 1 && n.matches('a.lk, b')) {
+      n.remove();
+      who = n.outerHTML;
+    }
+  }
+  let btns = '';
+  f.querySelectorAll('button').forEach((e) => {
+    btns += e.outerHTML + ' ';
+    e.remove();
+  });
+  const d = document.createElement('div');
+  d.appendChild(f);
+  return { kind, who, btns, text: d.innerHTML.trim().replace(/^(—|·)\s*/, ''), raw: li };
+}
+function todoCard(it) {
   const C = progCases(),
     due = C.filter((c) => c.next && diffDays(today(), c.next.nextDate) <= 3).sort((a, b) => a.next.nextDate.localeCompare(b.next.nextDate)),
     od = due.filter((c) => c.next.nextDate < today());
   const st = C.filter((c) => c.stale >= 14)
     .sort((a, b) => b.stale - a.stale)
     .slice(0, 4);
-  if (!C.length) return '';
-  const line = (c) =>
-    `<li>${nxBadge(c.next.nextDate)} <a class="lk" onclick="openCase('${c.kind}','${c.id}')">${esc(c.title)}</a> <span class="muted" style="font-size:12px">${esc(c.next.next)} · ${esc(c.sup)}</span></li>`;
   const lateN = C.filter((c) => c.late.length).length, // 지연 = 미종결 + 기한 경과 (진행 현황 화면과 같은 기준)
     soonN = due.length - od.length,
     staleN = C.filter((c) => c.stale >= 14).length;
-  return `<div class="card pc1"><h3>진행 현황${
+  const all = !!state.dashAll,
+    R = it.map(todoCell),
+    has = (id) => R.find((r) => r.raw.includes(`'${id}'`));
+  const open = (c) => `<a class="lk" onclick="openCase('${c.kind}','${c.id}')">${esc(c.title)}</a>`;
+  // 기한 임박 · 초과: 오늘 챙길 일에 이미 있는 건은 다시 넣지 않음
+  due.slice(0, 6).forEach((c) => {
+    if (!has(c.id)) R.push({ kind: nxBadge(c.next.nextDate), who: open(c), btns: '', text: `${esc(c.next.next)} · ${esc(c.sup)}`, raw: `'${c.id}'` });
+  });
+  const nAct = R.length;
+  st.forEach((c) => {
+    const r = has(c.id);
+    if (r) r.text += ` <span class="muted">· 기록 ${c.stale >= 999 ? '없음' : c.stale + '일 전'}</span>`;
+    else
+      R.push({
+        kind: staleBadge(c.stale).replace('일 전</span>', '일 정체</span>'),
+        who: open(c),
+        btns: `<button class="b s noprint" onclick="openCase('${c.kind}','${c.id}')">기록</button>`,
+        text: `${esc(c.sup)} · ${c.lastM ? esc(c.lastM.text.slice(0, 30)) + (c.lastM.text.length > 30 ? '…' : '') : '직접 쓴 기록 없음'}`,
+        raw: `'${c.id}'`,
+      });
+  });
+  const show = all ? R : R.slice(0, 6).concat(R.slice(nAct > 6 ? nAct : 6));
+  const hid = R.length - show.length;
+  return `<div class="card pc1"><h3>할 일 ${R.length ? `<span class="muted cnt">${R.length}건</span>` : ''}${
     lateN ? ` <button type="button" class="bg bad" onclick="dashGo('late')" title="누르면 지연 건만 보기">지연 ${lateN}</button>` : ''
   }${soonN ? ` <span class="bg warn">3일 안에 기한 ${soonN}</span>` : ''}${staleN ? ` <span class="bg warn">14일+ 정체 ${staleN}</span>` : ''}
-    <span class="muted cnt">미종결 — RCA ${C.filter((c) => c.kind === 'rca').length} · NCR ${C.filter((c) => c.kind === 'ncr').length} · 불량 ${
-      C.filter((c) => c.kind === 'defect').length
-    }</span><span class="sp"></span><button class="b s" onclick="go('prog')">전체 보기</button></h3>
-    <div class="grid g2" style="gap:16px"><div><div class="muted" style="font-size:12px;margin-bottom:4px">기한 초과 · 3일 안에 기한</div>${
-      due.length ? `<ul class="todo">${due.slice(0, 6).map(line).join('')}</ul>` : '<div class="muted" style="font-size:12px">임박한 기한 없음</div>'
-    }</div>
-    <div><div class="muted" style="font-size:12px;margin-bottom:4px">오래 정체된 건 — 직접 쓴 기록이 14일 넘게 없음</div>${
-      st.length
-        ? `<ul class="todo">${st
-            .map(
-              (c) =>
-                `<li>${staleBadge(c.stale)} <a class="lk" onclick="openCase('${c.kind}','${c.id}')">${esc(c.title)}</a> <span class="muted" style="font-size:12px">${esc(c.sup)} · ${
-                  c.lastM ? esc(c.lastM.text.slice(0, 30)) + (c.lastM.text.length > 30 ? '…' : '') : '직접 기록 없음'
-                }</span></li>`,
-            )
-            .join('')}</ul>`
-        : '<div class="muted" style="font-size:12px">14일 이상 정체된 건 없음</div>'
-    }</div></div></div>`;
+    ${
+      C.length
+        ? `<span class="muted cnt">미종결 — RCA ${C.filter((c) => c.kind === 'rca').length} · NCR ${C.filter((c) => c.kind === 'ncr').length} · 불량 ${
+            C.filter((c) => c.kind === 'defect').length
+          }</span>`
+        : ''
+    }<span class="sp"></span>${
+      hid || all
+        ? `<button class="b s noprint" onclick="state.dashAll=!state.dashAll;render()">${all ? '줄여 보기' : `전체 ${R.length}건 보기`}</button>`
+        : ''
+    }<button class="b s" onclick="go('prog')">진행 화면</button></h3>${
+      R.length
+        ? `<table class="todot"><thead><tr><th>구분</th><th>대상</th><th>내용</th><th class="noprint"></th></tr></thead><tbody>${show
+            .map((r) => `<tr><td class="k">${r.kind}</td><td class="w">${r.who}</td><td>${r.text}</td><td class="a noprint">${r.btns}</td></tr>`)
+            .join('')}</tbody></table>${
+            hid
+              ? `<div class="muted" style="font-size:12px;margin-top:6px">외 ${hid}건 — <a class="lk" onclick="state.dashAll=true;render()">모두 펼치기</a></div>`
+              : ''
+          }`
+        : '<div class="muted">지연 · 임박 항목이 없습니다.</div>'
+    }</div>`;
 }
