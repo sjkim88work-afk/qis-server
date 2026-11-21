@@ -1901,8 +1901,8 @@ function srvPanel() {
       '공유 · 내보내기',
       sv(
         '읽기 전용 공유',
-        '지금 데이터를 HTML 파일 하나로 만듭니다. 서버 밖으로 나가는 사본이니 받을 사람을 가려서 보내세요. 기준정보는 빼고 만듭니다.',
-        `<span style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">${btn('사진 제외', 'makeShareFile(false)')}</span>`,
+        '지금 데이터와 사진 · 첨부를 HTML 파일 하나로 만듭니다. 서버 밖으로 나가는 사본이니 받을 사람을 가려서 보내세요. 기준정보는 빼고 만듭니다. 사진이 많으면 파일이 큽니다.',
+        btn('만들기 (사진 포함)', 'makeShareFile()'),
       ) +
         sv(
           'SQL로 조회 (QIS.sqlite)',
@@ -6295,7 +6295,7 @@ function renderDefect() {
       .map(([v, l]) => `<option value="${v}" ${v === f.status ? 'selected' : ''}>${l}</option>`)
       .join('')}</select>
     <input placeholder="검색 (부품·납품일·내용·담당)" value="${esc(f.q)}" oninput="state.df.q=this.value;deb(refreshDT)" style="width:200px">
-    <span style="flex:1"></span><button class="b" onclick="exportDefectsCSV()">엑셀 내보내기</button>
+    <span style="flex:1"></span><details class="tbm"><summary>엑셀</summary><div class="mn">${RO ? '' : `<button type="button" onclick="this.closest('details').open=false;openImport()">엑셀 일괄 등록 <span>여러 건을 한 번에 넣기</span></button>`}<button type="button" onclick="this.closest('details').open=false;exportDefectsCSV()">엑셀 내보내기 <span>지금 보이는 목록</span></button></div></details>
   </div></div>
   <div class="card" id="dtab">${defectTable()}</div></div>`;
 }
@@ -15552,18 +15552,19 @@ function shareStrip(src) {
   d.bom = { updatedAt: '', fg: {}, rows: [] };
   return d;
 }
-async function makeShareFile(withPhotos) {
+async function makeShareFile() {
   if (!APP_SRC || !APP_SRC.includes('<head>')) {
     toast('이 화면에서는 공유 파일을 만들 수 없습니다');
     return;
   }
+  toast('읽기 전용 공유 파일을 만드는 중… (사진이 많으면 시간이 걸립니다)');
   let photos = [];
-  if (withPhotos) {
-    try {
-      photos = (await photoList()).filter((p) => p && !phIsPending(p));
-    } catch (e) {
-      toast('사진을 읽지 못해 사진 없이 만듭니다');
-    }
+  try {
+    photoStr = null; // 서버에서 지금 사진을 다시 받음
+    photos = (await photoList()).filter((p) => p && !phIsPending(p));
+  } catch (e) {
+    toast('사진을 읽지 못해 공유 파일을 만들지 못했습니다: ' + e.message);
+    return;
   }
   const S = db.settings,
     noMaster = num(S.shareNoMaster) !== 0,
@@ -15577,9 +15578,9 @@ async function makeShareFile(withPhotos) {
     };
   const data = JSON.stringify({ meta, db: noMaster ? shareStrip(db) : db, photos }).replace(/</g, '\\u003c');
   const html = APP_SRC.replace('<head>', '<head>\n<script id="qmsShare" type="application/json">' + data + '<\/script>');
-  download(`QIS_읽기전용_${today()}${withPhotos ? '' : '_사진제외'}.html`, html, 'text/html;charset=utf-8');
+  download(`QIS_읽기전용_${today()}.html`, html, 'text/html;charset=utf-8');
   toast(
-    `읽기 전용 공유 파일 ${(html.length / 1048576).toFixed(1)}MB를 만들었습니다${noMaster ? ' (기준정보 제외)' : ''} — 메일 · Teams · 공유 폴더로 보내세요`,
+    `읽기 전용 공유 파일 ${(html.length / 1048576).toFixed(1)}MB를 만들었습니다 (사진 · 첨부 ${photos.length}개 포함)${noMaster ? ' (기준정보 제외)' : ''} — 메일 · Teams · 공유 폴더로 보내세요`,
   );
 }
 // 전체 백업 내려받기 (관리자) — 서버가 만든 백업 파일

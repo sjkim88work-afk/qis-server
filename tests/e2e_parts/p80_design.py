@@ -193,11 +193,29 @@ def run(c):
       for(const t of ['defect','ncr','inv','prog']){go(t);await wait(300);const tb=document.querySelector('.pltool'),k=[...tb.querySelector('.row').children].filter(e=>e.offsetParent);
         const mid=k.map(e=>{const r=e.getBoundingClientRect();return Math.round((r.top+r.bottom)/2)});
         o[t]={one:Math.max(...mid)-Math.min(...mid)<6,h:tb.offsetHeight,sel:Math.max(0,...[...tb.querySelectorAll('select')].map(s=>s.offsetWidth)),help:!!tb.querySelector(':scope > .help')}}
-      go('defect');await wait(300);o.items=[...document.querySelectorAll('.pltool button')].map(b=>b.textContent.trim()).join('|');
+      go('defect');await wait(300);o.items=[...document.querySelectorAll('.pltool button')].map(b=>b.textContent.trim()).join('|');{const m=document.querySelector('.pltool details.tbm');m.open=true;await wait(100);const q=m.querySelector('.mn').getBoundingClientRect();o.xlIn=q.right<=innerWidth&&q.left>=0&&q.height>20;m.open=false}
       go('ncr');await wait(300);const m=document.querySelector('.pltool details.tbm');m.open=true;await wait(100);const mn=m.querySelector('.mn').getBoundingClientRect();o.inView=mn.right<=innerWidth&&mn.left>=0&&mn.height>20;m.open=false;mfDirty=false;closeModal(true);return o}""")
     bad = [k for k in ("defect", "ncr", "inv", "prog") if not (r[k]["one"] and r[k]["h"] <= 50 and r[k]["sel"] <= 140 and not r[k]["help"])]
     ok(not bad, f"조건 줄 (1240px): 네 화면 모두 한 줄 · 선택 칸 140px 이하 · 긴 안내 없음 (어긋난 화면: {bad} · {[r[k]['h'] for k in ('defect','ncr','inv','prog')]})")
-    ok("엑셀 내보내기" in r["items"] and "일괄 등록" not in r["items"] and r["inView"], f"불량 목록: ‘엑셀 내보내기’ 버튼 (서버판에서 안 되는 ‘엑셀 일괄 등록’ 은 없음) · NCR 의 ‘기준’ 메뉴는 화면 안에 펼쳐짐 ({r['items']})")
+    ok("엑셀 내보내기" in r["items"] and "엑셀 일괄 등록" in r["items"] and r["xlIn"] and r["inView"], f"불량 목록: ‘엑셀’ 메뉴 안에 일괄 등록 · 내보내기 · NCR 의 ‘기준’ 메뉴도 화면 안에 펼쳐짐 ({r['items']})")
+    # 엑셀 일괄 등록 (서버판): 붙여넣기 → 미리보기 → 등록 → 서버에 저장되어 새로 열어도 남음
+    n0 = A.evaluate("db.defects.length")
+    A.evaluate("""async()=>{const wait=ms=>new Promise(r=>setTimeout(r,ms));go('defect');await wait(200);openImport();await wait(200);
+      const sp=db.suppliers[0].name;
+      document.querySelector('#impPaste').value=['발생일\\t발생처\\t품번\\t품명\\t협력사\\t불량유형\\t불량수량\\t불량내용',
+        today()+'\\t공정\\tXL-IMP-001\\t일괄등록 시험품\\t'+sp+'\\t치수\\t3\\t일괄등록 시험 가',
+        today()+'\\t공정\\tXL-IMP-002\\t일괄등록 시험품\\t'+sp+'\\t외관\\t5\\t일괄등록 시험 나'].join('\\n');
+      impSetRows(parseCSV(document.querySelector('#impPaste').value),'붙여넣기');await wait(300)}""")
+    pv = A.evaluate("({prev:(document.querySelector('#impPrev')||{}).innerText||'',dis:document.querySelector('#mfoot .p').disabled})")
+    A.evaluate("document.querySelector('#mfoot .p').click()"); A.wait_for_timeout(500)
+    if A.evaluate("!!document.querySelector('#cfm.on')"):
+        A.evaluate("document.querySelector('#cfm.on .p').click()"); A.wait_for_timeout(400)
+    A.evaluate("srvSync()"); A.wait_for_timeout(1200)
+    A.reload(); settle(A, 1200)
+    ri = A.evaluate("({n:db.defects.length,got:db.defects.filter(d=>/일괄등록 시험/.test(d.desc||d.content||JSON.stringify(d))).length})")
+    ok(not pv["dis"] and ri["n"] == n0 + 2 and ri["got"] == 2, f"엑셀 일괄 등록 (서버판): 2건 붙여넣어 등록 → 새로 열어도 남음 ({n0} → {ri['n']}건 · 미리보기 {pv['prev'][:40]!r})")
+    vw = c.C.evaluate("""async()=>{go('defect');await new Promise(r=>setTimeout(r,300));return [...document.querySelectorAll('.pltool button')].map(b=>b.textContent.trim()).join('|')}""")
+    ok("엑셀 내보내기" in vw and "일괄 등록" not in vw, f"조회 권한: 엑셀 메뉴에 일괄 등록 없음 ({vw})")
     A.set_viewport_size(vpT); settle(A, 300)
 
     # 진행 현황: 건이 많아도 왼쪽 표가 상자 밖으로 넘치지 않고 아래 글과 겹치지 않음 (낮은 창)
@@ -245,8 +263,11 @@ def run(c):
 
     # 읽기 전용 공유본: 서버판에서 만든 HTML 파일은 서버 없이 열려도 읽기 전용으로 동작 (서버 요청 · 저장 없음)
     import tempfile
-    with B.expect_download(timeout=20000) as dl:
-        B.evaluate("makeShareFile(false)")
+    PX = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=="
+    B.evaluate("async(px)=>{await photoPut([{id:'shareph1',name:'공유시험.png',data:px,thumb:px,at:now()}]);photoStr=null}", PX)
+    nph = B.evaluate("async()=>(await photoAll()).length")
+    with B.expect_download(timeout=30000) as dl:
+        B.evaluate("makeShareFile()")
     shp = os.path.join(tempfile.mkdtemp(), "share.html")
     dl.value.save_as(shp)
     pgS = b.new_page(viewport={"width": 1300, "height": 800})
@@ -257,10 +278,11 @@ def run(c):
     rs = pgS.evaluate("""async()=>{go('defect');await new Promise(r=>setTimeout(r,400));
       return {bar:(document.querySelector('.roBar')||{}).textContent||'',n:db.defects.length,rows:document.querySelectorAll('main tbody tr').length,
         ro:RO,srv:!!SRV,tabs:RO_TABS.join(),nav:document.querySelector('nav').innerText,
-        nosrv:!!document.querySelector('#nosrv'),save:(document.querySelector('#saveInfo')||{}).textContent||''}}""")
+        nosrv:!!document.querySelector('#nosrv'),ph:(await photoAll()).length,one:((await photoGet('shareph1'))||{}).data||'',save:(document.querySelector('#saveInfo')||{}).textContent||''}}""")
     pgS.close()
     ok("읽기 전용 사본" in rs["bar"] and rs["ro"] and not rs["srv"] and not rs["nosrv"] and rs["n"] > 0 and rs["rows"] > 0 and not errsS and not reqS,
        f"읽기 전용 공유본: 서버 없이 열림 — 불량 {rs['n']}건 · 표 {rs['rows']}줄 · 오류 {len(errsS)} · 서버 요청 {len(reqS)}")
+    ok(nph >= 1 and rs["ph"] == nph and rs["one"].startswith("data:image/png") and f"사진 {nph}장" in rs["bar"], f"읽기 전용 공유본: 사진 · 첨부 포함 (서버 {nph}개 → 공유본 {rs['ph']}개)")
     ok("dash" in rs["tabs"] and "data" not in rs["tabs"].split(",") and "master" not in rs["tabs"].split(",") and "설정" not in rs["nav"] and "불량" in rs["nav"], f"읽기 전용 공유본: 설정 · 기준정보 메뉴 없음 ({rs['tabs']})")
     ok(r["keys"] == "personalQMS_v1" and r["old"] == '{"keep":1}', f"서버 없이 열어도 브라우저의 예전 데이터를 바꾸지 않음 ({r['keys']})")
 

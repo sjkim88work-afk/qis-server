@@ -424,18 +424,19 @@ function shareStrip(src) {
   d.bom = { updatedAt: '', fg: {}, rows: [] };
   return d;
 }
-async function makeShareFile(withPhotos) {
+async function makeShareFile() {
   if (!APP_SRC || !APP_SRC.includes('<head>')) {
     toast('이 화면에서는 공유 파일을 만들 수 없습니다');
     return;
   }
+  toast('읽기 전용 공유 파일을 만드는 중… (사진이 많으면 시간이 걸립니다)');
   let photos = [];
-  if (withPhotos) {
-    try {
-      photos = (await photoList()).filter((p) => p && !phIsPending(p));
-    } catch (e) {
-      toast('사진을 읽지 못해 사진 없이 만듭니다');
-    }
+  try {
+    photoStr = null; // 서버에서 지금 사진을 다시 받음
+    photos = (await photoList()).filter((p) => p && !phIsPending(p));
+  } catch (e) {
+    toast('사진을 읽지 못해 공유 파일을 만들지 못했습니다: ' + e.message);
+    return;
   }
   const S = db.settings,
     noMaster = num(S.shareNoMaster) !== 0,
@@ -449,9 +450,9 @@ async function makeShareFile(withPhotos) {
     };
   const data = JSON.stringify({ meta, db: noMaster ? shareStrip(db) : db, photos }).replace(/</g, '\\u003c');
   const html = APP_SRC.replace('<head>', '<head>\n<script id="qmsShare" type="application/json">' + data + '<\/script>');
-  download(`QIS_읽기전용_${today()}${withPhotos ? '' : '_사진제외'}.html`, html, 'text/html;charset=utf-8');
+  download(`QIS_읽기전용_${today()}.html`, html, 'text/html;charset=utf-8');
   toast(
-    `읽기 전용 공유 파일 ${(html.length / 1048576).toFixed(1)}MB를 만들었습니다${noMaster ? ' (기준정보 제외)' : ''} — 메일 · Teams · 공유 폴더로 보내세요`,
+    `읽기 전용 공유 파일 ${(html.length / 1048576).toFixed(1)}MB를 만들었습니다 (사진 · 첨부 ${photos.length}개 포함)${noMaster ? ' (기준정보 제외)' : ''} — 메일 · Teams · 공유 폴더로 보내세요`,
   );
 }
 // 전체 백업 내려받기 (관리자) — 서버가 만든 백업 파일
