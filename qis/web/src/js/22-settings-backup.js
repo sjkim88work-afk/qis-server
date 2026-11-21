@@ -209,8 +209,15 @@ function renderData() {
     sg(
       '비용 · 사진',
       sv('시간당 인건비', '작업시간 × 인건비로 선별비·재작업비를 자동 계산합니다.', sNum('laborRate', '원', 0)) +
-        sv('사진 최대 크기', '첨부 사진의 긴 변을 이 크기로 줄여서 저장합니다.', sNum('photoMax', 'px', 400, 4000)) +
-        sv('사진 압축 품질', '낮을수록 용량이 작아집니다. 70~85 권장.', sNum('photoQ', '%', 30, 95)),
+        sv(
+          '사진 저장 방식',
+          '‘원본 그대로’ 는 사진을 줄이지 않고 저장합니다. 확대해도 선명하지만 한 장이 3~8MB 가 될 수 있습니다. 바꾼 뒤에 넣는 사진부터 적용됩니다.',
+          `<select onchange="setS('photoOrig',this.value,'num');render()"><option value="0" ${num(db.settings.photoOrig) ? '' : 'selected'}>줄여서 저장</option><option value="1" ${num(db.settings.photoOrig) ? 'selected' : ''}>원본 그대로</option></select>`,
+        ) +
+        (num(db.settings.photoOrig)
+          ? ''
+          : sv('사진 최대 크기', '첨부 사진의 긴 변을 이 크기로 줄여서 저장합니다.', sNum('photoMax', 'px', 400, 4000)) +
+            sv('사진 압축 품질', '낮을수록 용량이 작아집니다. 70~85 권장.', sNum('photoQ', '%', 30, 95))),
     ) +
     sg(
       '환율 (부품 단가 → 원화)',

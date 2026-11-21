@@ -261,6 +261,24 @@ def run(c):
        f"서버 없이 열면 안내만 보이고 프로그램은 시작하지 않음 (보이는 것: {r['vis']} · 화면 {r['app']} · 멈춤 알림 {len(errsN)})")
     ok(r["dbs"] == "", f"서버 없이 열어도 브라우저 저장소 (IndexedDB) 를 만들지 않음 ({r['dbs'] or '없음'})")
 
+    # 사진 저장 방식: ‘원본 그대로’ 면 파일을 바꾸지 않고 저장, ‘줄여서 저장’ 이면 긴 변 1600px JPEG
+    rp = B.evaluate("""async()=>{const c=document.createElement('canvas');c.width=2400;c.height=1800;const x=c.getContext('2d');
+      for(let i=0;i<400;i++){x.fillStyle='hsl('+(i*37%360)+',70%,50%)';x.fillRect((i*97)%2400,(i*53)%1800,180,120)}
+      const blob=await new Promise(r=>c.toBlob(r,'image/png')),f=new File([blob],'원본시험.png',{type:'image/png'});
+      const orig=await new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(fr.result);fr.readAsDataURL(f)});
+      const size=u=>new Promise(r=>{const im=new Image();im.onload=()=>r([im.naturalWidth,im.naturalHeight]);im.src=u});
+      const keep=db.settings.photoOrig;
+      db.settings.photoOrig=0;const a=await attImgRec(f);
+      db.settings.photoOrig=1;const b=await attImgRec(f);
+      const keepTab=state.setTab;state.setTab='defect';go('data');await new Promise(r=>setTimeout(r,300));const on=document.querySelector('main').innerText;
+      db.settings.photoOrig=0;render();await new Promise(r=>setTimeout(r,300));const off=document.querySelector('main').innerText;
+      db.settings.photoOrig=keep;state.setTab=keepTab;go('dash');
+      return {small:await size(a.data),smallJpg:a.data.startsWith('data:image/jpeg'),big:await size(b.data),same:b.data===orig,thumb:(await size(b.thumb))[0],
+        rowOn:on.includes('사진 저장 방식')&&!on.includes('사진 최대 크기'),rowOff:off.includes('사진 저장 방식')&&off.includes('사진 최대 크기')&&off.includes('사진 압축 품질')}}""")
+    ok(rp["small"] == [1600, 1200] and rp["smallJpg"], f"사진 ‘줄여서 저장’: 2400×1800 → {rp['small']} JPEG")
+    ok(rp["big"] == [2400, 1800] and rp["same"] and rp["thumb"] == 320, f"사진 ‘원본 그대로’: 파일 내용이 그대로 저장됨 ({rp['big']} · 목록용 작은 그림 {rp['thumb']}px)")
+    ok(rp["rowOn"] and rp["rowOff"], "설정: ‘사진 저장 방식’ 칸 — ‘원본 그대로’ 에서는 크기 · 품질 칸을 숨김")
+
     # 읽기 전용 공유본: 서버판에서 만든 HTML 파일은 서버 없이 열려도 읽기 전용으로 동작 (서버 요청 · 저장 없음)
     import tempfile
     PX = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=="

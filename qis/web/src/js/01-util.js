@@ -210,6 +210,7 @@ function defaultDB() {
       gradeC: 1000,
       photoMax: 1600,
       photoQ: 80,
+      photoOrig: 0, // 1 = 사진을 줄이지 않고 원본 그대로 저장
       backupKeep: 30,
       backupPhotos: 1,
       company: '',

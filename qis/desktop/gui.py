@@ -91,10 +91,10 @@ class DesktopApi:
             return None
         return self._c.open_file(str(name), data_url)
 
-    def export_backup(self):
+    def export_backup(self, photos=True):
         if not self._ok("export_backup"):
             return None
-        return self._c.export_backup()
+        return self._c.export_backup(photos is not False)
 
     def open_url(self, url):
         if not self._ok("open_url"):
@@ -461,15 +461,16 @@ class Controller:
     def open_file(self, name: str, data_url):
         return attach.open_file(self._ask_save, name, data_url)
 
-    def export_backup(self):
+    def export_backup(self, photos: bool = True):
         if not self.runner or not self.runner.app:
             return "서버가 꺼져 있습니다"
         try:
-            p = self._ask_save(f"QIS_백업_{datetime.now().strftime('%Y%m%d')}.json", ("QIS 백업 (*.json)",))
+            name = f"QIS_백업_{datetime.now().strftime('%Y%m%d')}{'' if photos else '_사진제외'}.json"
+            p = self._ask_save(name, ("QIS 백업 (*.json)",))
             if not p:
                 return None
-            size = core.export_json(self.runner.app, p, None)
-            return f"백업 파일을 저장했습니다: {p.name} ({size / 1048576:.1f} MB · 사진 포함)"
+            size = core.export_json(self.runner.app, p, None, photos=photos)
+            return f"백업 파일을 저장했습니다: {p.name} ({size / 1048576:.1f} MB · 사진 {'포함' if photos else '제외'})"
         except Exception as e:
             log.exception("백업 파일 저장 실패")
             return f"저장하지 못했습니다: {e}"

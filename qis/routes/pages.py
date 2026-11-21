@@ -28,8 +28,13 @@ def index_html() -> str:
     return _idx["html"]
 
 
-def static_page(name: str):
-    return HTMLResponse((WEB / name).read_text(encoding="utf-8"))
+def static_page(name: str, request: Request | None = None):
+    """관리 · 계정 · 로그인 화면. 데스크톱 프로그램 창이면 창 보조 (desktop.js) 를 붙임 —
+    프로그램 창은 파일 내려받기를 스스로 못 해서, 보조가 프로그램의 저장 창으로 넘김."""
+    h = (WEB / name).read_text(encoding="utf-8")
+    if request is not None and request.app.state.desktop and in_window(request):
+        h = h.replace("</head>", '<script src="/desktop.js"></script>\n</head>', 1)
+    return HTMLResponse(h)
 
 
 def _static(folder: str, name: str, media_type: str | None = None):
@@ -102,7 +107,7 @@ def mount(app: FastAPI) -> None:
     def account_page(request: Request):
         if not page_user(request):
             return RedirectResponse("/login", status_code=303)
-        return static_page("account.html")
+        return static_page("account.html", request)
 
     @app.get("/admin", response_class=HTMLResponse)
     def admin_page(request: Request):
@@ -111,7 +116,7 @@ def mount(app: FastAPI) -> None:
             return RedirectResponse("/login", status_code=303)
         if u["role"] != "admin":
             return RedirectResponse("/", status_code=303)
-        return static_page("admin.html")
+        return static_page("admin.html", request)
 
     @app.get("/manifest.webmanifest")
     def manifest():
