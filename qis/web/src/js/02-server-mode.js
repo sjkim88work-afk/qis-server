@@ -647,13 +647,13 @@ function renderAlert() {
   if (!b) return;
   if (tabLocked && !loadFailed) {
     b.style.display = 'flex';
-    b.innerHTML = `<span>🔒 <b>다른 창(또는 탭)에서 QIS가 열려 있어 이 창은 보기 전용입니다.</b> 두 창에서 동시에 저장하면 한쪽 입력이 사라질 수 있어 막았습니다. 입력은 먼저 연 창에서 하세요 — 그 창을 닫으면 이 창이 최신 내용으로 바뀌고 편집할 수 있게 됩니다.</span>`;
+    b.innerHTML = `<span><b>다른 창(또는 탭)에서 QIS가 열려 있어 이 창은 보기 전용입니다.</b> 두 창에서 동시에 저장하면 한쪽 입력이 사라질 수 있어 막았습니다. 입력은 먼저 연 창에서 하세요 — 그 창을 닫으면 이 창이 최신 내용으로 바뀌고 편집할 수 있게 됩니다.</span>`;
     return;
   }
   if (SRV && !loadFailed) {
     if (srvState.expired) {
       b.style.display = 'flex';
-      b.innerHTML = `<span>🔒 <b>로그인이 만료되었습니다.</b> 아직 서버에 보내지 못한 변경은 이 창에 남아 있습니다 — 창을 닫지 말고 다시 로그인하세요. 로그인하면 자동으로 저장됩니다.</span><span style="flex:1"></span><button class="b s p" onclick="window.open('/login','qisLogin')">다시 로그인</button><button class="b s" onclick="srvState.expired=false;srvSync()">저장 다시 시도</button>`;
+      b.innerHTML = `<span><b>로그인이 만료되었습니다.</b> 아직 서버에 보내지 못한 변경은 이 창에 남아 있습니다 — 창을 닫지 말고 다시 로그인하세요. 로그인하면 자동으로 저장됩니다.</span><span style="flex:1"></span><button class="b s p" onclick="window.open('/login','qisLogin')">다시 로그인</button><button class="b s" onclick="srvState.expired=false;srvSync()">저장 다시 시도</button>`;
       return;
     }
     if (srvState.ok === false) {
@@ -671,17 +671,17 @@ function renderAlert() {
     b.style.background = '#fff7e0';
     b.style.borderBottomColor = '#f0d49b';
     b.style.color = '#5c4210';
-    b.innerHTML = `<span>💡 <b>미리보기 화면에서는 데이터가 저장되지 않습니다.</b> 이 창은 보안상 브라우저 저장소가 막혀 있어, 여기서 입력한 내용은 창을 닫으면 사라집니다. 실제로 쓰려면 파일을 내려받아 <b>Edge 또는 Chrome에서 직접</b> 여세요.</span>`;
+    b.innerHTML = `<span><b>미리보기 화면에서는 데이터가 저장되지 않습니다.</b> 이 창은 보안상 브라우저 저장소가 막혀 있어, 여기서 입력한 내용은 창을 닫으면 사라집니다. 실제로 쓰려면 파일을 내려받아 <b>Edge 또는 Chrome에서 직접</b> 여세요.</span>`;
     return;
   }
   if (loadFailed) {
     b.style.display = 'flex';
-    b.innerHTML = `<span>⛔ <b>저장된 데이터를 읽지 못했습니다</b> (${esc(loadFailed)}). 원본은 보존해 두었고, 덮어쓰지 않도록 <b>저장을 멈췄습니다.</b> 백업 파일로 복원하거나 원본을 내려받아 확인하세요.</span><span style="flex:1"></span><button class="b s" onclick="downloadBroken()">원본 내려받기</button><button class="b s p" onclick="pickImport('replace')">백업으로 복원</button>`;
+    b.innerHTML = `<span><b>저장된 데이터를 읽지 못했습니다</b> (${esc(loadFailed)}). 원본은 보존해 두었고, 덮어쓰지 않도록 <b>저장을 멈췄습니다.</b> 백업 파일로 복원하거나 원본을 내려받아 확인하세요.</span><span style="flex:1"></span><button class="b s" onclick="downloadBroken()">원본 내려받기</button><button class="b s p" onclick="pickImport('replace')">백업으로 복원</button>`;
     return;
   }
   if (saveFailed) {
     b.style.display = 'flex';
-    b.innerHTML = `<span>⛔ <b>브라우저 저장 실패</b> — 마지막 변경이 저장되지 않았습니다 (${esc(saveFailed)}). ${
+    b.innerHTML = `<span><b>브라우저 저장 실패</b> — 마지막 변경이 저장되지 않았습니다 (${esc(saveFailed)}). ${
       dataStore === 'idb'
         ? 'PC 디스크 공간이 부족하거나 브라우저가 저장을 막았을 수 있습니다. 지금 <b>백업 내려받기</b>를 하고, 디스크 여유 공간을 확인하세요.'
         : '저장 공간이 가득 찼을 수 있습니다. 지금 <b>백업 내려받기</b>를 하고, 설정 › 데이터 · 백업 › 고급 설정에서 저장 공간을 확인하세요.'
@@ -755,8 +755,8 @@ function updateSaveInfo() {
           ? `자동저장 ${pad(s.getHours())}:${pad(s.getMinutes())}:${pad(s.getSeconds())}`
           : '';
   $('#linkInfo').textContent = [
-    photoDir ? `📷 ${photoDir.name}` : lazyH.photoDir ? `📷 ${lazyH.photoDir.name} (저장할 때 허용)` : '',
-    backupDir ? `🗂 ${backupDir.name}` : lazyH.backupDir ? `🗂 ${lazyH.backupDir.name} (백업할 때 허용)` : '',
+    photoDir ? `사진 폴더 ${photoDir.name}` : lazyH.photoDir ? `사진 폴더 ${lazyH.photoDir.name} (저장할 때 허용)` : '',
+    backupDir ? `백업 폴더 ${backupDir.name}` : lazyH.backupDir ? `백업 폴더 ${lazyH.backupDir.name} (백업할 때 허용)` : '',
   ]
     .filter(Boolean)
     .join('  ');

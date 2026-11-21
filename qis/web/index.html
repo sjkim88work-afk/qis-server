@@ -839,6 +839,20 @@ body:not(.mob) .pld textarea,body:not(.mob) .pld .card input{border-radius:3px;b
   body:not(.mob) #modal label .bg{margin-left:6px}
   body:not(.mob) main .sgrp,body:not(.mob) main .snav,body:not(.mob) main .snav button,body:not(.mob) main .docbox,body:not(.mob) main .cbox,body:not(.mob) main .psum{border-radius:3px}
 }
+/* 대시보드 ‘할 일’ 표 */
+.todot{width:100%;border-collapse:collapse;font-size:13px}
+.todot th{position:static;padding:4px 8px;background:none;border-bottom:1px solid #9aa2af;color:var(--sub);font-size:11.5px;font-weight:600;text-align:left}
+.todot td{padding:5px 8px;border-bottom:1px solid #eceef2;vertical-align:top;line-height:1.5}
+.todot td.k{white-space:nowrap;width:1%;padding-right:16px}.todot td.w{white-space:nowrap;width:1%;padding-right:20px}.todot td.a{white-space:nowrap;text-align:right;width:1%}
+.todot tbody tr:hover>td{background:#f5f7fa}
+.todot td.a button.b{height:22px;min-height:0;padding:0 8px;font-size:12px;background:#fff;color:var(--ink);border:1px solid #b8bec9;border-radius:3px}
+@media screen{
+  body:not(.mob) main .kpis>.kpi.ok .v{color:var(--ink)}
+  body:not(.mob) .pld .pc1>.todot{margin:0;width:100%}
+  body:not(.mob) .pld .pc1>.todot th:first-child,body:not(.mob) .pld .pc1>.todot td:first-child{padding-left:12px}
+  body:not(.mob) .pld .pc1>.todot td:last-child{padding-right:12px}
+}
+@media (max-width:900px){.todot,.todot tbody,.todot tr,.todot td{display:block;width:auto!important}.todot thead{display:none}.todot td{border:0;padding:1px 0;white-space:normal!important;text-align:left!important}.todot tr{padding:6px 0;border-bottom:1px solid #eceef2}}
 /* ================= 휴대폰 화면 ================= */
 #mswitch{display:none;text-align:center;padding:14px 0 22px;font-size:13px}
 #mswitch a{display:none}
@@ -930,7 +944,7 @@ fieldset.murg label{position:relative}
 <div id="recon" class="recon noprint" style="display:none"></div>
 <main><div class="print-only phead" id="printHead"></div><div id="view"></div></main>
 <div id="mcard" class="mcard" onclick="mobCardClose()"></div>
-<div id="mswitch" class="noprint"><a class="lk mon" onclick="mobSet('pc')">PC 화면으로 보기</a><a class="lk moff" onclick="mobSet('mobile')">📱 휴대폰 화면</a></div>
+<div id="mswitch" class="noprint"><a class="lk mon" onclick="mobSet('pc')">PC 화면으로 보기</a><a class="lk moff" onclick="mobSet('mobile')">휴대폰 화면</a></div>
 
 <div class="modal-bg" id="modal">
   <div class="modal">
@@ -2195,13 +2209,13 @@ function renderAlert() {
   if (!b) return;
   if (tabLocked && !loadFailed) {
     b.style.display = 'flex';
-    b.innerHTML = `<span>🔒 <b>다른 창(또는 탭)에서 QIS가 열려 있어 이 창은 보기 전용입니다.</b> 두 창에서 동시에 저장하면 한쪽 입력이 사라질 수 있어 막았습니다. 입력은 먼저 연 창에서 하세요 — 그 창을 닫으면 이 창이 최신 내용으로 바뀌고 편집할 수 있게 됩니다.</span>`;
+    b.innerHTML = `<span><b>다른 창(또는 탭)에서 QIS가 열려 있어 이 창은 보기 전용입니다.</b> 두 창에서 동시에 저장하면 한쪽 입력이 사라질 수 있어 막았습니다. 입력은 먼저 연 창에서 하세요 — 그 창을 닫으면 이 창이 최신 내용으로 바뀌고 편집할 수 있게 됩니다.</span>`;
     return;
   }
   if (SRV && !loadFailed) {
     if (srvState.expired) {
       b.style.display = 'flex';
-      b.innerHTML = `<span>🔒 <b>로그인이 만료되었습니다.</b> 아직 서버에 보내지 못한 변경은 이 창에 남아 있습니다 — 창을 닫지 말고 다시 로그인하세요. 로그인하면 자동으로 저장됩니다.</span><span style="flex:1"></span><button class="b s p" onclick="window.open('/login','qisLogin')">다시 로그인</button><button class="b s" onclick="srvState.expired=false;srvSync()">저장 다시 시도</button>`;
+      b.innerHTML = `<span><b>로그인이 만료되었습니다.</b> 아직 서버에 보내지 못한 변경은 이 창에 남아 있습니다 — 창을 닫지 말고 다시 로그인하세요. 로그인하면 자동으로 저장됩니다.</span><span style="flex:1"></span><button class="b s p" onclick="window.open('/login','qisLogin')">다시 로그인</button><button class="b s" onclick="srvState.expired=false;srvSync()">저장 다시 시도</button>`;
       return;
     }
     if (srvState.ok === false) {
@@ -2219,17 +2233,17 @@ function renderAlert() {
     b.style.background = '#fff7e0';
     b.style.borderBottomColor = '#f0d49b';
     b.style.color = '#5c4210';
-    b.innerHTML = `<span>💡 <b>미리보기 화면에서는 데이터가 저장되지 않습니다.</b> 이 창은 보안상 브라우저 저장소가 막혀 있어, 여기서 입력한 내용은 창을 닫으면 사라집니다. 실제로 쓰려면 파일을 내려받아 <b>Edge 또는 Chrome에서 직접</b> 여세요.</span>`;
+    b.innerHTML = `<span><b>미리보기 화면에서는 데이터가 저장되지 않습니다.</b> 이 창은 보안상 브라우저 저장소가 막혀 있어, 여기서 입력한 내용은 창을 닫으면 사라집니다. 실제로 쓰려면 파일을 내려받아 <b>Edge 또는 Chrome에서 직접</b> 여세요.</span>`;
     return;
   }
   if (loadFailed) {
     b.style.display = 'flex';
-    b.innerHTML = `<span>⛔ <b>저장된 데이터를 읽지 못했습니다</b> (${esc(loadFailed)}). 원본은 보존해 두었고, 덮어쓰지 않도록 <b>저장을 멈췄습니다.</b> 백업 파일로 복원하거나 원본을 내려받아 확인하세요.</span><span style="flex:1"></span><button class="b s" onclick="downloadBroken()">원본 내려받기</button><button class="b s p" onclick="pickImport('replace')">백업으로 복원</button>`;
+    b.innerHTML = `<span><b>저장된 데이터를 읽지 못했습니다</b> (${esc(loadFailed)}). 원본은 보존해 두었고, 덮어쓰지 않도록 <b>저장을 멈췄습니다.</b> 백업 파일로 복원하거나 원본을 내려받아 확인하세요.</span><span style="flex:1"></span><button class="b s" onclick="downloadBroken()">원본 내려받기</button><button class="b s p" onclick="pickImport('replace')">백업으로 복원</button>`;
     return;
   }
   if (saveFailed) {
     b.style.display = 'flex';
-    b.innerHTML = `<span>⛔ <b>브라우저 저장 실패</b> — 마지막 변경이 저장되지 않았습니다 (${esc(saveFailed)}). ${
+    b.innerHTML = `<span><b>브라우저 저장 실패</b> — 마지막 변경이 저장되지 않았습니다 (${esc(saveFailed)}). ${
       dataStore === 'idb'
         ? 'PC 디스크 공간이 부족하거나 브라우저가 저장을 막았을 수 있습니다. 지금 <b>백업 내려받기</b>를 하고, 디스크 여유 공간을 확인하세요.'
         : '저장 공간이 가득 찼을 수 있습니다. 지금 <b>백업 내려받기</b>를 하고, 설정 › 데이터 · 백업 › 고급 설정에서 저장 공간을 확인하세요.'
@@ -2303,8 +2317,8 @@ function updateSaveInfo() {
           ? `자동저장 ${pad(s.getHours())}:${pad(s.getMinutes())}:${pad(s.getSeconds())}`
           : '';
   $('#linkInfo').textContent = [
-    photoDir ? `📷 ${photoDir.name}` : lazyH.photoDir ? `📷 ${lazyH.photoDir.name} (저장할 때 허용)` : '',
-    backupDir ? `🗂 ${backupDir.name}` : lazyH.backupDir ? `🗂 ${lazyH.backupDir.name} (백업할 때 허용)` : '',
+    photoDir ? `사진 폴더 ${photoDir.name}` : lazyH.photoDir ? `사진 폴더 ${lazyH.photoDir.name} (저장할 때 허용)` : '',
+    backupDir ? `백업 폴더 ${backupDir.name}` : lazyH.backupDir ? `백업 폴더 ${lazyH.backupDir.name} (백업할 때 허용)` : '',
   ]
     .filter(Boolean)
     .join('  ');
@@ -5935,40 +5949,94 @@ function renderProg() {
     </tbody></table></div>
     <div class="help" style="margin-top:6px">‘마지막 진행’은 직접 쓴 기록과 자동 이벤트(NCR 발행·대책 요청·회신·평가·구상 등) 중 가장 최근 날짜입니다. 행을 누르면 RCA는 RCA 상세, NCR은 NCR 화면, 불량은 진행 보기 창이 열립니다.</div></div>`;
 }
-function progCard() {
+// 대시보드의 ‘할 일’ — 표 한 개: 오늘 챙길 일(it: <li> 문장들) + 기한 임박 + 오래 정체된 건. 같은 건은 한 줄로 (정체는 내용 끝에 덧붙임)
+function todoCell(li) {
+  const t = document.createElement('template');
+  t.innerHTML = li.replace(/^<li[^>]*>/, '').replace(/<\/li>$/, '');
+  const f = t.content,
+    take = (sel) => {
+      const e = f.querySelector(sel);
+      if (!e) return '';
+      e.remove();
+      return e.outerHTML;
+    };
+  const kind = take('.bg');
+  // 대상: 구분 바로 뒤에 오는 링크만 (문장 가운데의 링크는 내용에 그대로 둠)
+  let who = '';
+  {
+    let n = f.firstChild;
+    while (n && n.nodeType === 3 && !n.textContent.trim()) n = n.nextSibling;
+    if (n && n.nodeType === 1 && n.matches('a.lk, b')) {
+      n.remove();
+      who = n.outerHTML;
+    }
+  }
+  let btns = '';
+  f.querySelectorAll('button').forEach((e) => {
+    btns += e.outerHTML + ' ';
+    e.remove();
+  });
+  const d = document.createElement('div');
+  d.appendChild(f);
+  return { kind, who, btns, text: d.innerHTML.trim().replace(/^(—|·)\s*/, ''), raw: li };
+}
+function todoCard(it) {
   const C = progCases(),
     due = C.filter((c) => c.next && diffDays(today(), c.next.nextDate) <= 3).sort((a, b) => a.next.nextDate.localeCompare(b.next.nextDate)),
     od = due.filter((c) => c.next.nextDate < today());
   const st = C.filter((c) => c.stale >= 14)
     .sort((a, b) => b.stale - a.stale)
     .slice(0, 4);
-  if (!C.length) return '';
-  const line = (c) =>
-    `<li>${nxBadge(c.next.nextDate)} <a class="lk" onclick="openCase('${c.kind}','${c.id}')">${esc(c.title)}</a> <span class="muted" style="font-size:12px">${esc(c.next.next)} · ${esc(c.sup)}</span></li>`;
   const lateN = C.filter((c) => c.late.length).length, // 지연 = 미종결 + 기한 경과 (진행 현황 화면과 같은 기준)
     soonN = due.length - od.length,
     staleN = C.filter((c) => c.stale >= 14).length;
-  return `<div class="card pc1"><h3>진행 현황${
+  const all = !!state.dashAll,
+    R = it.map(todoCell),
+    has = (id) => R.find((r) => r.raw.includes(`'${id}'`));
+  const open = (c) => `<a class="lk" onclick="openCase('${c.kind}','${c.id}')">${esc(c.title)}</a>`;
+  // 기한 임박 · 초과: 오늘 챙길 일에 이미 있는 건은 다시 넣지 않음
+  due.slice(0, 6).forEach((c) => {
+    if (!has(c.id)) R.push({ kind: nxBadge(c.next.nextDate), who: open(c), btns: '', text: `${esc(c.next.next)} · ${esc(c.sup)}`, raw: `'${c.id}'` });
+  });
+  const nAct = R.length;
+  st.forEach((c) => {
+    const r = has(c.id);
+    if (r) r.text += ` <span class="muted">· 기록 ${c.stale >= 999 ? '없음' : c.stale + '일 전'}</span>`;
+    else
+      R.push({
+        kind: staleBadge(c.stale).replace('일 전</span>', '일 정체</span>'),
+        who: open(c),
+        btns: `<button class="b s noprint" onclick="openCase('${c.kind}','${c.id}')">기록</button>`,
+        text: `${esc(c.sup)} · ${c.lastM ? esc(c.lastM.text.slice(0, 30)) + (c.lastM.text.length > 30 ? '…' : '') : '직접 쓴 기록 없음'}`,
+        raw: `'${c.id}'`,
+      });
+  });
+  const show = all ? R : R.slice(0, 6).concat(R.slice(nAct > 6 ? nAct : 6));
+  const hid = R.length - show.length;
+  return `<div class="card pc1"><h3>할 일 ${R.length ? `<span class="muted cnt">${R.length}건</span>` : ''}${
     lateN ? ` <button type="button" class="bg bad" onclick="dashGo('late')" title="누르면 지연 건만 보기">지연 ${lateN}</button>` : ''
   }${soonN ? ` <span class="bg warn">3일 안에 기한 ${soonN}</span>` : ''}${staleN ? ` <span class="bg warn">14일+ 정체 ${staleN}</span>` : ''}
-    <span class="muted cnt">미종결 — RCA ${C.filter((c) => c.kind === 'rca').length} · NCR ${C.filter((c) => c.kind === 'ncr').length} · 불량 ${
-      C.filter((c) => c.kind === 'defect').length
-    }</span><span class="sp"></span><button class="b s" onclick="go('prog')">전체 보기</button></h3>
-    <div class="grid g2" style="gap:16px"><div><div class="muted" style="font-size:12px;margin-bottom:4px">기한 초과 · 3일 안에 기한</div>${
-      due.length ? `<ul class="todo">${due.slice(0, 6).map(line).join('')}</ul>` : '<div class="muted" style="font-size:12px">임박한 기한 없음</div>'
-    }</div>
-    <div><div class="muted" style="font-size:12px;margin-bottom:4px">오래 정체된 건 — 직접 쓴 기록이 14일 넘게 없음</div>${
-      st.length
-        ? `<ul class="todo">${st
-            .map(
-              (c) =>
-                `<li>${staleBadge(c.stale)} <a class="lk" onclick="openCase('${c.kind}','${c.id}')">${esc(c.title)}</a> <span class="muted" style="font-size:12px">${esc(c.sup)} · ${
-                  c.lastM ? esc(c.lastM.text.slice(0, 30)) + (c.lastM.text.length > 30 ? '…' : '') : '직접 기록 없음'
-                }</span></li>`,
-            )
-            .join('')}</ul>`
-        : '<div class="muted" style="font-size:12px">14일 이상 정체된 건 없음</div>'
-    }</div></div></div>`;
+    ${
+      C.length
+        ? `<span class="muted cnt">미종결 — RCA ${C.filter((c) => c.kind === 'rca').length} · NCR ${C.filter((c) => c.kind === 'ncr').length} · 불량 ${
+            C.filter((c) => c.kind === 'defect').length
+          }</span>`
+        : ''
+    }<span class="sp"></span>${
+      hid || all
+        ? `<button class="b s noprint" onclick="state.dashAll=!state.dashAll;render()">${all ? '줄여 보기' : `전체 ${R.length}건 보기`}</button>`
+        : ''
+    }<button class="b s" onclick="go('prog')">진행 화면</button></h3>${
+      R.length
+        ? `<table class="todot"><thead><tr><th>구분</th><th>대상</th><th>내용</th><th class="noprint"></th></tr></thead><tbody>${show
+            .map((r) => `<tr><td class="k">${r.kind}</td><td class="w">${r.who}</td><td>${r.text}</td><td class="a noprint">${r.btns}</td></tr>`)
+            .join('')}</tbody></table>${
+            hid
+              ? `<div class="muted" style="font-size:12px;margin-top:6px">외 ${hid}건 — <a class="lk" onclick="state.dashAll=true;render()">모두 펼치기</a></div>`
+              : ''
+          }`
+        : '<div class="muted">지연 · 임박 항목이 없습니다.</div>'
+    }</div>`;
 }
 /* ================= 대시보드 ================= */
 const monthEnd = (m) => {
@@ -6052,7 +6120,7 @@ function renderDash() {
   // 서버형은 복원 · 가져오기가 관리자 전용(관리 화면)이라 대시보드 안내를 띄우지 않음
   if (SRV) {
   } else if (!total && /^https?:$/.test(location.protocol))
-    banner = `<div class="banner">📦 <b>예전 HTML 파일로 쓰던 데이터가 있나요?</b> 데이터가 사라졌다면 <button class="b s p" onclick="restoreFromFolder()">백업 폴더에서 복원</button> — 백업 폴더에서 가장 최근 백업을 찾아 되살립니다. 예전 HTML 파일의 데이터는 그 파일에서 <b>백업</b>을 누른 뒤 <button class="b s" onclick="pickImport('replace')">백업 파일로 복원</button>. <span class="muted">처음 쓰는 경우에는 <b>기준정보</b>에서 협력사·부품을 등록하세요.</span></div>`;
+    banner = `<div class="banner"><b>예전 HTML 파일로 쓰던 데이터가 있나요?</b> 데이터가 사라졌다면 <button class="b s p" onclick="restoreFromFolder()">백업 폴더에서 복원</button> — 백업 폴더에서 가장 최근 백업을 찾아 되살립니다. 예전 HTML 파일의 데이터는 그 파일에서 <b>백업</b>을 누른 뒤 <button class="b s" onclick="pickImport('replace')">백업 파일로 복원</button>. <span class="muted">처음 쓰는 경우에는 <b>기준정보</b>에서 협력사·부품을 등록하세요.</span></div>`;
   else if (!total)
     banner = `<div class="banner">데이터가 비어 있습니다. <b>기준정보</b>에서 협력사·부품을 등록하거나(엑셀 붙여넣기 지원), <b>불량 관리</b>에서 불량을 등록하세요. 기존 백업 파일이 있으면 <a class="lk" onclick="state.setTab='backup';go('data')">설정·백업</a>에서 복원할 수 있습니다.</div>`;
   const li = (arr, fn) =>
@@ -6197,7 +6265,6 @@ function renderDash() {
       banner;
   return `${banner}<div class="pl pld">
   <div class="row noprint pldtop" style="margin-bottom:12px"><b>기준월</b><input type="month" value="${m}" onchange="state.dashMonth=this.value||today().slice(0,7);render()"><span class="sp" style="flex:1"></span><button class="b" onclick="editDefect()">+ 불량 등록</button><button class="b" onclick="weekReport()" title="오늘까지 최근 7일 — 신규 불량 · NCR · RCA · 지연 · 다음 주 기한">주간 보고 (최근 7일)</button><button class="b p" onclick="dashReport()">월간 보고 인쇄 / PDF</button></div>
-  ${progCard()}
   ${(() => {
     // 요약 수치 — 급한 순서로 세 묶음 (지연 → 진행 중 → 이번 달 발생). 값이 0 이면 약하게, 지연은 강하게
     const k = (key, cls, label, v, sub, zero) =>
@@ -6225,22 +6292,8 @@ function renderDash() {
     ])}</div>`;
   })()}
   ${(() => {
-    const it = (dashItems = actions.match(/<li[\s\S]*?<\/li>/g) || []),
-      all = !!state.dashAll,
-      k = all ? it.length : 6;
-    return `<div class="card"><h3>오늘 챙길 일 ${it.length ? `<span class="bg mut">${it.length}</span>` : ''}<span class="sp"></span>${
-      it.length > 6
-        ? `<button class="b s noprint" onclick="state.dashAll=!state.dashAll;render()">${all ? '6건만 보기' : `전체 ${it.length}건 보기`}</button>`
-        : ''
-    }</h3>${
-      it.length
-        ? `<ul class="act">${it.slice(0, k).join('')}</ul>${
-            it.length > k
-              ? `<div class="muted" style="font-size:12px">외 ${it.length - k}건 — <a class="lk" onclick="state.dashAll=true;render()">모두 펼치기</a></div>`
-              : ''
-          }`
-        : '<div class="muted">지연·임박 항목이 없습니다.</div>'
-    }</div>`;
+    const it = (dashItems = actions.match(/<li[\s\S]*?<\/li>/g) || []);
+    return todoCard(it);
   })()}
   ${reviewCard(m)}
   <div class="grid g2">
@@ -7663,7 +7716,7 @@ function lgThumbs(ids, editable) {
         .map((id, k) => {
           const r = phRec(id),
             x = editable ? `<a onclick="${editable}(${k})" title="빼기" aria-label="첨부 빼기">✕</a>` : '';
-          if (!r) return `<span class="t"><span class="ld">📎</span>${x}</span>`;
+          if (!r) return `<span class="t"><span class="ld">${LG_ICO.clip}</span>${x}</span>`;
           return isDocRec(r)
             ? `<span class="t dc"><span class="o" role="button" tabindex="0" onclick="lgOpenDoc('${id}')" title="${esc(r.name)} — 열기"><span class="dk">${docIcon(r)}</span><b>${esc(r.name)}</b>${
                 r.size ? `<span class="muted">${fmtBytes(r.size)}</span>` : ''
@@ -8146,7 +8199,7 @@ async function lgPrint() {
           .map((id) =>
             P[id]
               ? isDocRec(P[id])
-                ? `<div><b>#${pn[id]}</b> 📎 ${esc(P[id].name || '')} <span class="s">(문서 파일 — 화면에서 열기)</span></div>`
+                ? `<div><b>#${pn[id]}</b> ${esc(P[id].name || '')} <span class="s">(문서 파일 — 화면에서 열기)</span></div>`
                 : `<div><img src="${P[id].data}"><br><b>#${pn[id]}</b> ${esc(P[id].caption || P[id].name || '')}</div>`
               : '',
           )
@@ -9814,7 +9867,7 @@ function ncrNotifyCell(n) {
   if (n.notifyDate)
     return `<span class="nwi" title="협력사 통보일">${esc(n.notifyDate)}</span>${
       (n.noticeDocs || []).length
-        ? ` <span class="bg inf" title="발송한 통보서 파일 ${(n.noticeDocs || []).length}개">📎 ${(n.noticeDocs || []).length}</span>`
+        ? ` <span class="bg inf" title="발송한 통보서 파일 ${(n.noticeDocs || []).length}개">${LG_ICO.clip} ${(n.noticeDocs || []).length}</span>`
         : ''
     }${n.notifyMethod ? `<br><span class="muted" style="font-size:11.5px">${esc(n.notifyMethod)}</span>` : ''}${
       n.requestDate && n.requestDate !== n.notifyDate && n.reqType !== '단순 통보'
@@ -10021,7 +10074,7 @@ function ncrTable() {
       : ''
   }${!n.replyDate && nudgeLogs(n).length ? `<br><span class="muted" style="font-size:11.5px">독촉 ${nudgeLogs(n).length}회</span>` : ''}${
     (n.replyDocs || []).length
-      ? ` <span class="bg inf" title="협력사 대책서 파일 ${(n.replyDocs || []).length}개">📎 ${(n.replyDocs || []).length}</span>`
+      ? ` <span class="bg inf" title="협력사 대책서 파일 ${(n.replyDocs || []).length}개">${LG_ICO.clip} ${(n.replyDocs || []).length}</span>`
       : ''
   }${n.replyDate && n.dueDate && n.replyDate > n.dueDate ? ' <span class="bg warn">지연접수</span>' : ''}${
     n.evalVerdict
@@ -12412,7 +12465,7 @@ function rcvHint() {
     linked ? `<input type="hidden" name="lot" value="${esc((linked.docNo || '') + (linked.seq ? '-' + linked.seq : ''))}">` : ''
   }`;
   if (linked) {
-    b.innerHTML = `${hid}<div class="bomx"><b>🚚 연결된 입고</b> ${lab(linked)} — ${esc(supName(linked.supplierId))} <a class="lk" onclick="curRcvId='';rcvHint();mfDirty=true">연결 해제</a></div>`;
+    b.innerHTML = `${hid}<div class="bomx"><b>연결된 입고</b> ${lab(linked)} — ${esc(supName(linked.supplierId))} <a class="lk" onclick="curRcvId='';rcvHint();mfDirty=true">연결 해제</a></div>`;
     return;
   }
   if (!L.length) {
@@ -12420,7 +12473,7 @@ function rcvHint() {
     return;
   }
   const src = f.source ? f.source.value : '';
-  b.innerHTML = `${hid}<div class="bomx"><b>🚚 이 품번의 최근 입고</b> <span class="muted">— ${
+  b.innerHTML = `${hid}<div class="bomx"><b>이 품번의 최근 입고</b> <span class="muted">— ${
     src === '수입검사' ? '검사한 입고 건을 고르면' : '관련 입고 건을 고르면'
   } 납품일자 · 입고수량이 채워지고 거래명세서 · 검사번호가 연결됩니다</span>
     <div class="bomc">${L.map((r) => `<span class="bchip" onclick="rcvPick('${r.id}')">${lab(r)}</span>`).join('')}</div></div>`;
@@ -14797,7 +14850,7 @@ function bomImpactHTML(partNo, fgNo, pick) {
   ix.byPart.forEach((rs, p) => {
     if (mkey(p) === k) used = used.concat(rs);
   }); // 번호 표기 차이(대소문자 · 공백 · 하이픈) 무시
-  if (!used.length) return `<div class="bomx muted">📦 BOM에 없는 부품입니다 — 이 부품이 들어가는 제품을 알 수 없습니다.</div>`;
+  if (!used.length) return `<div class="bomx muted">BOM에 없는 부품입니다 — 이 부품이 들어가는 제품을 알 수 없습니다.</div>`;
   const fgsU = [...new Set(used.map((r) => r.fgNo))];
   const models = [...new Set(fgsU.map((f) => bomFg(f).model).filter(Boolean))].sort(kcmp);
   const fg = String(fgNo || '').trim(),
@@ -14806,7 +14859,7 @@ function bomImpactHTML(partNo, fgNo, pick) {
   // 처음엔 접어 두고(드롭다운), 누르면 제품 목록 표 — 열고 닫은 상태는 기억
   const open = !!bomImpactHTML.open;
   return `<details class="bomx bomdd" ${open ? 'open' : ''} ontoggle="bomImpactHTML.open=this.open">
-    <summary><b>📦 영향 범위</b> — 이 부품이 들어가는 제품 <b>${fgsU.length}개</b>${
+    <summary><b>영향 범위</b> — 이 부품이 들어가는 제품 <b>${fgsU.length}개</b>${
       models.length ? ` · 차종 <b>${models.map(esc).join(', ')}</b>` : ''
     } <span class="muted ddh">— 눌러서 제품 목록 보기</span></summary>
     <div class="tw" style="max-height:240px;margin-top:6px"><table class="sm"><thead><tr><th>차종</th>
@@ -21630,7 +21683,7 @@ if (SRV) {
   const R = { viewer: '조회', editor: '작성', admin: '관리자' };
   $('#hdrBk').insertAdjacentHTML(
     'beforebegin',
-    `<span class="noprint" id="srvUser" title="${esc(SRV.user)} · ${R[SRV.role] || ''} 권한" style="font-size:12px;opacity:.9">👤 ${esc(SRV.name)} <span style="opacity:.7">· ${R[SRV.role] || SRV.role}</span></span>` +
+    `<span class="noprint" id="srvUser" title="${esc(SRV.user)} · ${R[SRV.role] || ''} 권한" style="font-size:12px;opacity:.9"><svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg> ${esc(SRV.name)} <span style="opacity:.7">· ${R[SRV.role] || SRV.role}</span></span>` +
       `<button class="b s noprint" id="hdrPw" onclick="location.href='/account'" title="내 비밀번호 바꾸기">비밀번호</button>` +
       (srvCanAdmin()
         ? `<button class="b s noprint" id="hdrAdm" onclick="window.open('/admin','qisAdmin')" title="사용자 · 변경 이력 · 백업">관리</button>`

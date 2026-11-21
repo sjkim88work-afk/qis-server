@@ -496,7 +496,7 @@ if (SRV) {
   const R = { viewer: '조회', editor: '작성', admin: '관리자' };
   $('#hdrBk').insertAdjacentHTML(
     'beforebegin',
-    `<span class="noprint" id="srvUser" title="${esc(SRV.user)} · ${R[SRV.role] || ''} 권한" style="font-size:12px;opacity:.9">👤 ${esc(SRV.name)} <span style="opacity:.7">· ${R[SRV.role] || SRV.role}</span></span>` +
+    `<span class="noprint" id="srvUser" title="${esc(SRV.user)} · ${R[SRV.role] || ''} 권한" style="font-size:12px;opacity:.9"><svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg> ${esc(SRV.name)} <span style="opacity:.7">· ${R[SRV.role] || SRV.role}</span></span>` +
       `<button class="b s noprint" id="hdrPw" onclick="location.href='/account'" title="내 비밀번호 바꾸기">비밀번호</button>` +
       (srvCanAdmin()
         ? `<button class="b s noprint" id="hdrAdm" onclick="window.open('/admin','qisAdmin')" title="사용자 · 변경 이력 · 백업">관리</button>`

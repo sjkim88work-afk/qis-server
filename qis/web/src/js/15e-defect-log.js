@@ -305,7 +305,7 @@ function lgThumbs(ids, editable) {
         .map((id, k) => {
           const r = phRec(id),
             x = editable ? `<a onclick="${editable}(${k})" title="빼기" aria-label="첨부 빼기">✕</a>` : '';
-          if (!r) return `<span class="t"><span class="ld">📎</span>${x}</span>`;
+          if (!r) return `<span class="t"><span class="ld">${LG_ICO.clip}</span>${x}</span>`;
           return isDocRec(r)
             ? `<span class="t dc"><span class="o" role="button" tabindex="0" onclick="lgOpenDoc('${id}')" title="${esc(r.name)} — 열기"><span class="dk">${docIcon(r)}</span><b>${esc(r.name)}</b>${
                 r.size ? `<span class="muted">${fmtBytes(r.size)}</span>` : ''
@@ -788,7 +788,7 @@ async function lgPrint() {
           .map((id) =>
             P[id]
               ? isDocRec(P[id])
-                ? `<div><b>#${pn[id]}</b> 📎 ${esc(P[id].name || '')} <span class="s">(문서 파일 — 화면에서 열기)</span></div>`
+                ? `<div><b>#${pn[id]}</b> ${esc(P[id].name || '')} <span class="s">(문서 파일 — 화면에서 열기)</span></div>`
                 : `<div><img src="${P[id].data}"><br><b>#${pn[id]}</b> ${esc(P[id].caption || P[id].name || '')}</div>`
               : '',
           )

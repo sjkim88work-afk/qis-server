@@ -80,7 +80,7 @@ function renderDash() {
   // 서버형은 복원 · 가져오기가 관리자 전용(관리 화면)이라 대시보드 안내를 띄우지 않음
   if (SRV) {
   } else if (!total && /^https?:$/.test(location.protocol))
-    banner = `<div class="banner">📦 <b>예전 HTML 파일로 쓰던 데이터가 있나요?</b> 데이터가 사라졌다면 <button class="b s p" onclick="restoreFromFolder()">백업 폴더에서 복원</button> — 백업 폴더에서 가장 최근 백업을 찾아 되살립니다. 예전 HTML 파일의 데이터는 그 파일에서 <b>백업</b>을 누른 뒤 <button class="b s" onclick="pickImport('replace')">백업 파일로 복원</button>. <span class="muted">처음 쓰는 경우에는 <b>기준정보</b>에서 협력사·부품을 등록하세요.</span></div>`;
+    banner = `<div class="banner"><b>예전 HTML 파일로 쓰던 데이터가 있나요?</b> 데이터가 사라졌다면 <button class="b s p" onclick="restoreFromFolder()">백업 폴더에서 복원</button> — 백업 폴더에서 가장 최근 백업을 찾아 되살립니다. 예전 HTML 파일의 데이터는 그 파일에서 <b>백업</b>을 누른 뒤 <button class="b s" onclick="pickImport('replace')">백업 파일로 복원</button>. <span class="muted">처음 쓰는 경우에는 <b>기준정보</b>에서 협력사·부품을 등록하세요.</span></div>`;
   else if (!total)
     banner = `<div class="banner">데이터가 비어 있습니다. <b>기준정보</b>에서 협력사·부품을 등록하거나(엑셀 붙여넣기 지원), <b>불량 관리</b>에서 불량을 등록하세요. 기존 백업 파일이 있으면 <a class="lk" onclick="state.setTab='backup';go('data')">설정·백업</a>에서 복원할 수 있습니다.</div>`;
   const li = (arr, fn) =>
@@ -225,7 +225,6 @@ function renderDash() {
       banner;
   return `${banner}<div class="pl pld">
   <div class="row noprint pldtop" style="margin-bottom:12px"><b>기준월</b><input type="month" value="${m}" onchange="state.dashMonth=this.value||today().slice(0,7);render()"><span class="sp" style="flex:1"></span><button class="b" onclick="editDefect()">+ 불량 등록</button><button class="b" onclick="weekReport()" title="오늘까지 최근 7일 — 신규 불량 · NCR · RCA · 지연 · 다음 주 기한">주간 보고 (최근 7일)</button><button class="b p" onclick="dashReport()">월간 보고 인쇄 / PDF</button></div>
-  ${progCard()}
   ${(() => {
     // 요약 수치 — 급한 순서로 세 묶음 (지연 → 진행 중 → 이번 달 발생). 값이 0 이면 약하게, 지연은 강하게
     const k = (key, cls, label, v, sub, zero) =>
@@ -253,22 +252,8 @@ function renderDash() {
     ])}</div>`;
   })()}
   ${(() => {
-    const it = (dashItems = actions.match(/<li[\s\S]*?<\/li>/g) || []),
-      all = !!state.dashAll,
-      k = all ? it.length : 6;
-    return `<div class="card"><h3>오늘 챙길 일 ${it.length ? `<span class="bg mut">${it.length}</span>` : ''}<span class="sp"></span>${
-      it.length > 6
-        ? `<button class="b s noprint" onclick="state.dashAll=!state.dashAll;render()">${all ? '6건만 보기' : `전체 ${it.length}건 보기`}</button>`
-        : ''
-    }</h3>${
-      it.length
-        ? `<ul class="act">${it.slice(0, k).join('')}</ul>${
-            it.length > k
-              ? `<div class="muted" style="font-size:12px">외 ${it.length - k}건 — <a class="lk" onclick="state.dashAll=true;render()">모두 펼치기</a></div>`
-              : ''
-          }`
-        : '<div class="muted">지연·임박 항목이 없습니다.</div>'
-    }</div>`;
+    const it = (dashItems = actions.match(/<li[\s\S]*?<\/li>/g) || []);
+    return todoCard(it);
   })()}
   ${reviewCard(m)}
   <div class="grid g2">

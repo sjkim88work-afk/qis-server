@@ -636,7 +636,7 @@ function rcvHint() {
     linked ? `<input type="hidden" name="lot" value="${esc((linked.docNo || '') + (linked.seq ? '-' + linked.seq : ''))}">` : ''
   }`;
   if (linked) {
-    b.innerHTML = `${hid}<div class="bomx"><b>🚚 연결된 입고</b> ${lab(linked)} — ${esc(supName(linked.supplierId))} <a class="lk" onclick="curRcvId='';rcvHint();mfDirty=true">연결 해제</a></div>`;
+    b.innerHTML = `${hid}<div class="bomx"><b>연결된 입고</b> ${lab(linked)} — ${esc(supName(linked.supplierId))} <a class="lk" onclick="curRcvId='';rcvHint();mfDirty=true">연결 해제</a></div>`;
     return;
   }
   if (!L.length) {
@@ -644,7 +644,7 @@ function rcvHint() {
     return;
   }
   const src = f.source ? f.source.value : '';
-  b.innerHTML = `${hid}<div class="bomx"><b>🚚 이 품번의 최근 입고</b> <span class="muted">— ${
+  b.innerHTML = `${hid}<div class="bomx"><b>이 품번의 최근 입고</b> <span class="muted">— ${
     src === '수입검사' ? '검사한 입고 건을 고르면' : '관련 입고 건을 고르면'
   } 납품일자 · 입고수량이 채워지고 거래명세서 · 검사번호가 연결됩니다</span>
     <div class="bomc">${L.map((r) => `<span class="bchip" onclick="rcvPick('${r.id}')">${lab(r)}</span>`).join('')}</div></div>`;
