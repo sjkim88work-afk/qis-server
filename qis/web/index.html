@@ -814,6 +814,31 @@ body:not(.mob) .pld textarea,body:not(.mob) .pld .card input{border-radius:3px;b
   body:not(.mob) main .cz{--radius:3px}
   body:not(.mob) main .cz .btn,body:not(.mob) main .cz .seg,body:not(.mob) main .cz .seg button{border-radius:3px}
 }
+/* ── 창 (불량 · NCR · 이슈 등): 본문과 같은 규칙 ── */
+@media screen{
+  body:not(.mob) #modal .modal{border-radius:4px}
+  body:not(.mob) #modal button.b,body:not(.mob) #modal label.b{border-radius:3px;border-color:#b8bec9}
+  body:not(.mob) #modal button.b.p,body:not(.mob) #modal label.b.p{border-color:var(--pri)}
+  body:not(.mob) #modal input,body:not(.mob) #modal select,body:not(.mob) #modal textarea{border-radius:3px}
+  body:not(.mob) #modal .fgrp,body:not(.mob) #modal .dfold,body:not(.mob) #modal .route,body:not(.mob) #modal .banner,body:not(.mob) #modal .card,body:not(.mob) #modal .tw,body:not(.mob) #modal .bomx{border-radius:3px}
+  body:not(.mob) #modal .fgrp.fgfound,body:not(.mob) #modal .fgrp.fgpart{background:#fff;border-color:var(--line)}
+  body:not(.mob) #modal .fgrp.dfn>.gh::before{display:none}
+  body:not(.mob) #modal .fgrp>.gh{margin:-8px -12px 8px;padding:6px 12px;background:#f5f6f8;border-bottom:1px solid var(--line);border-radius:3px 3px 0 0}
+  body:not(.mob) #modal .tw th{background:#fff;border-bottom:1px solid #9aa2af;color:var(--sub);font-weight:600}
+  body:not(.mob) #modal .tw button.b{background:#fff;color:var(--ink);border-color:#b8bec9;font-weight:500}
+  body:not(.mob) #modal .tw button.b.d{color:#b42318}
+  body:not(.mob) #modal .bg{display:inline;padding:0;border-radius:0;background:none;font-size:12.5px;font-weight:400;color:var(--ink)}
+  body:not(.mob) #modal .bg.ok,body:not(.mob) #modal .bg.mut,body:not(.mob) #modal .bg.svC{color:var(--sub)}
+  body:not(.mob) #modal .bg.svB{font-weight:600}
+  body:not(.mob) #modal .bg.warn,body:not(.mob) #modal .bg.bad,body:not(.mob) #modal .bg.svA{font-weight:600;white-space:nowrap}
+  body:not(.mob) #modal .bg.warn{color:#9a5b00}body:not(.mob) #modal .bg.bad,body:not(.mob) #modal .bg.svA{color:#b42318}
+  body:not(.mob) #modal .bg.warn::before,body:not(.mob) #modal .bg.bad::before,body:not(.mob) #modal .bg.svA::before{content:'';display:inline-block;width:7px;height:7px;margin-right:5px;background:currentColor;vertical-align:1px}
+  body:not(.mob) #modal a.bg,body:not(.mob) #modal a.lk{text-decoration:underline;text-underline-offset:2px;cursor:pointer}
+  body:not(.mob) #modal a.bg.inf{color:var(--pri)}
+  body:not(.mob) #modal .psum,body:not(.mob) #modal .lgplan,body:not(.mob) #modal .lgc,body:not(.mob) #modal .isr,body:not(.mob) #modal .isprev,body:not(.mob) #modal .docbox,body:not(.mob) #modal .cbox,body:not(.mob) #modal .cbx,body:not(.mob) #modal .ws,body:not(.mob) #modal .rh,body:not(.mob) #modal .mchk,body:not(.mob) #modal .lgm .mn,body:not(.mob) #modal .lgm>summary,body:not(.mob) #modal .bchip{border-radius:3px}
+  body:not(.mob) #modal label .bg{margin-left:6px}
+  body:not(.mob) main .sgrp,body:not(.mob) main .snav,body:not(.mob) main .snav button,body:not(.mob) main .docbox,body:not(.mob) main .cbox,body:not(.mob) main .psum{border-radius:3px}
+}
 /* ================= 휴대폰 화면 ================= */
 #mswitch{display:none;text-align:center;padding:14px 0 22px;font-size:13px}
 #mswitch a{display:none}

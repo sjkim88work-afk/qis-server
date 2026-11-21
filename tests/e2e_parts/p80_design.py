@@ -105,3 +105,13 @@ def run(c):
     bad = [k for k, v in r.items() if not (v["card"] and v["bg"] and v["btn"])]
     ok(not bad, f"모든 화면: 카드 · 버튼 모서리 3px 이하 · 배지는 배경 없는 글자 (어긋난 화면: {bad})")
 
+    # 창도 같은 규칙: 창 모서리 4px · 묶음 3px · 배지는 배경 없는 글자 · 번호 원 없음
+    r = A.evaluate("""async()=>{const wait=ms=>new Promise(r=>setTimeout(r,ms)),cs=e=>getComputedStyle(e),clear=c=>c==='rgba(0, 0, 0, 0)',q=s=>document.querySelector(s);
+      editDefect(db.defects[0].id);await wait(350);
+      const o={modal:parseFloat(cs(q('#modal .modal')).borderTopLeftRadius),grp:parseFloat(cs(q('#mf .fgrp')).borderTopLeftRadius),
+        num:getComputedStyle(q('#mf .fgrp.dfn>.gh'),'::before').display,bg:[...document.querySelectorAll('#modal .bg')].filter(e=>e.offsetParent).every(b=>clear(cs(b).backgroundColor))};
+      mfDirty=false;closeModal(true);editNcr(db.ncrs[0].id);await wait(350);
+      o.ncrBg=[...document.querySelectorAll('#modal .bg')].filter(e=>e.offsetParent).every(b=>clear(cs(b).backgroundColor));o.ncrBtn=parseFloat(cs(q('#modal button.b')).borderTopLeftRadius);
+      mfDirty=false;closeModal(true);return o}""")
+    ok(r["modal"] == 4 and r["grp"] == 3 and r["num"] == "none" and r["bg"] and r["ncrBg"] and r["ncrBtn"] == 3, f"창: 모서리 4px · 묶음 3px · 번호 원 없음 · 배지는 글자 ({r})")
+
