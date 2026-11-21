@@ -89,16 +89,6 @@ def reset_all(request: Request, user, reason: str) -> dict:
     return {"cleared": cnt, "backup": info["db"]}
 
 
-@router.get("/update")
-def update_status(request: Request, user=Depends(admin_only)):
-    return st(request).updater.status()
-
-
-@router.post("/update/check")
-def update_check(request: Request, user=Depends(admin_only)):
-    return st(request).updater.check(force=True)
-
-
 @router.get("/photos/missing")
 def photos_missing(request: Request, user=Depends(admin_only)):
     """기록이 가리키는데 내용이 없는 첨부 목록 — 관리 화면 '빠진 사진 채우기'."""

@@ -213,3 +213,17 @@ def run(c):
     ok(r["rows"] >= 14 and r["inBox"] and r["noOverlap"] and r["noInner"], f"진행 현황: 건 {r['rows']}줄 — 표가 상자 안에 있고 아래 글과 겹치지 않음 ({r})")
     A.set_viewport_size(vpP); settle(A, 300)
 
+    # 새 버전 확인 기능 없음 (2026-11) · 서버판 설정에는 ‘알림 (텔레그램)’ 항목 없음 (관리 화면에 있음)
+    r = B.evaluate("""async()=>{const wait=ms=>new Promise(r=>setTimeout(r,ms)),o={};
+      state.setTab='tg';go('data');await wait(300);o.nav=[...document.querySelectorAll('.snav button')].map(b=>b.textContent.trim());
+      o.on=(document.querySelector('.snav button.on')||{}).textContent;o.title=document.querySelector('.spane h2').textContent;
+      o.badge=!!document.querySelector('.updbadge');o.api=(await fetch('/api/update')).status;o.info=typeof SRV.update;
+      state.setTab='general';go('dash');return o}""")
+    ok(not any("텔레그램" in x for x in r["nav"]) and "일반" in (r["on"] or "") and "텔레그램" not in r["title"], f"서버판 설정: ‘알림 (텔레그램)’ 항목 없음 — 그 탭으로 가도 ‘일반’ 이 열림 ({len(r['nav'])}개)")
+    ok(not r["badge"] and r["api"] == 404 and r["info"] == "undefined", f"새 버전 확인: 배지 · API 없음 ({r['api']})")
+    back = B.url
+    B.goto(back.split("/")[0] + "//" + back.split("/")[2] + "/admin"); settle(B, 800)
+    tabs = B.evaluate("()=>[...document.querySelectorAll('#nav button')].map(b=>b.textContent)")
+    ok(len(tabs) == 4 and not any("버전" in x or "업데이트" in x for x in tabs), f"관리 화면: ‘버전 · 업데이트’ 탭 없음 ({tabs})")
+    B.goto(back); settle(B, 800)
+

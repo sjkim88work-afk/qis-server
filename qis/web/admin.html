@@ -98,7 +98,7 @@ async function api(path,opt={}){
 }
 const post=(p,b,m='POST')=>api(p,{method:m,body:JSON.stringify(b||{})});
 const fmt=t=>{if(!t)return '';const d=new Date(t);if(isNaN(d))return t;const p=n=>String(n).padStart(2,'0');return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`};
-const TABS=[['users','사용자'],['audit','변경 이력'],['backup','백업 · 데이터'],['telegram','알림 (텔레그램 · 팀즈)'],['update','버전 · 업데이트']];
+const TABS=[['users','사용자'],['audit','변경 이력'],['backup','백업 · 데이터'],['telegram','알림 (텔레그램 · 팀즈)']];
 const ROLES={viewer:'조회',editor:'작성',admin:'관리자'};
 const ROLE_HELP={viewer:'보기 · 검색 · 출력만',editor:'등록 · 수정 (기준정보 삭제 · BOM 교체 · 설정 제외)',admin:'모든 기능 + 사용자 · 이력 · 백업 관리'};
 const ACT={create:'등록',update:'수정',delete:'삭제',restore:'복원','file.add':'첨부 추가','file.delete':'첨부 삭제',login:'로그인','login.fail':'로그인 실패',logout:'로그아웃',
@@ -115,7 +115,6 @@ async function render(){
     if(tab==='users')v.innerHTML=await renderUsers();
     else if(tab==='audit')v.innerHTML=await renderAudit();
     else if(tab==='telegram')v.innerHTML=await renderTelegram();
-    else if(tab==='update')v.innerHTML=await renderUpdate();
     else{v.innerHTML=await renderBackup();phMissLoad()}
   }catch(e){v.innerHTML=`<div class="card"><b>불러오지 못했습니다</b> — ${esc(e.message)}</div>`}
 }
@@ -250,16 +249,6 @@ async function renderTelegram(){
 }
 async function tmTest(btn){btn.disabled=true;try{await post('/api/admin/telegram/teams/test');toast('시험 카드를 보냈습니다 — 팀즈 채널에서 확인하세요 (몇 초 걸릴 수 있음)')}catch(e){toast('전송 실패: '+e.message)}btn.disabled=false}
 const tgChatBtns=()=>TG.chats.length?TG.chats.map(c=>`<button class="b" onclick="tgSet({chat:${jsq(c.id)}})">${esc(c.title)} <span class="muted">(${esc(c.type)} · ${esc(c.id)})</span></button>`).join(''):'<span class="muted">찾은 대화가 없습니다 — 봇을 그룹에 초대한 뒤 그 그룹에 아무 메시지나 한 번 보내고 다시 누르세요</span>';
-/* ---- 버전 · 업데이트 ---- */
-async function renderUpdate(){
-  const U=await api('/api/admin/update');
-  return `<div class="card"><h2>버전 · 업데이트</h2>
-    <div class="kv"><div>지금 버전</div><div><b>${esc(U.current)}</b> <span class="muted">(빌드 ${esc(U.build)})</span></div>
-    <div>새 버전</div><div>${U.available?`<b>${esc(U.latest.version)}</b> <span class="muted">(빌드 ${esc(U.latest.build||'')})</span> <a class="b s p" href="${esc(U.latest.page||'#')}" target="_blank" rel="noopener">내려받기 페이지</a>${U.latest.notes?`<div class="muted" style="white-space:pre-wrap;margin-top:6px">${esc(U.latest.notes)}</div>`:''}`:U.latest?'최신 버전입니다':'<span class="muted">아직 확인한 적 없음</span>'}</div>
-    <div>확인</div><div>${U.checked_at?fmt(U.checked_at):'—'} ${U.error?`<span class="bg warn" title="${esc(U.error)}">확인 실패: ${esc(U.error)}</span>`:''} <button class="b s" onclick="updCheck(this)">지금 확인</button></div></div>
-    <p class="help">하루 한 번 배포 페이지의 최신 버전 정보(버전 번호 · 날짜 · 변경 내용)만 읽어 옵니다. 자동 설치는 하지 않으며, 보내는 정보도 없습니다.${U.enabled?'':' <b>설정에서 꺼져 있습니다</b> (qis.json 의 update_check).'}<br>새 버전 설치: 내려받기 페이지에서 받아 기존 프로그램 폴더를 바꿔 넣으면 됩니다. 데이터는 데이터 폴더에 따로 있어 그대로 유지됩니다.</p></div>`;
-}
-async function updCheck(btn){btn.disabled=true;try{const r=await post('/api/admin/update/check');toast(r.error?'확인 실패: '+r.error:r.available?'새 버전 '+r.latest.version+' 이 있습니다':'최신 버전입니다')}catch(e){toast(e.message)}render()}
 async function tgSet(ch){try{await post('/api/admin/telegram',ch);toast('저장했습니다')}catch(e){toast(e.message)}render()}
 async function tgFind(){const b=$('#tgChats');b.innerHTML='<span class="muted">찾는 중…</span>';try{const {chats}=await post('/api/admin/telegram/chats');TG.chats=chats;b.innerHTML=tgChatBtns()}catch(e){b.innerHTML=`<span class="bg bad">${esc(e.message)}</span>`}}
 async function tgTest(btn){btn.disabled=true;try{await post('/api/admin/telegram/test');toast('시험 메시지를 보냈습니다 — 텔레그램에서 확인하세요')}catch(e){toast('전송 실패: '+e.message)}btn.disabled=false}
