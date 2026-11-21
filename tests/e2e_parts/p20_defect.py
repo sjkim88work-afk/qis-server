@@ -98,3 +98,26 @@ def run(c):
     ok("2026-11-10 14:30" in r["when"] and "2026-11-10 오전" in r["when"], f"기록에 일시가 보임 ({r['when']})")
     ok(r["needReason"] and r["edit"] == {"t": "16:00", "b": "", "h": 1, "hb": "오전", "ht": ""}, f"시각 수정: 사유 필수 · 원문의 시간대가 이력에 남음 ({r['edit']})")
     ok(r["order2"].index("오전 기록") < r["order2"].index("오후 두 시 반"), f"시각을 16:00 으로 고치면 14:30 보다 위 ({r['order2']})")
+
+    # 불량 목록 ‘진행 · 다음 할 일’ 칸: 다음 할 일 버튼은 한 개, 나머지는 ⋯ 안. 기록 버튼은 글자 이름. 불량 창은 번호 카드 + 접는 줄
+    r = A.evaluate("""async()=>{const wait=ms=>new Promise(r=>setTimeout(r,ms));const out={};
+      go('defect');await wait(300);
+      out.th=[...document.querySelectorAll('#view thead th')].map(x=>x.textContent).join('|');
+      const cells=[...document.querySelectorAll('#view td.actc')];
+      out.maxBtn=Math.max(...cells.map(c=>[...c.querySelectorAll('.act.nx > button')].length));
+      out.hidden=cells.some(c=>{const m=c.querySelector('.actm');return m&&!m.open&&m.querySelectorAll('.mn button').length>0});
+      out.wait=document.querySelector('#view').textContent.includes('귀책 판정 후');
+      out.rec=[...document.querySelectorAll('#view button.lgchip')].map(b=>b.textContent.trim())[0]||'';
+      const d=db.defects[0];editDefect(d.id);await wait(350);
+      out.cards=[...document.querySelectorAll('#mf .fgrp.dfn')].filter(e=>e.offsetParent).length;
+      out.folds=[...document.querySelectorAll('#mf details.dfold > summary')].map(s=>s.textContent.trim().slice(0,6)).join('|');
+      out.sevOpen=document.querySelector('#sevWrap').open;out.route=!!document.querySelector('.dfnext #routeBox');
+      out.recBtn=(document.querySelector('.dfrec button')||{}).textContent||'';
+      mfDirty=false;closeModal(true);editDefect();await wait(300);out.newSev=document.querySelector('#sevWrap').open;out.newNext=!!document.querySelector('.dfnext');
+      mfDirty=false;closeModal(true);return out}""")
+    ok("진행 · 다음 할 일" in r["th"] and "후속 조치" not in r["th"], "불량 목록: 칸 이름 ‘진행 · 다음 할 일’")
+    ok(r["maxBtn"] == 1 and r["hidden"] and not r["wait"], f"불량 목록: 다음 할 일 버튼은 줄마다 한 개 · 나머지는 ⋯ 안 · 누를 수 없는 ‘귀책 판정 후’ 없음 ({r['maxBtn']})")
+    ok(r["rec"].startswith("기록"), f"불량 목록: 기록 버튼에 글자 이름 ({r['rec']})")
+    ok(r["cards"] >= 5 and r["folds"].startswith("심각도 평가") and "비용" in r["folds"] and "사진" in r["folds"], f"불량 창: 번호 카드 {r['cards']}개 + 접는 줄 ({r['folds']})")
+    ok(not r["sevOpen"] and r["newSev"] and r["route"] and not r["newNext"], "불량 창: 심각도 평가는 등록된 불량에서 접힘 · 새 불량에서 펼침 · 다음 단계는 등록된 불량에만")
+    ok("진행 기록" in r["recBtn"], f"불량 창: 진행 기록 버튼 ({r['recBtn'].strip()})")
