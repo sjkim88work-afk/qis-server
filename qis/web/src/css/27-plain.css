@@ -163,4 +163,4 @@ body:not(.mob) .pld textarea,body:not(.mob) .pld .card input{border-radius:3px;b
   body:not(.mob) .pld .pc1>.todot th:first-child,body:not(.mob) .pld .pc1>.todot td:first-child{padding-left:12px}
   body:not(.mob) .pld .pc1>.todot td:last-child{padding-right:12px}
 }
-@media (max-width:900px){.todot,.todot tbody,.todot tr,.todot td{display:block;width:auto!important}.todot thead{display:none}.todot td{border:0;padding:1px 0;white-space:normal!important;text-align:left!important}.todot tr{padding:6px 0;border-bottom:1px solid #eceef2}}
+@media (max-width:900px){.todot,.todot tbody,.todot tr,.todot td{display:block;width:auto!important}.todot thead{display:none}.todot td{border:0;padding:1px 12px!important;white-space:normal!important;text-align:left!important}.todot td:empty{display:none}.todot td.a{padding-top:4px!important}.todot tr{padding:7px 0;border-bottom:1px solid #eceef2}}
