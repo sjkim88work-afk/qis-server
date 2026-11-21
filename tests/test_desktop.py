@@ -44,12 +44,30 @@ def data(tmp_path):
     return d
 
 
+PW = "Qadm2026x"
+LOCAL = dict(mode="lan", lan_scope="local")     # 접속 범위 ‘이 PC만’
+SETUP = {"admin": "admin", "admin_name": "김선중", "password": PW, "scope": "local"}
+
+
+def login(op, r, user="admin", pw=PW):
+    """프로그램 창처럼 들어감: 창 표시 쿠키 → 로그인."""
+    get(op, r.enter_url)
+    return get(op, r.base_url + "/api/login", data=json.dumps({"username": user, "password": pw}).encode(),
+               headers={"Content-Type": "application/json", "X-QIS": "1"})
+
+
+def local_runner(data, name="김선중"):
+    cfg = core.desktop_config(data)
+    core.set_lan_admin(cfg, "admin", name, PW)
+    st = core.DesktopSettings(**LOCAL)
+    core.prepare(cfg, st)
+    return cfg, core.ServerRunner(cfg, st).start()
+
+
 @pytest.fixture()
 def solo(data):
-    cfg = core.desktop_config(data)
-    st = core.DesktopSettings(mode="solo", solo_name="김선중")
-    core.prepare(cfg, st)
-    r = core.ServerRunner(cfg, st).start()
+    """접속 범위 ‘이 PC만’ 으로 켠 서버 (예전의 혼자 쓰기 자리)."""
+    cfg, r = local_runner(data)
     yield cfg, r
     r.stop()
 
@@ -83,25 +101,40 @@ def test_instance_lock(data):
 
 def test_settings_roundtrip(data):
     assert core.DesktopSettings.load(data).mode == ""          # 첫 실행
-    core.DesktopSettings(mode="lan", solo_name="김").save(data)
+    core.DesktopSettings(mode="lan", lan_scope="local", setup_user="admin").save(data)
     s = core.DesktopSettings.load(data)
-    assert (s.mode, s.solo_name) == ("lan", "김")
+    assert (s.mode, s.lan_scope, s.setup_user) == ("lan", "local", "admin")
     core.DesktopSettings.path(data).write_text('{"mode":"weird"}', encoding="utf-8")
     assert core.DesktopSettings.load(data).mode == ""          # 모르는 값은 첫 실행처럼
 
 
-def test_solo_localhost_only_and_no_login(solo):
+def test_legacy_solo_settings_move_to_local_scope(data):
+    f = core.DesktopSettings.path(data)
+    f.write_text('{"mode":"solo","solo_name":"김선중"}', encoding="utf-8")            # 예전: 로그인 없이 혼자 쓰기
+    s = core.DesktopSettings.load(data)
+    assert (s.mode, s.lan_scope, s.setup_user, s.setup_name) == ("", "local", "local", "김선중")   # 처음 설정을 한 번 거침
+    f.write_text('{"mode":"solo","solo_name":"김선중","solo_login":true}', encoding="utf-8")   # 예전: 비밀번호로 잠금
+    s = core.DesktopSettings.load(data)
+    assert (s.mode, s.lan_scope) == ("lan", "local")                                   # 설정 없이 그대로 열림 (계정 local)
+
+
+def test_local_scope_localhost_only_and_login(solo):
     cfg, r = solo
     host, port = r.bound
     assert host == "127.0.0.1" and port == r.port and port != cfg.port   # 이 PC 안에서만 · 빈 포트
     op = opener()
     st, body, url = get(op, r.base_url + "/")
-    assert url.endswith("/login") and "pywebview" in body      # 로그인 화면 대신 자동 재입장 화면
-    st, _, _ = get(opener(), r.base_url + "/desktop/enter?k=wrong")
-    assert st == 403                                           # 열쇠 없이는 못 들어옴
+    assert url.endswith("/login") and 'id="u"' in body and "qisOneUser" not in body   # 로그인 화면 (창이 아니면 아이디를 채우지 않음)
+    assert get(opener(), r.base_url + "/desktop/enter?k=" + r.token)[0] == 404   # 자동 입장 경로 없음
+    assert get(opener(), r.base_url + "/desktop/window?k=wrong")[0] == 403
     st, body, url = get(op, r.enter_url)
-    assert st == 200 and url == r.base_url + "/"
-    assert '"desktop": "solo"' in body and '"name": "김선중"' in body and "/desktop.js" in body
+    assert url.endswith("/login") and 'id="qisOneUser"' in body and '"admin"' in body   # 프로그램 창 · 계정 한 개: 아이디를 미리 채움
+    st, body, _ = login(op, r, pw="wrong")
+    assert st == 400
+    st, body, _ = login(op, r)
+    assert st == 200, body
+    st, body, url = get(op, r.base_url + "/")
+    assert st == 200 and '"desktop": "local"' in body and '"name": "김선중"' in body and "/desktop.js" in body
     st, body, _ = get(op, r.base_url + "/api/boot")
     assert st == 200 and json.loads(body)["user"]["role"] == "admin"
     # 변경 저장도 됨
@@ -123,7 +156,8 @@ def test_solo_ignores_lan_host(data):
     cfg = core.desktop_config(data)
     cfg.host = "0.0.0.0"
     cfg.save()
-    st = core.DesktopSettings(mode="solo")
+    core.set_lan_admin(cfg, "admin", "관리자", PW)
+    st = core.DesktopSettings(**LOCAL)
     core.prepare(cfg, st)
     r = core.ServerRunner(cfg, st).start()
     try:
@@ -134,12 +168,13 @@ def test_solo_ignores_lan_host(data):
 
 def test_stop_cleans_up(data):
     cfg = core.desktop_config(data)
-    st = core.DesktopSettings(mode="solo")
+    core.set_lan_admin(cfg, "admin", "관리자", PW)
+    st = core.DesktopSettings(**LOCAL)
     core.prepare(cfg, st)
     r = core.ServerRunner(cfg, st).start()
     port, th = r.port, r.thread
     op = opener()
-    get(op, r.enter_url)
+    assert login(op, r)[0] == 200
     get(op, r.base_url + "/api/sync", data=json.dumps({"since": 0, "changes": [
         {"coll": "parts", "id": "p1", "rev": 0, "data": {"id": "p1", "partNo": "A-1"}}]}).encode(),
         headers={"Content-Type": "application/json", "X-QIS": "1"})
@@ -198,7 +233,7 @@ def test_lan_port_in_use(data):
 
 def test_unclean_shutdown_check(data):
     cfg = core.desktop_config(data)
-    core.ensure_solo_user(cfg, "나")
+    core.set_lan_admin(cfg, "admin", "나", PW)
     assert not core.was_unclean(data)
     core.mark_running(data)
     assert core.was_unclean(data)                                # 표시 파일이 남으면 비정상 종료
@@ -213,16 +248,16 @@ def test_unclean_shutdown_check(data):
 
 def test_import_json_backup(data):
     cfg = core.desktop_config(data)
-    core.ensure_solo_user(cfg, "나")
-    r = core.import_json_backup(cfg, SAMPLE, by_username=core.SOLO_USER)
+    core.set_lan_admin(cfg, "admin", "나", PW)
+    r = core.import_json_backup(cfg, SAMPLE)
     assert r["imported"]["defects"] == 5 and not r["kept"]
     with pytest.raises(ValueError):
         core.import_json_backup(cfg, SAMPLE)                    # 기록이 있으면 묻고(replace) 나서만
-    r = core.import_json_backup(cfg, SAMPLE, replace=True, by_username=core.SOLO_USER)
+    r = core.import_json_backup(cfg, SAMPLE, replace=True)
     keep = Path(r["kept"])
     assert keep.is_dir() and (keep / "qis.db").exists()          # 이전 DB 보관
     con = sqlite3.connect(str(data / "qis.db"))
-    assert con.execute("SELECT COUNT(*) FROM users WHERE username='local'").fetchone()[0] == 1   # 계정 유지
+    assert con.execute("SELECT COUNT(*) FROM users WHERE username='admin'").fetchone()[0] == 1   # 계정 유지
     assert con.execute("SELECT COUNT(*) FROM records WHERE coll='defects'").fetchone()[0] == 5
     con.close()
 
@@ -243,16 +278,16 @@ def test_import_server_folder(tmp_path, data):
     Files(db, old).put_many(u, [{"id": "ph1", "name": "a.png", "data": "data:image/png;base64,AAAA"}])
     db.close()                                    # WAL 파일이 남은 상태 그대로 가져와도 됨
     cfg = core.desktop_config(data)
-    core.ensure_solo_user(cfg, "나")
+    core.set_lan_admin(cfg, "local", "나", PW)
     r = core.import_server_folder(cfg, tmp_path / "server")      # data 위 폴더를 골라도 찾음
     assert r["records"].get("defects") == 5 and r["files_filled"] >= 1
     assert list(cfg.files_dir.rglob("*.json"))
-    st = core.DesktopSettings(mode="solo")
-    core.prepare(cfg, st)                          # 가져온 뒤 혼자 쓰기 계정 되살림
+    st = core.DesktopSettings(**LOCAL)
+    core.prepare(cfg, st)                          # 가져온 뒤: 서버판의 관리자 계정으로 로그인
     run = core.ServerRunner(cfg, st).start()
     try:
         op = opener()
-        assert get(op, run.enter_url)[0] == 200
+        assert login(op, run)[0] == 200
         boot = json.loads(get(op, run.base_url + "/api/boot")[1])
         assert boot
     finally:
@@ -301,35 +336,73 @@ def ctl(data):
     c.cfg = core.desktop_config(data)
     c.settings = core.DesktopSettings.load(data)
     html, url = c._first_screen()
-    assert c.state == "setup" and "사용 방식" in html and url is None     # 첫 실행: 모드 고르기
+    assert c.state == "setup" and "QIS 처음 설정" in html and "사용 방식" not in html and url is None     # 첫 실행: 처음 설정 (방식 고르기 없음)
     c.window = FakeWindow()
     yield c
     c.shutdown()
 
 
 def test_controller_setup_and_switch(ctl, data):
-    r = ctl.apply_setup({"mode": "solo", "solo_name": "김선중"})
+    assert "접속 범위" in ctl.apply_setup({**SETUP, "scope": "solo"})["error"]      # 모르는 범위
+    assert "8자" in ctl.apply_setup({**SETUP, "password": "short"})["error"]       # 약한 비밀번호
+    r = ctl.apply_setup(SETUP)
     assert r == {"ok": True} and ctl.state == "app"
-    assert ctl.runner.bound[0] == "127.0.0.1" and ctl.window.loaded[-1] == ("url", ctl.runner.enter_url)
-    assert core.DesktopSettings.load(data).mode == "solo"
-    assert ctl.apply_setup({"mode": "lan"})["error"]                  # 고르는 화면이 아닐 때는 거부 (화면에서 함부로 못 바꿈)
+    assert ctl.runner.bound[0] == "127.0.0.1" and ctl.window.loaded[-1] == ("url", ctl.runner.enter_url)   # 이 PC만: 바로 QIS (로그인 화면)
+    s = core.DesktopSettings.load(data)
+    assert (s.mode, s.lan_scope, s.setup_user) == ("lan", "local", "admin")
+    assert ctl.apply_setup(SETUP)["error"]                            # 설정 화면이 아닐 때는 거부 (화면에서 함부로 못 바꿈)
     ctl.m_switch_mode()
     assert ctl.state == "setup"
-    r = ctl.apply_setup({"mode": "lan", "admin": "admin", "admin_name": "관리자", "password": "short", "port": "8080"})
-    assert "8자" in r["error"]                                         # 약한 비밀번호
+    html = ctl.window.loaded[-1][1]
+    assert "접속 설정 바꾸기" in html and 'value="admin"' in html and "비워 두기" in html
+    assert "포트" in ctl.apply_setup({**SETUP, "scope": "lan", "port": "0"})["error"]
     port = core.free_port()
-    r = ctl.apply_setup({"mode": "lan", "admin": "admin", "admin_name": "관리자", "password": "Qadm2026x", "port": str(port)})
+    r = ctl.apply_setup({"admin": "admin", "admin_name": "", "password": "", "scope": "lan", "port": str(port)})   # 비밀번호를 비워 두면 그대로
     assert r == {"ok": True}, r
     assert ctl.runner.bound == ("0.0.0.0", port) and "접속 주소" in ctl.window.loaded[-1][1]
     assert core.desktop_config(data).port == port                     # 포트는 qis.json 에 저장
+    assert login(opener(), ctl.runner)[0] == 200                      # 처음 정한 비밀번호로 로그인
     ctl.m_switch_mode()
-    assert ctl.apply_setup({"mode": "solo", "solo_name": "김선중"}) == {"ok": True}
+    assert ctl.apply_setup({"admin": "nobody", "admin_name": "누구", "password": "", "scope": "local"})["error"]   # 없는 아이디 + 빈 비밀번호
+    assert ctl.apply_setup({"admin": "admin", "password": "Qnew2026y", "scope": "local"}) == {"ok": True}
     assert ctl.runner.bound[0] == "127.0.0.1"
+    assert login(opener(), ctl.runner)[0] == 400 and login(opener(), ctl.runner, pw="Qnew2026y")[0] == 200   # 비밀번호를 새로 정함
+
+
+def test_controller_first_setup_needs_password(ctl, data):
+    assert ctl.apply_setup({"admin": "admin", "admin_name": "김", "password": "", "scope": "local"})["error"]
+    assert ctl.state == "setup" and core.DesktopSettings.load(data).mode == ""
+
+
+def test_controller_legacy_solo_goes_through_setup_once(data):
+    """예전 ‘혼자 쓰기 (로그인 없음)’: 업데이트 후 처음 열면 설정 화면 — 아이디 local · 이름이 채워져 있고, 비밀번호를 정하면 기록은 그대로."""
+    from qis.desktop.gui import Controller
+    cfg = core.desktop_config(data)
+    core.set_lan_admin(cfg, "local", "김선중", "Old" + PW)             # 예전 자동 입장 계정 (비밀번호는 아무도 모름)
+    core.import_json_backup(cfg, SAMPLE)
+    core.DesktopSettings.path(data).write_text('{"mode":"solo","solo_name":"김선중"}', encoding="utf-8")
+    c = Controller(data)
+    c.lock.acquire()
+    try:
+        c.cfg, c.settings = core.desktop_config(data), core.DesktopSettings.load(data)
+        html, url = c._first_screen()
+        assert c.state == "setup" and url is None and 'value="local"' in html and 'value="김선중"' in html
+        assert 'value=local checked' in html                           # 접속 범위는 ‘이 PC만’
+        c.window = FakeWindow()
+        assert c.apply_setup({"admin": "local", "admin_name": "김선중", "password": PW, "scope": "local"}) == {"ok": True}
+        op = opener()
+        assert login(op, c.runner, "local")[0] == 200
+        con = sqlite3.connect(str(data / "qis.db"))
+        assert con.execute("SELECT COUNT(*) FROM records WHERE coll='defects'").fetchone()[0] == 5
+        con.close()
+        assert json.loads(get(op, c.runner.base_url + "/api/boot")[1])["user"]["username"] == "local"
+    finally:
+        c.shutdown()
 
 
 def test_controller_close_and_shutdown(ctl, data):
     assert ctl._on_closing() is True                                   # 고르는 화면: 바로 닫힘
-    ctl.apply_setup({"mode": "solo"})
+    assert ctl.apply_setup(SETUP) == {"ok": True}
     core.mark_running(data)
     assert ctl._on_closing() is False                                  # QIS 화면: 먼저 저장 확인
     for _ in range(50):
@@ -346,9 +419,10 @@ def test_controller_close_and_shutdown(ctl, data):
 def test_controller_recover(data):
     from qis.desktop.gui import Controller
     cfg = core.desktop_config(data)
-    core.DesktopSettings(mode="solo").save(data)
-    core.prepare(cfg, core.DesktopSettings(mode="solo"))
-    run = core.ServerRunner(cfg, core.DesktopSettings(mode="solo")).start()
+    core.set_lan_admin(cfg, "admin", "관리자", PW)
+    core.DesktopSettings(**LOCAL).save(data)
+    core.prepare(cfg, core.DesktopSettings(**LOCAL))
+    run = core.ServerRunner(cfg, core.DesktopSettings(**LOCAL)).start()
     run.app.state.backup.run("manual")
     run.stop()
     core.mark_running(data)                                            # 지난번 비정상 종료
@@ -456,7 +530,7 @@ def _wait_destroyed(w, n=60):
 
 def test_lan_close_warns_about_other_users(ctl, data):
     port = core.free_port()
-    assert ctl.apply_setup({"mode": "lan", "admin": "admin", "admin_name": "관리자", "password": "Qadm2026x",
+    assert ctl.apply_setup({"scope": "lan", "admin": "admin", "admin_name": "관리자", "password": "Qadm2026x",
                             "port": str(port)}) == {"ok": True}
     db = ctl.runner.app.state.db
     uid = db.q1("SELECT id FROM users WHERE username='admin'")["id"]
@@ -476,79 +550,30 @@ def test_lan_close_warns_about_other_users(ctl, data):
     assert ctl._on_closing() is False and _wait_destroyed(ctl.window)
 
 
-def test_solo_close_has_no_lan_warning(ctl, data):
-    ctl.apply_setup({"mode": "solo"})
+def test_local_scope_close_has_no_lan_warning(ctl, data):
+    assert ctl.apply_setup(SETUP) == {"ok": True}
     ctl.window.confirm = False
     assert ctl._on_closing() is False and _wait_destroyed(ctl.window)
     assert not any("사내 서버" in d for d in ctl.window.dialogs)
 
 
-# ---------------------------------------------------------------- 혼자 쓰기 · 비밀번호 잠금
-def test_solo_login_settings_roundtrip(data):
-    core.DesktopSettings(mode="solo", solo_name="김", solo_login=True).save(data)
-    s = core.DesktopSettings.load(data)
-    assert (s.mode, s.solo_name, s.solo_login) == ("solo", "김", True)
-    (data / "desktop.json").write_text('{"mode":"solo","solo_name":"김"}', encoding="utf-8")   # 예전 파일: 잠금 없음
-    assert core.DesktopSettings.load(data).solo_login is False
-
-
-def test_solo_login_shows_login_screen(data):
-    cfg = core.desktop_config(data)
-    st = core.DesktopSettings(mode="solo", solo_name="김선중", solo_login=True)
-    core.ensure_solo_user(cfg, "김선중", "Mypw2026x", login=True)       # 설정 화면에서 비밀번호를 정함
-    core.prepare(cfg, st)                                                # 다시 시작해도 비밀번호 유지
-    r = core.ServerRunner(cfg, st).start()
-    try:
-        assert r.enter_url.startswith(r.base_url + "/desktop/window?k=")  # 자동 입장 대신 창 표시 → 로그인
-        assert get(opener(), r.base_url + "/desktop/enter?k=" + r.token)[0] == 404   # 자동 입장 경로 없음
-        op = opener()
-        s, body, url = get(op, r.enter_url)
-        assert url.endswith("/login") and 'id="qisSolo"' in body and '"local"' in body   # 진짜 로그인 화면 · 아이디 고정
-        assert "pywebview" not in body.split('id="qisSolo"')[0] or "desktop_enter" not in body
-        s, body, _ = get(op, r.base_url + "/api/login", data=json.dumps({"username": "local", "password": "wrong"}).encode(),
-                         headers={"Content-Type": "application/json", "X-QIS": "1"})
-        assert s == 400
-        s, body, _ = get(op, r.base_url + "/api/login", data=json.dumps({"username": "local", "password": "Mypw2026x"}).encode(),
-                         headers={"Content-Type": "application/json", "X-QIS": "1"})
-        assert s == 200, body
-        s, body, _ = get(op, r.base_url + "/")
-        assert '"desktop": "solo"' in body and '"desktopLogin": true' in body and "/desktop.js" in body
-        with op.open(r.base_url + "/", timeout=10) as resp:
-            assert "'unsafe-eval'" in resp.headers["Content-Security-Policy"]     # 프로그램 창 표시 쿠키는 그대로
-    finally:
-        r.stop()
-    # 잠금 해제 → 비밀번호가 무작위로 바뀌어 로그인 화면으로는 못 들어옴, 자동 입장으로
-    st2 = core.DesktopSettings(mode="solo", solo_name="김선중", solo_login=False)
-    core.ensure_solo_user(cfg, "김선중", login=False)
-    core.prepare(cfg, st2)
-    r = core.ServerRunner(cfg, st2).start()
-    try:
-        assert "/desktop/enter?k=" in r.enter_url
-        s, _, _ = get(opener(), r.base_url + "/api/login", data=json.dumps({"username": "local", "password": "Mypw2026x"}).encode(),
-                      headers={"Content-Type": "application/json", "X-QIS": "1"})
-        assert s == 400
-    finally:
-        r.stop()
-
-
-def test_solo_login_weak_password_rejected(data):
+def test_weak_admin_password_rejected(data):
     cfg = core.desktop_config(data)
     with pytest.raises(AuthError):
-        core.ensure_solo_user(cfg, "김", "1234", login=True)
+        core.set_lan_admin(cfg, "admin", "김", "1234")
 
 
-def test_apply_setup_solo_login(ctl, data):
-    assert ctl.apply_setup({"mode": "solo", "solo_name": "김", "solo_login": True, "solo_password": ""}) == \
-        {"error": "잠그려면 비밀번호를 정하세요"}
-    assert ctl.apply_setup({"mode": "solo", "solo_name": "김", "solo_login": True, "solo_password": "Mypw2026x"}) == {"ok": True}
-    assert ctl.settings.solo_login is True and core.DesktopSettings.load(data).solo_login is True
-    assert "/desktop/window?k=" in ctl.runner.enter_url
-    # 다시 설정 화면: 비밀번호를 비워 두면 기존 비밀번호 유지
-    ctl.m_switch_mode()
-    assert ctl.apply_setup({"mode": "solo", "solo_name": "김", "solo_login": True, "solo_password": ""}) == {"ok": True}
-    s, _, _ = get(opener(), ctl.runner.base_url + "/api/login", data=json.dumps({"username": "local", "password": "Mypw2026x"}).encode(),
-                  headers={"Content-Type": "application/json", "X-QIS": "1"})
-    assert s == 200
+def test_login_page_prefills_only_for_one_user_in_local_window(data):
+    cfg, r = local_runner(data)
+    try:
+        op = opener()
+        assert 'id="qisOneUser"' in get(op, r.enter_url)[1]
+        db = r.app.state.db
+        from qis.auth import Auth
+        Auth(db, r.cfg).create_user("kim", "김", "editor", "Edit2026pwx", must_change=False)
+        assert 'id="qisOneUser"' not in get(opener(), r.enter_url)[1]      # 계정이 두 개면 채우지 않음
+    finally:
+        r.stop()
 
 
 # ---------------------------------------------------------------- 접속 범위: Tailscale 만

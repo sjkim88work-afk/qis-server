@@ -17,14 +17,9 @@ def ip_of(request: Request) -> str:
     return request.client.host if request.client else ""
 
 
-def is_solo(request: Request) -> bool:
-    d = st(request).desktop
-    return bool(d and d.get("mode") == "solo")
-
-
 def in_window(request: Request) -> bool:
     """프로그램 창에서 온 요청인지 — 창을 열 때 받은 표시 쿠키로 구분.
-    사내 서버 모드에서 팀원 브라우저로 접속한 화면에는 데스크톱 보조를 붙이지 않는다."""
+    팀원 브라우저로 접속한 화면에는 데스크톱 보조를 붙이지 않는다."""
     d = st(request).desktop or {}
     k = request.cookies.get(WIN_COOKIE) or ""
     t = str(d.get("token") or "")
@@ -53,11 +48,9 @@ def page_user(request: Request):
 
 
 def set_cookie(request: Request, resp: Response, token: str) -> None:
-    # 혼자 쓰기(데스크톱): 프로그램을 닫으면 사라지는 쿠키 — 창 저장소(webview 폴더)에 로그인이 남지 않게.
-    #   다시 열면 프로그램이 새 열쇠로 자동 입장하므로 불편 없음.
-    # 그 밖: 마지막 사용 후 session_hours 동안 유지(서버가 확인) · 쿠키 자체는 최대 30일
+    # 마지막 사용 후 session_hours 동안 유지(서버가 확인) · 쿠키 자체는 최대 30일
     cfg = st(request).cfg
-    max_age = None if is_solo(request) else min(cfg.session_hours * 3600 * 14, 30 * 24 * 3600)
+    max_age = min(cfg.session_hours * 3600 * 14, 30 * 24 * 3600)
     resp.set_cookie(COOKIE, token, httponly=True, samesite="strict", secure=cfg.https, path="/", max_age=max_age)
 
 

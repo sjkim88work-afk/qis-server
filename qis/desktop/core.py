@@ -1,8 +1,10 @@
 """데스크톱 프로그램의 바탕 — 창(pywebview) 없이 동작 · 시험할 수 있는 부분.
 
-· 설정: 데이터 폴더의 desktop.json  {"mode": "solo" | "lan", "solo_name": 이름, "solo_login": true/false}
-    solo (이 PC 혼자 쓰기)  127.0.0.1 에만 열고(외부 접속 차단) 빈 포트 자동 선택, 로그인 없이 로컬 관리자로 입장
-    lan  (사내 서버로 쓰기) 기존 서버판처럼 사내망에 공개(0.0.0.0:qis.json 의 port) · 로그인
+· 설정: 데이터 폴더의 desktop.json  {"mode": "lan" (처음 설정을 마침) | "", "lan_scope": 접속 범위}
+    접속 범위  local     이 PC만 — 127.0.0.1 에만 열고(외부 접속 차단) 빈 포트 자동 선택
+              lan       사내망 전체 — 0.0.0.0:qis.json 의 port
+              tailscale 이 PC + Tailscale 주소만
+    방식은 한 가지: 항상 아이디 · 비밀번호로 로그인. (예전의 ‘이 PC 혼자 쓰기’ 는 v2.0.2 에서 없앰 — 읽을 때 접속 범위 local 로 바꿈)
 · 서버 켜기/끄기: ServerRunner — 같은 프로세스 안의 uvicorn. 끌 때 WAL을 DB 파일에 합치고 닫음
 · 비정상 종료 감지: 켜는 동안 desktop.running 표시 파일, 정상 종료 때 지움 → 남아 있으면 다음 실행 때 DB 손상 검사
 · 가져오기 · 복원: 기존 restore · import 기능을 그대로 씀 (지금 DB는 지우지 않고 restore_before_<시각>/ 에 보관)
@@ -28,19 +30,19 @@ from ..db import now, open_db, parse_db_url
 
 log = logging.getLogger("qis.desktop")
 
-MODES = ("solo", "lan")
-SCOPES = ("lan", "tailscale")   # 사내 서버 모드의 접속 허용 범위
-SOLO_USER = "local"          # 혼자 쓰기 모드의 로컬 관리자 아이디 (비밀번호는 아무도 모르는 무작위 값)
+MODES = ("lan",)                        # 설정을 마친 상태. 예전 값 "solo" 는 읽을 때 바꿈
+SCOPES = ("local", "lan", "tailscale")  # 접속 허용 범위
+SOLO_USER = "local"          # 예전 ‘이 PC 혼자 쓰기’ 의 로컬 관리자 아이디 — 옮겨 올 때만 씀
 RUNNING = "desktop.running"
 
 
 # ---------------------------------------------------------------- 설정
 @dataclasses.dataclass
 class DesktopSettings:
-    mode: str = ""               # 비어 있으면 첫 실행 — 모드를 고르는 화면부터
-    solo_name: str = ""          # 혼자 쓰기: 기록(담당자 · 변경 이력)에 남을 이름
-    solo_login: bool = False     # 혼자 쓰기: 켜면 비밀번호로 잠금 — 프로그램이 자동 입장 대신 로그인 화면을 띄움
-    lan_scope: str = "lan"       # 사내 서버: "lan" = 사내망 전체(0.0.0.0) · "tailscale" = 이 PC + Tailscale 주소(100.x)만
+    mode: str = ""               # 비어 있으면 처음 설정 화면부터. "lan" = 설정을 마침
+    lan_scope: str = "lan"       # 접속 범위: "local" = 이 PC만 · "lan" = 사내망 전체(0.0.0.0) · "tailscale" = 이 PC + Tailscale 주소(100.x)만
+    setup_user: str = ""         # 처음 설정 화면에 미리 채울 아이디 (예전 혼자 쓰기에서 옮겨 올 때 local)
+    setup_name: str = ""         # 처음 설정 화면에 미리 채울 이름
 
     @staticmethod
     def path(data_dir: Path) -> Path:
@@ -53,12 +55,24 @@ class DesktopSettings:
         if f.exists():
             try:
                 d = json.loads(f.read_text(encoding="utf-8"))
-                for k in ("mode", "solo_name"):
-                    if isinstance(d.get(k), str):
-                        setattr(s, k, d[k])
-                s.solo_login = bool(d.get("solo_login"))
+                if isinstance(d.get("mode"), str):
+                    s.mode = d["mode"]
                 if d.get("lan_scope") in SCOPES:
                     s.lan_scope = d["lan_scope"]
+                for k in ("setup_user", "setup_name"):
+                    if isinstance(d.get(k), str):
+                        setattr(s, k, d[k])
+                if s.mode == "solo":
+                    # 예전 ‘이 PC 혼자 쓰기’: 접속 범위 ‘이 PC만’ 으로 옮김.
+                    # · 비밀번호로 잠가 쓰던 PC — 계정 local 과 그 비밀번호로 그대로 로그인
+                    # · 로그인 없이 쓰던 PC — 처음 설정 화면에서 비밀번호를 한 번 정함 (아이디 local · 이름은 미리 채움)
+                    s.lan_scope = "local"
+                    if d.get("solo_login"):
+                        s.mode = "lan"
+                    else:
+                        s.mode = ""
+                        s.setup_user = SOLO_USER
+                        s.setup_name = d.get("solo_name") if isinstance(d.get("solo_name"), str) else ""
             except (OSError, ValueError):
                 log.exception("desktop.json 을 읽지 못함 — 첫 실행처럼 진행")
         if s.mode not in MODES:
@@ -101,46 +115,8 @@ def desktop_config(data_dir: Path) -> Config:
 
 
 # ---------------------------------------------------------------- 계정
-def ensure_solo_user(cfg: Config, name: str = "", password: str | None = None, *, login: bool = False) -> dict:
-    """혼자 쓰기용 로컬 관리자(local)를 만들거나 되살림.
-    · 자동 입장(login=False): 비밀번호는 무작위 — 로그인 화면으로는 못 들어옴. 지난 자동 입장 세션은 모두 끝냄.
-    · 비밀번호 잠금(login=True): password 가 주어지면 그 비밀번호로 정함(없으면 기존 비밀번호 유지). 세션은 그대로
-      두어 프로그램을 다시 열어도 24시간 안이면 다시 입력하지 않아도 됨."""
-    name = (name or "").strip() or "이 PC 사용자"
-    if login and password is not None:
-        p = pw_problem(password, SOLO_USER)
-        if p:
-            raise AuthError(p, "weak_password")
-    db = open_db(cfg)
-    try:
-        u = db.q1("SELECT * FROM users WHERE lower(username)=lower(?)", (SOLO_USER,))
-        pw = password if (login and password is not None) else ("Ql" + secrets.token_urlsafe(24) + "9")
-        if not u:
-            Auth(db, cfg).create_user(SOLO_USER, name, "admin", pw, must_change=False)
-        else:
-            with db.tx() as c:
-                c.execute("UPDATE users SET role='admin', active=1, must_change=0, name=? WHERE id=?", (name, u["id"]))
-                if u["name"] != name or u["role"] != "admin" or not u["active"]:
-                    db.audit(c, action="user.update", coll="users", rec_id=str(u["id"]),
-                             label=f"{name} ({SOLO_USER})", detail={"desktop": "solo"})
-                if login and password is not None:
-                    c.execute("UPDATE users SET pw_hash=?, fail_count=0, locked_until=NULL WHERE id=?",
-                              (hash_pw(password), u["id"]))
-                    db.audit(c, action="user.reset_password", coll="users", rec_id=str(u["id"]),
-                             label=f"{name} ({SOLO_USER})", detail={"desktop": "solo", "login": True})
-                elif not login:
-                    c.execute("UPDATE users SET pw_hash=? WHERE id=?", (hash_pw(pw), u["id"]))   # 잠금 해제: 다시 무작위
-        u = db.q1("SELECT id, username, name, role FROM users WHERE lower(username)=lower(?)", (SOLO_USER,))
-        if not login:
-            with db.tx() as c:   # 지난 실행의 자동 입장 세션은 모두 끝냄 (실행마다 새 열쇠 · 새 세션)
-                c.execute("DELETE FROM sessions WHERE user_id=?", (u["id"],))
-        return dict(u)
-    finally:
-        db.close()
-
-
-def set_lan_admin(cfg: Config, username: str, name: str, password: str) -> dict:
-    """사내 서버로 쓰기: 로그인할 관리자 계정을 만들거나(없으면) 비밀번호를 정함(있으면)."""
+def set_lan_admin(cfg: Config, username: str, name: str, password: str, *, keep_password: bool = False) -> dict:
+    """처음 설정 · 접속 설정 바꾸기: 로그인할 관리자 계정을 만들거나(없으면) 비밀번호를 정함(있으면)."""
     username = (username or "").strip()
     name = (name or "").strip()
     db = open_db(cfg)
@@ -149,6 +125,15 @@ def set_lan_admin(cfg: Config, username: str, name: str, password: str) -> dict:
         u = db.q1("SELECT * FROM users WHERE lower(username)=lower(?)", (username,))
         if not u:
             auth.create_user(username, name, "admin", password, must_change=False)
+        elif keep_password and not password:
+            # 접속 설정 바꾸기에서 비밀번호를 비워 둠: 지금 쓰는 관리자 계정이면 그대로 (이름만 맞춤)
+            if u["role"] != "admin" or not u["active"]:
+                raise AuthError("이 아이디는 관리자 계정이 아닙니다 — 비밀번호를 넣어 관리자로 정하세요", "no_admin")
+            if name and name != u["name"]:
+                with db.tx() as c:
+                    c.execute("UPDATE users SET name=? WHERE id=?", (name, u["id"]))
+                    db.audit(c, action="user.update", coll="users", rec_id=str(u["id"]),
+                             label=f"{name} ({u['username']})", detail={"desktop": "setup"})
         else:
             p = pw_problem(password, username)
             if p:
@@ -225,17 +210,17 @@ class ServerRunner:
         self.settings = settings
         self.mode = settings.mode
         if self.mode not in MODES:
-            raise ValueError("모드를 먼저 고르세요")
-        # 실행마다 새 열쇠: 혼자 쓰기는 자동 입장, 사내 서버는 '프로그램 창' 표시용 (로그인은 따로 필요)
+            raise ValueError("처음 설정을 먼저 하세요")
+        # 실행마다 새 열쇠: '프로그램 창' 표시용 (로그인은 따로 필요)
         self.token = secrets.token_urlsafe(32)
         self.app = None
         self.server = None
         self.thread = None
         self.sock = None
         self.socks = []
-        self.host = "127.0.0.1" if self.mode == "solo" else (cfg.host or "0.0.0.0")
+        self.scope = settings.lan_scope if settings.lan_scope in SCOPES else "lan"
+        self.host = "127.0.0.1" if self.scope == "local" else (cfg.host or "0.0.0.0")
         self.port = 0
-        self.scope = settings.lan_scope if self.mode == "lan" else ""
         self.ts_ip = ""              # 접속 범위가 tailscale 일 때 실제로 연 Tailscale 주소 ('' = 못 찾음 → 이 PC 에서만 열림)
 
     # -- 주소
@@ -249,9 +234,7 @@ class ServerRunner:
 
     @property
     def enter_url(self) -> str:
-        """창이 처음 여는 주소: 혼자 쓰기(잠금 없음)는 자동 입장, 사내 서버 · 비밀번호 잠금은 로그인 화면."""
-        if self.mode == "solo" and not self.settings.solo_login:
-            return f"{self.base_url}/desktop/enter?k={self.token}"
+        """창이 처음 여는 주소: 프로그램 창 표시 쿠키를 붙이고 QIS 로 (로그인하지 않았으면 로그인 화면)."""
         return f"{self.base_url}/desktop/window?k={self.token}"
 
     @property
@@ -261,10 +244,9 @@ class ServerRunner:
     # -- 켜기
     def _runtime_cfg(self) -> Config:
         c = self.base_cfg
-        if self.mode == "solo":
-            # 혼자 쓰기: 이 PC 안에서만, HTTPS 불필요 (qis.json 은 바꾸지 않음).
-            # 로그인은 마지막 사용 후 하루 유지 — 넘으면 창이 비밀번호 없이 다시 들어감(desktop_enter.html)
-            return dataclasses.replace(c, host="127.0.0.1", ssl_certfile="", ssl_keyfile="", session_hours=24)
+        if self.scope == "local":
+            # 이 PC만: 이 PC 안에서만 열림, HTTPS 불필요 (qis.json 은 바꾸지 않음)
+            return dataclasses.replace(c, host="127.0.0.1", ssl_certfile="", ssl_keyfile="")
         if self.scope == "tailscale":
             # 이 PC(127.0.0.1) + Tailscale 주소에만 엶 — 사내망 주소로는 연결 자체가 안 됨. 추가 소켓은 start() 에서
             return dataclasses.replace(c, host="127.0.0.1")
@@ -292,7 +274,7 @@ class ServerRunner:
 
         self.cfg = self._runtime_cfg()
         self.host = self.cfg.host
-        self.sock = self._open_socket(self.host, 0 if self.mode == "solo" else int(self.cfg.port))
+        self.sock = self._open_socket(self.host, 0 if self.scope == "local" else int(self.cfg.port))
         self.port = self.sock.getsockname()[1]
         self.socks = [self.sock]
         self.ts_ip = ""
@@ -306,8 +288,7 @@ class ServerRunner:
                     log.exception("Tailscale 주소 %s:%s 를 열지 못함 — 이 PC 에서만 열림", ip, self.port)
             else:
                 log.warning("접속 범위가 Tailscale 인데 Tailscale 주소를 찾지 못함 — 이 PC 에서만 열림")
-        desktop = {"mode": self.mode, "token": self.token, "user": SOLO_USER,
-                   "login": self.mode == "lan" or bool(self.settings.solo_login)}
+        desktop = {"mode": self.mode, "token": self.token, "scope": self.scope}
         try:
             self.app = create_app(self.cfg, desktop=desktop)
             kw = {}
@@ -329,7 +310,7 @@ class ServerRunner:
         except BaseException:
             self.stop()
             raise
-        log.info("서버 시작 %s %s:%s", self.mode, self.host, self.port)
+        log.info("서버 시작 %s %s:%s", self.scope, self.host, self.port)
         return self
 
     @property
@@ -375,21 +356,16 @@ class ServerRunner:
 
 # ---------------------------------------------------------------- 시작 준비 (창이 뜨기 전)
 def prepare(cfg: Config, settings: DesktopSettings) -> None:
-    """모드에 맞게 DB · 계정을 준비. 사내 서버 모드는 관리자 계정이 이미 있어야 함."""
-    if settings.mode == "solo":
-        ensure_solo_user(cfg, settings.solo_name, login=settings.solo_login)
-    elif settings.mode == "lan":
-        db = open_db(cfg)
-        try:
-            n = db.q1("SELECT COUNT(*) n FROM users WHERE role='admin' AND active=1 AND lower(username)<>lower(?)",
-                      (SOLO_USER,))["n"]
-            with db.tx() as c:   # 혼자 쓰기 때의 자동 입장 세션이 사내 서버 모드로 이어지지 않게
-                c.execute("DELETE FROM sessions WHERE user_id IN (SELECT id FROM users WHERE lower(username)=lower(?))",
-                          (SOLO_USER,))
-        finally:
-            db.close()
-        if not n:
-            raise AuthError("사내 서버로 쓰려면 로그인할 관리자 계정이 필요합니다", "no_admin")
+    """DB · 계정을 준비. 로그인할 관리자 계정이 이미 있어야 함."""
+    if settings.mode not in MODES:
+        raise ValueError("처음 설정을 먼저 하세요")
+    db = open_db(cfg)
+    try:
+        n = db.q1("SELECT COUNT(*) n FROM users WHERE role='admin' AND active=1")["n"]
+    finally:
+        db.close()
+    if not n:
+        raise AuthError("로그인할 관리자 계정이 필요합니다", "no_admin")
 
 
 # ---------------------------------------------------------------- 가져오기 · 복원 (서버를 멈춘 상태에서)

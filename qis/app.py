@@ -35,7 +35,7 @@ CSP_DESKTOP = CSP.replace("script-src 'self' 'unsafe-inline'", "script-src 'self
 
 def create_app(cfg: Config | None = None, *, start_backup=True, desktop: dict | None = None) -> FastAPI:
     """desktop: 데스크톱 프로그램(qis.desktop)에서 띄울 때만 —
-       {"mode": "solo" | "lan", "token": 자동 입장 열쇠(solo), "user": 로컬 관리자 아이디(solo)}"""
+       {"mode": "lan", "token": 프로그램 창 표시 열쇠, "scope": 접속 범위 (local · lan · tailscale)}"""
     cfg = cfg or load_config()
     cfg.data_dir.mkdir(parents=True, exist_ok=True)
     db = open_db(cfg)

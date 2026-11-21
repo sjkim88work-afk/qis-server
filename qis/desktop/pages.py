@@ -1,4 +1,4 @@
-"""프로그램 창에 직접 그리는 작은 화면들 (서버가 뜨기 전 · 작업 중): 첫 실행 모드 선택 · 작업 중 · 손상 복구 · 안내."""
+"""프로그램 창에 직접 그리는 작은 화면들 (서버가 뜨기 전 · 작업 중): 처음 설정 · 작업 중 · 손상 복구 · 안내."""
 from __future__ import annotations
 
 import html
@@ -6,21 +6,24 @@ import json
 
 CSS = """
 *{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Malgun Gothic","맑은 고딕","Apple SD Gothic Neo",sans-serif;
-background:#f3f5f8;color:#1f2937;font-size:14px}
-.wrap{max-width:880px;margin:0 auto;padding:36px 24px}
-h1{font-size:22px;margin:0 0 6px}h2{font-size:16px;margin:0 0 8px}.muted{color:#6b7280}
-.cards{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:22px 0}
-.card{background:#fff;border:2px solid #e5e7eb;border-radius:12px;padding:18px;cursor:pointer}
-.card.on{border-color:#2563eb;box-shadow:0 0 0 3px #dbeafe}
-.card ul{margin:8px 0 0;padding-left:18px;color:#4b5563;line-height:1.6}
-.box{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:18px;margin:14px 0}
-label{display:block;margin:10px 0 4px;font-weight:600}input{width:100%;padding:9px 10px;border:1px solid #d1d5db;border-radius:8px;font-size:14px}
-.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-button{padding:10px 18px;border-radius:8px;border:1px solid #d1d5db;background:#fff;font-size:14px;cursor:pointer}
-button.p{background:#2563eb;border-color:#2563eb;color:#fff}button:disabled{opacity:.5}
+background:#f3f5f8;color:#1a1f29;font-size:13px;line-height:1.5}
+.wrap{max-width:720px;margin:0 auto;padding:32px 24px}
+h1{font-size:18px;margin:0 0 4px}h2{font-size:13px;margin:0 0 4px}.muted{color:#5a6372;font-weight:400}
+.box{background:#fff;border:1px solid #d5dae2;border-radius:4px;padding:14px 16px 16px;margin:12px 0}
+label{display:block;margin:12px 0 4px;font-size:12px;font-weight:600;color:#3a4250}
+input{width:100%;height:34px;padding:0 10px;border:1px solid #c9cfd8;border-radius:3px;font-size:13px;background:#fff}
+input:disabled{background:#f3f5f8;color:#8a93a2}input[type=radio]{width:auto;height:auto;margin:3px 0 0;flex:none}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}
+.opts{border:1px solid #d5dae2;border-top:0;border-radius:3px;margin-top:8px}
+.opt{display:flex;gap:8px;align-items:flex-start;margin:0;padding:7px 10px;border-top:1px solid #eceef2;font-size:13px;font-weight:400;color:#1a1f29;cursor:pointer}
+.opt:has(input:checked){background:#f4f7f7}.opt b{font-weight:600}
+.port{display:flex;align-items:center;gap:10px;margin-top:12px}
+button{height:34px;padding:0 14px;border-radius:3px;border:1px solid #c9cfd8;background:#fff;font-size:13px;cursor:pointer}
+button.p{background:#00635f;border-color:#00635f;color:#fff;font-weight:600;padding:0 18px}button:disabled{opacity:.5}
 .err{color:#b91c1c;margin:10px 0;font-weight:600;white-space:pre-wrap}.ok{color:#047857}
-code{background:#eef2f7;padding:2px 6px;border-radius:4px}
-.spin{width:28px;height:28px;border:3px solid #dbeafe;border-top-color:#2563eb;border-radius:50%;animation:s 1s linear infinite;margin:30px 0 12px}
+ul{padding-left:18px;line-height:1.6}
+code{background:#eef2f7;padding:2px 6px;border-radius:3px}
+.spin{width:28px;height:28px;border:3px solid #d5dae2;border-top-color:#00635f;border-radius:50%;animation:s 1s linear infinite;margin:30px 0 12px}
 @keyframes s{to{transform:rotate(360deg)}}
 """
 
@@ -37,70 +40,57 @@ function ready(fn){if(api())fn();else window.addEventListener('pywebviewready',f
 """
 
 
-def setup_page(*, current: str = "", solo_name: str = "", solo_login: bool = False, admin: str = "admin",
-               admin_name: str = "", port: int = 8080, error: str = "", can_cancel: bool = False,
-               version: str = "", lan_scope: str = "lan") -> str:
-    init = json.dumps({"mode": current or "solo"})
+def setup_page(*, first: bool = True, admin: str = "admin", admin_name: str = "", port: int = 8080, error: str = "",
+               can_cancel: bool = False, version: str = "", scope: str = "local") -> str:
+    """처음 설정 · 접속 설정 바꾸기 — 한 화면: 관리자 계정 + 접속 범위 (이 PC만 / 사내망 전체 / Tailscale 만).
+    first=False (바꾸기) 에서는 비밀번호를 비워 두면 그대로 둠."""
+    def radio(v: str, title: str, desc: str) -> str:
+        return (f'<label class=opt><input type=radio name=sc value={v}{" checked" if scope == v else ""} onchange="scx()">'
+                f"<span><b>{title}</b> <span class=muted>— {desc}</span></span></label>")
+    keep = "" if first else ", 바꾸지 않으려면 비워 두기"
     body = f"""
-<h1>QIS 사용 방식 고르기</h1>
-<div class=muted>QIS 품질정보시스템 {html.escape(version)} · 나중에 메뉴 ‘설정 › 사용 방식 바꾸기’에서 바꿀 수 있습니다. 데이터는 그대로 유지됩니다.</div>
-<div class=cards>
-  <div class=card id=c_solo onclick="pick('solo')"><h2>🖥 이 PC 혼자 쓰기</h2>
-    <ul><li>바로 시작 (원하면 비밀번호 잠금)</li><li>이 PC 안에서만 열림 (다른 PC · 휴대폰 접속 차단)</li><li>개인 업무 · 시험용</li></ul></div>
-  <div class=card id=c_lan onclick="pick('lan')"><h2>🏢 사내 서버로 쓰기</h2>
-    <ul><li>같은 사내망의 다른 PC · 휴대폰에서 접속</li><li>사람마다 아이디 · 비밀번호로 로그인, 권한(조회 · 작성 · 관리자)</li><li>이 PC가 켜져 있고 QIS가 열려 있어야 함</li></ul></div>
+<h1>{'QIS 처음 설정' if first else 'QIS 접속 설정 바꾸기'}</h1>
+<div class=muted>QIS 품질정보시스템 {html.escape(version)} · 나중에 메뉴 ‘설정 › 접속 설정 바꾸기’에서 바꿀 수 있습니다. 데이터는 그대로 둡니다.</div>
+<div class=box>
+  <h2>1. 관리자 계정</h2>
+  <div class=muted>QIS 를 열 때 이 계정으로 로그인합니다. 다른 사용자는 관리 화면에서 추가합니다. 이미 있는 아이디면 비밀번호를 새로 정합니다.</div>
+  <div class=row><div><label for=au>아이디</label><input id=au value="{html.escape(admin)}"></div>
+  <div><label for=an>이름 <span class=muted>(담당자 · 변경 이력에 남음)</span></label><input id=an value="{html.escape(admin_name)}" placeholder="예: 김선중"></div></div>
+  <div class=row><div><label for=ap>비밀번호 <span class=muted>(8자 이상, 영문+숫자{keep})</span></label><input id=ap type=password autocomplete="new-password"></div>
+  <div><label for=ap2>한 번 더</label><input id=ap2 type=password autocomplete="new-password"></div></div>
 </div>
-<div class=box id=f_solo>
-  <label for=sn>내 이름 <span class=muted>(담당자 · 변경 이력에 남는 이름)</span></label>
-  <input id=sn value="{html.escape(solo_name)}" placeholder="예: 김선중">
-  <label style="display:flex;gap:8px;align-items:center;margin-top:14px;cursor:pointer"><input type=checkbox id=sl{' checked' if solo_login else ''} onchange="slx()" style="width:auto;margin:0">
-    비밀번호로 잠그기 <span class=muted>— 프로그램을 열 때 로그인 화면이 뜹니다 (자리 비움 · 공용 PC)</span></label>
-  <div id=f_sl style="display:none;margin-top:10px">
-    <div class=row><div><label for=sp>비밀번호 <span class=muted>(8자 이상, 영문+숫자{', 바꾸지 않으려면 비워 두기' if solo_login else ''})</span></label><input id=sp type=password autocomplete="new-password"></div>
-    <div><label for=sp2>한 번 더</label><input id=sp2 type=password autocomplete="new-password"></div></div>
-    <div class=muted>로그인 아이디는 <b>local</b> 입니다. 잊으면 ‘설정 › 사용 방식 바꾸기’에서 새로 정할 수 있습니다.</div>
+<div class=box>
+  <h2>2. 접속 범위</h2>
+  <div class=opts>
+  {radio("local", "이 PC만", "다른 PC · 휴대폰에서는 열리지 않습니다. 혼자 쓸 때")}
+  {radio("lan", "사내망 전체", "같은 사내망 · Wi-Fi 의 PC · 휴대폰. 이 PC가 켜져 있고 QIS가 열려 있어야 합니다")}
+  {radio("tailscale", "Tailscale 만", "이 PC 와, 내 Tailscale 에 등록한 기기만. 사내망의 다른 PC 에서는 열리지 않습니다")}
   </div>
-</div>
-<div class=box id=f_lan style="display:none">
-  <div class=muted>관리자 계정 — 이 계정으로 로그인해 관리 화면에서 다른 사용자를 추가합니다. 이미 있는 아이디면 비밀번호를 새로 정합니다.</div>
-  <div class=row><div><label for=au>관리자 아이디</label><input id=au value="{html.escape(admin)}"></div>
-  <div><label for=an>이름</label><input id=an value="{html.escape(admin_name or solo_name)}"></div></div>
-  <div class=row><div><label for=ap>비밀번호 <span class=muted>(8자 이상, 영문+숫자)</span></label><input id=ap type=password></div>
-  <div><label for=ap2>한 번 더</label><input id=ap2 type=password></div></div>
-  <label for=pt>포트 <span class=muted>(접속 주소의 번호, 보통 8080)</span></label><input id=pt value="{int(port)}" style="max-width:160px">
-  <label style="margin-top:14px">접속 허용 범위</label>
-  <label style="display:flex;gap:8px;align-items:center;cursor:pointer;font-weight:400"><input type=radio name=sc value=lan{' checked' if lan_scope != 'tailscale' else ''} style="width:auto;margin:0">
-    사내망 전체 <span class=muted>— 같은 사내망 · Wi-Fi 의 PC · 휴대폰</span></label>
-  <label style="display:flex;gap:8px;align-items:center;cursor:pointer;font-weight:400;margin-top:6px"><input type=radio name=sc value=tailscale{' checked' if lan_scope == 'tailscale' else ''} style="width:auto;margin:0">
-    Tailscale 만 <span class=muted>— 이 PC 와, 내 Tailscale 에 등록한 기기(휴대폰)만. 사내망의 다른 PC 에서는 열리지 않습니다</span></label>
+  <div class=port><label for=pt style="margin:0">포트</label><input id=pt value="{int(port)}" style="width:90px">
+    <span class=muted id=ptn></span></div>
 </div>
 <div class=err id=err>{html.escape(error)}</div>
-<div style="display:flex;gap:10px"><button class=p id=go onclick="go()">시작</button>
+<div style="display:flex;gap:8px"><button class=p id=go onclick="go()">{'시작' if first else '바꾸기'}</button>
 {'<button onclick="ready(function(){api().cancel_setup()})">취소</button>' if can_cancel else ''}</div>
-<p class=muted style="margin-top:22px">기존 데이터(개인판 HTML 백업 · 서버판 data 폴더)는 시작한 뒤 메뉴 ‘파일 › 가져오기’로 넣습니다.</p>
+<p class=muted style="margin-top:18px">기존 데이터(백업 파일 · 서버판 data 폴더)는 시작한 뒤 메뉴 ‘파일 › 가져오기’로 넣습니다.</p>
 """
     script = API_JS + f"""
-var mode={init}.mode;
+var first={json.dumps(bool(first))};
 function $(i){{return document.getElementById(i)}}
-function pick(m){{mode=m;$('c_solo').classList.toggle('on',m==='solo');$('c_lan').classList.toggle('on',m==='lan');
-  $('f_solo').style.display=m==='solo'?'':'none';$('f_lan').style.display=m==='lan'?'':'none'}}
-pick(mode);
-var hadPw={json.dumps(bool(solo_login))};
-function slx(){{$('f_sl').style.display=$('sl').checked?'':'none'}}
-slx();
+function sc(){{return (document.querySelector('input[name=sc]:checked')||{{}}).value||''}}
+function scx(){{var l=sc()==='local';$('pt').disabled=l;
+  $('ptn').textContent=l?'‘이 PC만’ 에서는 쓰지 않습니다':'접속 주소의 번호입니다 (보통 8080)'}}
+scx();
 function go(){{
-  var d={{mode:mode,solo_name:$('sn').value,solo_login:$('sl').checked,solo_password:$('sp').value,admin:$('au').value,admin_name:$('an').value,password:$('ap').value,port:$('pt').value,
-    lan_scope:(document.querySelector('input[name=sc]:checked')||{{}}).value||'lan'}};
-  if(mode==='lan'&&$('ap').value!==$('ap2').value){{$('err').textContent='두 번 입력한 비밀번호가 다릅니다';return}}
-  if(mode==='solo'&&$('sl').checked){{
-    if($('sp').value!==$('sp2').value){{$('err').textContent='두 번 입력한 비밀번호가 다릅니다';return}}
-    if(!$('sp').value&&!hadPw){{$('err').textContent='잠그려면 비밀번호를 정하세요';return}}
-  }}
+  var d={{admin:$('au').value,admin_name:$('an').value,password:$('ap').value,port:$('pt').value,scope:sc()}};
+  if(!d.scope){{$('err').textContent='접속 범위를 고르세요';return}}
+  if($('ap').value!==$('ap2').value){{$('err').textContent='두 번 입력한 비밀번호가 다릅니다';return}}
+  if(first&&!$('ap').value){{$('err').textContent='비밀번호를 정하세요';return}}
   $('go').disabled=true;$('err').textContent='시작하는 중…';
   ready(function(){{api().setup(d).then(function(r){{if(r&&r.error){{$('err').textContent=r.error;$('go').disabled=false}}}})}});
 }}
 """
-    return _page("QIS — 사용 방식", body, script)
+    return _page("QIS — 접속 설정", body, script)
 
 
 def _tailscale_info_page(addresses: list[str], port: int, windows: bool) -> str:
@@ -112,14 +102,14 @@ def _tailscale_info_page(addresses: list[str], port: int, windows: bool) -> str:
     else:
         rows = "<li>지금은 이 PC 에서만 열려 있습니다</li>"
         head = "<h2>Tailscale 주소를 찾지 못했습니다</h2>"
-        miss = ("<div class=box style='border-color:#f59e0b;background:#fffbeb'><b>⚠ 이 PC 의 Tailscale 이 꺼져 있거나 설치되어 있지 않습니다</b>"
+        miss = ("<div class=box style='border-color:#f59e0b;background:#fffbeb'><b>이 PC 의 Tailscale 이 꺼져 있거나 설치되어 있지 않습니다</b>"
                 "<p class=muted style='margin:6px 0 0'>Tailscale 을 켜고 로그인한 뒤 QIS 를 다시 여세요. 그때까지는 다른 기기에서 접속할 수 없습니다 "
                 "(사내망으로도 열리지 않습니다).</p></div>")
     fw = (f"<p class=muted>휴대폰에서 안 열리면 Windows 방화벽 규칙이 필요합니다 — Tailscale 대역에서 오는 연결만 허용합니다. 관리자 권한 명령 창에서<br>"
           f"<code>netsh advfirewall firewall add rule name=\"QIS (Tailscale)\" dir=in action=allow protocol=TCP localport={port} remoteip=100.64.0.0/10</code></p>"
           if windows else "<p class=muted>맥에서 ‘들어오는 네트워크 연결을 허용할까요?’ 창이 뜨면 ‘허용’을 누르세요.</p>")
     body = f"""
-<h1>🔒 Tailscale 로만 접속되게 켜졌습니다</h1>{miss}
+<h1>Tailscale 로만 접속되게 켜졌습니다</h1>{miss}
 <div class=box>{head}<ul>{rows}</ul>{fw}
 <p class=muted>사내망 · 인터넷의 다른 PC 에서는 이 주소로도, 이 PC 의 사내 IP 로도 열리지 않습니다. 오가는 내용은 Tailscale(WireGuard)이 암호화합니다.
 Tailscale 주소가 바뀌거나 Tailscale 을 나중에 켰다면 QIS 를 다시 여세요. 메뉴 ‘설정 › 접속 주소 보기’에서 다시 볼 수 있습니다.</p></div>
@@ -166,12 +156,12 @@ def lan_info_page(addresses: list[str], port: int, windows: bool, https: bool = 
           f"또는 관리자 권한 명령 창에서 <code>netsh advfirewall firewall add rule name=\"QIS\" dir=in action=allow protocol=TCP localport={port}</code></p>"
           if windows else "<p class=muted>맥에서 ‘들어오는 네트워크 연결을 허용할까요?’ 창이 뜨면 ‘허용’을 누르세요.</p>")
     warn = "" if https else (
-        "<div class=box style='border-color:#f59e0b;background:#fffbeb'><b>⚠ 암호화되지 않은 연결(http)입니다</b>"
+        "<div class=box style='border-color:#f59e0b;background:#fffbeb'><b>암호화되지 않은 연결(http)입니다</b>"
         "<p class=muted style='margin:6px 0 0'>같은 사내망에서 오가는 아이디 · 비밀번호 · 기록 내용을 다른 사람이 엿볼 수 있습니다. "
         "IT에서 받은 인증서를 데이터 폴더의 <code>qis.json</code>에 <code>ssl_certfile</code> · <code>ssl_keyfile</code>로 넣고 "
-        "프로그램을 다시 열면 https로 바뀝니다 (사용 안내서 ‘사내 서버 모드 HTTPS’).</p></div>")
+        "프로그램을 다시 열면 https로 바뀝니다 (사용 안내서 ‘사내망 HTTPS’).</p></div>")
     body = f"""
-<h1>🏢 사내 서버로 켜졌습니다</h1>{warn}
+<h1>사내망에서 접속되게 켜졌습니다</h1>{warn}
 <div class=box><h2>다른 PC · 휴대폰 접속 주소 (같은 사내망 · Wi-Fi)</h2><ul>{rows}</ul>{fw}
 <p class=muted>이 PC가 켜져 있고 QIS 창이 열려 있는 동안만 접속됩니다. 메뉴 ‘설정 › 접속 주소 보기’에서 다시 볼 수 있습니다.</p></div>
 <button class=p onclick="ready(function(){{api().go_app()}})">QIS 열기 (로그인)</button>

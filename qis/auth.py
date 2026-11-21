@@ -234,7 +234,7 @@ class Auth:
         return self.open_session(u, ip=ip, ua=ua)
 
     def open_session(self, u, *, ip=None, ua=None, action="login") -> tuple[str, dict]:
-        """확인을 마친 사용자의 세션을 연다 (로그인 · 데스크톱 '혼자 쓰기' 자동 입장)."""
+        """확인을 마친 사용자의 세션을 연다 (로그인)."""
         token = secrets.token_urlsafe(32)
         th = hashlib.sha256(token.encode()).hexdigest()
         t = now()
