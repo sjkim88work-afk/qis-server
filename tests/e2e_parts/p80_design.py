@@ -126,3 +126,25 @@ def run(c):
     ok(r["th"].startswith("구분|대상|내용") and r["n"] >= 6 and r["uls"] == 0 and r["cards"] == 0, f"대시보드 할 일: 표 한 개 · {r['n']}줄 · 예전 목록 없음 ({r['th']})")
     ok(r["dup"] == 0 and r["kinds"] and r["btn"], f"대시보드 할 일: 같은 줄 없음 · 줄마다 구분 있음 · 행동 버튼은 오른쪽 칸 ({r})")
 
+    # 관리 화면 (/admin) 을 휴대폰 폭으로: 화면이 옆으로 넘치지 않음 · 탭은 한 줄
+    vp = B.viewport_size
+    back = B.url
+    B.set_viewport_size({"width": 390, "height": 844})
+    B.goto(back.split("/")[0] + "//" + back.split("/")[2] + "/admin"); settle(B, 800)
+    r = B.evaluate("""async()=>{const wait=ms=>new Promise(r=>setTimeout(r,ms)),o=[];
+      for(const b of [...document.querySelectorAll('#nav button')]){b.click();await wait(500);
+        o.push({t:b.textContent,over:document.documentElement.scrollWidth-innerWidth,navH:document.querySelector('#nav').offsetHeight})}
+      return o}""")
+    ok(len(r) >= 4 and all(x["over"] <= 0 and x["navH"] < 60 for x in r), f"관리 화면 (390px): 탭 {len(r)}개 모두 옆으로 넘치지 않음 · 탭은 한 줄 ({[x['over'] for x in r]})")
+    B.set_viewport_size(vp); B.goto(back); settle(B, 800)
+
+    # 좁은 창의 대시보드 할 일: 줄이 세로로 쌓일 때 구분 · 대상 · 내용의 왼쪽이 같은 자리
+    vpA = A.viewport_size
+    A.set_viewport_size({"width": 430, "height": 900})
+    settle(A, 400); A.evaluate("()=>mobSet('pc')"); settle(A, 400); A.evaluate("()=>{go('dash')}"); settle(A, 400)
+    r = A.evaluate("""()=>{const tr=document.querySelector('.pc1 .todot tbody tr');if(!tr)return null;
+      const x=e=>{const r=document.createRange();r.selectNodeContents(e);return Math.round(r.getClientRects()[0].left)};
+      const cells=[...tr.cells].filter(c=>c.offsetParent&&c.textContent.trim());
+      return {xs:cells.map(c=>Math.round(c.getBoundingClientRect().left+parseFloat(getComputedStyle(c).paddingLeft))),over:document.documentElement.scrollWidth-innerWidth}}""")
+    ok(r and len(set(r["xs"])) == 1 and r["over"] <= 0, f"좁은 창의 할 일: 칸의 왼쪽 시작 자리가 같음 · 옆으로 넘치지 않음 ({r})")
+    A.evaluate("()=>mobSet('auto')"); A.set_viewport_size(vpA); settle(A, 400)

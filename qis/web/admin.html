@@ -55,6 +55,24 @@ input,select{border-radius:8px;padding:8px 10px;font-size:13.5px;border-color:#D
 th{background:#F8FAFC;color:#3D4659;font-size:12px}
 td{padding:10px 8px}
 .bg{border-radius:11px;font-weight:600}
+/* 현장 도구 모양 (2026-11): 각진 모서리 · 배지는 한 줄 */
+.card{border-radius:3px}.b{border-radius:3px}input,select,textarea{border-radius:3px}.bg{border-radius:3px;white-space:nowrap}
+td .b{white-space:nowrap}
+/* 좁은 화면 (휴대폰): 옆으로 넘치지 않게 — 탭은 한 줄에서 옆으로 밀기, 표는 카드 안에서 옆으로 밀기, 입력 칸은 화면 폭까지만 */
+@media(max-width:760px){
+  header{padding:10px 12px;flex-wrap:wrap;gap:4px 12px}
+  nav{padding:0 6px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+  nav button{white-space:nowrap;flex:none;padding:11px 10px}
+  main{padding:12px}
+  .card{padding:14px 12px;overflow-x:auto}
+  .row>*{max-width:100%}
+  .row input,.row select{flex:1 1 140px;min-width:0;width:auto!important}
+  select{max-width:100%;text-overflow:ellipsis}
+  th{position:static;white-space:nowrap}
+  .kv{grid-template-columns:1fr}
+  .kv input,.kv select,.kv textarea{width:100%!important;max-width:100%}
+  .scroll{max-height:none}
+}
 </style>
 </head>
 <body>
