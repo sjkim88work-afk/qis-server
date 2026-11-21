@@ -272,7 +272,9 @@ function czViewCases() {
       <td><span class="badge ${czTierCls(c.Tier)}">${esc(c.Tier || '-')}</span></td><td>${esc(c.Stage)}</td>
         <td><span class="badge ${czStCls(c.Status)}">${esc(c.Status)}</span></td><td>${czBall(c.Ball)}</td>
       <td style="max-width:240px">${esc(c.NextAction)}</td><td style="white-space:nowrap">${czDate(c.RecheckDate, closed)}${
-        due(c) ? ` <button class="btn sm" data-act="bump" data-id="${c.id}" title="재확인일을 오늘+2일로">+2일</button>` : ''
+        due(c)
+          ? ` <button class="btn sm" data-act="bump" data-id="${c.id}" title="재확인일을 오늘부터 2일 뒤로 옮깁니다. 목표 종결일은 그대로입니다">2일 뒤 다시 보기</button>`
+          : ''
       }</td><td style="white-space:nowrap">${
         closed ? `<span class="muted">${esc(c.CloseDate || '')}</span>` : czDate(czTarget(c))
       }${lateBadge(lt) ? '<br>' + lateBadge(lt) : ''}</td><td class="num">${
@@ -518,8 +520,8 @@ function czCaseHTML(c) {
       <div class="stages">${stages}</div>
       <div class="flow"><div><label>공</label><select data-scope="case" data-f="Ball" class="${missSet.has('NextAction') ? 'miss' : ''}">${czOptHTML(CZ_OPT.Ball, c.Ball)}</select></div>
         <div><label>다음 행동</label><input type="text" data-scope="case" data-f="NextAction" value="${esc(c.NextAction)}"></div>
-        <div><label>재확인일</label><input type="date" data-scope="case" data-f="RecheckDate" value="${esc(c.RecheckDate)}"></div>
-        <div><button class="btn" data-act="bump" data-id="${c.id}">+2일</button></div></div>
+        <div><label title="이 날이 되면 대시보드의 할 일과 RCA 목록의 ‘내가 볼 것 · 독촉’ 에 다시 나옵니다">재확인일 <span class="muted" style="font-weight:normal">이 날 할 일에 다시 나옴</span></label><input type="date" data-scope="case" data-f="RecheckDate" value="${esc(c.RecheckDate)}"></div>
+        <div><button class="btn" data-act="bump" data-id="${c.id}" title="재확인일을 오늘부터 2일 뒤로 옮깁니다. 목표 종결일은 그대로입니다">2일 뒤 다시 보기</button></div></div>
       ${
         czUi.showGate && missing.length
           ? `<div class="gate"><b>${esc(ns)} 단계로 넘어가려면 ${missing.length}개 항목이 필요합니다.</b><ul>${missing

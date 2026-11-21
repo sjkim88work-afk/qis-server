@@ -854,6 +854,13 @@ body:not(.mob) .pld textarea,body:not(.mob) .pld .card input{border-radius:3px;b
 }
 @media (max-width:900px){.todot,.todot tbody,.todot tr,.todot td{display:block;width:auto!important}.todot thead{display:none}.todot td{border:0;padding:1px 12px!important;white-space:normal!important;text-align:left!important}.todot td:empty{display:none}.todot td.a{padding-top:4px!important}.todot tr{padding:7px 0;border-bottom:1px solid #eceef2}}
 .cz .btn.on{border-color:var(--ink);font-weight:600}.cz .btn.sm b{font-family:var(--f-mono,monospace);font-weight:600}
+/* RCA 화면 · RCA 창 (.cz): 다른 화면과 같은 각진 모서리 */
+@media screen{
+  body:not(.mob) .cz .btn,body:not(.mob) .cz input,body:not(.mob) .cz select,body:not(.mob) .cz textarea,body:not(.mob) .cz .tw,body:not(.mob) .cz .badge,body:not(.mob) .cz .ball,body:not(.mob) .cz .chead,body:not(.mob) .cz .stg,body:not(.mob) .cz .gate,body:not(.mob) .cz .note,body:not(.mob) .cz .calc,body:not(.mob) .cz .chip,body:not(.mob) .cz .tool,body:not(.mob) .cz .tool .rec,body:not(.mob) .cz .ws,body:not(.mob) .cz .ws-h,body:not(.mob) .cz .how,body:not(.mob) .cz .fbc,body:not(.mob) .cz .seg,body:not(.mob) .cz .vbox,body:not(.mob) .cz .lkbox,body:not(.mob) .cz .card,body:not(.mob) .cz .list-item{border-radius:3px}
+  body:not(.mob) .cz .ws-h{border-radius:3px 3px 0 0}
+  body:not(.mob) .cz .badge,body:not(.mob) .cz .ball{font-weight:600}
+}
+@media (min-width:901px){.cz .flow{grid-template-columns:130px 1fr 190px auto}.cz .flow label{white-space:nowrap}}
 /* ================= 휴대폰 화면 ================= */
 #mswitch{display:none;text-align:center;padding:14px 0 22px;font-size:13px}
 #mswitch a{display:none}
@@ -19491,7 +19498,9 @@ function czViewCases() {
       <td><span class="badge ${czTierCls(c.Tier)}">${esc(c.Tier || '-')}</span></td><td>${esc(c.Stage)}</td>
         <td><span class="badge ${czStCls(c.Status)}">${esc(c.Status)}</span></td><td>${czBall(c.Ball)}</td>
       <td style="max-width:240px">${esc(c.NextAction)}</td><td style="white-space:nowrap">${czDate(c.RecheckDate, closed)}${
-        due(c) ? ` <button class="btn sm" data-act="bump" data-id="${c.id}" title="재확인일을 오늘+2일로">+2일</button>` : ''
+        due(c)
+          ? ` <button class="btn sm" data-act="bump" data-id="${c.id}" title="재확인일을 오늘부터 2일 뒤로 옮깁니다. 목표 종결일은 그대로입니다">2일 뒤 다시 보기</button>`
+          : ''
       }</td><td style="white-space:nowrap">${
         closed ? `<span class="muted">${esc(c.CloseDate || '')}</span>` : czDate(czTarget(c))
       }${lateBadge(lt) ? '<br>' + lateBadge(lt) : ''}</td><td class="num">${
@@ -19737,8 +19746,8 @@ function czCaseHTML(c) {
       <div class="stages">${stages}</div>
       <div class="flow"><div><label>공</label><select data-scope="case" data-f="Ball" class="${missSet.has('NextAction') ? 'miss' : ''}">${czOptHTML(CZ_OPT.Ball, c.Ball)}</select></div>
         <div><label>다음 행동</label><input type="text" data-scope="case" data-f="NextAction" value="${esc(c.NextAction)}"></div>
-        <div><label>재확인일</label><input type="date" data-scope="case" data-f="RecheckDate" value="${esc(c.RecheckDate)}"></div>
-        <div><button class="btn" data-act="bump" data-id="${c.id}">+2일</button></div></div>
+        <div><label title="이 날이 되면 대시보드의 할 일과 RCA 목록의 ‘내가 볼 것 · 독촉’ 에 다시 나옵니다">재확인일 <span class="muted" style="font-weight:normal">이 날 할 일에 다시 나옴</span></label><input type="date" data-scope="case" data-f="RecheckDate" value="${esc(c.RecheckDate)}"></div>
+        <div><button class="btn" data-act="bump" data-id="${c.id}" title="재확인일을 오늘부터 2일 뒤로 옮깁니다. 목표 종결일은 그대로입니다">2일 뒤 다시 보기</button></div></div>
       ${
         czUi.showGate && missing.length
           ? `<div class="gate"><b>${esc(ns)} 단계로 넘어가려면 ${missing.length}개 항목이 필요합니다.</b><ul>${missing
@@ -20603,7 +20612,7 @@ document.addEventListener('click', async (e) => {
       touch(c);
       save();
       render();
-      toast('재확인일을 ' + c.RecheckDate + '로 옮겼습니다.');
+      toast('재확인일을 ' + c.RecheckDate + '로 옮겼습니다. 목표 종결일은 그대로입니다.');
       break;
     }
     case 'stageNext':

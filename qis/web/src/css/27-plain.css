@@ -165,3 +165,10 @@ body:not(.mob) .pld textarea,body:not(.mob) .pld .card input{border-radius:3px;b
 }
 @media (max-width:900px){.todot,.todot tbody,.todot tr,.todot td{display:block;width:auto!important}.todot thead{display:none}.todot td{border:0;padding:1px 12px!important;white-space:normal!important;text-align:left!important}.todot td:empty{display:none}.todot td.a{padding-top:4px!important}.todot tr{padding:7px 0;border-bottom:1px solid #eceef2}}
 .cz .btn.on{border-color:var(--ink);font-weight:600}.cz .btn.sm b{font-family:var(--f-mono,monospace);font-weight:600}
+/* RCA 화면 · RCA 창 (.cz): 다른 화면과 같은 각진 모서리 */
+@media screen{
+  body:not(.mob) .cz .btn,body:not(.mob) .cz input,body:not(.mob) .cz select,body:not(.mob) .cz textarea,body:not(.mob) .cz .tw,body:not(.mob) .cz .badge,body:not(.mob) .cz .ball,body:not(.mob) .cz .chead,body:not(.mob) .cz .stg,body:not(.mob) .cz .gate,body:not(.mob) .cz .note,body:not(.mob) .cz .calc,body:not(.mob) .cz .chip,body:not(.mob) .cz .tool,body:not(.mob) .cz .tool .rec,body:not(.mob) .cz .ws,body:not(.mob) .cz .ws-h,body:not(.mob) .cz .how,body:not(.mob) .cz .fbc,body:not(.mob) .cz .seg,body:not(.mob) .cz .vbox,body:not(.mob) .cz .lkbox,body:not(.mob) .cz .card,body:not(.mob) .cz .list-item{border-radius:3px}
+  body:not(.mob) .cz .ws-h{border-radius:3px 3px 0 0}
+  body:not(.mob) .cz .badge,body:not(.mob) .cz .ball{font-weight:600}
+}
+@media (min-width:901px){.cz .flow{grid-template-columns:130px 1fr 190px auto}.cz .flow label{white-space:nowrap}}

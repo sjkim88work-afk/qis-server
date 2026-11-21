@@ -57,9 +57,9 @@ def run(c):
       const btn=[...document.querySelectorAll('.cz .bar button')].find(b=>b.textContent.includes('내가 볼 것'));o.n=btn.textContent.trim();
       btn.click();await wait(250);o.rows=document.querySelectorAll('.cz table.t tbody tr.click').length;o.on=[...document.querySelectorAll('.cz .bar button.on')].length;
       const bump=q('.cz table.t tbody [data-act=bump]');o.bump=!!bump;if(bump){bump.click();await wait(300)}
-      o.after=db.cases.find(x=>x.id===c.id).RecheckDate>today();o.modal=q('#modal').classList.contains('on');
+      o.bumpTxt=bump?bump.textContent:'';o.after=db.cases.find(x=>x.id===c.id).RecheckDate>today();o.modal=q('#modal').classList.contains('on');
       db.cases=db.cases.filter(x=>x.id!==c.id);czUi.filt.todo='';czUi.filt.status='미종결';save();render();return o}""")
     ok(r["prog"] == "prog" and r["view"] == "cases" and r["tabs"].startswith("RCA 목록|조치") and "오늘 할 일" not in r["tabs"] and "RCA" in r["h1"], f"RCA 메뉴: 목록이 먼저 · ‘오늘 할 일’ 탭 없음 ({r['tabs']})")
     if not r.get("skip"):
-        ok(r["rows"] >= 1 and r["on"] == 1 and r["bump"] and r["after"] and not r["modal"], f"RCA 목록: ‘내가 볼 것’ 단추로 거르고 그 줄에서 +2일 (창은 열리지 않음) ({r['n']} · {r['rows']}줄)")
+        ok(r["rows"] >= 1 and r["on"] == 1 and r["bump"] and r["bumpTxt"] == "2일 뒤 다시 보기" and r["after"] and not r["modal"], f"RCA 목록: ‘내가 볼 것’ 단추로 거르고 그 줄에서 +2일 (창은 열리지 않음) ({r['n']} · {r['rows']}줄)")
 

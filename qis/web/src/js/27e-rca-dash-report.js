@@ -58,7 +58,7 @@ document.addEventListener('click', async (e) => {
       touch(c);
       save();
       render();
-      toast('재확인일을 ' + c.RecheckDate + '로 옮겼습니다.');
+      toast('재확인일을 ' + c.RecheckDate + '로 옮겼습니다. 목표 종결일은 그대로입니다.');
       break;
     }
     case 'stageNext':
