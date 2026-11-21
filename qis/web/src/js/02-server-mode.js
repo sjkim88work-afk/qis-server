@@ -356,7 +356,23 @@ function srvPanel() {
   );
 }
 
+// 서버 없이 열었을 때의 안내 (v2.0.0 부터 서버판 전용)
+function noServerNotice() {
+  const d = document.createElement('div');
+  d.id = 'nosrv';
+  d.innerHTML = `<div class="box"><h1>QIS 는 데스크톱 프로그램으로 엽니다</h1>
+    <p>v2.0.0 부터 QIS 는 <b>서버판 (데스크톱 프로그램 QIS.app · QIS.exe)</b> 만 씁니다. 이 파일을 직접 열어서는 쓸 수 없습니다.</p>
+    <p>혼자 쓰는 경우에도 데스크톱 프로그램의 <b>‘이 PC 혼자 쓰기’</b> 로 같은 기능을 씁니다.</p>
+    <p class="sub">예전에 이 파일로 쓰던 데이터가 있으면: 예전 버전 (v1.x) 의 파일로 열어 <b>설정 · 백업 › 백업 파일 내보내기</b> 를 한 뒤, 데스크톱 프로그램의 <b>관리 › 백업 · 데이터 › 가져오기</b> 로 넣으세요. 이 화면은 예전 데이터를 읽거나 지우지 않습니다.</p></div>`;
+  document.body.appendChild(d);
+  document.body.classList.add('nosrv');
+}
 async function bootData() {
+  if (NO_SERVER) {
+    noServerNotice();
+    dataReady = true;
+    return;
+  }
   if (SHARE) {
     dataReady = true;
     return;

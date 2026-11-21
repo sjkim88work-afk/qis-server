@@ -27,5 +27,7 @@ const SRV = (() => {
     return null;
   }
 })();
-const RO = !!SHARE || !!(SRV && SRV.role === 'viewer');
+// 서버판 전용 (v2.0.0): 서버 없이 이 파일을 직접 열면 안내만 보여 주고, 브라우저에 남아 있는 예전 데이터는 읽지도 쓰지도 않음
+const NO_SERVER = !SRV && !SHARE;
+const RO = !!SHARE || !!(SRV && SRV.role === 'viewer') || NO_SERVER;
 const RO_PH = new Map(SHARE && Array.isArray(SHARE.photos) ? SHARE.photos.filter((p) => p && p.id).map((p) => [p.id, p]) : []);

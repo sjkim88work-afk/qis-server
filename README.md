@@ -175,7 +175,7 @@ python tests/e2e_browser.py tests/sample_backup.json       # 화면 시험 (두 
 python tests/e2e_browser.py tests/sample_backup.json --only issue,ncr   # 화면 시험 일부만 (이름은 --list · 내용은 tests/e2e_parts/)
 ```
 
-화면(`qis/web/index.html`)은 QIS 단일 파일과 같은 소스입니다. 서버에서 열리면 서버 모드로 동작합니다.
+화면(`qis/web/index.html`)은 **서버판 전용**입니다 (v2.0.0 부터). 서버 없이 이 파일을 직접 열면 안내만 나옵니다 — 혼자 쓰는 경우에는 데스크톱 프로그램의 ‘이 PC 혼자 쓰기’ 를 씁니다. 예전 단일 파일판과 같은 소스에서 나왔습니다. 서버에서 열리면 서버 모드로 동작합니다.
 
 ## 화면 소스 고치기 (개발)
 
