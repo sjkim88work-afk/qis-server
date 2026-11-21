@@ -53,10 +53,36 @@ def run(c):
     # 좁은 화면의 PC 보기: 요약 칸은 작은 숫자 유지 · 단추 칸은 고정하지 않음
     A.set_viewport_size({"width": 390, "height": 800}); settle(A, 500)
     A.evaluate("()=>mobSet('pc')"); settle(A, 400)
-    k = A.evaluate("()=>({v:getComputedStyle(document.querySelector('.kpi .v')).fontSize,p:getComputedStyle(document.querySelector('.kpi')).paddingTop})")
+    A.evaluate("()=>go('issue')"); settle(A, 300)      # 요약 칸(타일)이 있는 화면 — 대시보드는 2026-11 부터 묶음 줄 모양
+    k = A.evaluate("()=>({v:getComputedStyle(document.querySelector('.kpis .kpi .v')).fontSize,p:getComputedStyle(document.querySelector('.kpis .kpi')).paddingTop})")
+    k["dash"] = A.evaluate("()=>{go('dash');const g=[...document.querySelectorAll('.kgs .kg')].map(e=>Math.round(e.getBoundingClientRect().left));return {n:g.length,oneCol:new Set(g).size===1,over:document.documentElement.scrollWidth>innerWidth+2}}")
     A.evaluate("()=>{state.df.from='2025-01-01';go('defect')}"); settle(A, 350)
     k["pos"] = A.evaluate("()=>{const t=document.querySelector('#dtab .tw tbody tr td:last-child');return t?getComputedStyle(t).position:'none'}")
+    ok(k["dash"] == {"n": 3, "oneCol": True, "over": False}, f"휴대폰의 PC 보기: 대시보드 수치 묶음 3개가 한 줄씩 쌓임 · 옆으로 넘치지 않음 ({k['dash']})")
     ok(k["v"] == "19px" and k["p"] == "8px" and k["pos"] != "sticky", f"휴대폰의 PC 보기: 요약 숫자 19px 유지 · 단추 칸 고정 없음 ({k['v']} · {k['pos']})")
     A.evaluate("()=>{mobSet('auto')}"); A.set_viewport_size({"width": 1400, "height": 900}); settle(A, 700)
     A.evaluate("()=>{go('dash')}"); settle(A, 300)
     ok(A.evaluate(NAVST)["outIn"] == "nav" and not A._errs, f"원래 창 크기로 돌아옴 · 화면 오류 없음 {A._errs[:2]}")
+
+    # 대시보드 배치 (2026-11): 진행 현황이 먼저 → 수치 묶음 3개(지연 · 진행 중 · 이번 달 발생) → 오늘 챙길 일 → 월간 특이사항 → 그림표
+    r = A.evaluate("""async()=>{const wait=ms=>window.__settle(ms),q=s=>document.querySelector(s),o={};go('dash');await wait(300);
+      const top=e=>e?Math.round(e.getBoundingClientRect().top+scrollY):-1,card=t=>[...document.querySelectorAll('#view .card')].find(c=>(c.querySelector('h3')||{}).textContent&&c.querySelector('h3').textContent.includes(t));
+      o.order=[top(q('.pc1')),top(q('.kgs')),top(card('오늘 챙길 일')),top(card('월간 특이사항')),top(card('월별 불량 건수'))];
+      o.groups=[...document.querySelectorAll('.kgs .kg h4')].map(h=>h.firstChild.textContent.trim()).join('|');
+      o.rows=[...document.querySelectorAll('.kgs .kg')].map(g=>g.querySelectorAll('.kpi').length).join('');o.tiles=document.querySelectorAll('#view .kpis').length;
+      const row=t=>[...document.querySelectorAll('.kgs .kpi')].find(e=>e.querySelector('.l').firstChild.textContent.trim()===t),cs=e=>getComputedStyle(e);
+      const late=row('대책서 회신 지연'),zero=row('유효성 검증 지연'),on=row('미종결 NCR');
+      o.late={n:late.querySelector('.v').textContent,cls:late.classList.contains('bad'),color:cs(late.querySelector('.v')).color,bg:cs(late).backgroundColor};
+      o.zero={n:zero.querySelector('.v').textContent,cls:zero.classList.contains('z'),color:cs(zero.querySelector('.v')).color,bg:cs(zero).backgroundColor};
+      o.on={n:on.querySelector('.v').textContent,color:cs(on.querySelector('.v')).color};
+      o.noLateTile=![...document.querySelectorAll('.kgs .kpi .l')].some(e=>/지연 중인 건/.test(e.textContent));
+      const chip=q('.pc1 h3 button.bg');o.chip=chip?chip.textContent.trim():'';
+      on.click();await wait(300);o.go=state.tab+'/'+(state.nf.status||'');go('dash');await wait(200);
+      if(q('.pc1 h3 button.bg')){q('.pc1 h3 button.bg').click();await wait(300);o.goLate=state.tab+'/'+((state.pf||{}).late||'');state.pf.late=''}
+      go('dash');return o}""")
+    ok(r["order"] == sorted(r["order"]) and min(r["order"]) > 0, f"대시보드 순서: 진행 현황 → 수치 → 오늘 챙길 일 → 월간 특이사항 → 그림표 ({r['order']})")
+    ok(r["groups"].startswith("지연|진행 중|") and r["groups"].endswith("발생") and r["rows"] == "234" and r["tiles"] == 0 and r["noLateTile"], f"수치는 세 묶음 9줄 — 지연 2 · 진행 중 3 · 이번 달 발생 4 ({r['groups']})")
+    ok(r["late"]["n"] == "1" and r["late"]["cls"] and r["late"]["color"] == "rgb(185, 50, 31)" and r["late"]["bg"] == "rgb(251, 231, 228)", f"지연이 있으면 빨간 숫자 · 빨간 바탕 ({r['late']})")
+    ok(r["zero"]["n"] == "0" and r["zero"]["cls"] and r["zero"]["color"] == "rgb(107, 118, 137)" and r["zero"]["bg"] == "rgba(0, 0, 0, 0)", f"값이 0 이면 회색으로 약하게 ({r['zero']})")
+    ok(r["on"]["color"] == "rgb(29, 36, 51)" and r["go"] == "ncr/open", f"진행 중인 수는 검은 숫자 · 누르면 그 목록으로 ({r['go']})")
+    ok(r["chip"].startswith("지연 ") and r.get("goLate") == "case/1", f"진행 현황의 ‘지연’ 표시를 누르면 지연 건만 보기 ({r['chip']} → {r.get('goLate')})")

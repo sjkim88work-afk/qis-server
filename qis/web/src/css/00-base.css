@@ -231,3 +231,17 @@ ul.act{margin:0;padding-left:18px}ul.act li{margin:4px 0}
 #sevBox,#costBox,#evalBox,#stockBox,#linkBox,#ctBox{overflow-x:auto;max-width:100%}
 @media(max-width:600px){.g2{grid-template-columns:1fr}main{padding:12px}.card h3{flex-wrap:wrap}.card{min-width:0;overflow-wrap:anywhere}.card .row{flex-wrap:wrap}.card .row input{min-width:0;max-width:100%}}
 .updbadge{display:inline-block;margin-left:8px;padding:2px 8px;border-radius:10px;font:600 11px/1.6 var(--f);vertical-align:middle;background:#dcfce7;color:#14532d;text-decoration:none}
+
+/* 대시보드 — 진행 현황이 먼저 · 요약 수치는 세 묶음 (지연 → 진행 중 → 이번 달 발생) */
+.pc1 h3{flex-wrap:wrap}.pc1 h3 .cnt{font-size:12px;font-weight:400}.pc1 h3 button.bg{border:0;font:inherit;font-size:11.5px;font-weight:600;cursor:pointer}.pc1 h3 button.bg:hover{box-shadow:0 0 0 2px var(--bad) inset}
+.pc1 ul.todo li{min-height:38px;gap:8px}
+.kgs{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(300px,100%),1fr));gap:12px;margin-bottom:18px}
+.kg{display:flex;flex-direction:column;gap:2px;padding:14px 8px 8px;background:var(--card);border:1px solid var(--line);border-radius:12px}
+.kg h4{margin:0 10px 6px;font-size:13px;font-weight:600}.kg h4 span{font-size:12px;font-weight:400;color:var(--sub)}
+.kgs .kg .kpi{display:flex;align-items:baseline;gap:10px;padding:8px 10px;border:0;border-radius:8px;background:none;box-shadow:none}
+.kgs .kg .kpi .l{flex:1 1 auto;min-width:0;font-size:13px;font-weight:500;color:var(--ink);line-height:1.4}
+.kgs .kg .kpi .s{display:block;margin:0;font-size:12px;font-weight:400;color:var(--sub);line-height:1.4}
+.kgs .kg .kpi .v{margin:0;font-family:var(--f-mono,monospace);font-size:20px;font-weight:600;letter-spacing:0;line-height:1.1;color:var(--ink);font-variant-numeric:tabular-nums}
+.kgs .kg .kpi.z .v{color:#6b7689;font-weight:500}
+.kgs .kg .kpi.bad{background:#fbe7e4}.kgs .kg .kpi.bad .v{color:#b9321f;font-weight:700}
+.kgs .kg .kpi.go:hover{box-shadow:0 0 0 2px var(--pri) inset}

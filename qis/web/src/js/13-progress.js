@@ -261,15 +261,19 @@ function progCard() {
   if (!C.length) return '';
   const line = (c) =>
     `<li>${nxBadge(c.next.nextDate)} <a class="lk" onclick="openCase('${c.kind}','${c.id}')">${esc(c.title)}</a> <span class="muted" style="font-size:12px">${esc(c.next.next)} · ${esc(c.sup)}</span></li>`;
-  return `<div class="card"><h3>진행 현황 <span class="bg inf">RCA ${C.filter((c) => c.kind === 'rca').length} · NCR ${
-    C.filter((c) => c.kind === 'ncr').length
-  } · 불량 ${C.filter((c) => c.kind === 'defect').length}</span>${od.length ? ` <span class="bg bad">기한 초과 ${od.length}</span>` : ''}${
-    C.filter((c) => c.stale >= 14).length ? ` <span class="bg warn">14일+ 정체 ${C.filter((c) => c.stale >= 14).length}</span>` : ''
-  }<span class="sp"></span><button class="b s" onclick="go('prog')">전체 보기</button></h3>
-    <div class="grid g2" style="gap:16px"><div><div class="muted" style="font-size:12px;margin-bottom:4px">기한 임박 · 초과 (3일 이내)</div>${
+  const lateN = C.filter((c) => c.late.length).length, // 지연 = 미종결 + 기한 경과 (진행 현황 화면과 같은 기준)
+    soonN = due.length - od.length,
+    staleN = C.filter((c) => c.stale >= 14).length;
+  return `<div class="card pc1"><h3>진행 현황${
+    lateN ? ` <button type="button" class="bg bad" onclick="dashGo('late')" title="누르면 지연 건만 보기">지연 ${lateN}</button>` : ''
+  }${soonN ? ` <span class="bg warn">3일 안에 기한 ${soonN}</span>` : ''}${staleN ? ` <span class="bg warn">14일+ 정체 ${staleN}</span>` : ''}
+    <span class="muted cnt">미종결 — RCA ${C.filter((c) => c.kind === 'rca').length} · NCR ${C.filter((c) => c.kind === 'ncr').length} · 불량 ${
+      C.filter((c) => c.kind === 'defect').length
+    }</span><span class="sp"></span><button class="b s" onclick="go('prog')">전체 보기</button></h3>
+    <div class="grid g2" style="gap:16px"><div><div class="muted" style="font-size:12px;margin-bottom:4px">기한 초과 · 3일 안에 기한</div>${
       due.length ? `<ul class="todo">${due.slice(0, 6).map(line).join('')}</ul>` : '<div class="muted" style="font-size:12px">임박한 기한 없음</div>'
     }</div>
-    <div><div class="muted" style="font-size:12px;margin-bottom:4px">오래 정체된 건</div>${
+    <div><div class="muted" style="font-size:12px;margin-bottom:4px">오래 정체된 건 — 직접 쓴 기록이 14일 넘게 없음</div>${
       st.length
         ? `<ul class="todo">${st
             .map(
