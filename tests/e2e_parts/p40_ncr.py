@@ -151,3 +151,73 @@ def run(c):
     ok(r["c"]["cur"] == "유효성 검증,종결" and r["c"]["tabs"] == "c" and r["c"]["sel"] == "c", "‘유효성 검증’ 단계 → 검증 · 종결 화면")
     ok(r["d"] == {"sel": "d", "on": "true", "log": True}, f"‘진행 기록’ 단추 → 기록 화면 (탭 줄에는 없음) ({r['d']})")
     ok(r["info"]["labels"] == "발행>협력사 통보>종결" and r["info"]["cur"] == "발행,협력사 통보", f"요구 유형을 단순 통보로 바꾸면 단계 줄도 바뀜 ({r['info']['labels']})")
+
+    # ---- 업무 규칙 (2026-11 점검): 끝난 것으로 보는 조건 · PPM · 입력값 검사 ----
+    r = A.evaluate("""async()=>{const wait=ms=>window.__settle(ms),o={},T=today(),sup=db.suppliers[0],made=[],madeN=[];
+      mfDirty=false;closeModal(true);
+      const B3={impact:3,stage:2,scope:2,repeat:1};
+      const D=T<RULES_FROM?RULES_FROM:T;const mk=(x)=>{const d={id:'pr'+Math.random().toString(36).slice(2,8),date:D,source:'수입검사',partNo:'PR-1',partName:'규칙시험',supplierId:sup.id,type:'치수',qty:10,inspQty:100,disposition:'선별',resp:'협력사',owner:'kim',logs:[],photos:[],sev:B3,...x};db.defects.push(d);made.push(d);return d};
+      const mkN=(d,x)=>{const n={id:'prn'+Math.random().toString(36).slice(2,8),no:'PR-NCR-'+madeN.length,supplierId:sup.id,partNo:d.partNo,issueDate:T,reqType:'간이 대책서',defectIds:[d.id],...x};db.ncrs.push(n);madeN.push(n);d.ncrId=n.id;return n};
+      const OKN={notifyDate:T,requestDate:T,replyDate:T,validity:'적정'},ICA={level:'간이 대책',d1:'a',d2:'a',d3:'a',d4:'a',d5:'a',d6:'a',d7:'a',d8:'a',doneDate:T};
+      // 3. 사내 대책 뒤 재발 (검증 무효): 불량이 다시 열리고 대시보드에 나옴
+      let d=mk({resp:'사내',partNo:'PR-ICANG',ica:{...ICA}});o.ica0=!!defStage(d).done;
+      d.ica.verifyDate=T;d.ica.verifyResult='무효(재발)';o.ica1={done:!!defStage(d).done,label:defStage(d).label};
+      go('dash');await wait(300);o.icaDash=[...document.querySelectorAll('main tr,main li')].some(e=>/사내 대책 재발/.test(e.textContent)&&/규칙시험/.test(e.textContent));
+      // 1. 공동 귀책: NCR 승인만으로는 끝나지 않음 — 사내 몫의 대책도 끝나야 함
+      d=mk({resp:'공동',inv:{share:50},ica:{level:'간이 대책'}});let n=mkN(d,OKN);
+      o.joint0={done:!!defStage(d).done,label:defStage(d).label,need:icaNeed(d)};
+      d.ica={...ICA};o.joint1={done:!!defStage(d).done,label:defStage(d).label};
+      d.ica={...ICA,verifyDate:T,verifyResult:'무효(재발)'};o.joint2=defStage(d).label;
+      // 새 조건은 2026-11-22 부터 발생한 불량에만 — 그 전의 기록은 다시 열리지 않음
+      d=mk({resp:'공동',inv:{share:50},ica:{level:'간이 대책'},date:'2026-11-01'});n=mkN(d,OKN);o.old1=!!defStage(d).done;
+      d=mk({resp:'미정',doneDate:'2026-11-02',date:'2026-11-01'});o.old2=!!defStage(d).done;
+      d=mk({source:'공정',date:'2026-11-01'});n=mkN(d,OKN);o.old3=!!defStage(d).done;
+      // 5. 불량과 NCR 의 이름: 승인 = ‘대책 승인(검증 대기)’, 검증 종결 뒤에 ‘완료’
+      d=mk({});n=mkN(d,OKN);o.name0=[defStage(d).label,ncrStatus(n)];
+      n.verifyDate=T;n.verifyResult='유효';o.name1=[defStage(d).label,ncrStatus(n)];
+      // 2. 귀책 미정: A · B 등급은 조사 없이 처리 완료일만으로 끝나지 않음. C 등급은 끝남
+      d=mk({resp:'미정',doneDate:T});o.unk={g:sevOf(d).grade,done:!!defStage(d).done,open:invOpen(d),label:defStage(d).label};
+      d.inv={verdict:'원인 불명'};o.unkV=!!defStage(d).done;
+      d=mk({resp:'미정',doneDate:T,partNo:'PR-C1',sev:{impact:1,stage:1,scope:1,repeat:1}});o.unkC={g:sevOf(d).grade,done:!!defStage(d).done};
+      // 4. 유출 원인: 공정에서 찾은 협력사 귀책 (B 등급) — 검출 판정, 그리고 ‘샘플링 한계’ 가 아니면 사내 RCA 종결까지
+      d=mk({source:'공정'});n=mkN(d,{...OKN,verifyDate:T,verifyResult:'유효'});
+      o.esc0={label:defStage(d).label,ncr:ncrStatus(n),a3:a3Ready({ncr:n,defs:[d]})};
+      d.escJudge='검사 누락·오판정';o.esc1=defStage(d).label;
+      d.escJudge='샘플링 한계';o.esc2={done:!!defStage(d).done,a3:a3Ready({ncr:n,defs:[d]})};
+      d=mk({source:'공정',partNo:'PR-C2',sev:{impact:1,stage:2,scope:1,repeat:1},doneDate:T});o.escC={g:sevOf(d).grade,done:!!defStage(d).done};
+      // 단순 통보 NCR: 통보해서 NCR 은 종결이어도, 불량 처리 전에는 A3 를 출력하지 않음
+      d=mk({disposition:''});n=mkN(d,{reqType:'단순 통보',notifyDate:T});o.notice={ncr:ncrStatus(n),done:!!defStage(d).done,a3:a3Ready({ncr:n,defs:[d]})};
+      // 고객 귀책: 처리 완료일을 넣으면 다음 할 일도 완료 표시
+      d=mk({resp:'고객'});o.cust0=routeOf(d).map(s=>s.done).join();d.doneDate=T;o.cust1=routeOf(d).map(s=>s.done).join()+'/'+!!defStage(d).done;
+      // 6. PPM: 공동 귀책은 분담 비율만큼 (설정으로 전량)
+      const m=T.slice(0,7),base=()=>supMonthPpm(sup.id,m).q;made.forEach(x=>{db.defects=db.defects.filter(y=>y!==x)});const q0=base();
+      d={id:'prq',date:T,supplierId:sup.id,qty:10,resp:'공동',inv:{share:30}};db.defects.push(d);o.ppmShare=base()-q0;
+      const keep=db.settings.ppmJoint;db.settings.ppmJoint=0;o.ppmAll=base()-q0;db.settings.ppmJoint=keep;
+      d.inv={};o.ppmNoShare=base()-q0;d.resp='미정';o.ppmUnk=base()-q0;
+      db.defects=db.defects.filter(y=>y!==d);madeN.forEach(x=>{db.ncrs=db.ncrs.filter(y=>y!==x)});
+      // 7. 입력값 검사 — 불량: 미래 날짜 · 수량 > 입고 수량
+      const t0=window.toast,msgs=[];window.toast=(x)=>{msgs.push(String(x));t0(x)};
+      go('defect');editDefect();await wait(300);let f=document.querySelector('#mf');
+      f.date.value=addDays(T,3);o.vFuture=[await saveDefect(),msgs.pop()||''];
+      f.date.value=T;f.qty.value=50;f.inspQty.value=20;o.vQty=[await saveDefect(),msgs.pop()||''];
+      mfDirty=false;closeModal(true);
+      // NCR: 회신일 · 검증일이 발행일보다 빠르면 저장하지 않음
+      const n0=db.ncrs.find(x=>x.issueDate&&x.reqType!=='단순 통보');go('ncr');editNcr(n0.id);await wait(300);f=document.querySelector('#mf');
+      const keepR=f.replyDate.value,keepV=f.verifyDate.value;
+      f.replyDate.value=addDays(n0.issueDate,-2);o.vReply=[saveNcr(n0.id),msgs.pop()||''];
+      f.replyDate.value=addDays(n0.issueDate,5);f.verifyDate.value=addDays(n0.issueDate,2);o.vVerify=[saveNcr(n0.id),msgs.pop()||''];
+      f.replyDate.value=keepR;f.verifyDate.value=keepV;mfDirty=false;closeModal(true);window.toast=t0;render();return o}""")
+    ok(r["joint0"] == {"done": False, "label": "사내 몫 — 간이 대책 필요", "need": True} and r["joint1"]["done"] and "재발" in r["joint2"],
+       f"공동 귀책: NCR 승인만으로는 끝나지 않고 사내 몫의 대책이 끝나야 함 ({r['joint0']['label']} → {r['joint1']['label']} · 재발: {r['joint2']})")
+    ok(r["old1"] and r["old2"] and r["old3"], f"새 조건은 2026-11-22 부터 발생한 불량에만 적용 — 그 전 기록은 끝난 상태 그대로 ({r['old1']}, {r['old2']}, {r['old3']})")
+    ok(r["name0"] == ["대책 승인(검증 대기)", "승인(검증대기)"] and r["name1"] == ["완료(검증 종결)", "종결"], f"불량 · NCR 의 이름이 맞음: 승인 {r['name0']} → 종결 {r['name1']}")
+    ok(r["unk"]["g"] in ("A", "B") and not r["unk"]["done"] and r["unk"]["open"] and r["unkV"] and r["unkC"] == {"g": "C", "done": True},
+       f"귀책 미정: A · B 등급은 처리 완료일만으로 끝나지 않음 ({r['unk']['label']}) · ‘원인 불명’ 판정이면 끝남 · C 등급은 끝남")
+    ok(r["ica0"] and not r["ica1"]["done"] and r["ica1"]["label"] == "재발 — 재대책 필요" and r["icaDash"], f"사내 대책 뒤 재발: 불량이 다시 열림 ({r['ica1']['label']}) · 대시보드 할 일에 나옴 ({r['icaDash']})")
+    ok(r["esc0"]["label"] == "수입검사 검출 판정 필요" and r["esc0"]["ncr"] == "종결" and r["esc0"]["a3"] and r["esc1"] == "유출 원인 분석 필요 (사내 RCA)" and r["esc2"] == {"done": True, "a3": ""} and r["escC"] == {"g": "C", "done": True},
+       f"유출 원인: 검출 판정 → 사내 RCA 까지 끝나야 함 ({r['esc0']['label']} → {r['esc1']}) · ‘샘플링 한계’ 와 C 등급은 그대로 끝남")
+    ok(r["notice"]["ncr"] == "종결" and not r["notice"]["done"] and r["notice"]["a3"], f"단순 통보 NCR: 불량 처리 전에는 A3 를 출력하지 않음 ({r['notice']['a3']})")
+    ok(r["cust0"] == "false" and r["cust1"] == "true/true", f"고객 귀책: 처리 완료일을 넣으면 할 일도 완료 ({r['cust0']} → {r['cust1']})")
+    ok(r["ppmShare"] == 3 and r["ppmAll"] == 10 and r["ppmNoShare"] == 10 and r["ppmUnk"] == 0, f"PPM 수량: 공동 30% → {r['ppmShare']} · 설정 ‘전량’ {r['ppmAll']} · 분담 비율 없음 {r['ppmNoShare']} · 귀책 미정 {r['ppmUnk']}")
+    ok(r["vFuture"][0] is None and "오늘보다 뒤" in r["vFuture"][1] and r["vQty"][0] is None and "보다 큽니다" in r["vQty"][1], f"불량 저장 검사: 미래 날짜 · 수량 > 입고 수량은 저장하지 않음 ({r['vFuture'][1]} / {r['vQty'][1]})")
+    ok(r["vReply"][0] is None and "발행일" in r["vReply"][1] and r["vVerify"][0] is None and "회신일" in r["vVerify"][1], f"NCR 저장 검사: 날짜 순서 ({r['vReply'][1]} / {r['vVerify'][1]})")

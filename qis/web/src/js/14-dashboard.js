@@ -63,7 +63,8 @@ function renderDash() {
     judge = invs.filter((d) => invInfo(d).k === 'judge');
   const icas = db.defects.filter((d) => icaNeed(d) && !d.ica?.doneDate),
     icaLate = icas.filter((d) => d.ica?.due && today() > d.ica.due),
-    icaVLate = db.defects.filter((d) => !d.ncrId && icaVerify(d)?.k === 'late');
+    icaVLate = db.defects.filter((d) => !d.ncrId && icaVerify(d)?.k === 'late'),
+    icaNg = db.defects.filter((d) => !d.closed && !defCase(d) && ['사내', '공동'].includes(d.resp) && icaVerify(d)?.k === 'ng'); // 사내 대책 뒤 재발
   const delta = (a, b) =>
     b ? `전월 ${b.toLocaleString()} → ${a > b ? '▲' : a < b ? '▼' : '－'} ${Math.abs(a - b).toLocaleString()}` : '전월 데이터 없음';
   const ms = lastMonths(m, 12);
@@ -143,6 +144,11 @@ function renderDash() {
       icaLate.filter(ownD),
       (d) =>
         `<li><span class="bg bad">사내 대책 지연</span> <a class="lk" onclick="editDefect('${d.id}')">${esc(defLabel(d))}</a> ${esc(icaLevel(d))} — 기한 ${esc(d.ica.due)}</li>`,
+    ) +
+    li(
+      icaNg.filter(ownD),
+      (d) =>
+        `<li><span class="bg bad">사내 대책 재발</span> <a class="lk" onclick="editIca('${d.id}')">${esc(defLabel(d))}</a> — 검증 무효 · 재대책 필요</li>`,
     ) +
     li(
       icaVLate.filter(ownD),

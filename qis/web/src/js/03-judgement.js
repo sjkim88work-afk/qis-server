@@ -136,7 +136,14 @@ function routeOf(d) {
       rec: true,
     });
   } else if (d.resp === '고객')
-    S.push({ t: '고객 귀책 — 고객 협의 내용을 실행 기록으로 남기기', why: 'NCR · RCA 대상 아님', done: false, btn: '', rec: false });
+    S.push({
+      t: '고객 귀책 — 고객 협의 내용을 실행 기록으로 남기기',
+      why: 'NCR · RCA 대상 아님 · 처리 완료일을 넣으면 끝',
+      done: !!d.doneDate,
+      doneT: '처리 완료',
+      btn: '',
+      rec: false,
+    });
   else {
     const ii = invInfo(d);
     S.push({
@@ -390,8 +397,46 @@ function ncrStatus(n) {
 }
 // 종결일 — 유효성 검증일, 단순 통보(검증 없음)는 협력사 통보일
 const ncrCloseDate = (n) => (ncrStatus(n) !== '종결' ? '' : n.verifyDate || (n.reqType === '단순 통보' ? n.notifyDate || n.issueDate || '' : ''));
-/* ---- 불량 단계 (자동) · 유효성 검증 (별도) ---- */
+/* ---- 불량 단계 (자동) · 유효성 검증 (별도) ----
+   defStage0 = 귀책별 주된 길 (NCR · 사내 대책 · RCA · 귀책 조사) 의 단계.
+   defStage  = 그 길이 끝났어도 남은 사내 일 (공동 귀책의 사내 몫 · 유출 원인 분석) 이 있으면 끝난 것으로 보지 않음 (2026-11) */
+// 2026-11 에 더한 ‘끝난 것으로 보는 조건’ 은 이 날짜부터 발생한 불량에만 적용 — 그 전에 끝난 기록이 다시 열리지 않게
+const RULES_FROM = '2026-11-22';
+const newRules = (d) => (d.date || '') >= RULES_FROM;
 function defStage(d) {
+  const s = defStage0(d);
+  return (s.done && !d.closed && newRules(d) && inHouseLeft(d)) || s;
+}
+// NCR 쪽 (또는 처리) 이 끝난 불량에 남은 사내 일. 없으면 null
+function inHouseLeft(d) {
+  const r = d.resp || '협력사',
+    cs = defCase(d);
+  if (r === '공동') {
+    // 공동 귀책: 협력사 몫 (NCR) 과 따로, 사내 몫의 대책도 끝나야 함
+    if (cs) {
+      if (cs.Status !== '종결') return { label: `사내 몫 — RCA ${cs.Stage}`, cls: 'inf' };
+    } else {
+      const lv = icaLevel(d),
+        c = d.ica || {};
+      if (lv !== ICA_NONE) {
+        if (!c.doneDate) return icaStarted(c) ? { label: `사내 몫 — ${lv} 진행`, cls: 'inf' } : { label: `사내 몫 — ${lv} 필요`, cls: 'bad' };
+        if (icaVerify(d)?.k === 'ng') return { label: '재발 — 재대책 필요 (사내 몫)', cls: 'bad' };
+      }
+    }
+  }
+  // 유출 원인: 수입검사 뒤 단계에서 찾은 협력사 · 공동 귀책 (A · B 등급) — 검출 판정을 하고, ‘샘플링 한계’ 가 아니면 사내 RCA 가 끝나야 함
+  if (escAsk(d) && sevOf(d).grade !== 'C') {
+    if (!d.escJudge) return { label: '수입검사 검출 판정 필요', cls: 'warn' };
+    if (d.escJudge !== '샘플링 한계') {
+      const n = d.ncrId ? db.ncrs.find((x) => x.id === d.ncrId) : null,
+        c2 = cs || (n && n.caseId && typeof czById === 'function' ? czById('cases', n.caseId) : null);
+      if (!c2) return { label: '유출 원인 분석 필요 (사내 RCA)', cls: 'bad' };
+      if (c2.Status !== '종결') return { label: `유출 RCA ${c2.Stage}`, cls: 'inf' };
+    }
+  }
+  return null;
+}
+function defStage0(d) {
   if (d.closed) return { done: true, label: '완료(수동)', cls: 'ok' };
   const n = d.ncrId ? db.ncrs.find((x) => x.id === d.ncrId) : null;
   if (n) {
@@ -401,8 +446,9 @@ function defStage(d) {
       return ncrNotified(n) && (d.disposition || n.verifyDate)
         ? { done: true, label: '완료(통보)', cls: 'ok' }
         : { label: ncrNotified(n) ? '처리 대기' : 'NCR 통보 전', cls: 'warn' };
-    if (n.validity === '적정') return { done: true, label: '완료(대책 승인)', cls: 'ok' };
     if (st === '종결') return { done: true, label: '완료(검증 종결)', cls: 'ok' };
+    // 대책서 승인 = 불량 쪽 일은 끝. NCR 은 유효성 검증이 남아 ‘승인(검증대기)’ — 이름을 NCR 과 맞춤 (예전 ‘완료(대책 승인)’)
+    if (n.validity === '적정') return { done: true, label: '대책 승인(검증 대기)', cls: 'ok' };
     return {
       label:
         { 미통보: 'NCR 통보 전', 발행: '대책 요청 전', 대책요청: '대책서 대기', '대책서 검토': '대책서 검토', 보완요청: '대책서 보완' }[st] || st,
@@ -415,7 +461,7 @@ function defStage(d) {
     iv = d.inv || {};
   if (r === '미정') {
     if (iv.verdict === '원인 불명') return { done: true, label: '완료(원인 불명)', cls: 'ok' };
-    if (d.doneDate && !d.inv) return { done: true, label: '완료', cls: 'ok' };
+    if (d.doneDate && !d.inv && (sevOf(d).grade === 'C' || !newRules(d))) return { done: true, label: '완료', cls: 'ok' }; // C 등급만 조사 없이 끝낼 수 있음
     const ii = invInfo(d);
     return { label: ii.label, cls: ii.cls };
   }
@@ -427,7 +473,8 @@ function defStage(d) {
     const lv = icaLevel(d);
     if (lv !== ICA_NONE) {
       const c = d.ica || {};
-      if (c.doneDate) return { done: true, label: '완료(사내 대책)', cls: 'ok' };
+      if (c.doneDate)
+        return icaVerify(d)?.k === 'ng' ? { label: '재발 — 재대책 필요', cls: 'bad' } : { done: true, label: '완료(사내 대책)', cls: 'ok' };
       return icaStarted(c) ? { label: `사내 ${lv} 진행`, cls: 'inf' } : { label: `사내 ${lv} 필요`, cls: 'bad' };
     }
   }
@@ -452,7 +499,9 @@ function addBiz(s, n) {
   }
   return fmtD(d);
 }
-const invOpen = (d) => !d.ncrId && !d.closed && d.resp === '미정' && !(d.inv && d.inv.verdict) && !(d.doneDate && !d.inv);
+// 귀책 조사가 열려 있음: 귀책 미정이고 판정 전. (C 등급은 조사 없이 처리 완료일만으로 끝낼 수 있음 — A · B 등급은 판정 또는 ‘원인 불명’ 이 필요)
+const invOpen = (d) =>
+  !d.ncrId && !d.closed && d.resp === '미정' && !(d.inv && d.inv.verdict) && !(d.doneDate && !d.inv && (sevOf(d).grade === 'C' || !newRules(d)));
 const ntfDue = (d) => addDays(d.date, num(db.settings.ntfDays) || 30);
 function invInfo(d) {
   const iv = d.inv || {};
@@ -489,13 +538,20 @@ function icaVerify(d) {
   return x < 0 ? { k: 'late', label: `검증 지연 D+${-x}`, cls: 'bad' } : { k: 'wait', label: `검증 대기 D-${x}`, cls: x <= 3 ? 'warn' : 'mut' };
 }
 const defCase = (d) => (d && d.caseId && typeof czById === 'function' ? czById('cases', d.caseId) : null);
-const icaNeed = (d) => !d.ncrId && !d.closed && d.resp === '사내' && icaLevel(d) !== ICA_NONE && !defCase(d);
+// 사내 대책이 필요한 불량: 사내 귀책 (NCR 없음) · 공동 귀책 (NCR 이 있어도 사내 몫은 따로)
+const icaNeed = (d) =>
+  !d.closed && icaLevel(d) !== ICA_NONE && !defCase(d) && ((d.resp === '사내' && !d.ncrId) || (d.resp === '공동' && newRules(d)));
 const isDone = (d) => defStage(d).done;
 // A3 보고서는 결과 보고용 — 건이 종결된 뒤에만 출력 (2026-11). 건의 종결 = 가장 위의 기록이 끝남:
 // RCA 가 있으면 RCA 종결, RCA 가 없고 NCR 이 있으면 NCR 종결, NCR 도 없으면 불량 처리 완료. 출력은 진행 현황의 전체 이력에서
 function a3Ready(B) {
   if (B.rca) return B.rca.Status === '종결' ? '' : 'RCA 종결 뒤에 출력할 수 있습니다';
-  if (B.ncr) return ncrStatus(B.ncr) === '종결' ? '' : 'NCR 종결 뒤에 출력할 수 있습니다';
+  if (B.ncr)
+    return ncrStatus(B.ncr) !== '종결'
+      ? 'NCR 종결 뒤에 출력할 수 있습니다'
+      : B.defs.every(isDone)
+        ? ''
+        : '연결된 불량의 처리가 끝난 뒤에 출력할 수 있습니다';
   return B.defs.length && B.defs.every(isDone) ? '' : '불량 처리가 완료된 뒤에 출력할 수 있습니다';
 }
 function verifyInfo(n) {
@@ -618,12 +674,15 @@ function rcvSumRange(sid, mf, mt) {
   return t;
 }
 const rcvHasLines = (sid, m) => db.receipts.some((r) => isLine(r) && r.supplierId === sid && r.month === m);
+// PPM 에 넣는 불량: 협력사 · 공동 귀책 (귀책을 안 넣은 것 포함). 귀책 미정은 판정 전까지 빠짐
+const ppmCounts = (d) => !d.resp || d.resp === '협력사' || d.resp === '공동';
+// PPM 에 넣는 수량: 공동 귀책은 협력사 분담 비율만큼 (설정 ppmJoint = 0 이면 전량 · 분담 비율이 비어 있으면 전량)
+const ppmQty = (d) =>
+  num(d.qty) * (d.resp === '공동' && num(db.settings.ppmJoint ?? 1) && d.inv && d.inv.share !== '' && d.inv.share != null ? shareOf(d) : 1);
 // 협력사 월별 PPM: 협력사·공동 귀책 불량수량 ÷ 그 달 입고수량 (협력사 품질 표와 같은 기준)
 function supMonthPpm(sid, m) {
   const rcv = rcvSum(sid, m);
-  const q = db.defects
-    .filter((d) => d.supplierId === sid && (d.date || '').startsWith(m) && (!d.resp || d.resp === '협력사' || d.resp === '공동'))
-    .reduce((a, d) => a + num(d.qty), 0);
+  const q = db.defects.filter((d) => d.supplierId === sid && (d.date || '').startsWith(m) && ppmCounts(d)).reduce((a, d) => a + ppmQty(d), 0);
   return { m, rcv, q, ppm: rcv ? (q / rcv) * 1e6 : null };
 }
 function ppmRange(sid, from, to) {

@@ -178,7 +178,17 @@ async function saveDefect(id) {
     toast('발생일을 입력하세요');
     return null;
   }
+  if (o.date > today()) {
+    toast('발생일이 오늘보다 뒤입니다 — 날짜를 확인하세요');
+    return null;
+  }
   NUMF.forEach((k) => (o[k] = o[k] === '' || o[k] == null ? '' : num(o[k])));
+  if (num(o.inspQty) > 0 && num(o.qty) > num(o.inspQty)) {
+    toast(
+      `불량 수량 (${num(o.qty).toLocaleString()}) 이 ${(($('#lbInsp') || {}).textContent || '입고 · 검사 수량').trim()} (${num(o.inspQty).toLocaleString()}) 보다 큽니다`,
+    );
+    return null;
+  }
   {
     const inForm = !!$('#mf').inv_verdict,
       exInv = id ? (db.defects.find((x) => x.id === id) || {}).inv : null;

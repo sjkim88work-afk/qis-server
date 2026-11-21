@@ -7,8 +7,8 @@ function supStats(from, to) {
   return db.suppliers
     .map((s) => {
       const my = ds.filter((d) => d.supplierId === s.id),
-        sq = my.filter((d) => !d.resp || d.resp === '협력사' || d.resp === '공동');
-      const qty = sum(sq, 'qty');
+        sq = my.filter(ppmCounts);
+      const qty = sq.reduce((a, d) => a + ppmQty(d), 0);
       const rcv = rcvSumRange(s.id, mf, mt);
       const ppm = rcv ? (qty / rcv) * 1e6 : null;
       const ns = db.ncrs.filter((n) => n.supplierId === s.id && n.issueDate >= from && n.issueDate <= to);

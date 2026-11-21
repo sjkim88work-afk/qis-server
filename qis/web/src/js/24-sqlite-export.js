@@ -216,13 +216,13 @@ async function buildSqlite() {
   // 협력사 × 월: 불량수량(협력사 · 공동 귀책) · 입고수량 · PPM — 앱의 협력사 품질 화면과 같은 규칙
   const sm = [];
   db.suppliers.forEach((s) => {
-    const my = db.defects.filter((d) => d.supplierId === s.id && (!d.resp || d.resp === '협력사' || d.resp === '공동'));
+    const my = db.defects.filter((d) => d.supplierId === s.id && ppmCounts(d));
     const ms = new Set(
       [...my.map((d) => (d.date || '').slice(0, 7)), ...db.receipts.filter((r) => r.supplierId === s.id).map((r) => r.month)].filter(Boolean),
     );
     [...ms].sort().forEach((m) => {
       const dq = my.filter((d) => (d.date || '').startsWith(m)),
-        q = dq.reduce((a, d) => a + num(d.qty), 0),
+        q = dq.reduce((a, d) => a + ppmQty(d), 0),
         rc = rcvSum(s.id, m);
       sm.push({
         supplier_id: s.id,
