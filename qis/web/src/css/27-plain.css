@@ -219,3 +219,8 @@ body:not(.mob) .pld textarea,body:not(.mob) .pld .card input{border-radius:3px;b
 /* 진행 현황: 표의 높이 제한을 없앰 — 목록이 길 때 상자 밖으로 넘치고 아래 글과 겹치던 것 (.pl .tw 의 max-height 가 남아 있었음) */
 body:not(.mob) .pl.pg .tw,.pl.pg .tw{max-height:none!important;overflow:visible}
 .pg .pgr .tw{overflow-x:auto}
+/* 서버 없이 열었을 때의 안내 (v2.0.0 부터 서버판 전용) */
+body.nosrv>*:not(#nosrv){display:none!important}
+#nosrv{position:fixed;inset:0;z-index:999;display:flex;align-items:center;justify-content:center;padding:24px;background:#f4f6f9;color:#1d2433;font-family:"IBM Plex Sans KR","Malgun Gothic","Apple SD Gothic Neo",sans-serif}
+#nosrv .box{max-width:560px;padding:28px 30px;background:#fff;border:1px solid #d8dce3;border-radius:4px;line-height:1.7;font-size:14px}
+#nosrv h1{margin:0 0 12px;font-size:18px}#nosrv p{margin:0 0 10px}#nosrv .sub{margin-top:16px;padding-top:12px;border-top:1px solid #eceef2;color:#5a6372;font-size:13px}

@@ -909,6 +909,11 @@ body:not(.mob) .pld textarea,body:not(.mob) .pld .card input{border-radius:3px;b
 /* 진행 현황: 표의 높이 제한을 없앰 — 목록이 길 때 상자 밖으로 넘치고 아래 글과 겹치던 것 (.pl .tw 의 max-height 가 남아 있었음) */
 body:not(.mob) .pl.pg .tw,.pl.pg .tw{max-height:none!important;overflow:visible}
 .pg .pgr .tw{overflow-x:auto}
+/* 서버 없이 열었을 때의 안내 (v2.0.0 부터 서버판 전용) */
+body.nosrv>*:not(#nosrv){display:none!important}
+#nosrv{position:fixed;inset:0;z-index:999;display:flex;align-items:center;justify-content:center;padding:24px;background:#f4f6f9;color:#1d2433;font-family:"IBM Plex Sans KR","Malgun Gothic","Apple SD Gothic Neo",sans-serif}
+#nosrv .box{max-width:560px;padding:28px 30px;background:#fff;border:1px solid #d8dce3;border-radius:4px;line-height:1.7;font-size:14px}
+#nosrv h1{margin:0 0 12px;font-size:18px}#nosrv p{margin:0 0 10px}#nosrv .sub{margin-top:16px;padding-top:12px;border-top:1px solid #eceef2;color:#5a6372;font-size:13px}
 /* ================= 휴대폰 화면 ================= */
 #mswitch{display:none;text-align:center;padding:14px 0 22px;font-size:13px}
 #mswitch a{display:none}
@@ -1055,7 +1060,9 @@ const SRV = (() => {
     return null;
   }
 })();
-const RO = !!SHARE || !!(SRV && SRV.role === 'viewer');
+// 서버판 전용 (v2.0.0): 서버 없이 이 파일을 직접 열면 안내만 보여 주고, 브라우저에 남아 있는 예전 데이터는 읽지도 쓰지도 않음
+const NO_SERVER = !SRV && !SHARE;
+const RO = !!SHARE || !!(SRV && SRV.role === 'viewer') || NO_SERVER;
 const RO_PH = new Map(SHARE && Array.isArray(SHARE.photos) ? SHARE.photos.filter((p) => p && p.id).map((p) => [p.id, p]) : []);
 /* ================= 기본 유틸 ================= */
 const KEY = 'personalQMS_v1';
@@ -1973,7 +1980,23 @@ function srvPanel() {
   );
 }
 
+// 서버 없이 열었을 때의 안내 (v2.0.0 부터 서버판 전용)
+function noServerNotice() {
+  const d = document.createElement('div');
+  d.id = 'nosrv';
+  d.innerHTML = `<div class="box"><h1>QIS 는 데스크톱 프로그램으로 엽니다</h1>
+    <p>v2.0.0 부터 QIS 는 <b>서버판 (데스크톱 프로그램 QIS.app · QIS.exe)</b> 만 씁니다. 이 파일을 직접 열어서는 쓸 수 없습니다.</p>
+    <p>혼자 쓰는 경우에도 데스크톱 프로그램의 <b>‘이 PC 혼자 쓰기’</b> 로 같은 기능을 씁니다.</p>
+    <p class="sub">예전에 이 파일로 쓰던 데이터가 있으면: 예전 버전 (v1.x) 의 파일로 열어 <b>설정 · 백업 › 백업 파일 내보내기</b> 를 한 뒤, 데스크톱 프로그램의 <b>관리 › 백업 · 데이터 › 가져오기</b> 로 넣으세요. 이 화면은 예전 데이터를 읽거나 지우지 않습니다.</p></div>`;
+  document.body.appendChild(d);
+  document.body.classList.add('nosrv');
+}
 async function bootData() {
+  if (NO_SERVER) {
+    noServerNotice();
+    dataReady = true;
+    return;
+  }
   if (SHARE) {
     dataReady = true;
     return;
@@ -6828,7 +6851,7 @@ function renderDefect() {
       .map(([v, l]) => `<option value="${v}" ${v === f.status ? 'selected' : ''}>${l}</option>`)
       .join('')}</select>
     <input placeholder="검색 (부품·납품일·내용·담당)" value="${esc(f.q)}" oninput="state.df.q=this.value;deb(refreshDT)" style="width:200px">
-    <span style="flex:1"></span><details class="tbm"><summary>엑셀</summary><div class="mn"><button type="button" onclick="this.closest('details').open=false;openImport()">엑셀 일괄 등록 <span>여러 건을 한 번에 넣기</span></button><button type="button" onclick="this.closest('details').open=false;exportDefectsCSV()">엑셀 내보내기 <span>지금 보이는 목록</span></button></div></details>
+    <span style="flex:1"></span><button class="b" onclick="exportDefectsCSV()">엑셀 내보내기</button>
   </div></div>
   <div class="card" id="dtab">${defectTable()}</div></div>`;
 }

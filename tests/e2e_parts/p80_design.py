@@ -193,12 +193,11 @@ def run(c):
       for(const t of ['defect','ncr','inv','prog']){go(t);await wait(300);const tb=document.querySelector('.pltool'),k=[...tb.querySelector('.row').children].filter(e=>e.offsetParent);
         const mid=k.map(e=>{const r=e.getBoundingClientRect();return Math.round((r.top+r.bottom)/2)});
         o[t]={one:Math.max(...mid)-Math.min(...mid)<6,h:tb.offsetHeight,sel:Math.max(0,...[...tb.querySelectorAll('select')].map(s=>s.offsetWidth)),help:!!tb.querySelector(':scope > .help')}}
-      go('defect');await wait(300);const m=document.querySelector('.pltool details.tbm');o.items=[...m.querySelectorAll('.mn button')].map(b=>b.firstChild.textContent.trim()).join('|');
-      m.open=true;await wait(100);const mn=m.querySelector('.mn').getBoundingClientRect();o.inView=mn.right<=innerWidth&&mn.left>=0&&mn.height>40;
-      m.querySelector('.mn button').click();await wait(400);o.imp=document.querySelector('#modal').classList.contains('on')||!!(document.querySelector('#toast')||{}).textContent;o.closed=!m.open;mfDirty=false;closeModal(true);return o}""")
+      go('defect');await wait(300);o.items=[...document.querySelectorAll('.pltool button')].map(b=>b.textContent.trim()).join('|');
+      go('ncr');await wait(300);const m=document.querySelector('.pltool details.tbm');m.open=true;await wait(100);const mn=m.querySelector('.mn').getBoundingClientRect();o.inView=mn.right<=innerWidth&&mn.left>=0&&mn.height>20;m.open=false;mfDirty=false;closeModal(true);return o}""")
     bad = [k for k in ("defect", "ncr", "inv", "prog") if not (r[k]["one"] and r[k]["h"] <= 50 and r[k]["sel"] <= 140 and not r[k]["help"])]
     ok(not bad, f"조건 줄 (1240px): 네 화면 모두 한 줄 · 선택 칸 140px 이하 · 긴 안내 없음 (어긋난 화면: {bad} · {[r[k]['h'] for k in ('defect','ncr','inv','prog')]})")
-    ok(r["items"] == "엑셀 일괄 등록|엑셀 내보내기" and r["inView"] and r["imp"] and r["closed"], f"불량 목록의 ‘엑셀’ 메뉴: 일괄 등록 · 내보내기 ({r['items']} · {r['inView']} {r['imp']} {r['closed']})")
+    ok("엑셀 내보내기" in r["items"] and "일괄 등록" not in r["items"] and r["inView"], f"불량 목록: ‘엑셀 내보내기’ 버튼 (서버판에서 안 되는 ‘엑셀 일괄 등록’ 은 없음) · NCR 의 ‘기준’ 메뉴는 화면 안에 펼쳐짐 ({r['items']})")
     A.set_viewport_size(vpT); settle(A, 300)
 
     # 진행 현황: 건이 많아도 왼쪽 표가 상자 밖으로 넘치지 않고 아래 글과 겹치지 않음 (낮은 창)
@@ -226,4 +225,19 @@ def run(c):
     tabs = B.evaluate("()=>[...document.querySelectorAll('#nav button')].map(b=>b.textContent)")
     ok(len(tabs) == 4 and not any("버전" in x or "업데이트" in x for x in tabs), f"관리 화면: ‘버전 · 업데이트’ 탭 없음 ({tabs})")
     B.goto(back); settle(B, 800)
+
+    # 서버판 전용 (v2.0.0): 서버 없이 index.html 을 직접 열면 안내만 보이고, 브라우저의 예전 데이터를 읽거나 쓰지 않음
+    pgN = b.new_page(viewport={"width": 1200, "height": 700})
+    errsN = []
+    pgN.on("pageerror", lambda e: errsN.append(str(e)[:120]))
+    urlN = "file://" + os.path.join(str(ROOT), "qis", "web", "index.html")
+    pgN.goto(urlN)
+    pgN.evaluate("()=>{localStorage.setItem('personalQMS_v1',JSON.stringify({keep:1}))}")
+    pgN.reload(); pgN.wait_for_timeout(1500)
+    r = pgN.evaluate("""()=>({notice:!!document.querySelector('#nosrv'),text:(document.querySelector('#nosrv')||{}).textContent||'',
+      vis:[...document.body.children].filter(e=>getComputedStyle(e).display!=='none').map(e=>e.id||e.tagName).join(),
+      keys:Object.keys(localStorage).sort().join(),old:localStorage.getItem('personalQMS_v1'),ro:RO})""")
+    pgN.close()
+    ok(r["notice"] and r["vis"] == "nosrv" and "데스크톱 프로그램" in r["text"] and r["ro"] and not errsN, f"서버 없이 열면 안내만 보임 (보이는 것: {r['vis']} · 오류 {len(errsN)})")
+    ok(r["keys"] == "personalQMS_v1" and r["old"] == '{"keep":1}', f"서버 없이 열어도 브라우저의 예전 데이터를 바꾸지 않음 ({r['keys']})")
 
