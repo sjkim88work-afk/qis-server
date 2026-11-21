@@ -58,9 +58,6 @@
 
   // ---- 서버가 맡는 기능 → 프로그램 메뉴 ----
   document.addEventListener('DOMContentLoaded',function(){
-    var MSG='프로그램 메뉴(파일 › 가져오기 · 백업에서 복원)를 쓰세요';
-    ['resetAll','pickImport','restoreFromFolder','pickRoot','unlinkRoot','pickDir','unlinkDir','photoDirNow','chooseQmsDir','openImport']
-      .forEach(function(n){if(typeof window[n]==='function')window[n]=function(){say(MSG)}});
     if(typeof window.exportJSON==='function')window.exportJSON=function(){
       if(info.role!=='admin'){say('관리자만 할 수 있습니다');return}
       withApi(function(a){a.export_backup().then(function(r){if(r)say(r)})});

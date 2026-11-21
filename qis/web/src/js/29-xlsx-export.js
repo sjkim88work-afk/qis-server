@@ -227,26 +227,3 @@ function downloadXlsx(name, sheets) {
   download(fn, xlsxBlob(sheets));
 }
 /* 모든 표를 시트로 — SQLite 내보내기와 같은 표 구성(x_ 열 = 앱이 계산한 값). 엑셀에서 피벗 · VLOOKUP 용 */
-async function exportAllXlsx(btn) {
-  if (btn) {
-    btn.disabled = true;
-  }
-  try {
-    const SQL = await loadSql(),
-      { bytes } = await buildSqlite(),
-      sdb = new SQL.Database(bytes);
-    const tabs =
-      sdb.exec(`SELECT name FROM sqlite_master WHERE type='table' AND name NOT IN ('about') ORDER BY name`)[0]?.values.map((v) => v[0]) || [];
-    const sheets = tabs.map((t) => {
-      const r = sdb.exec(`SELECT * FROM ${sqlId(t)}`)[0];
-      return { name: t, rows: r ? [r.columns, ...r.values.map((row) => row.map((v) => (v == null ? '' : v)))] : [[]] };
-    });
-    sdb.close();
-    downloadXlsx(`QIS_전체_${today()}.xlsx`, sheets);
-    toast(`엑셀 파일을 만들었습니다 — 시트 ${sheets.length}장`);
-  } catch (e) {
-    toast('엑셀 만들기 실패: ' + e.message);
-  } finally {
-    if (btn) btn.disabled = false;
-  }
-}

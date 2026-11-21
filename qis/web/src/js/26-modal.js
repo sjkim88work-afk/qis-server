@@ -202,10 +202,3 @@ document.addEventListener('keydown', (e) => {
   if ($('#cfm').classList.contains('on')) return;
   if (e.key === 'Escape' && $('#modal').classList.contains('on')) closeModal();
 });
-window.addEventListener('storage', (e) => {
-  if (e.key === KEY && dataStore === 'ls' && dataReady) {
-    db = load();
-    render();
-    toast('다른 탭에서 변경된 내용을 불러왔습니다');
-  }
-});

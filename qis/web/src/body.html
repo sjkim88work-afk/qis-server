@@ -5,8 +5,7 @@
   <span class="sp"></span>
   <small id="linkInfo"></small>
   <small id="copyInfo" title="QIS 저작권: 김선중 · 사내 사용 허락 (LICENSE) · 오픈소스 구성요소는 NOTICE 참고" style="opacity:.55">© 2026 김선중</small>
-  <button class="b s p noprint" id="hdrInstall" style="display:none" onclick="pwaInstall()" title="바탕화면 · 시작 메뉴에 아이콘을 만들고 별도 창으로 실행합니다">앱으로 설치</button>
-  <button class="b s" id="hdrBk" onclick="exportJSON(true)" title="전체 백업 (백업 폴더를 지정했으면 그 폴더에 저장)">백업</button>
+  <span id="hdrBk" hidden></span>
 </header>
 <nav id="nav"></nav>
 <div id="alertBar" class="recon noprint" style="display:none;background:#fde8e8;border-bottom-color:#e5a3a3;color:#7a1414"></div>
@@ -37,5 +36,4 @@
 <datalist id="dlOwners"></datalist>
 <datalist id="dlSources"></datalist>
 <datalist id="dlAttn"></datalist>
-<input type="file" id="fileIn" accept=".json,application/json" style="display:none">
 

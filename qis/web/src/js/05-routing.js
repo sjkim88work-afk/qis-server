@@ -24,12 +24,11 @@ function navFoot() {
       if (e) ft.appendChild(e);
     });
   } else {
-    // 머리글의 원래 순서: … 저작권 · [앱으로 설치] · 사용자 · 비밀번호 · 관리 · 로그아웃 · [백업]
-    const bk = $('#hdrBk'),
-      ins = $('#hdrInstall') || bk;
+    // 머리글의 원래 순서: … 저작권 · 사용자 · 비밀번호 · 관리 · 로그아웃 (hdrBk 는 자리 표시)
+    const bk = $('#hdrBk');
     NAV_FT_IDS.forEach((i) => {
       const e = find(i);
-      if (e && e.parentNode !== hd) hd.insertBefore(e, i === 'copyInfo' ? ins : bk);
+      if (e && e.parentNode !== hd) hd.insertBefore(e, i === 'copyInfo' ? $('#srvUser') || bk : bk);
     });
     if (ft) ft.remove();
     window.__navFt = null;
@@ -63,14 +62,14 @@ const state = {
   supTo: today(),
   copqYear: today().slice(0, 4),
 };
-// 읽기 전용 공유본에서 보이는 화면 (협력사 품질 · 기준정보 · 설정 · 백업은 숨김)
+// 보이는 화면: 공유본은 협력사 품질 · 기준정보 · 설정을 숨김. 서버판은 관리자가 아니면 설정 · 백업을 숨김
 const RO_TABS = SHARE
   ? ['dash', 'prog', 'issue', 'defect', 'inv', 'ncr', 'case', 'copq']
-  : SRV && !srvCanAdmin()
+  : !srvCanAdmin()
     ? ['dash', 'prog', 'issue', 'defect', 'inv', 'ncr', 'case', 'sup', 'copq', 'master']
     : TABS.map((t) => t[0]);
 function go(t) {
-  if ((RO || SRV) && !RO_TABS.includes(t) && t !== 'prog') t = 'dash';
+  if (!RO_TABS.includes(t)) t = 'dash';
   state.tab = t;
   render();
   window.scrollTo(0, 0);

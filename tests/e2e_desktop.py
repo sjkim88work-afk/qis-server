@@ -96,10 +96,9 @@ def main():
             pg.evaluate("exportJSON()")
             pg.wait_for_timeout(100)
             ok(len(calls(pg, "export_backup")) == 1, "백업 내려받기 → 프로그램 저장")
-            # 브라우저 폴더 선택 기능은 메뉴 안내로
-            pg.evaluate("pickRoot()")
-            pg.wait_for_timeout(200)
-            ok("프로그램 메뉴" in (pg.text_content("body") or ""), "폴더 선택 대신 메뉴 안내")
+            # 브라우저 폴더 선택 · 파일 백업 기능은 지움 (백업 · 복원은 프로그램 메뉴)
+            gone = pg.evaluate("['pickRoot','pickDir','pickImport','restoreFromFolder','resetAll','autoBackup'].filter(n=>typeof window[n]!=='undefined').join()")
+            ok(gone == "", f"브라우저 폴더 · 파일 백업 기능 없음 ({gone or '없음'})")
             # 설정 › 데이터 문구
             panel = pg.evaluate("srvPanel()")
             ok("이 PC의 QIS 데이터 폴더" in panel and "사내 서버에 저장" not in panel, "혼자 쓰기 안내 문구")
