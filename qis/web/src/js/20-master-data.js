@@ -183,7 +183,7 @@ function msPartTable() {
             : ''
         }</td><td class="n">${fmtPrice(p)}${
           p.price && curOf(p) !== 'KRW'
-            ? `<br><span class="muted" style="font-size:11.5px">${fxRate(curOf(p)) ? '≈ ' + won(partKRW(p)) + '원' : '환율 미설정'}</span>`
+            ? `<br><span class="muted" style="font-size:12px">${fxRate(curOf(p)) ? '≈ ' + won(partKRW(p)) + '원' : '환율 미설정'}</span>`
             : ''
         }</td>${
           hasBom ? `<td class="nw">${bomCell(p)}</td>` : ''
@@ -622,7 +622,7 @@ function editPart(id) {
     <label>차종<input name="model" value="${esc(p.model)}"></label><label>협력사<select name="supplierId">${supOpts(p.supplierId)}</select></label>
     <label>단가<span style="display:flex;gap:6px"><input type="number" min="0" step="any" name="price" value="${esc(p.price)}" style="flex:1" oninput="partFxHint()"><select name="currency" style="width:auto" onchange="partFxHint()">${CURS.map(
       (c) => `<option value="${c}" ${curOf(p) === c ? 'selected' : ''}>${c}</option>`,
-    ).join('')}</select></span><span id="partFx" class="muted" style="font-size:11.5px;font-weight:normal"></span></label>
+    ).join('')}</select></span><span id="partFx" class="muted" style="font-size:12px;font-weight:normal"></span></label>
     <label>안전특성 (RCA 화면에 표시)<select name="safety">${czOptHTML(CZ_OPT.SafetyChar, p.safety || '해당없음')}</select></label></div>`,
     [
       { label: '취소', fn: closeModal },
@@ -1204,14 +1204,14 @@ function miTable(L, cols, c) {
     const shown = new Set(cols.map(([f]) => (f === 'supCode' ? 'sup' : f === 'cur' ? 'price' : f)));
     const o = x.diff.filter((d) => !shown.has(d.f));
     return o.length
-      ? `<div class="mich" style="font-size:11.5px">${o
+      ? `<div class="mich" style="font-size:12px">${o
           .map((d) => `${esc(LB[d.f] || d.f)}: <s class="muted">${esc(d.o || '빈칸')}</s> → <b>${esc(d.n)}</b>`)
           .join(' · ')}</div>`
       : '';
   };
   const simH = (x) =>
     x.sim && x.sim.length
-      ? `<div style="font-size:11.5px;color:var(--warn)">⚠ 비슷한 기존 ${mi.kind === 'part' ? '부품' : '협력사'}: ${x.sim
+      ? `<div style="font-size:12px;color:var(--warn)">⚠ 비슷한 기존 ${mi.kind === 'part' ? '부품' : '협력사'}: ${x.sim
           .map((p) =>
             mi.kind === 'part'
               ? `<b>${esc(p.partNo)}</b> ${esc(p.name || '')}${p.model ? ' · ' + esc(p.model) : ''}${

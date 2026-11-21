@@ -26,7 +26,7 @@ function farLine(n) {
     f.src && db.defects.find((d) => d.id === f.src)
       ? ` <a class="lk" onclick="farGoInv('${f.src}')">FAR 열기</a>`
       : ' <span class="muted">(연결 불량이 없는 NCR — 읽기만 됩니다)</span>'
-  }${f.summary ? `<div style="margin-top:3px;font-size:12.5px;white-space:pre-wrap">${esc(f.summary)}</div>` : ''}</div>`;
+  }${f.summary ? `<div style="margin-top:3px;font-size:13px;white-space:pre-wrap">${esc(f.summary)}</div>` : ''}</div>`;
 }
 // FAR 은 FAR 화면(연결 불량의 귀책 조사)이 원본 — NCR 창에서는 입력하지 않음.
 // n.far 는 연결 불량의 FAR 를 그대로 비춘 값(목록 배지 · 통보서 문구 · 지연 알림용)이고, src 에 원본 불량 id 를 둠.

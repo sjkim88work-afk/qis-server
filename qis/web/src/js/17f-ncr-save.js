@@ -192,7 +192,7 @@ function renderNcrCost() {
   if (!box) return;
   const ds = curLinks.map((i) => db.defects.find((d) => d.id === i)).filter(Boolean);
   if (!ds.length) {
-    box.innerHTML = '<div class="muted" style="font-size:12.5px">연결된 불량이 없습니다.</div>';
+    box.innerHTML = '<div class="muted" style="font-size:13px">연결된 불량이 없습니다.</div>';
     return;
   }
   const cat = {};
@@ -221,7 +221,7 @@ function renderNcrCost() {
               }</td></tr>`
             : ''
         }</tbody></table></div>`
-      : `<div class="muted" style="font-size:12.5px">연결된 불량 ${ds.length}건에 입력된 비용이 없습니다.</div>`;
+      : `<div class="muted" style="font-size:13px">연결된 불량 ${ds.length}건에 입력된 비용이 없습니다.</div>`;
 }
 function refreshLinks() {
   const box = $('#linkBox');

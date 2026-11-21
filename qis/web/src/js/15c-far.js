@@ -267,7 +267,7 @@ function editInv(id, focus, stage) {
     reqSum || repSum
       ? `<div class="banner" style="margin:8px 0 0;background:var(--pri2);border-color:transparent;color:var(--ink)">${[reqSum, repSum]
           .filter(Boolean)
-          .join('<br>')}${iv.farResult ? `<div style="margin-top:3px;font-size:12.5px;white-space:pre-wrap">${esc(iv.farResult)}</div>` : ''}</div>`
+          .join('<br>')}${iv.farResult ? `<div style="margin-top:3px;font-size:13px;white-space:pre-wrap">${esc(iv.farResult)}</div>` : ''}</div>`
       : ''
   }
   <div class="sec">사내 분석 <span class="muted" style="font-weight:normal;font-size:12px">재현시험 · 측정 · 분해 분석</span></div>

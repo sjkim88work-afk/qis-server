@@ -56,12 +56,12 @@ function renderSev() {
           k,
           v.f[k],
           k === 'stage' || k === 'repeat',
-        )}</td><td class="muted" style="font-size:11.5px">${note[k]}</td><td class="n" style="width:40px"><b>${v.f[k]}</b></td></tr>`,
+        )}</td><td class="muted" style="font-size:12px">${note[k]}</td><td class="n" style="width:40px"><b>${v.f[k]}</b></td></tr>`,
     )
     .join('')}
-    <tr><td><b>특별특성</b></td><td colspan="2"><label class="row" style="gap:6px;font-size:12.5px"><input type="checkbox" ${curSev.special ? 'checked' : ''} onchange="curSev.special=this.checked;mfDirty=true;renderSev()"> CC/SC(특별특성) 항목의 불량 — 점수와 관계없이 A</label></td><td></td></tr></tbody>
+    <tr><td><b>특별특성</b></td><td colspan="2"><label class="row" style="gap:6px;font-size:13px"><input type="checkbox" ${curSev.special ? 'checked' : ''} onchange="curSev.special=this.checked;mfDirty=true;renderSev()"> CC/SC(특별특성) 항목의 불량 — 점수와 관계없이 A</label></td><td></td></tr></tbody>
     <tfoot><tr><td colspan="4" style="background:#f7f8fa;padding:8px">
-      <div class="row" style="gap:10px"><span>합계 <b style="font-size:16px">${v.score}</b>점</span>
+      <div class="row" style="gap:10px"><span>합계 <b style="font-size:18px">${v.score}</b>점</span>
       <span>자동 판정 <span class="bg ${SEV_CLS[v.auto]}" style="font-size:13px;padding:2px 10px">${v.auto}</span>${
         v.forced.length
           ? ` <span class="muted" style="font-size:12px">강제 A: ${esc(v.forced.join(', '))}</span>`
@@ -82,7 +82,7 @@ function renderSev() {
             }" oninput="curSev.reason=this.value;mfDirty=true">`
           : ''
       }</div>
-      <div style="margin-top:6px">최종 등급 <span class="bg ${SEV_CLS[v.grade]}" style="font-size:14px;padding:3px 14px">${v.grade}</span> → 대응 수준 <b>${v.resp}</b>${
+      <div style="margin-top:6px">최종 등급 <span class="bg ${SEV_CLS[v.grade]}" style="font-size:13px;padding:3px 14px">${v.grade}</span> → 대응 수준 <b>${v.resp}</b>${
         v.grade === 'C' ? ' <span class="muted" style="font-size:12px">(NCR 발행 시 회신 불요 통보)</span>' : ''
       }</div>
     </td></tr></tfoot></table>`;
@@ -390,7 +390,7 @@ function delDefectDialog(d, L) {
     c.innerHTML = `<div class="cbox wide" role="alertdialog" aria-modal="true"><div class="ch"><span class="ic dz">!</span>불량 기록을 삭제할까요?</div>
       <div class="cb"><div class="dl-s">이 불량과 함께 삭제되는 기록</div><ul>${own.map((t) => `<li>${t}</li>`).join('')}</ul>
       <div class="dl-s" style="margin-top:12px">연결된 문서 — 처리 방법을 고르세요</div>
-      ${docs.length ? docs.join('') : '<div class="muted" style="font-size:12.5px">연결된 NCR · RCA가 없습니다.</div>'}
+      ${docs.length ? docs.join('') : '<div class="muted" style="font-size:13px">연결된 NCR · RCA가 없습니다.</div>'}
       <label class="dl-ck"><input type="checkbox" id="dlChk"> 연결된 문서와 함께 삭제되는 내용을 확인했습니다</label>
       <div class="note">삭제 후 10초 안에 되돌릴 수 있습니다.</div></div>
       <div class="cf"><button type="button" class="b" id="cfmNo">취소</button><button type="button" class="b dz" id="cfmOk" disabled>삭제</button></div></div>`;

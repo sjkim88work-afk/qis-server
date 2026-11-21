@@ -441,7 +441,7 @@ function renderLogsInner(b) {
               ? '<span class="muted" style="font-size:11px">원본에서 수정</span>'
               : '';
     if (ed)
-      return `<li class="ed"><div class="lh"><b>기록 수정</b>${saved ? ' <span class="muted" style="font-size:11.5px">— 원문은 이력으로 보존됩니다</span>' : ''}</div>
+      return `<li class="ed"><div class="lh"><b>기록 수정</b>${saved ? ' <span class="muted" style="font-size:12px">— 원문은 이력으로 보존됩니다</span>' : ''}</div>
       <div class="dtrow" style="margin-top:6px"><label><span>일시 <span class="muted" style="font-weight:normal">(시간은 선택)</span></span>${dtpHTML('leAt', lgAtOf(x), x.band)}</label>
         <label>구분<select id="leKind">${opts(K.includes(x.kind) ? K : [x.kind, ...K], x.kind)}</select></label></div>
       <div class="cgp"><label>상대방 · 참석<input id="leParty" list="lgParties" value="${esc(x.party)}"></label><label>방법<select id="leMethod">${opts(LOG_METHODS, x.method || '', true)}</select></label></div>

@@ -545,7 +545,7 @@ function renderData() {
           '지금 데이터를 HTML 파일 하나로 만듭니다. 받은 사람은 보기 · 검색 · 출력만 되고 수정 · 저장은 안 됩니다. 파일 안에 데이터가 그대로 들어 있으니 받을 사람을 가려서 보내세요.',
         ),
         '',
-        `<span style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;align-items:center"><label class="row" style="gap:5px;font-size:12.5px" title="협력사 연락처 · 주소 · 단가 · BOM · 기록에 안 쓰인 협력사 · 부품을 빼고, 기록에 쓰인 협력사 · 부품 이름만 남깁니다. 기준정보 탭도 숨깁니다."><input type="checkbox" ${
+        `<span style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;align-items:center"><label class="row" style="gap:5px;font-size:13px" title="협력사 연락처 · 주소 · 단가 · BOM · 기록에 안 쓰인 협력사 · 부품을 빼고, 기록에 쓰인 협력사 · 부품 이름만 남깁니다. 기준정보 탭도 숨깁니다."><input type="checkbox" ${
           num(db.settings.shareNoMaster) !== 0 ? 'checked' : ''
         } onchange="db.settings.shareNoMaster=this.checked?1:0;save()"> 기준정보 빼기</label>${btn('사진 포함', 'makeShareFile(true)')}${btn('사진 제외', 'makeShareFile(false)')}</span>`,
       ) +

@@ -514,7 +514,7 @@ function stageBadges(d) {
     v = s.done ? (n ? verifyInfo(n) : icaVerify(d)) : null,
     vd = n ? n.verifyDue : d.ica && d.ica.verifyDue;
   return `<span class="bg ${s.cls}">${esc(s.label)}</span>${
-    v ? `<br><span class="bg ${v.cls}" style="font-size:10.5px" title="유효성 검증 기한 ${esc(vd || '-')}">${esc(v.label)}</span>` : ''
+    v ? `<br><span class="bg ${v.cls}" style="font-size:11px" title="유효성 검증 기한 ${esc(vd || '-')}">${esc(v.label)}</span>` : ''
   }`;
 }
 function ncrSteps(n) {

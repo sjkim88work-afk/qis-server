@@ -164,7 +164,7 @@ function renderIssue() {
       '<span class="muted">—</span>'
     );
   };
-  return `<div class="row noprint" style="margin-bottom:12px;align-items:baseline"><h2 style="margin:0;font-size:20px">이슈</h2><span class="muted" style="font-size:13px">원인 · 처리 방향이 아직 정해지지 않은 이상 건. 일상 불량은 불량 관리에서 바로 등록합니다.</span><span style="flex:1"></span>${
+  return `<div class="row noprint" style="margin-bottom:12px;align-items:baseline"><h2 style="margin:0;font-size:22px">이슈</h2><span class="muted" style="font-size:13px">원인 · 처리 방향이 아직 정해지지 않은 이상 건. 일상 불량은 불량 관리에서 바로 등록합니다.</span><span style="flex:1"></span>${
     RO ? '' : '<button class="b p" onclick="editIssue()">+ 이슈 등록</button>'
   }</div>
   <div class="kpis">
@@ -422,7 +422,7 @@ function issDetailHTML(i) {
   setTimeout(() => issPhotos(i), 0);
   const kv = (k, v, s) =>
     `<div><div class="muted" style="font-size:12px">${k}</div><div style="font-weight:600;margin-top:2px">${v}</div>${
-      s ? `<div style="font-size:12.5px">${s}</div>` : ''
+      s ? `<div style="font-size:13px">${s}</div>` : ''
     }</div>`;
   const p = partByNo(i.partNo || '');
   const fol = [
@@ -481,7 +481,7 @@ function issDetailHTML(i) {
           .join('')}</ul>
           ${
             r.k === 'close' && of.length
-              ? `<div style="color:var(--warn);font-size:12.5px">진행 중인 후속 건 ${of.length}건 — 종결해도 후속 건은 각자 계속 진행됩니다</div>`
+              ? `<div style="color:var(--warn);font-size:13px">진행 중인 후속 건 ${of.length}건 — 종결해도 후속 건은 각자 계속 진행됩니다</div>`
               : ''
           }
           <button class="b p" style="width:100%;padding:10px" onclick="issRoute('${i.id}','${r.k}')">${r.cta}</button></div></div>`
