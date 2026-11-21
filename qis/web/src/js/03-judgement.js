@@ -77,7 +77,7 @@ function routeOf(d) {
       vi = icaVerify(d);
     S.push({
       t: `사내 대책 — ${lv}`,
-      why: '불량 목록 후속 조치의 ‘사내 대책’ (A: 8D · B: 간이 대책) · 완료 후 유효성 검증',
+      why: '불량 목록 ‘진행 · 다음 할 일’ 칸의 ‘사내 대책’ (A: 8D · B: 간이 대책) · 완료 후 유효성 검증',
       done: !!ic.doneDate,
       doneT: `완료 ${ic.doneDate || ''}${vi ? ' · ' + vi.label : ''}`,
       btn: go('icaWrap'),
@@ -181,7 +181,7 @@ function routeOf(d) {
   }
   return S;
 }
-// form=true: 불량 등록 창용 — FAR · RCA 는 넣지 않음 (등록 창은 등록만. FAR · RCA 는 불량 목록의 후속 조치 칸과 각 화면에서 시작)
+// form=true: 불량 등록 창용 — FAR · RCA 는 넣지 않음 (등록 창은 등록만. FAR · RCA 는 불량 목록의 ‘진행 · 다음 할 일’ 칸과 각 화면에서 시작)
 function routeHTML(d, form) {
   if (!d || !d.id) return '';
   let S = routeOf(d);

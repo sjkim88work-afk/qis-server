@@ -1,4 +1,4 @@
-// ── 불량 — 목록 (조건 · 후속 조치 칸 · 표) ──
+// ── 불량 — 목록 (조건 · 진행 · 다음 할 일 칸 · 표) ──
 /* ================= 불량 관리 ================= */
 function filteredDefects() {
   const f = state.df,
@@ -48,10 +48,12 @@ function filteredDefects() {
     )
     .sort((a, b) => (b.date || '').localeCompare(a.date || '') || (b.createdAt || '').localeCompare(a.createdAt || ''));
 }
-// 불량 목록의 후속 조치 칸 — 귀책에 맞는 FAR · RCA · NCR 진행 상태 또는 발행 버튼
+// 불량 목록의 ‘진행 · 다음 할 일’ 칸 — 시작한 일은 링크로, 다음 할 일은 버튼 한 개로, 나머지 할 일은 ⋯ 안에
 function actCell(d) {
   const L = [],
-    line = (k, h) => L.push(`<div class="act"><span class="ak">${k}</span>${h}</div>`);
+    T = [],
+    line = (k, h) => L.push(`<div class="act"><span class="ak">${k}</span>${h}</div>`),
+    todo = (label, on, title, hot) => T.push({ label, on, title, hot });
   const iv = d.inv || {},
     r = d.resp || '협력사',
     done = isDone(d),
@@ -70,7 +72,26 @@ function actCell(d) {
         ? `<a class="bg ok" onclick="editInv('${d.id}')">판정 ${esc(iv.verdict)}</a>`
         : `<a class="bg ${ii.cls}" onclick="editInv('${d.id}')">${esc(ii.label.replace('FAR ', ''))}</a>`,
     );
-  } else if (r === '미정' && !done) line('FAR', `<button class="b s noprint" onclick="editInv('${d.id}','inv_farReq')">FAR 요청</button>`);
+  } else if (r === '미정' && !done) todo('FAR 요청', `editInv('${d.id}','inv_farReq')`, '귀책 조사 요청', true);
+  // NCR (협력사 대책서)
+  if (n)
+    line(
+      'NCR',
+      `<a class="bg inf" onclick="editNcr('${n.id}')">${esc(n.no)}</a> <span class="muted" style="font-size:11.5px">${esc(ncrStatus(n))}</span>`,
+    );
+  else if (['협력사', '공동'].includes(r) && !done) {
+    const rs = ncrReasons(d);
+    todo('NCR 발행', `ncrFromDefect('${d.id}')`, rs.join(' / ') || '협력사에 대책서 요청', rs.length > 0);
+  }
+  // 사내 대책 (RCA가 없을 때)
+  if (!c && ['사내', '공동'].includes(r)) {
+    const ch = icaChip(d);
+    if (ch) line('대책', ch);
+    else if (!done) {
+      const lv = icaLevel(d);
+      todo('사내 대책', `editIca('${d.id}')`, '권장 수준: ' + lv, lv !== ICA_NONE);
+    }
+  }
   // RCA (사내 원인분석)
   if (c)
     line(
@@ -82,38 +103,28 @@ function actCell(d) {
     !(d.ica && (icaStarted(d.ica) || d.ica.doneDate)) &&
     (['사내', '공동', '미정'].includes(r) || (r === '협력사' && stageOf(d.source) >= 2 && d.escJudge !== '샘플링 한계'))
   )
-    line(
-      'RCA',
-      `<button class="b s noprint" onclick="czFromDefect('${d.id}')" title="${
-        r === '협력사' ? '수입검사에서 왜 못 걸렀는지 사내 유출 원인 분석' : '사내 원인분석 요청'
-      }">${r === '협력사' ? '유출 RCA' : 'RCA 요청'}</button>`,
+    todo(
+      r === '협력사' ? '유출 RCA' : 'RCA 요청',
+      `czFromDefect('${d.id}')`,
+      r === '협력사' ? '수입검사에서 왜 못 걸렀는지 사내 유출 원인 분석' : '사내 원인분석 요청',
     );
-  // 사내 대책 (RCA가 없을 때)
-  if (!c && ['사내', '공동'].includes(r)) {
-    const ch = icaChip(d);
-    if (ch) line('대책', ch);
-    else if (!done) {
-      const lv = icaLevel(d);
-      line(
-        '대책',
-        `<button class="b s noprint ${lv !== ICA_NONE ? 'p' : ''}" onclick="editIca('${d.id}')" title="권장 수준: ${esc(lv)}">사내 대책</button>`,
-      );
-    }
-  }
-  // NCR (협력사 대책서)
-  if (n)
-    line(
-      'NCR',
-      `<a class="bg inf" onclick="editNcr('${n.id}')">${esc(n.no)}</a> <span class="muted" style="font-size:11.5px">${esc(ncrStatus(n))}</span>`,
-    );
-  else if (['협력사', '공동'].includes(r) && !done) {
-    const rs = ncrReasons(d);
-    line(
-      'NCR',
-      `<button class="b s noprint ${rs.length ? 'p' : ''}" onclick="ncrFromDefect('${d.id}')" title="${esc(rs.join(' / ') || '협력사에 대책서 요청')}">NCR 발행</button>`,
-    );
-  } else if (r === '미정' && !done) line('NCR', '<span class="muted" style="font-size:11.5px">귀책 판정 후</span>');
-  return L.join('') || (r === '고객' ? '<span class="bg mut">고객 귀책</span>' : '<span class="muted">-</span>');
+  // 다음 할 일: 권장(hot) 이 먼저. 한 개만 버튼으로 보이고 나머지는 ⋯ 안에
+  T.sort((a, b) => (b.hot ? 1 : 0) - (a.hot ? 1 : 0));
+  const btn = (t, cls) => `<button class="b s ${cls}" onclick="${t.on}" title="${esc(t.title || '')}">${t.label}</button>`;
+  let next = '';
+  if (T.length)
+    next = `<div class="act nx noprint">${btn(T[0], 'p')}${
+      T.length > 1
+        ? `<details class="actm"><summary title="다른 할 일 ${T.length - 1}개" aria-label="다른 할 일 ${T.length - 1}개">${LG_ICO.more}</summary><div class="mn">${T.slice(
+            1,
+          )
+            .map((t) => btn(t, ''))
+            .join('')}</div></details>`
+        : ''
+    }</div>`;
+  else if (r === '고객' && !L.length) next = '<span class="bg mut">고객 귀책</span>';
+  else next = `<span class="muted actn">${done ? '할 일 없음' : L.length ? '진행 중' : '할 일 없음'}</span>`;
+  return L.join('') + next;
 }
 function defectTable() {
   const ds = filteredDefects();
@@ -122,7 +133,7 @@ function defectTable() {
   return `<div class="row" style="margin-bottom:8px"><span>심각도 <span class="bg svA">A ${gc.A}</span> <span class="bg svB">B ${gc.B}</span> <span class="bg svC">C ${gc.C}</span> · </span><span><b>${ds.length.toLocaleString()}</b>건 · 수량 <b>${sum(ds, 'qty').toLocaleString()}</b> · 비용 <b>${won(sum(ds, costTotal))}</b>원</span></div>
   <div class="tw"><table><thead><tr><th>발생일</th><th>발생처</th><th>심각도</th><th>부품</th><th>사진</th><th>차종</th><th>협력사</th><th>유형</th>
     <th class="n">수량</th><th>처리</th><th>귀책</th><th class="n">비용(원)</th>
-      <th>후속 조치</th><th>담당</th><th>상태</th><th class="noprint"></th></tr></thead><tbody>
+      <th>진행 · 다음 할 일</th><th>담당</th><th>상태</th><th class="noprint"></th></tr></thead><tbody>
   ${
     ds
       .map(
@@ -153,9 +164,9 @@ function defectTable() {
             }</td><td class="actc">${actCell(d)}</td><td>${esc(d.owner)}</td><td class="stc">${stageBadges(d)}<br>${(() => {
               const n = (d.logs || []).length,
                 l = lastLog(d);
-              return `<a class="bg lgchip ${n ? 'inf' : 'mut'}" onclick="openLog('${d.id}')" title="${
+              return `<button type="button" class="lgchip ${n ? 'on' : ''}" onclick="openLog('${d.id}')" title="${
                 n ? esc(l.date + ' ' + l.kind + ': ' + l.text.slice(0, 80)) : '진행 기록 추가'
-              }">📝 ${n || '+'}</a>`;
+              }">${LG_ICO.note}기록 ${n || '+'}</button>`;
             })()}</td><td class="noprint" style="white-space:nowrap"><button class="b s" onclick="editDefect('${d.id}')">상세</button></td></tr>`,
       )
       .join('') || '<tr><td colspan="16" class="muted" style="text-align:center;padding:30px">조건에 맞는 불량이 없습니다.</td></tr>'

@@ -44,7 +44,7 @@ function saveIca(id, keep) {
   toast(c.doneDate ? `사내 대책 완료 — 유효성 검증 기한 ${c.verifyDue}` : '사내 대책을 저장했습니다');
   return true;
 }
-// 불량 목록 후속 조치 칸의 사내 대책 상태
+// 불량 목록 ‘진행 · 다음 할 일’ 칸의 사내 대책 상태
 function icaChip(d) {
   const c = d.ica || {},
     vi = icaVerify(d);
