@@ -88,6 +88,12 @@ const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 // 클릭 코드(onclick) 안의 글자: JS 문자열로 만든 뒤 HTML 이스케이프 — esc() 만 쓰면 브라우저가 &#39; 를 ' 로 되돌려 코드가 끼어들 수 있음
 const jsq=s=>esc(JSON.stringify(String(s??'')));
+// 백업 파일 내려받기. 데스크톱 프로그램 창은 내려받기를 못 하고 파일 내용을 화면에 열어 버리므로, 프로그램의 저장 창을 씀
+function exportDl(photos){
+  const a=window.pywebview&&window.pywebview.api;
+  if(a&&a.export_backup){toast('백업 파일을 만드는 중…');a.export_backup(!!photos).then(r=>{if(r)toast(r)}).catch(e=>toast('저장하지 못했습니다: '+(e&&e.message||e)));return}
+  const l=document.createElement('a');l.href='/api/admin/export'+(photos?'?photos=1':'');l.download='QIS_server_export.json';document.body.appendChild(l);l.click();l.remove();
+}
 const toast=m=>{const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('on'),3200)};
 async function api(path,opt={}){
   const r=await fetch(path,{credentials:'same-origin',...opt,headers:{...(opt.body?{'Content-Type':'application/json'}:{}),'X-QIS':'1',...(opt.headers||{})}});
@@ -205,8 +211,8 @@ async function renderBackup(){
     ${b.error?`<div>마지막 오류</div><div><span class="bg bad">${esc(fmt(b.error.at))}</span> ${esc(b.error.error)}</div>`:''}
     <div>DB 사본</div><div>${b.list.length?b.list.slice(0,8).map(x=>`${esc(x.name)} <span class="muted">${(x.size/1048576).toFixed(1)}MB</span>`).join('<br>')+(b.list.length>8?`<br><span class="muted">외 ${b.list.length-8}개</span>`:''):'<span class="muted">없음</span>'}</div></div>
     <div class="row" style="margin-top:12px"><button class="b p" onclick="backupNow(this)">지금 백업</button></div></div>
-    <div class="card"><h2>내보내기</h2><p class="help">QIS 백업 형식(JSON)으로 내려받습니다. 서버를 쓸 수 없을 때 기존 QIS 화면(HTML)에서 ‘백업으로 교체’로 열어 볼 수 있습니다. 내려받기도 이력에 남습니다.</p>
-    <div class="row"><a class="b" href="/api/admin/export">기록만 (사진 제외)</a><a class="b" href="/api/admin/export?photos=1">사진 · 첨부 포함</a></div></div>
+    <div class="card"><h2>내보내기</h2><p class="help">QIS 백업 형식(JSON)으로 내려받습니다. 다른 PC의 QIS에서 ‘기존 QIS 데이터 가져오기’ (데스크톱 프로그램은 메뉴 ‘파일 › 가져오기’) 로 넣을 수 있습니다. 내려받기도 이력에 남습니다.</p>
+    <div class="row"><button class="b" onclick="exportDl(0)">기록만 (사진 제외)</button><button class="b" onclick="exportDl(1)">사진 · 첨부 포함</button></div></div>
     <div class="card"><h2>기존 QIS 데이터 가져오기</h2><p class="help">개인 QIS(HTML)에서 ‘백업’으로 받은 JSON 파일을 가져옵니다. 사진 포함 백업이면 사진 · 첨부도 함께 들어옵니다. 서버에 기록이 이미 있으면 <b>지금 데이터를 비우고 바꿀지</b> 묻습니다 — 바꾸기 전에 DB 백업을 자동으로 받아 두므로 복원할 수 있습니다. 사용자 계정 · 변경 이력은 그대로 남습니다.</p>
     <div class="row"><button class="b" onclick="$('#impFile').click()">백업 파일 선택</button><span id="impMsg" class="muted"></span></div></div>
     <div class="card"><h2>빠진 사진 채우기</h2><p class="help">기록은 사진을 가리키는데 서버에 사진 내용이 없는 경우입니다 (개인 QIS에서 <b>사진 정보만</b> 든 파일 — 1분 자동 저장 <code>QMS_data.json</code> · <code>…_사진제외.json</code> — 로 가져왔을 때). 기록은 그대로 두고 사진만 채웁니다. 두 가지 중 편한 쪽을 쓰세요.<br>

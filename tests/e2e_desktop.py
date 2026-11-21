@@ -115,6 +115,23 @@ def main():
             pg.wait_for_url(r.base_url + "/admin", timeout=5000)
             pg.wait_for_selector("text=QIS로 돌아가기")
             ok(pg.url == r.base_url + "/admin", "관리 화면 열림 (같은 창)")
+            # 관리 화면의 내려받기: 프로그램 창은 파일을 화면에 열어 버리므로 프로그램의 저장 창으로
+            pg.evaluate("go('backup')")
+            pg.wait_for_selector("text=사진 · 첨부 포함")
+            pg.click("text=사진 · 첨부 포함")
+            pg.wait_for_timeout(300)
+            pg.click("text=기록만 (사진 제외)")
+            pg.wait_for_timeout(300)
+            ex = [c[1:] for c in calls(pg, "export_backup")]
+            ok(ex == [[True], [False]] and pg.url.split("#")[0] == r.base_url + "/admin",
+               f"관리 화면 ‘내보내기’: 프로그램 저장 창으로 (사진 포함 · 제외) — 화면은 그대로 ({ex} · {pg.url})")
+            pg.evaluate("go('audit')")
+            pg.wait_for_selector("text=CSV")
+            n0 = len(calls(pg, "save_file"))
+            pg.click("button:has-text('CSV')")
+            pg.wait_for_timeout(600)
+            sv = calls(pg, "save_file")
+            ok(len(sv) == n0 + 1 and str(sv[-1][1]).startswith("QIS_변경이력_"), f"관리 화면 ‘변경 이력 CSV’: 프로그램 저장 창으로 ({len(sv) - n0}번)")
             ok(not errs, f"화면 오류 없음 {errs}")
             b.close()
     finally:
