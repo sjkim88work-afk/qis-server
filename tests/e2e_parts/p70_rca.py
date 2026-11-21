@@ -50,7 +50,7 @@ def run(c):
 
     # RCA 메뉴는 목록이 먼저 (‘오늘 할 일’ 탭 없음). ‘내가 볼 것’ 단추로 재확인일이 된 RCA 만 보고, 그 줄에서 +2일
     r = A.evaluate("""async()=>{const wait=ms=>new Promise(r=>setTimeout(r,ms)),q=s=>document.querySelector(s),o={};
-      go('prog');await wait(250);o.prog=czUi.view;go('case');await wait(250);o.view=czUi.view;
+      go('prog');await wait(250);o.prog=state.tab;go('case');await wait(250);o.view=czUi.view;
       o.tabs=[...document.querySelectorAll('.cz .seg a')].map(a=>a.textContent.trim().replace(/\\s*\\d+$/,'')).join('|');
       o.h1=q('.cz h1').textContent;
       const c={id:'t_rca_todo',CaseNo:'RCA-T-0001',Title:'시험용',Status:'진행중',Stage:CZ_STAGES[0],Tier:'TIER 1',Ball:'나',RecheckDate:today(),Created:today(),DefectIds:[]};db.cases.push(c);czUi.filt.status='';czUi.filt.todo='';render();await wait(200);
@@ -59,7 +59,7 @@ def run(c):
       const bump=q('.cz table.t tbody [data-act=bump]');o.bump=!!bump;if(bump){bump.click();await wait(300)}
       o.bumpTxt=bump?bump.textContent:'';o.after=db.cases.find(x=>x.id===c.id).RecheckDate>today();o.modal=q('#modal').classList.contains('on');
       db.cases=db.cases.filter(x=>x.id!==c.id);czUi.filt.todo='';czUi.filt.status='미종결';save();render();return o}""")
-    ok(r["prog"] == "prog" and r["view"] == "cases" and r["tabs"].startswith("RCA 목록|조치") and "오늘 할 일" not in r["tabs"] and "RCA" in r["h1"], f"RCA 메뉴: 목록이 먼저 · ‘오늘 할 일’ 탭 없음 ({r['tabs']})")
+    ok(r["prog"] == "prog" and r["view"] == "cases" and r["tabs"] == "RCA 목록|조치" and "오늘 할 일" not in r["tabs"] and "RCA" in r["h1"], f"RCA 메뉴: 목록이 먼저 · ‘오늘 할 일’ 탭 없음 ({r['tabs']})")
     if not r.get("skip"):
         ok(r["rows"] >= 1 and r["on"] == 1 and r["bump"] and r["bumpTxt"] == "2일 뒤 다시 보기" and r["after"] and not r["modal"], f"RCA 목록: ‘내가 볼 것’ 단추로 거르고 그 줄에서 +2일 (창은 열리지 않음) ({r['n']} · {r['rows']}줄)")
 

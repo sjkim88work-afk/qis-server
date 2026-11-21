@@ -85,7 +85,7 @@ def run(c):
     ok(r["late"]["n"] == "1" and r["late"]["cls"] and r["late"]["color"] == "rgb(185, 50, 31)" and r["late"]["bg"] == "rgba(0, 0, 0, 0)", f"지연이 있으면 빨간 숫자 (바탕색 없음 · 이름 앞에 빨간 사각 표시) ({r['late']})")
     ok(r["zero"]["n"] == "0" and r["zero"]["cls"] and r["zero"]["color"] == "rgb(107, 118, 137)" and r["zero"]["bg"] == "rgba(0, 0, 0, 0)", f"값이 0 이면 회색으로 약하게 ({r['zero']})")
     ok(r["on"]["color"] == "rgb(29, 36, 51)" and r["go"] == "ncr/open", f"진행 중인 수는 검은 숫자 · 누르면 그 목록으로 ({r['go']})")
-    ok(r["chip"].startswith("지연 ") and r.get("goLate") == "case/1", f"진행 현황의 ‘지연’ 표시를 누르면 지연 건만 보기 ({r['chip']} → {r.get('goLate')})")
+    ok(r["chip"].startswith("지연 ") and r.get("goLate") == "prog/1", f"진행 현황의 ‘지연’ 표시를 누르면 지연 건만 보기 ({r['chip']} → {r.get('goLate')})")
 
     # 대시보드 현장 도구 모양: 숫자 줄이 맨 위 · 카드 테두리 없음 · 색 버튼 없음
     A.set_viewport_size({"width": 1400, "height": 900})
@@ -156,4 +156,22 @@ def run(c):
       state.dashMonth=today().slice(0,7);render();return o}""")
     ok(not any("RCA" in t for t in r["titles"]) and len(r["titles"]) >= 4 and r["titles"][0].startswith("월별") and r["titles"][1].startswith("월별") and "파레토" in r["titles"][2] and "파레토" in r["titles"][3] and all(r["rows"]),
        f"대시보드 그림표: RCA 없음 · 월별끼리 · 파레토끼리 한 줄 ({r['titles']})")
+
+    # 메뉴 ‘진행 현황’: 대시보드 바로 아래 · 왼쪽 표는 건 · 협력사 · 지금 단계 · 기한 · 줄을 누르면 오른쪽에 전체 이력
+    A.evaluate("()=>{state.pf=null;go('prog')}"); settle(A, 400)
+    r = A.evaluate("""async()=>{const wait=ms=>new Promise(r=>setTimeout(r,ms)),q=s=>document.querySelector(s),o={};
+      o.nav=[...document.querySelectorAll('#nav button')].map(b=>b.firstChild.textContent.trim()).slice(0,3).join('|');
+      o.th=[...document.querySelectorAll('.pgl thead th')].map(x=>x.textContent).join('|');
+      o.rows=document.querySelectorAll('.pgl tbody tr[onclick]').length;o.empty=!q('.pgr .pgh');
+      const c=progCases().find(c=>c.kind==='ncr')||progCases()[0];progSel(c.kind,c.id);await wait(300);
+      o.sel=document.querySelectorAll('.pgl tr.sel').length;o.hth=[...document.querySelectorAll('.pgr thead th')].map(x=>x.textContent).join('|');
+      o.hist=document.querySelectorAll('.pgr tbody tr').length;o.flow=[...document.querySelectorAll('.pgflow>div b')].map(b=>b.textContent).join('>');
+      o.kinds=[...new Set([...document.querySelectorAll('.pgr tbody tr td:nth-child(2)')].map(t=>t.textContent))].join(',');
+      const kb=[...document.querySelectorAll('.pgf button')].find(b=>b.textContent==='NCR');if(kb){kb.click();await wait(250);
+        o.onlyNcr=[...document.querySelectorAll('.pgr tbody tr td:nth-child(2)')].every(t=>t.textContent==='NCR')}
+      q('.pgr tbody a.lk').click();await wait(400);o.opened=q('#modal').classList.contains('on');mfDirty=false;closeModal(true);
+      o.over=document.documentElement.scrollWidth-innerWidth;state.pf=null;go('dash');return o}""")
+    ok(r["nav"] == "대시보드|진행 현황|이슈" and r["th"] == "건|협력사|지금 단계|기한" and r["rows"] >= 1 and r["empty"], f"진행 현황: 메뉴는 대시보드 아래 · 표의 칸 ({r['th']})")
+    ok(r["sel"] == 1 and r["hth"] == "일자|구분|내용|출처|기록자" and r["hist"] >= 2 and "NCR" in r["flow"] and r.get("onlyNcr") and r["opened"] and r["over"] <= 0,
+       f"진행 현황: 줄을 누르면 전체 이력 · 종류로 거름 · 출처를 누르면 창이 열림 (흐름 {r['flow']} · {r['hist']}줄 · {r['kinds']})")
 

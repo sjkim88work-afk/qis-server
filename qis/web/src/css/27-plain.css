@@ -172,3 +172,25 @@ body:not(.mob) .pld textarea,body:not(.mob) .pld .card input{border-radius:3px;b
   body:not(.mob) .cz .badge,body:not(.mob) .cz .ball{font-weight:600}
 }
 @media (min-width:901px){.cz .flow{grid-template-columns:130px 1fr 190px auto}.cz .flow label{white-space:nowrap}}
+/* ── 진행 현황: 왼쪽 건 목록 + 오른쪽 전체 이력 ── */
+.pg .b.s.on{border-color:var(--ink);font-weight:600}
+.pgw{display:flex;align-items:stretch;flex-wrap:wrap}
+.pgl{flex:0 0 480px;min-width:0;max-width:100%;border-right:1px solid #d8dce3}
+.pgr{flex:1 1 420px;min-width:0}
+.pg .tw{border:0;border-radius:0;max-height:none}
+.pg .pgl th,.pg .pgr th{position:static;padding:6px 8px;background:#fff;border-bottom:1px solid #9aa2af;color:var(--sub);font-size:11.5px;font-weight:600;white-space:nowrap}
+.pg .pgl td,.pg .pgr td{padding:5px 8px;border-bottom:1px solid #eceef2;font-size:13px;line-height:1.45}
+.pg .pgl td:first-child,.pg .pgl th:first-child,.pg .pgr td:first-child,.pg .pgr th:first-child{padding-left:12px}
+.pg .pgl tr.sel>td{background:#eef4f4}
+.pgh{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px;padding:8px 12px;background:#f5f6f8;border-bottom:1px solid #d8dce3;font-size:12px}
+.pgh h3{margin:0;font-size:13.5px}
+.pgflow{display:flex;border-bottom:1px solid #d8dce3}
+.pgflow>div{flex:1 1 0;min-width:0;padding:6px 10px;border-top:3px solid #9aa2af;border-right:1px solid #d8dce3;font-size:12px}
+.pgflow>div.on{border-top-color:var(--pri)}.pgflow>div span{color:var(--sub)}.pgflow>div.on span{color:#9a5b00}
+.pgflow small{display:block;font-family:var(--f-mono,monospace);font-size:11.5px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pgf{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:7px 12px;border-bottom:1px solid #d8dce3;font-size:12px}
+.pgf label{display:inline-flex;align-items:center;gap:5px;color:var(--sub)}
+.pght td:nth-child(1),.pght td:nth-child(2),.pght td:nth-child(4),.pght td:nth-child(5){white-space:nowrap}
+.pght td.mono .muted{font-size:11.5px}
+@media (max-width:1100px){.pgl{flex:1 1 100%;border-right:0;border-bottom:1px solid #d8dce3}}
+.pg .pgl td>b:first-child{white-space:normal}.pg .pgl .tw{overflow:visible}.pg .pgl table{table-layout:auto}

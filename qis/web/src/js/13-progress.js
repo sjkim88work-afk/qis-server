@@ -172,84 +172,204 @@ const nxBadge = (dt) => {
 };
 const staleBadge = (n) =>
   n >= 999 ? '<span class="bg mut">기록 없음</span>' : `<span class="bg ${n >= 30 ? 'bad' : n >= 14 ? 'warn' : 'mut'}">${n}일 전</span>`;
+// ── 진행 현황 (메뉴) — 왼쪽: 끝나지 않은 건 (한 줄 = 한 건: 연결된 이슈 · 불량 · FAR · NCR · RCA 를 묶음), 오른쪽: 고른 건의 전체 이력 ──
+const progName = (c) => {
+  const o = c.obj;
+  if (c.kind === 'rca') return o.Title || o.CaseNo;
+  if (c.kind === 'ncr') return `${o.partName || o.partNo || ''} ${o.title || ''}`.trim() || o.no;
+  return `${o.partName || o.partNo || o.fgName || '(부품 미정)'} ${o.type || ''}`.trim();
+};
+const progKind = (k) => (k === 'ncr' ? 'NCR' : k === 'rca' ? 'RCA' : '불량');
+// 한 건에 묶인 기록: 이슈 · 불량들 · NCR · RCA
+function progBundle(kind, id) {
+  let rca = null,
+    ncr = null,
+    defs = [];
+  const D = (ids) => (ids || []).map((i) => db.defects.find((d) => d.id === i)).filter(Boolean);
+  if (kind === 'rca') {
+    rca = (db.cases || []).find((x) => x.id === id) || null;
+    if (rca) {
+      ncr = czNcr(rca);
+      defs = D(rca.DefectIds);
+    }
+  } else if (kind === 'ncr') {
+    ncr = db.ncrs.find((x) => x.id === id) || null;
+    if (ncr) rca = (db.cases || []).find((x) => x.NcrId === ncr.id) || null;
+  } else {
+    const d = db.defects.find((x) => x.id === id);
+    if (d) {
+      defs = [d];
+      ncr = (d.ncrId && db.ncrs.find((x) => x.id === d.ncrId)) || null;
+      rca = defCase(d);
+    }
+  }
+  if (ncr) D(ncr.defectIds).forEach((d) => defs.includes(d) || defs.push(d));
+  if (!rca && defs.length) rca = defs.map(defCase).find(Boolean) || null;
+  const iss = defs.map((d) => d.issueId && issById(d.issueId)).find(Boolean) || null;
+  return { rca, ncr, defs, iss };
+}
+// 전체 이력 줄: {date, time, kind(이슈|불량|FAR|NCR|RCA), text, src, open, by, auto, att}
+function progEvents(B) {
+  const E = [],
+    man = (logs, kind, src, open) =>
+      (logs || [])
+        .filter((l) => !l.void)
+        .forEach((l) =>
+          E.push({
+            date: l.date || String(l.at || '').slice(0, 10),
+            time: l.time || '',
+            kind,
+            text: `${l.kind ? l.kind + ' — ' : ''}${l.text || ''}${l.result ? ' → ' + l.result : ''}`,
+            src,
+            open,
+            by: l.by || '',
+            auto: !!l.sys,
+            att: (l.photos || []).length,
+          }),
+        );
+  if (B.iss) man(B.iss.logs, '이슈', B.iss.no, `issOpen('${B.iss.id}')`);
+  B.defs.forEach((d) => {
+    const src = `불량 ${String(d.date || '').slice(5)}`,
+      open = `openLog('${d.id}')`;
+    autoEvents(d, null).forEach((e) =>
+      E.push({ date: e.date, time: '', kind: /FAR/.test(e.text) ? 'FAR' : '불량', text: e.text, src, open, by: '', auto: true }),
+    );
+    man(d.logs, '불량', src, open);
+  });
+  if (B.ncr) {
+    const open = `editNcr('${B.ncr.id}')`;
+    autoEvents(null, B.ncr).forEach((e) => E.push({ date: e.date, time: '', kind: 'NCR', text: e.text, src: B.ncr.no, open, by: '', auto: true }));
+    man(B.ncr.logs, 'NCR', B.ncr.no, open);
+  }
+  if (B.rca)
+    czHistRows(B.rca).forEach((x) =>
+      E.push({
+        date: x.date,
+        time: x.at ? loc(x.at).slice(11, 16) : '',
+        kind: 'RCA',
+        text: `${x.type ? x.type + ' — ' : ''}${x.text || ''}`,
+        src: B.rca.CaseNo,
+        open: `czOpenCase('${B.rca.id}')`,
+        by: x.by || '',
+        auto: !!x.est,
+      }),
+    );
+  return E.filter((e) => e.date).sort((a, b) => b.date.localeCompare(a.date) || String(b.time).localeCompare(String(a.time)));
+}
+function progSel(kind, id) {
+  state.pf.sel = state.pf.sel && state.pf.sel.id === id ? null : { kind, id };
+  state.pf.hk = '';
+  render();
+}
+// 다른 화면 (RCA 창 등) 에서 전체 이력 열기
+function progOpen(kind, id) {
+  if ($('#modal').classList.contains('on')) closeModal(true);
+  state.pf = { ...(state.pf || {}), late: '', stale: '', q: '', sup: '', owner: '', sel: { kind, id }, hk: '' };
+  go('prog');
+}
+function progHistHTML(c) {
+  const f = state.pf,
+    B = progBundle(c.kind, c.id),
+    all = progEvents(B),
+    nd = B.defs.length,
+    far = B.defs.filter((d) => d.inv && d.inv.farReq);
+  const steps = [];
+  if (B.iss) steps.push(['이슈', B.iss.no, B.iss.status === '종결']);
+  if (nd) steps.push(['불량', `${nd}건 · ${sum(B.defs, 'qty').toLocaleString()}개`, B.defs.every(isDone)]);
+  if (far.length)
+    steps.push(['FAR', far.every((d) => d.inv.verdict) ? '판정 ' + far.map((d) => d.inv.verdict)[0] : '조사 중', far.every((d) => d.inv.verdict)]);
+  if (B.ncr) steps.push(['NCR', `${B.ncr.no} · ${ncrStatus(B.ncr)}`, ncrStatus(B.ncr) === '종결']);
+  if (B.rca) steps.push(['RCA', `${B.rca.CaseNo} · ${B.rca.Stage || ''}`, ['종결', '취소'].includes(B.rca.Status)]);
+  const kinds = [...new Set(all.map((e) => e.kind))],
+    E = all.filter((e) => (!f.hk || e.kind === f.hk) && (f.hauto !== false || !e.auto));
+  const kb = (k, l) => `<button type="button" class="b s${(f.hk || '') === k ? ' on' : ''}" onclick="state.pf.hk='${k}';render()">${l}</button>`;
+  return `<div class="pgh"><h3>${esc(progName(c))}</h3><span class="muted">${esc(c.sup || '')} · 전체 이력 ${all.length}건</span><span style="flex:1"></span><button type="button" class="b s" onclick="openCase('${c.kind}','${c.id}')">${progKind(c.kind)} 열기</button><button type="button" class="b s" onclick="progSel('${c.kind}','${c.id}')">닫기</button></div>
+    <div class="pgflow">${steps
+      .map(
+        ([k, t, done]) =>
+          `<div class="${done ? 'done' : 'on'}"><b>${k}</b> <span>${done ? '끝남' : '진행 중'}</span><small title="${esc(t)}">${esc(t)}</small></div>`,
+      )
+      .join('')}</div>
+    <div class="pgf noprint"><span class="muted">보기</span>${kb('', '전체')}${['이슈', '불량', 'FAR', 'NCR', 'RCA']
+      .filter((k) => kinds.includes(k))
+      .map((k) => kb(k, k))
+      .join(
+        '',
+      )}<span style="flex:1"></span><label><input type="checkbox" ${f.hauto !== false ? 'checked' : ''} onchange="state.pf.hauto=this.checked;render()"> 자동 기록 포함</label></div>
+    <div class="tw"><table class="pght"><thead><tr><th>일자</th><th>구분</th><th>내용</th><th>출처</th><th>기록자</th></tr></thead><tbody>${
+      E.map(
+        (e) =>
+          `<tr><td class="mono">${esc(e.date.slice(5))}${e.time ? ` <span class="muted">${esc(e.time)}</span>` : ''}</td><td><b>${e.kind}</b></td><td>${esc(e.text)}${
+            e.att ? ` <span class="muted">${LG_ICO.clip} ${e.att}</span>` : ''
+          }</td><td><a class="lk" onclick="${e.open}" title="누르면 열림">${esc(e.src)}</a></td><td class="muted">${esc(e.by || (e.auto ? '자동' : ''))}</td></tr>`,
+      ).join('') || '<tr><td colspan="5" class="muted" style="text-align:center;padding:24px">조건에 맞는 기록이 없습니다.</td></tr>'
+    }</tbody></table></div>
+    <div class="help" style="margin:8px 12px">여기서는 보기만 합니다. 기록은 출처의 창 (불량 진행 · NCR · RCA · 이슈) 에서 씁니다.</div>`;
+}
 function renderProg() {
-  const f = (state.pf = state.pf || { kind: '', owner: '', stale: '', sup: '', sort: 'stale', late: '' });
-  let C = progCases();
+  const f = (state.pf = { kind: '', owner: '', stale: '', sup: '', sort: 'stale', late: '', q: '', sel: null, hk: '', ...(state.pf || {}) });
+  const all = progCases(),
+    lateN = all.filter((c) => c.late.length).length,
+    staleN = all.filter((c) => c.stale >= 14).length;
+  let C = all.slice();
   const owners = [...new Set(C.map((c) => c.owner).filter(Boolean))];
   if (f.kind) C = C.filter((c) => c.kind === f.kind);
   if (f.owner) C = C.filter((c) => c.owner === f.owner);
   if (f.sup) C = C.filter((c) => (c.kind === 'rca' ? c.obj.SupplierId : c.obj.supplierId) === f.sup);
   if (f.stale) C = C.filter((c) => c.stale >= +f.stale);
   if (f.late) C = C.filter((c) => c.late.length);
-  const srt = {
-    stale: (a, b) => b.stale - a.stale,
-    next: (a, b) => (a.next?.nextDate || '9999').localeCompare(b.next?.nextDate || '9999'),
-    grade: (a, b) => (SEV_ORD[a.grade] ?? 3) - (SEV_ORD[b.grade] ?? 3) || b.stale - a.stale,
-  }[f.sort];
-  C.sort(srt);
-  const all = progCases(),
-    od = all.filter((c) => c.late.length),
-    soon = all.filter((c) => c.next && c.next.nextDate >= today() && diffDays(today(), c.next.nextDate) <= 3);
-  return `<div class="kpis">
-    <div class="kpi"><div class="l">진행 중 RCA</div><div class="v">${
-      all.filter((c) => c.kind === 'rca').length
-    }</div><div class="s">사내 원인분석 · 내부 8D</div></div>
-    <div class="kpi"><div class="l">진행 중 NCR</div><div class="v">${all.filter((c) => c.kind === 'ncr').length}</div><div class="s">미종결</div></div>
-    <div class="kpi"><div class="l">진행 중 불량 (NCR 없음)</div><div class="v">${
-      all.filter((c) => c.kind === 'defect').length
-    }</div><div class="s">처리 대기 · 처리 중 · NCR 발행 필요</div></div>
-    <div class="kpi ${
-      all.filter((c) => c.stale >= 14).length ? 'warn' : 'ok'
-    }"><div class="l">14일 이상 정체</div><div class="v">${all.filter((c) => c.stale >= 14).length}</div><div class="s">마지막 기록·진행 기준</div></div>
-    <div class="kpi go ${od.length ? 'bad' : 'ok'}" onclick="state.pf.late=state.pf.late?'':'1';render()" title="누르면 지연 건만 보기"><div class="l">지연 (기한 초과)</div>
-      <div class="v">${od.length}</div><div class="s">회신·검증·FAR·조치·목표 종결일 · 3일 내 ${soon.length}</div></div>
-  </div>
-  <div class="card"><h3>진행 중인 건 <span class="bg mut">${C.length}</span> <span class="muted" style="font-weight:normal;font-size:12px">RCA로 관리 중인 불량 · NCR은 RCA 한 줄로 표시</span></h3>
-    <div class="row noprint" style="margin-bottom:8px">
-      <select onchange="state.pf.kind=this.value;render()"><option value="">RCA + NCR + 불량</option>
-        <option value="rca" ${f.kind === 'rca' ? 'selected' : ''}>RCA만</option>
-        <option value="ncr" ${f.kind === 'ncr' ? 'selected' : ''}>NCR만</option>
-          <option value="defect" ${f.kind === 'defect' ? 'selected' : ''}>불량만 (NCR 없음)</option></select>
-      <select onchange="state.pf.sup=this.value;render()">${supOpts(f.sup, '전체 협력사')}</select>
-      <select onchange="state.pf.owner=this.value;render()"><option value="">전체 담당</option>${owners
-        .map((o) => `<option ${o === f.owner ? 'selected' : ''}>${esc(o)}</option>`)
-        .join('')}</select>
-      <select onchange="state.pf.late=this.value;render()"><option value="">지연 전체</option>
-        <option value="1" ${f.late ? 'selected' : ''}>지연만</option></select>
-      <select onchange="state.pf.stale=this.value;render()"><option value="">정체 기간 전체</option>${[7, 14, 30]
-        .map((d) => `<option value="${d}" ${+f.stale === d ? 'selected' : ''}>${d}일 이상 정체</option>`)
-        .join('')}</select>
-      <span style="flex:1"></span><span class="muted">정렬</span><select onchange="state.pf.sort=this.value;render()"><option value="stale" ${f.sort === 'stale' ? 'selected' : ''}>오래 정체된 순</option>
-        <option value="next" ${f.sort === 'next' ? 'selected' : ''}>기한 순</option>
-          <option value="grade" ${f.sort === 'grade' ? 'selected' : ''}>심각도 순</option></select></div>
-    <div class="tw"><table><thead><tr><th>구분</th><th>건</th><th>협력사</th><th>심각도</th>
-      <th>상태</th><th>마지막 진행</th><th>최근 기록</th><th>다음 기한</th><th>담당</th></tr></thead><tbody>
-    ${
-      C.map(
-        (
-          c,
-        ) => `<tr class="${c.late.length ? 'late' : ''}" style="cursor:pointer" onclick="if(!event.target.closest('a,input,button'))openCase('${c.kind}','${c.id}')">
-      <td><span class="bg ${c.kind === 'ncr' ? 'inf' : c.kind === 'rca' ? 'warn' : 'mut'}">${
-        c.kind === 'ncr' ? 'NCR' : c.kind === 'rca' ? 'RCA' : '불량'
-      }</span></td>
-      <td><a class="lk" onclick="openCase('${c.kind}','${c.id}')"><b>${esc(c.title)}</b></a><br><span class="muted" style="font-size:11.5px">${esc(c.sub)}</span></td>
-      <td>${esc(c.sup)}</td><td>${c.grade ? `<span class="bg ${SEV_CLS[c.grade]}">${c.grade}</span>` : ''}</td>
-      <td>${c.kind === 'rca' ? `<span class="bg inf">${esc(c.status)}</span>` : stB(c.status)}${
-        c.kind === 'ncr' ? ' ' + farBadge(c.obj) : ''
-      } ${lateBadge(c.late)}</td>
-      <td style="white-space:nowrap">${c.last || '-'}<br>${staleBadge(c.stale)}</td>
-      <td style="max-width:300px">${
-        c.kind === 'rca'
-          ? `<span class="muted" style="font-size:11.5px">RCA · ${esc(c.sub)}</span>`
-          : c.lastM
-            ? `<span class="muted" style="font-size:11.5px">${esc(c.lastM.date)} ${esc(c.lastM.kind)}</span><br>${esc(c.lastM.text.slice(0, 70))}${c.lastM.text.length > 70 ? '…' : ''}`
-            : '<span class="muted">직접 쓴 기록 없음</span>'
-      }</td>
-      <td>${c.next ? `${esc(c.next.next)}<br>${nxBadge(c.next.nextDate)}` : '<span class="muted">-</span>'}</td><td>${esc(c.owner)}</td></tr>`,
-      ).join('') || '<tr><td colspan="9" class="muted" style="text-align:center;padding:24px">조건에 맞는 진행 중인 건이 없습니다.</td></tr>'
-    }
-    </tbody></table></div>
-    <div class="help" style="margin-top:6px">‘마지막 진행’은 직접 쓴 기록과 자동 이벤트(NCR 발행·대책 요청·회신·평가·구상 등) 중 가장 최근 날짜입니다. 행을 누르면 RCA는 RCA 상세, NCR은 NCR 화면, 불량은 진행 보기 창이 열립니다.</div></div>`;
+  if (f.q) {
+    const q = f.q.toLowerCase();
+    C = C.filter((c) =>
+      [progName(c), c.title, c.sub, c.sup, c.owner].some((v) =>
+        String(v || '')
+          .toLowerCase()
+          .includes(q),
+      ),
+    );
+  }
+  // 지연이 먼저, 그 다음 기한이 빠른 순
+  C.sort((a, b) => (b.late.length ? 1 : 0) - (a.late.length ? 1 : 0) || (a.next?.nextDate || '9999').localeCompare(b.next?.nextDate || '9999'));
+  const sel = f.sel && all.find((c) => c.id === f.sel.id && c.kind === f.sel.kind),
+    selC = sel || (f.sel ? progClosed(f.sel) : null);
+  const chip = (on, l, n, js) =>
+    `<button type="button" class="b s${on ? ' on' : ''}" onclick="${js};render()">${l} <span class="mono">${n}</span></button>`;
+  return `<div class="pl pg"><div class="card noprint pltool"><div class="row">
+    ${chip(!f.late && !f.stale, '진행 중', all.length, "state.pf.late='';state.pf.stale=''")}${chip(!!f.late, '지연', lateN, "state.pf.late=state.pf.late?'':'1';state.pf.stale=''")}${chip(
+      !!f.stale,
+      '정체',
+      staleN,
+      "state.pf.stale=state.pf.stale?'':'14';state.pf.late=''",
+    )}
+    <select onchange="state.pf.kind=this.value;render()"><option value="">RCA + NCR + 불량</option>
+      <option value="rca" ${f.kind === 'rca' ? 'selected' : ''}>RCA만</option>
+      <option value="ncr" ${f.kind === 'ncr' ? 'selected' : ''}>NCR만</option>
+      <option value="defect" ${f.kind === 'defect' ? 'selected' : ''}>불량만 (NCR 없음)</option></select>
+    <select onchange="state.pf.sup=this.value;render()">${supOpts(f.sup, '전체 협력사')}</select>
+    <select onchange="state.pf.owner=this.value;render()"><option value="">전체 담당</option>${owners
+      .map((o) => `<option ${o === f.owner ? 'selected' : ''}>${esc(o)}</option>`)
+      .join('')}</select>
+    <input placeholder="검색 (부품 · 번호 · 협력사)" value="${esc(f.q)}" oninput="state.pf.q=this.value;deb(render)" style="width:200px">
+  </div></div>
+  <div class="pgw"><div class="pgl" id="pgtab"><div class="tw"><table><thead><tr><th>건</th><th>협력사</th><th>지금 단계</th><th>기한</th></tr></thead><tbody>${
+    C.map(
+      (c) =>
+        `<tr class="${selC && selC.id === c.id ? 'sel' : ''}" style="cursor:pointer" onclick="progSel('${c.kind}','${c.id}')" title="${esc(c.title)}${c.sub ? ' · ' + esc(c.sub) : ''}">
+      <td><b>${esc(progName(c))}</b></td><td>${esc(c.sup)}</td><td>${progKind(c.kind)} ${esc(c.status)}</td>
+      <td style="white-space:nowrap" title="${esc(c.next ? c.next.next : '')}">${
+        c.late.length ? lateBadge(c.late) : c.next ? nxBadge(c.next.nextDate) : '<span class="muted">-</span>'
+      }</td></tr>`,
+    ).join('') || '<tr><td colspan="4" class="muted" style="text-align:center;padding:24px">조건에 맞는 진행 중인 건이 없습니다.</td></tr>'
+  }</tbody></table></div>
+  <div class="help" style="margin:8px 12px">한 줄은 한 건입니다. 연결된 이슈 · 불량 · FAR · NCR · RCA 를 한 줄로 묶습니다. 줄을 누르면 전체 이력이 나옵니다.</div></div>
+  <div class="pgr">${selC ? progHistHTML(selC) : '<div class="muted" style="padding:40px 16px;text-align:center">왼쪽에서 건을 누르면 전체 이력이 여기에 나옵니다.</div>'}</div></div></div>`;
+}
+// 목록에 없는 (끝난) 건의 전체 이력도 볼 수 있게 — RCA 창의 ‘전체 이력 보기’ 로 들어온 경우
+function progClosed(sel) {
+  const B = progBundle(sel.kind, sel.id),
+    o = sel.kind === 'rca' ? B.rca : sel.kind === 'ncr' ? B.ncr : B.defs[0];
+  if (!o) return null;
+  return { kind: sel.kind, id: sel.id, obj: o, sup: supName(sel.kind === 'rca' ? o.SupplierId : o.supplierId), title: '', sub: '' };
 }
 // 대시보드의 ‘할 일’ — 표 한 개: 오늘 챙길 일(it: <li> 문장들) + 기한 임박 + 오래 정체된 건. 같은 건은 한 줄로 (정체는 내용 끝에 덧붙임)
 function todoCell(li) {
