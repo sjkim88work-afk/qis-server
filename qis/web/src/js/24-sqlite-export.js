@@ -585,7 +585,9 @@ async function syncPhotoFiles(relist) {
 }
 function photoBadge(d) {
   const n = (d.photos || []).length;
-  return n ? `<a class="bg inf" style="cursor:pointer" onclick="viewDefectPhotos('${d.id}')" title="사진 보기">📷 ${n}</a>` : '';
+  return n
+    ? `<a class="bg inf" style="cursor:pointer" onclick="viewDefectPhotos('${d.id}')" title="사진 보기"><svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.2"/></svg> ${n}</a>`
+    : '';
 }
 let curPhotos = [],
   curRemoved = [];

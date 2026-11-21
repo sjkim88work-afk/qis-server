@@ -130,7 +130,7 @@ function defectTable() {
   const ds = filteredDefects();
   const gc = { A: 0, B: 0, C: 0 };
   ds.forEach((d) => gc[sevOf(d).grade]++);
-  return `<div class="row" style="margin-bottom:8px"><span>심각도 <span class="bg svA">A ${gc.A}</span> <span class="bg svB">B ${gc.B}</span> <span class="bg svC">C ${gc.C}</span> · </span><span><b>${ds.length.toLocaleString()}</b>건 · 수량 <b>${sum(ds, 'qty').toLocaleString()}</b> · 비용 <b>${won(sum(ds, costTotal))}</b>원</span></div>
+  return `<div class="row plsum" style="margin-bottom:8px"><span>심각도 <span class="bg svA">A ${gc.A}</span> <span class="bg svB">B ${gc.B}</span> <span class="bg svC">C ${gc.C}</span> · </span><span><b>${ds.length.toLocaleString()}</b>건 · 수량 <b>${sum(ds, 'qty').toLocaleString()}</b> · 비용 <b>${won(sum(ds, costTotal))}</b>원</span></div>
   <div class="tw"><table><thead><tr><th>발생일</th><th>발생처</th><th>심각도</th><th>부품</th><th>사진</th><th>차종</th><th>협력사</th><th>유형</th>
     <th class="n">수량</th><th>처리</th><th>귀책</th><th class="n">비용(원)</th>
       <th>진행 · 다음 할 일</th><th>담당</th><th>상태</th><th class="noprint"></th></tr></thead><tbody>
@@ -149,7 +149,7 @@ function defectTable() {
               ? `<br><span class="muted" style="font-size:11px" title="발견 품목 (완성품)">▸ 발견: ${esc(d.fgNo || d.fgName)}${d.fgQty ? ` (${num(d.fgQty)})` : ''}</span>`
               : ''
           }</td><td>${photoBadge(d)}</td><td>${esc(d.model)}</td><td>${esc(supName(d.supplierId))}</td>
-            <td>${esc(d.type)}</td><td class="n">${num(d.qty).toLocaleString()}</td><td>${esc(d.disposition)}</td><td>${esc(d.resp)}${
+            <td>${esc(d.type)}</td><td class="n">${num(d.qty).toLocaleString()}</td><td>${esc(d.disposition)}</td><td>${d.resp === '미정' && !isDone(d) ? '<span class="bg warn">미정</span>' : esc(d.resp)}${
               d.resp === '공동' && d.inv && d.inv.share !== '' && d.inv.share != null
                 ? `<br><span class="muted" style="font-size:11px">협력사 ${num(d.inv.share)}%</span>`
                 : ''
@@ -176,7 +176,7 @@ function defectTable() {
 function renderDefect() {
   const f = state.df,
     S = db.settings;
-  return `<div class="card noprint"><div class="row">
+  return `<div class="pl"><div class="card noprint pltool"><div class="row">
     <button class="b p" onclick="editDefect()">+ 불량 등록</button>
     <button class="b" onclick="openImport()">엑셀 일괄 등록</button>
     <span class="muted">기간</span><input type="date" value="${f.from}" onchange="state.df.from=this.value;refreshDT()"> ~ <input type="date" value="${f.to}" onchange="state.df.to=this.value;refreshDT()">
@@ -206,7 +206,7 @@ function renderDefect() {
     <input placeholder="검색 (부품·납품일·내용·담당)" value="${esc(f.q)}" oninput="state.df.q=this.value;deb(refreshDT)" style="width:200px">
     <span style="flex:1"></span><button class="b" onclick="exportDefectsCSV()">엑셀 내보내기</button>
   </div></div>
-  <div class="card" id="dtab">${defectTable()}</div>`;
+  <div class="card" id="dtab">${defectTable()}</div></div>`;
 }
 function refreshDT() {
   const own = !sevMemo;
