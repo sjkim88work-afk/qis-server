@@ -96,3 +96,12 @@ def run(c):
         colored:[...document.querySelectorAll('.pld button.b')].filter(b=>hex(cs(b).backgroundColor)===pri).length}}""")
     ok(r["pld"] and r["kFirst"] and r["radius"] == 0 and r["cardB"] == 0 and r["colored"] == 0, f"대시보드: 숫자 줄이 맨 위 · 카드 테두리 없음 · 색 버튼 없음 ({r})")
 
+    # 모든 화면 공통 규칙: 카드 · 버튼 모서리 3px · 본문의 배지는 배경 없는 글자
+    r = A.evaluate("""async()=>{const wait=ms=>new Promise(r=>setTimeout(r,ms)),cs=e=>getComputedStyle(e),clear=c=>c==='rgba(0, 0, 0, 0)',o={};
+      for(const t of ['issue','sup','copq','master','inv','case']){go(t);await wait(250);const m=document.querySelector('main');
+        const cards=[...m.querySelectorAll('.card')],bgs=[...m.querySelectorAll('.bg')].filter(e=>e.offsetParent),btn=m.querySelector('button.b');
+        o[t]={card:cards.every(c=>parseFloat(cs(c).borderTopLeftRadius)<=3),bg:bgs.every(b=>clear(cs(b).backgroundColor)),btn:!btn||parseFloat(cs(btn).borderTopLeftRadius)<=3}}
+      go('dash');return o}""")
+    bad = [k for k, v in r.items() if not (v["card"] and v["bg"] and v["btn"])]
+    ok(not bad, f"모든 화면: 카드 · 버튼 모서리 3px 이하 · 배지는 배경 없는 글자 (어긋난 화면: {bad})")
+
