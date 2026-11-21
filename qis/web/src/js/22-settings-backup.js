@@ -400,7 +400,12 @@ function renderData() {
       'PPM 등급 기준',
       sv('A등급', '협력사 귀책 불량수량 ÷ 입고수량 × 1,000,000 이 값 이하', sNum('gradeA', 'PPM 이하', 0)) +
         sv('B등급', '', sNum('gradeB', 'PPM 이하', 0)) +
-        sv('C등급', '이 값을 넘으면 D등급입니다.', sNum('gradeC', 'PPM 이하', 0)),
+        sv('C등급', '이 값을 넘으면 D등급입니다.', sNum('gradeC', 'PPM 이하', 0)) +
+        sv(
+          '공동 귀책 불량의 PPM 수량',
+          '‘분담 비율만큼’ 은 불량 수량 × 협력사 분담 비율을 PPM 에 넣습니다 (비용 분담과 같은 기준). 분담 비율이 비어 있으면 전량을 넣습니다.',
+          `<select onchange="setS('ppmJoint',this.value,'num');render()"><option value="1" ${num(db.settings.ppmJoint ?? 1) ? 'selected' : ''}>분담 비율만큼</option><option value="0" ${num(db.settings.ppmJoint ?? 1) ? '' : 'selected'}>전량</option></select>`,
+        ),
     );
   P.backup = srvPanel;
   return `<div class="set"><aside class="snav">${nav}</aside><section class="spane"><div class="row" style="margin-bottom:6px"><h2>${title}</h2><span style="flex:1"></span><span id="setSaved" class="muted" style="opacity:0;transition:opacity .4s;font-size:12px"></span></div>${(P[tab] || P.general)()}<div class="help" style="margin:-8px 4px 20px">설정은 값을 바꾸면 바로 저장됩니다.</div></section></div>`;

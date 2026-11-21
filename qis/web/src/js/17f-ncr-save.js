@@ -296,6 +296,23 @@ function saveNcr(id) {
     toast('통보일이 발행일보다 빠릅니다');
     return null;
   }
+  // 날짜 순서: 발행 → 대책 요청 · 봉쇄 회신 · 대책서 회신 → 유효성 검증
+  for (const [k, lbl, tab] of [
+    ['requestDate', '대책 요청일', 'r'],
+    ['d3Date', '봉쇄 회신일', 'r'],
+    ['replyDate', '대책서 회신일', 'r'],
+    ['verifyDate', '유효성 검증일', 'c'],
+  ])
+    if (o[k] && o[k] < o.issueDate) {
+      ncrTab(tab);
+      toast(`${lbl}이 발행일 (${o.issueDate}) 보다 빠릅니다`);
+      return null;
+    }
+  if (o.verifyDate && o.replyDate && o.verifyDate < o.replyDate) {
+    ncrTab('c');
+    toast(`유효성 검증일이 대책서 회신일 (${o.replyDate}) 보다 빠릅니다`);
+    return null;
+  }
   if (o.no && db.ncrs.some((x) => x.id !== id && x.no === o.no.trim())) {
     ncrTab('a');
     toast(`NCR 번호 ${o.no} 은(는) 이미 사용 중입니다`);

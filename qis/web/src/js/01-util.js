@@ -210,6 +210,7 @@ function defaultDB() {
       gradeC: 1000,
       photoMax: 1600,
       photoQ: 80,
+      ppmJoint: 1, // 공동 귀책 불량의 PPM 수량: 1 = 협력사 분담 비율만큼 · 0 = 전량
       photoOrig: 0, // 1 = 사진을 줄이지 않고 원본 그대로 저장
       backupKeep: 30,
       backupPhotos: 1,
