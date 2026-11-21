@@ -134,7 +134,8 @@ function setImpact(t, v) {
 function renderData() {
   const S = db.settings,
     fsOK = !!window.showSaveFilePicker,
-    tab = state.setTab === 'storage' ? 'backup' : state.setTab || 'general'; // 예전 ‘저장 공간’ 탭은 ‘데이터 · 백업’으로 합침
+    tab0 = state.setTab === 'storage' ? 'backup' : state.setTab || 'general', // 예전 ‘저장 공간’ 탭은 ‘데이터 · 백업’으로 합침
+    tab = SRV && tab0 === 'tg' ? 'general' : tab0; // 서버판: 알림은 관리 화면에 있으므로 여기에는 없음
   const cnt = COLLS.map((c) => db[c].length),
     nPh = db.defects.reduce((a, d) => a + (d.photos || []).length, 0);
   const ico = (d) =>
@@ -142,6 +143,7 @@ function renderData() {
   const nav = SET_NAV.map(
     ([g, items]) =>
       `<div class="gh">${g}</div>${items
+        .filter(([k]) => !(SRV && k === 'tg'))
         .map(
           ([k, l, d]) =>
             `<button class="${tab === k ? 'on' : ''}" onclick="state.setTab='${k}';render();window.scrollTo(0,0)">${ico(d)}<span>${l}</span></button>`,
@@ -612,9 +614,6 @@ function renderData() {
     sg('초기화', sv('전체 초기화', '모든 데이터와 사진을 영구 삭제 — 먼저 백업하세요', btn('초기화', 'resetAll()', 'dz'))) +
     `</details>`;
   if (SRV) P.backup = srvPanel;
-  if (SRV)
-    P.tg = () =>
-      `<div class="help" style="margin:0 4px">서버판에서는 <b>서버가</b> 매일 정한 시각에 텔레그램 요약을 보냅니다 — 아무도 접속하지 않아도 보내고, 사용자가 여럿이어도 한 번만 갑니다. 설정은 <b>관리 › 알림 (텔레그램)</b>에서 (관리자).</div>`;
   if (tab === 'backup' && state.setAdv && !SRV) setTimeout(showUsage, 0);
   return `<div class="set"><aside class="snav">${nav}</aside><section class="spane"><div class="row" style="margin-bottom:6px"><h2>${title}</h2><span style="flex:1"></span><span id="setSaved" class="muted" style="opacity:0;transition:opacity .4s;font-size:12px"></span></div>${(P[tab] || P.general)()}<div class="help" style="margin:-8px 4px 20px">설정은 값을 바꾸면 바로 저장됩니다.</div></section></div>`;
 }

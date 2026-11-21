@@ -240,7 +240,7 @@ ul.act{margin:0;padding-left:18px}ul.act li{margin:4px 0}
 @media print{.g2{grid-template-columns:1fr 1fr!important}ul.act button,.tw button{display:none!important}.print-only{display:flex!important}header,nav,.noprint,#toast,#undo,#actbar,#cfm{display:none!important}body{background:#fff}.card,.kpi{break-inside:avoid}main{max-width:none;padding:0}.tw{max-height:none;overflow:visible}}
 #sevBox,#costBox,#evalBox,#stockBox,#linkBox,#ctBox{overflow-x:auto;max-width:100%}
 @media(max-width:600px){.g2{grid-template-columns:1fr}main{padding:12px}.card h3{flex-wrap:wrap}.card{min-width:0;overflow-wrap:anywhere}.card .row{flex-wrap:wrap}.card .row input{min-width:0;max-width:100%}}
-.updbadge{display:inline-block;margin-left:8px;padding:2px 8px;border-radius:10px;font:600 var(--fs-xs)/1.6 var(--f);vertical-align:middle;background:#dcfce7;color:#14532d;text-decoration:none}
+
 
 /* 대시보드 — 진행 현황이 먼저 · 요약 수치는 세 묶음 (지연 → 진행 중 → 이번 달 발생) */
 .pc1 h3{flex-wrap:wrap}.pc1 h3 .cnt{font-size:var(--fs-sm);font-weight:400}.pc1 h3 button.bg{border:0;font:inherit;font-size:var(--fs-sm);font-weight:600;cursor:pointer}.pc1 h3 button.bg:hover{box-shadow:0 0 0 2px var(--bad) inset}

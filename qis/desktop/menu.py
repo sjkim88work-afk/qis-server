@@ -196,14 +196,7 @@ class MenuActions:
     def about(self):
         c = self.c
         mode = {"solo": "이 PC 혼자 쓰기", "lan": "사내 서버"}.get(c.settings.mode if c.settings else "", "미설정")
-        upd = ""
-        try:
-            if c.runner and c.runner.app:
-                u = c.runner.app.state.updater.status()
-                upd = f"새 버전 {u['latest']['version']} 이 있습니다 — 관리 › 버전 · 업데이트\n" if u["available"] else ""
-        except Exception:
-            log.exception("업데이트 상태")
-        self._tell(f"QIS 품질정보시스템 데스크톱 · 서버 {__version__} (빌드 {__build__})\n{upd}사용 방식: {mode}\n데이터 폴더: {c.data_dir}\n\n"
+        self._tell(f"QIS 품질정보시스템 데스크톱 · 서버 {__version__} (빌드 {__build__})\n사용 방식: {mode}\n데이터 폴더: {c.data_dir}\n\n"
                    f"{COPYRIGHT}\n오픈소스 구성요소: FastAPI · uvicorn · pywebview · sql.js 등 (NOTICE 파일 참고)")
 
 

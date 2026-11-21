@@ -22,7 +22,6 @@ from .routes.deps import COOKIE, in_window  # noqa: F401  (COOKIE 는 바깥에�
 from .routes.pages import WEB  # noqa: F401
 from .store import Forbidden, Store
 from .telegram import Telegram
-from .update import Updater
 
 CSP = ("default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; "
        "img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; media-src 'self' data: blob:; "
@@ -50,7 +49,6 @@ def create_app(cfg: Config | None = None, *, start_backup=True, desktop: dict | 
         cfg, db, auth, store, files, backup
     app.state.desktop = desktop
     app.state.telegram = telegram
-    app.state.updater = Updater(db, cfg)
 
     if start_backup:
         @app.on_event("startup")
@@ -58,13 +56,11 @@ def create_app(cfg: Config | None = None, *, start_backup=True, desktop: dict | 
             auth.purge_sessions()
             backup.start()
             telegram.start()
-            app.state.updater.start()
 
         @app.on_event("shutdown")
         def _stop():
             backup.stop()
             telegram.stop()
-            app.state.updater.stop()
 
     # ---- 공통: 보안 헤더 · 위조 요청 차단 ----
     @app.middleware("http")
