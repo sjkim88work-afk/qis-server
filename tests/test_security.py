@@ -95,7 +95,8 @@ class Win:
 def app_ctl(tmp_path, monkeypatch):
     c = gui.Controller(tmp_path / "QIS")
     c.cfg = core.desktop_config(c.data_dir)
-    c.settings = core.DesktopSettings(mode="solo", solo_name="김선중")
+    core.set_lan_admin(c.cfg, "admin", "김선중", "Qadm2026x")
+    c.settings = core.DesktopSettings(mode="lan", lan_scope="local")
     c.settings.save(c.data_dir)
     c.lock.acquire()
     c._start_server()
@@ -123,9 +124,9 @@ def test_open_file_only_viewable(app_ctl):
 
 def test_bridge_refused_on_foreign_page(app_ctl):
     c = app_ctl
-    assert c.api.reenter() == c.runner.enter_url                     # QIS 화면: 정상
+    assert c.api._ok("open_page") is True                         # QIS 화면: 정상
     c.window.url = "https://evil.example/page"                       # 창이 QIS 밖으로 이동한 상태
-    assert c.api.reenter() is None                                    # 자동 입장 열쇠를 넘기지 않음
+    assert c.api._ok("open_page") is False                         # 다리를 쓰지 못함
     assert c.api.open_file("a.pdf", PDF) is None and not c._opened    # 파일 실행 안 함
     assert c.api.save_file("a.pdf", PDF) is None and not c.window.saved
     old = c.runner.base_url
@@ -133,11 +134,12 @@ def test_bridge_refused_on_foreign_page(app_ctl):
     c._start_server()                                                 # 복원 등으로 서버를 다시 켬 (포트 바뀜)
     assert c.runner.base_url != old
     c.window.url = old + "/"                                          # 예전 포트에 남은 창도 이 프로그램 것
-    assert c.api.reenter() == c.runner.enter_url
+    assert c.api._ok("open_page") is True
     c.window.url = "http://127.0.0.1:1/"                              # 같은 PC라도 다른 포트는 남의 것
-    assert c.api.reenter() is None
+    assert c.api._ok("open_page") is False
     c.window.url = None                                               # 프로그램이 직접 그린 화면
-    assert c.api.reenter() == c.runner.enter_url
+    assert c.api._ok("open_page") is True
+    assert not hasattr(c.api, "reenter")                              # 비밀번호 없이 다시 들어가는 길은 없음
 
 
 def test_foreign_navigation_bounced(app_ctl):
@@ -222,49 +224,35 @@ def test_ip_block_api(tmp_path):
     assert r.status_code == 400 and r.json()["error"] == "ip_locked"
 
 
-# ---------------------------------------------------------------- 혼자 쓰기 세션
-def test_solo_cookie_not_persistent_and_old_sessions_end(tmp_path):
+class NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, *a, **k):
+        return None
+
+
+# ---------------------------------------------------------------- 프로그램 창 표시는 로그인이 아님
+def test_window_cookie_does_not_log_in(tmp_path):
     data = tmp_path / "QIS"
     data.mkdir()
     cfg = core.desktop_config(data)
-    st = core.DesktopSettings(mode="solo", solo_name="김선중")
+    core.set_lan_admin(cfg, "admin", "김선중", "Qadm2026x")
+    st = core.DesktopSettings(mode="lan", lan_scope="local")
     core.prepare(cfg, st)
     r = core.ServerRunner(cfg, st).start()
     try:
-        assert r.cfg.session_hours == 24
         op = urllib.request.build_opener(NoRedirect)
         try:
             op.open(r.enter_url, timeout=10)
+            cookies = []
         except urllib.error.HTTPError as e:
             cookies = e.headers.get_all("set-cookie")
-        sid = [x for x in cookies if x.startswith("qis_sid=")][0]
-        assert "max-age" not in sid.lower() and "expires" not in sid.lower()   # 닫으면 사라지는 쿠키
-        assert "httponly" in sid.lower() and "samesite=strict" in sid.lower()
+        assert [x for x in cookies if x.startswith("qis_win=")] and not [x for x in cookies if x.startswith("qis_sid=")]
     finally:
         r.stop()
     db = open_db(cfg)
     try:
-        assert db.q1("SELECT COUNT(*) n FROM sessions")["n"] == 1
+        assert db.q1("SELECT COUNT(*) n FROM sessions")["n"] == 0        # 창을 열기만 해서는 세션이 생기지 않음
     finally:
         db.close()
-    core.prepare(cfg, st)                                     # 다음 실행
-    db = open_db(cfg)
-    try:
-        assert db.q1("SELECT COUNT(*) n FROM sessions")["n"] == 0
-    finally:
-        db.close()
-    core.set_lan_admin(cfg, "admin", "관리자", "Qadm2026x")
-    core.prepare(cfg, core.DesktopSettings(mode="lan"))         # 사내 서버로 바꿔도 local 세션은 없음
-    db = open_db(cfg)
-    try:
-        assert db.q1("SELECT COUNT(*) n FROM sessions s JOIN users u ON u.id=s.user_id WHERE u.username='local'")["n"] == 0
-    finally:
-        db.close()
-
-
-class NoRedirect(urllib.request.HTTPRedirectHandler):
-    def redirect_request(self, *a, **k):
-        return None
 
 
 def test_lan_cookie_capped(tmp_path):

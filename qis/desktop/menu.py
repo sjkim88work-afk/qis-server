@@ -36,7 +36,7 @@ class MenuActions:
                 MenuAction("백업에서 복원…", self.restore),
             ]),
             Menu("설정", [
-                MenuAction("사용 방식 바꾸기 (혼자 쓰기 / 사내 서버)…", c.m_switch_mode),
+                MenuAction("접속 설정 바꾸기 (접속 범위 · 관리자 비밀번호)…", c.m_switch_mode),
                 MenuAction("접속 주소 보기", self.addresses),
             ]),
             Menu("보기", [
@@ -51,7 +51,7 @@ class MenuActions:
 
     def _ready(self) -> bool:
         if self.c.state != "app" or not self.c.runner:
-            self._tell("먼저 사용 방식을 고르고 QIS를 시작하세요")
+            self._tell("먼저 처음 설정을 마치고 QIS를 시작하세요")
             return False
         return True
 
@@ -111,8 +111,7 @@ class MenuActions:
             replace = True
 
         def work():
-            r = core.import_json_backup(c.cfg, p, replace=replace,
-                                        by_username=core.SOLO_USER if c.settings.mode == "solo" else None)
+            r = core.import_json_backup(c.cfg, p, replace=replace)
             cnt = ", ".join(f"{k} {v}" for k, v in r["imported"].items() if v)
             return f"가져왔습니다: {cnt or '기록 없음'}" + (f"\n\n이전 DB 보관: {r['kept']}" if r["kept"] else "")
         self._with_server_stopped("백업 가져오는 중…", work)
@@ -146,7 +145,7 @@ class MenuActions:
 
         def work():
             res = core.import_server_folder(c.cfg, folder)
-            note = "\n\n사내 서버 모드에서는 기존 서버판의 아이디 · 비밀번호로 로그인합니다." if c.settings.mode == "lan" else ""
+            note = "\n\n가져온 뒤에는 기존 서버판의 아이디 · 비밀번호로 로그인합니다."
             return (f"가져왔습니다: {', '.join(f'{k} {v}' for k, v in res['records'].items()) or '기록 없음'}"
                     f" · 첨부 {res.get('files_filled', 0)}개" + (f"\n이전 DB 보관: {res['kept']}" if res.get("kept") else "") + note)
         self._with_server_stopped("서버판 데이터 가져오는 중…", work)
@@ -181,9 +180,9 @@ class MenuActions:
         c = self.c
         if not c.runner:
             return
-        if c.runner.mode == "solo":
-            self._tell("지금은 ‘이 PC 혼자 쓰기’ 모드입니다 — 다른 PC · 휴대폰에서는 접속할 수 없습니다.\n"
-                       "사내에서 같이 쓰려면 ‘설정 › 사용 방식 바꾸기’에서 ‘사내 서버로 쓰기’를 고르세요.")
+        if c.runner.scope == "local":
+            self._tell("지금 접속 범위는 ‘이 PC만’ 입니다 — 다른 PC · 휴대폰에서는 접속할 수 없습니다.\n"
+                       "같이 쓰려면 ‘설정 › 접속 설정 바꾸기’ 에서 ‘사내망 전체’ 또는 ‘Tailscale 만’ 을 고르세요.")
             return
         c.state = "app"
         c.show(html=c.lan_html())
@@ -195,8 +194,9 @@ class MenuActions:
 
     def about(self):
         c = self.c
-        mode = {"solo": "이 PC 혼자 쓰기", "lan": "사내 서버"}.get(c.settings.mode if c.settings else "", "미설정")
-        self._tell(f"QIS 품질정보시스템 데스크톱 · 서버 {__version__} (빌드 {__build__})\n사용 방식: {mode}\n데이터 폴더: {c.data_dir}\n\n"
+        st = c.settings
+        mode = {"local": "이 PC만", "lan": "사내망 전체", "tailscale": "Tailscale 만"}.get(st.lan_scope, "") if st and st.mode else "미설정"
+        self._tell(f"QIS 품질정보시스템 데스크톱 · 서버 {__version__} (빌드 {__build__})\n접속 범위: {mode}\n데이터 폴더: {c.data_dir}\n\n"
                    f"{COPYRIGHT}\n오픈소스 구성요소: FastAPI · uvicorn · pywebview · sql.js 등 (NOTICE 파일 참고)")
 
 

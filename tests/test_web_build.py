@@ -26,7 +26,7 @@ def test_static_pages_call_no_outside_address():
     서버의 보안 정책(CSP)이 막으므로 넣어도 콘솔 오류만 난다 (메인 화면의 글꼴 연결은 서버가 지워서 내보냄)."""
     import re
     web = ROOT / "qis" / "web"
-    for name in ("login.html", "admin.html", "account.html", "desktop_enter.html"):
+    for name in ("login.html", "admin.html", "account.html"):
         h = (web / name).read_text(encoding="utf-8")
         assert not re.search(r"""(?:href|src)\s*=\s*["']https?://""", h), name
         assert "fonts.googleapis.com" not in h and "fonts.gstatic.com" not in h, name

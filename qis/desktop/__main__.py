@@ -1,7 +1,7 @@
 """QIS 데스크톱 프로그램 실행: python -m qis.desktop
 
   --data 폴더          데이터 폴더 바꾸기 (기본: 맥 ~/Library/Application Support/QIS, 윈도우 %APPDATA%\\QIS)
-  --selftest 결과.json  창 없이 점검 (빌드 확인용): 임시 폴더에서 서버 켜기 · 자동 입장 · 끄기
+  --selftest 결과.json  창 없이 점검 (빌드 확인용): 임시 폴더에서 서버 켜기 · 로그인 화면 · 끄기
 """
 from __future__ import annotations
 
@@ -33,7 +33,8 @@ def selftest(out: str | None, unblocked: int = 0) -> int:
             data = Path(tmp) / "QIS"
             data.mkdir()
             cfg = core.desktop_config(data)
-            st = core.DesktopSettings(mode="solo", solo_name="점검")
+            st = core.DesktopSettings(mode="lan", lan_scope="local")
+            core.set_lan_admin(cfg, "admin", "점검", "Qchk2026pwx")
             core.prepare(cfg, st)
             r = core.ServerRunner(cfg, st).start()
             try:
@@ -42,7 +43,7 @@ def selftest(out: str | None, unblocked: int = 0) -> int:
                 op = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
                 with op.open(r.enter_url, timeout=10) as resp:
                     page = resp.read().decode("utf-8")
-                chk("auto_enter", '"desktop": "solo"' in page and "/desktop.js" in page, resp.url)
+                chk("login_page", "/login" in resp.url and 'id="p"' in page, resp.url)
                 with op.open(r.base_url + "/desktop.js", timeout=10) as resp:
                     chk("desktop_js", resp.status == 200)
                 with op.open(r.base_url + "/lib/sql-wasm.wasm", timeout=10) as resp:

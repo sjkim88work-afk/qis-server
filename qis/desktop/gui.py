@@ -71,12 +71,6 @@ class DesktopApi:
         self._c.back_to_app()
 
     # QIS 화면 보조 (desktop.js)
-    def reenter(self):
-        if not self._ok("reenter"):
-            return None
-        r = self._c.runner
-        return r.enter_url if r and r.mode == "solo" else None
-
     def open_page(self, path):
         if not self._ok("open_page"):
             return None
@@ -241,7 +235,7 @@ class Controller:
 
     # ------------------------------------------------------------ 서버 · 화면
     def _first_screen(self):
-        """(html, url) — 손상 의심 → 복구 화면, 첫 실행 → 모드 고르기, 아니면 서버를 켜고 QIS 화면."""
+        """(html, url) — 손상 의심 → 복구 화면, 첫 실행 → 처음 설정, 아니면 서버를 켜고 QIS 화면."""
         if core.was_unclean(self.data_dir):
             problem = core.check_db(self.cfg)
             log.warning("지난 실행이 정상 종료되지 않음 — DB 검사: %s", problem)
@@ -277,8 +271,8 @@ class Controller:
 
     def _setup_html(self, error: str = "") -> str:
         s, c = self.settings, self.cfg
-        return pages.setup_page(current=s.mode, solo_name=s.solo_name, solo_login=s.solo_login, port=c.port, error=error,
-                                lan_scope=s.lan_scope,
+        return pages.setup_page(first=not s.mode, admin=s.setup_user or "admin", admin_name=s.setup_name, port=c.port,
+                                error=error, scope=s.lan_scope if s.mode or s.setup_user else "local",
                                 can_cancel=bool(self.runner and self.runner.running), version=__version__)
 
     def lan_html(self) -> str:
@@ -329,10 +323,11 @@ class Controller:
         if not self._op.acquire(blocking=False):
             return {"error": "다른 작업이 진행 중입니다"}
         try:
-            mode = d.get("mode")
-            if mode not in core.MODES:
-                return {"error": "사용 방식을 고르세요"}
-            if mode == "lan":
+            scope = d.get("scope")
+            if scope not in core.SCOPES:
+                return {"error": "접속 범위를 고르세요"}
+            port = self.cfg.port
+            if scope != "local":
                 try:
                     port = int(str(d.get("port") or "8080").strip())
                     assert 1 <= port <= 65535
@@ -342,31 +337,24 @@ class Controller:
                 self.runner.stop()
                 self.runner = None
             try:
-                if mode == "solo":
-                    self.settings.solo_name = str(d.get("solo_name") or "").strip()[:40]
-                    login = bool(d.get("solo_login"))
-                    pw = str(d.get("solo_password") or "")
-                    if login and not pw and not self.settings.solo_login:
-                        return {"error": "잠그려면 비밀번호를 정하세요"}
-                    core.ensure_solo_user(self.cfg, self.settings.solo_name, pw if (login and pw) else None, login=login)
-                    self.settings.solo_login = login
-                else:
-                    core.set_lan_admin(self.cfg, str(d.get("admin") or ""), str(d.get("admin_name") or ""),
-                                       str(d.get("password") or ""))
-                    if port != self.cfg.port:
-                        self.cfg.port = port
-                        self.cfg.save()
-                    self.settings.lan_scope = d.get("lan_scope") if d.get("lan_scope") in core.SCOPES else "lan"
-                self.settings.mode = mode
+                core.set_lan_admin(self.cfg, str(d.get("admin") or ""), str(d.get("admin_name") or ""),
+                                   str(d.get("password") or ""), keep_password=bool(self.settings.mode))
+                if port != self.cfg.port:
+                    self.cfg.port = port
+                    self.cfg.save()
+                self.settings.lan_scope = scope
+                self.settings.mode = "lan"
+                self.settings.setup_user = str(d.get("admin") or "").strip()   # 다음에 ‘접속 설정 바꾸기’ 를 열 때 채울 아이디
+                self.settings.setup_name = ""
                 url = self._start_server()
             except Exception as e:
-                log.exception("모드 적용 실패")
+                log.exception("설정 적용 실패")
                 return {"error": str(e)}
             self.settings.save(self.data_dir)
-            if mode == "lan":
-                self.show(html=self.lan_html())
-            else:
+            if scope == "local":
                 self.show(url=url)
+            else:
+                self.show(html=self.lan_html())
             return {"ok": True}
         finally:
             self._op.release()
@@ -409,7 +397,7 @@ class Controller:
         return False
 
     def _flush_and_close(self):
-        if self.runner and self.runner.mode == "lan":
+        if self.runner and self.runner.scope != "local":
             n = self._lan_others()
             who = f"지금 다른 사용자 {n}명이 접속해 있습니다.\n" if n else ""
             if not self.window.create_confirmation_dialog(
@@ -480,7 +468,7 @@ class Controller:
             p = self._ask_save(f"QIS_백업_{datetime.now().strftime('%Y%m%d')}.json", ("QIS 백업 (*.json)",))
             if not p:
                 return None
-            size = core.export_json(self.runner.app, p, core.SOLO_USER if self.runner.mode == "solo" else None)
+            size = core.export_json(self.runner.app, p, None)
             return f"백업 파일을 저장했습니다: {p.name} ({size / 1048576:.1f} MB · 사진 포함)"
         except Exception as e:
             log.exception("백업 파일 저장 실패")

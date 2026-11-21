@@ -2,12 +2,10 @@
    · 관리 화면 → 저장 후 같은 창에서 이동, 다시 로그인 → 프로그램 새 창
    · 보고서 · 인쇄 미리보기(window.open('') 후 document.write) → 프로그램 새 창으로
    · 첨부 열기(새 탭) → 이 PC의 기본 프로그램으로, 파일 내려받기 → 저장 위치를 묻는 창으로
-   · 백업 · 복원 · 가져오기 → 프로그램 메뉴 안내 (브라우저 폴더 선택을 쓰지 않음)
-   · 혼자 쓰기 모드: 로그아웃 · 비밀번호 버튼 숨김, 문구 정리 */
+   · 백업 내려받기 → 프로그램의 저장 창, 설정 › 데이터 · 백업 문구를 프로그램에 맞춤 */
 (function(){
   'use strict';
   var info={};try{info=JSON.parse(document.getElementById('qisServer').textContent)||{}}catch(e){}
-  var solo=info.desktop==='solo',auto=solo&&!info.desktopLogin;   // auto: 로그인 없이 자동 입장
   function api(){return window.pywebview&&window.pywebview.api}
   function withApi(fn){var a=api();if(a&&a.open_page)return fn(a);
     window.addEventListener('pywebviewready',function(){fn(api())},{once:true})}
@@ -67,15 +65,9 @@
       window.srvPanel=function(){var h=orig.apply(this,arguments);
         h=h.replace('매일 새벽 서버가 DB · 첨부를 백업 폴더에 저장합니다. 복원은 관리자가 서버에서 합니다.',
           '하루 한 번(새벽 2시 이후 처음 켜져 있을 때) 프로그램이 DB · 첨부를 백업 폴더에 저장합니다. 지금 백업 · 복원 · 가져오기는 프로그램 메뉴 ‘파일’에서 합니다.');
-        if(solo)h=h.replace('사내 서버','이 PC (QIS 프로그램)').replace('데이터는 사내 서버에 저장됩니다. 이 PC에는 남지 않습니다.',
+        h=h.replace('사내 서버','이 PC (QIS 프로그램)').replace('데이터는 사내 서버에 저장됩니다. 이 PC에는 남지 않습니다.',
           '데이터는 이 PC의 QIS 데이터 폴더에 저장됩니다 (메뉴 ‘파일 › 데이터 폴더 열기’).');
         return h};
     }
-    if(auto&&typeof window.srvLogout==='function')window.srvLogout=function(){say('이 PC 혼자 쓰기 모드에서는 로그인 없이 씁니다')};
   });
-  if(auto){
-    var st=document.createElement('style');
-    st.textContent='button[onclick="srvLogout()"],button[onclick="location.href=\'/account\'"]{display:none!important}';
-    (document.head||document.documentElement).appendChild(st);
-  }
 })();

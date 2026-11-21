@@ -21,7 +21,7 @@ window.__calls=[];
 (function(){
   function rec(n){return function(){window.__calls.push([n].concat([].slice.call(arguments)));return Promise.resolve(null)}}
   window.pywebview={api:{open_page:rec('open_page'),open_report:rec('open_report'),save_file:rec('save_file'),
-    open_file:rec('open_file'),export_backup:rec('export_backup'),open_url:rec('open_url'),reenter:rec('reenter')}};
+    open_file:rec('open_file'),export_backup:rec('export_backup'),open_url:rec('open_url')}};
   setTimeout(function(){window.dispatchEvent(new Event('pywebviewready'))},0);
 })();
 """
@@ -40,9 +40,10 @@ def calls(pg, name):
 def main():
     tmp = Path(tempfile.mkdtemp(prefix="qis_e2e_desktop_"))
     cfg = core.desktop_config(tmp)
-    st = core.DesktopSettings(mode="solo", solo_name="김선중")
+    core.set_lan_admin(cfg, "admin", "김선중", "Qadm2026x")
+    st = core.DesktopSettings(mode="lan", lan_scope="local")
     core.prepare(cfg, st)
-    core.import_json_backup(cfg, Path(__file__).parent / "sample_backup.json", by_username=core.SOLO_USER)
+    core.import_json_backup(cfg, Path(__file__).parent / "sample_backup.json")
     r = core.ServerRunner(cfg, st).start()
     try:
         with sync_playwright() as p:
@@ -53,9 +54,13 @@ def main():
             errs = []
             pg.on("pageerror", lambda e: errs.append(str(e)))
             pg.goto(r.enter_url)
+            pg.wait_for_selector("#p")
+            ok(pg.url.endswith("/login") and pg.input_value("#u") == "admin", "프로그램 창: 로그인 화면 · 계정이 한 개라서 아이디가 채워져 있음 (" + pg.url + ")")
+            pg.fill("#p", "Qadm2026x")
+            pg.press("#p", "Enter")
             pg.wait_for_function("typeof dataReady!=='undefined'&&dataReady")
             pg.wait_for_timeout(800)
-            ok(pg.url == r.base_url + "/", "자동 입장 (로그인 없음): " + pg.url)
+            ok(pg.url == r.base_url + "/", "로그인 후 QIS 화면: " + pg.url)
             # pywebview 다리는 new Function · eval 로 만들어짐 — 프로그램 창의 CSP가 이를 막으면 창 ↔ 프로그램 연결이 죽음
             pg.route("**/csp_probe.js", lambda route: route.fulfill(content_type="text/javascript", body=
                 "try{window.__nf=new Function('return 1')()}catch(e){window.__nf='ERR '+e.name}"
@@ -63,9 +68,8 @@ def main():
             pg.evaluate("new Promise(r=>{var s=document.createElement('script');s.src='/csp_probe.js';s.onload=r;s.onerror=r;document.head.appendChild(s)})")
             ok(pg.evaluate("[window.__nf,window.__ev]") == [1, 2], "프로그램 창 CSP: new Function · eval 허용 (pywebview 다리)")
             ok(pg.evaluate("db.defects.length") == 5, "가져온 기록이 보임")
-            ok(pg.evaluate("SRV.desktop") == "solo" and pg.evaluate("SRV.name") == "김선중", "혼자 쓰기 · 이름")
-            ok(not pg.is_visible("button[onclick='srvLogout()']"), "로그아웃 버튼 숨김")
-            ok(not pg.is_visible("button[onclick=\"location.href='/account'\"]"), "비밀번호 버튼 숨김")
+            ok(pg.evaluate("SRV.desktop") == "local" and pg.evaluate("SRV.name") == "김선중", "접속 범위 ‘이 PC만’ · 이름")
+            ok(pg.is_visible("button[onclick='srvLogout()']"), "로그아웃 버튼 있음 (항상 로그인)")
             # 다시 로그인 → 프로그램 새 창 (이 창의 미저장 내용 유지)
             pg.evaluate("window.open('/login','qisLogin')")
             pg.wait_for_timeout(100)
@@ -101,7 +105,7 @@ def main():
             ok(gone == "", f"브라우저 폴더 · 파일 백업 기능 없음 ({gone or '없음'})")
             # 설정 › 데이터 문구
             panel = pg.evaluate("srvPanel()")
-            ok("이 PC의 QIS 데이터 폴더" in panel and "사내 서버에 저장" not in panel, "혼자 쓰기 안내 문구")
+            ok("이 PC의 QIS 데이터 폴더" in panel and "사내 서버에 저장" not in panel, "데이터 위치 안내 문구 (이 PC의 데이터 폴더)")
             # 변경 저장 → 서버
             pg.evaluate("db.suppliers.push({id:'sx1',name:'시험협력사',contacts:[]});persist()")
             pg.wait_for_timeout(1500)
