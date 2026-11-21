@@ -58,3 +58,34 @@ body:not(.mob) .pl .card[id]>:first-child:not(.tw):not(.plsum){margin:0;padding:
   body:not(.mob)>header{padding-top:9px;padding-bottom:9px}
   body:not(.mob)>main{padding:14px 16px 32px;max-width:none}
 }
+/* ── 대시보드 (.pld): 숫자 줄이 먼저 · 카드 대신 머리 띠와 선 · 할 일은 줄 목록 · 인쇄 모양은 그대로 ── */
+@media screen{
+body:not(.mob) .pld{display:flex;flex-direction:column}
+body:not(.mob) .pld>.pldtop{order:-2;margin:0!important;padding:8px 12px;gap:6px;border-bottom:1px solid #d8dce3;font-size:12.5px}
+body:not(.mob) .pld>.pldtop input{height:30px;min-height:0;padding:0 8px;border:1px solid #b8bec9;border-radius:3px;font-size:12.5px}
+body:not(.mob) .pld>.pldtop button.b{height:30px;min-height:0;padding:0 11px;font-size:12.5px}
+body:not(.mob) .pld>.pldtop button.b.p{background:#fff;color:var(--ink);border-color:#b8bec9}
+body:not(.mob) .pld>.kgs{order:-1;display:flex;flex-wrap:wrap;gap:0;margin:0;border-bottom:1px solid #d8dce3}
+body:not(.mob) .pld .kg{flex:1 1 300px;min-width:0;padding:8px 2px 6px;border:0;border-right:1px solid #d8dce3;border-radius:0;background:none}
+body:not(.mob) .pld .kg:last-child{border-right:0}
+body:not(.mob) .pld .kg h4{margin:0 10px 2px;font-size:12px;color:var(--sub)}
+body:not(.mob) .pld .kgs .kg .kpi{padding:3px 10px;border-radius:0}
+body:not(.mob) .pld .kgs .kg .kpi .l{font-size:12.5px;font-weight:400}
+body:not(.mob) .pld .kgs .kg .kpi .s{display:inline;margin-left:8px;font-size:11.5px}
+body:not(.mob) .pld .kgs .kg .kpi .v{font-size:16px}
+body:not(.mob) .pld .kgs .kg .kpi.bad{background:none}
+body:not(.mob) .pld .kgs .kg .kpi.bad .l::before{content:'';display:inline-block;width:7px;height:7px;margin-right:6px;background:#b42318;vertical-align:1px}
+body:not(.mob) .pld .kgs .kg .kpi.go:hover{box-shadow:none;background:#f5f7fa}
+body:not(.mob) .pld .card{padding:0 0 10px;border-bottom:1px solid #d8dce3}
+body:not(.mob) .pld .card>h3{display:flex;align-items:center;gap:8px;margin:0 0 8px;padding:7px 12px;background:#f5f6f8;border-bottom:1px solid #d8dce3;font-size:13px;font-weight:700}
+body:not(.mob) .pld .card>:not(h3){margin-left:12px;margin-right:12px}
+body:not(.mob) .pld .card>h3 .b{height:24px;min-height:0;padding:0 8px;font-size:12px;font-weight:500;background:#fff;color:var(--ink);border-color:#b8bec9}
+body:not(.mob) .pld .pc1 h3 button.bg{background:none;padding:0}
+body:not(.mob) .pld ul.act,body:not(.mob) .pld ul.todo{list-style:none;padding:0;margin-top:0;margin-bottom:0}
+body:not(.mob) .pld ul.act li,body:not(.mob) .pld ul.todo li{margin:0;padding:5px 0;min-height:0;border-bottom:1px solid #eceef2;line-height:1.5}
+body:not(.mob) .pld ul.act li .bg,body:not(.mob) .pld ul.todo li .bg{display:inline-block;min-width:104px}
+body:not(.mob) .pld li button.b{height:22px;min-height:0;padding:0 8px;font-size:12px;background:#fff;color:var(--ink);border-color:#b8bec9;vertical-align:1px}
+body:not(.mob) .pld>.grid{gap:0;margin:0}
+body:not(.mob) .pld>.grid>.card:nth-child(odd){border-right:1px solid #d8dce3}
+body:not(.mob) .pld textarea,body:not(.mob) .pld .card input{border-radius:3px;border-color:#b8bec9}
+}

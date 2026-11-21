@@ -80,9 +80,19 @@ def run(c):
       on.click();await wait(300);o.go=state.tab+'/'+(state.nf.status||'');go('dash');await wait(200);
       if(q('.pc1 h3 button.bg')){q('.pc1 h3 button.bg').click();await wait(300);o.goLate=state.tab+'/'+((state.pf||{}).late||'');state.pf.late=''}
       go('dash');return o}""")
-    ok(r["order"] == sorted(r["order"]) and min(r["order"]) > 0, f"대시보드 순서: 진행 현황 → 수치 → 오늘 챙길 일 → 월간 특이사항 → 그림표 ({r['order']})")
+    ok(r["order"][1] < r["order"][0] and r["order"][2:] == sorted(r["order"][2:]) and r["order"][0] < r["order"][2] and min(r["order"]) > 0, f"대시보드 순서: 수치 → 진행 현황 → 오늘 챙길 일 → 월간 특이사항 → 그림표 ({r['order']})")
     ok(r["groups"].startswith("지연|진행 중|") and r["groups"].endswith("발생") and r["rows"] == "234" and r["tiles"] == 0 and r["noLateTile"], f"수치는 세 묶음 9줄 — 지연 2 · 진행 중 3 · 이번 달 발생 4 ({r['groups']})")
-    ok(r["late"]["n"] == "1" and r["late"]["cls"] and r["late"]["color"] == "rgb(185, 50, 31)" and r["late"]["bg"] == "rgb(251, 231, 228)", f"지연이 있으면 빨간 숫자 · 빨간 바탕 ({r['late']})")
+    ok(r["late"]["n"] == "1" and r["late"]["cls"] and r["late"]["color"] == "rgb(185, 50, 31)" and r["late"]["bg"] == "rgba(0, 0, 0, 0)", f"지연이 있으면 빨간 숫자 (바탕색 없음 · 이름 앞에 빨간 사각 표시) ({r['late']})")
     ok(r["zero"]["n"] == "0" and r["zero"]["cls"] and r["zero"]["color"] == "rgb(107, 118, 137)" and r["zero"]["bg"] == "rgba(0, 0, 0, 0)", f"값이 0 이면 회색으로 약하게 ({r['zero']})")
     ok(r["on"]["color"] == "rgb(29, 36, 51)" and r["go"] == "ncr/open", f"진행 중인 수는 검은 숫자 · 누르면 그 목록으로 ({r['go']})")
     ok(r["chip"].startswith("지연 ") and r.get("goLate") == "case/1", f"진행 현황의 ‘지연’ 표시를 누르면 지연 건만 보기 ({r['chip']} → {r.get('goLate')})")
+
+    # 대시보드 현장 도구 모양: 숫자 줄이 맨 위 · 카드 테두리 없음 · 색 버튼 없음
+    A.set_viewport_size({"width": 1400, "height": 900})
+    A.evaluate("()=>{mfDirty=false;closeModal(true);go('dash')}"); settle(A, 350)
+    r = A.evaluate("""()=>{const q=s=>document.querySelector(s),cs=e=>getComputedStyle(e),top=e=>e.getBoundingClientRect().top;
+      const pri=cs(q('.pl .b')).getPropertyValue('--pri').trim().toLowerCase(),hex=c=>'#'+c.match(/\\d+/g).slice(0,3).map(x=>(+x).toString(16).padStart(2,'0')).join('');
+      return {pld:!!q('.pl.pld'),kFirst:top(q('.pld .kgs'))<top(q('.pld .pc1')),radius:parseFloat(cs(q('.pld .kg')).borderTopLeftRadius),cardB:parseFloat(cs(q('.pld .pc1')).borderTopWidth),
+        colored:[...document.querySelectorAll('.pld button.b')].filter(b=>hex(cs(b).backgroundColor)===pri).length}}""")
+    ok(r["pld"] and r["kFirst"] and r["radius"] == 0 and r["cardB"] == 0 and r["colored"] == 0, f"대시보드: 숫자 줄이 맨 위 · 카드 테두리 없음 · 색 버튼 없음 ({r})")
+
