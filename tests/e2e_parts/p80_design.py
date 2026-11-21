@@ -18,7 +18,7 @@ def run(c):
         order:[...q('header').children].map(e=>e.id).filter(Boolean).join(',')}}"""
     A.evaluate("()=>{mfDirty=false;closeModal(true);go('dash')}"); settle(A, 300)
     s1 = A.evaluate(NAVST)
-    ok(s1["side"] and s1["navW"] == 200 and s1["gh"] == "업무,분석,관리", f"창 1400px: 좌측 사이드바 · 묶음 머리글 ({s1['gh']})")
+    ok(s1["side"] and s1["navW"] == 168 and s1["gh"] == "업무,분석,관리", f"창 1400px: 좌측 사이드바 · 묶음 머리글 ({s1['gh']})")
     ok(s1["outIn"] == "nav" and s1["out"] and s1["user"] and s1["inView"], "사이드바: 사용자 · 로그아웃은 사이드바 아래 칸")
     A.set_viewport_size({"width": 1400, "height": 560}); settle(A, 300)
     s2 = A.evaluate(NAVST)

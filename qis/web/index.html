@@ -733,6 +733,20 @@ body:not(.mob) .pl .pltool .help{margin-top:6px;font-size:12px;background:none;b
 body:not(.mob) .pl .tw button.b.d{color:#b42318}
 body:not(.mob) .pl .tw td.mono,body:not(.mob) .pl .tw .mono{font-size:12.5px}
 body:not(.mob) .pl .card[id]>:first-child:not(.tw):not(.plsum){margin:0;padding:7px 12px;font-size:12px;color:var(--sub);border-bottom:1px solid #d8dce3}
+/* ── 메뉴 · 머리 줄 (사이드바 모드, 1400px 이상): 좁은 폭 · 평평한 항목 · 선택은 왼쪽 흰 줄 · 알림은 일반 숫자 ── */
+@media screen and (min-width:1400px){
+  body:not(.mob){grid-template-columns:168px minmax(0,1fr)}
+  body:not(.mob)>nav#nav{gap:0;padding:12px 0 0}
+  body:not(.mob)>nav#nav::before{content:"QIS  품질정보시스템";white-space:normal;font-size:15px;letter-spacing:0;padding:2px 14px 8px}
+  body:not(.mob) nav .gh{letter-spacing:0;padding:14px 14px 4px}
+  body:not(.mob) nav button{min-height:32px;padding:4px 14px 4px 17px;border-radius:0;font-size:13px;font-weight:400}
+  body:not(.mob) nav button.on{background:rgba(255,255,255,.1);border-left:3px solid #fff;padding-left:14px;font-weight:600}
+  body:not(.mob) nav button .bg{background:none;color:#ffd3c7;border-radius:0;padding:0;min-width:0;font-family:var(--f-mono);font-size:11.5px!important;font-weight:500}
+  body:not(.mob) nav .navft{margin:auto 0 0;padding:10px 12px 12px}
+  body:not(.mob) nav .navft button.b{border-radius:3px;min-height:26px;padding:3px 8px}
+  body:not(.mob)>header{padding-top:9px;padding-bottom:9px}
+  body:not(.mob)>main{padding:14px 16px 32px;max-width:none}
+}
 /* ================= 휴대폰 화면 ================= */
 #mswitch{display:none;text-align:center;padding:14px 0 22px;font-size:13px}
 #mswitch a{display:none}
