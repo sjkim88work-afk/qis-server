@@ -358,18 +358,10 @@ const RO_FN = [
   'openRcvLineImport',
   'editReceipts',
   'bomClear',
-  'resetAll',
-  'pickImport',
   'exportJSON',
   'exportSqlite',
-  'restoreFromFolder',
-  'pickRoot',
-  'unlinkRoot',
   'dkAdd',
   'dkRemove',
-  'pickDir',
-  'unlinkDir',
-  'photoDirNow',
   'setS',
   'setFx',
   'ncrQuickNotify',
@@ -380,9 +372,7 @@ const RO_FN = [
   'czApplyVerdict',
   'ncrFromDefect',
   'quickSup',
-  'pwaInstall',
   'openImport',
-  'chooseQmsDir',
   'makeShareFile',
   'offerNcrAfterVerdict',
   'addCost',
@@ -466,33 +456,19 @@ if (RO) {
   new MutationObserver(roFoot).observe($('#mfoot'), { childList: true });
   document.documentElement.classList.add('ro');
   const m = SHARE ? SHARE.meta || {} : {};
-  if (SRV)
-    document
-      .querySelector('nav')
-      .insertAdjacentHTML(
-        'afterend',
-        `<div class="roBar noprint">📖 <b>조회 권한</b> — ${esc(SRV.name)} · 보기 · 검색 · 출력만 됩니다. 작성 권한이 필요하면 관리자에게 요청하세요.</div>`,
-      );
-  else
-    document
-      .querySelector('nav')
-      .insertAdjacentHTML(
-        'afterend',
-        `<div class="roBar noprint">📖 <b>읽기 전용 사본</b> — ${esc(m.company || '')} ${esc(m.by || '')} · 기준 <b>${esc(loc(m.created) || '-')}</b> · ver ${esc(m.ver || '')}${
-          m.photos != null ? ` · 사진 ${m.photos}장` : ''
-        }${m.noMaster ? ' · 기준정보 제외' : ''} <span class="muted">— 보기 · 검색 · 출력만 됩니다. 고친 내용은 저장되지 않습니다.</span></div>`,
-      );
-  ['hdrBk', 'hdrInstall'].forEach((i) => {
-    const e = $('#' + i);
-    if (e) e.style.display = 'none';
-  });
+  document
+    .querySelector('nav')
+    .insertAdjacentHTML(
+      'afterend',
+      SRV
+        ? `<div class="roBar noprint">📖 <b>조회 권한</b> — ${esc(SRV.name)} · 보기 · 검색 · 출력만 됩니다. 작성 권한이 필요하면 관리자에게 요청하세요.</div>`
+        : `<div class="roBar noprint">📖 <b>읽기 전용 사본</b> — ${esc(m.company || '')} ${esc(m.by || '')} · 기준 <b>${esc(loc(m.created) || '-')}</b> · ver ${esc(m.ver || '')}${
+            m.photos != null ? ` · 사진 ${m.photos}장` : ''
+          }${m.noMaster ? ' · 기준정보 제외' : ''} <span class="muted">— 보기 · 검색 · 출력만 됩니다. 고친 내용은 저장되지 않습니다.</span></div>`,
+    );
 }
 /* ---- 사내 서버 모드: 사용자 표시 · 관리자 전용 기능 ---- */
 if (SRV) {
-  ['hdrBk', 'hdrInstall'].forEach((i) => {
-    const e = $('#' + i);
-    if (e) e.style.display = 'none';
-  });
   const R = { viewer: '조회', editor: '작성', admin: '관리자' };
   $('#hdrBk').insertAdjacentHTML(
     'beforebegin',
@@ -504,28 +480,6 @@ if (SRV) {
       `<button class="b s noprint" id="hdrOut" onclick="srvLogout()">로그아웃</button>`,
   );
   if (typeof navFoot === 'function') navFoot();
-  // 서버가 맡는 기능 (브라우저 저장소 · PC 폴더 · 파일 백업/복원)
-  [
-    'resetAll',
-    'pickImport',
-    'restoreFromFolder',
-    'pickRoot',
-    'unlinkRoot',
-    'pickDir',
-    'unlinkDir',
-    'photoDirNow',
-    'chooseQmsDir',
-    'openImport',
-  ].forEach((n) => {
-    if (typeof window[n] === 'function')
-      window[n] = function () {
-        toast('사내 서버 모드에서는 서버가 백업 · 복원합니다 — 관리자 화면을 쓰세요');
-      };
-  });
-  window.exportJSON = function () {
-    if (!srvCanAdmin()) return srvAdminOnly();
-    location.href = '/api/admin/export?photos=1';
-  };
   // 관리자 전용: 기준정보 삭제 · BOM 교체 · 설정
   if (!srvCanAdmin())
     [
@@ -557,70 +511,8 @@ bootReady.then(() => {
   render();
   renderAlert();
   updateSaveInfo();
-  if (dataMigrated)
-    setTimeout(
-      () =>
-        toast(
-          dataMigrated === 'newer'
-            ? '예전 버전 창에서 저장된 최신 내용을 가져왔습니다'
-            : dataMigrated === 'legacyKept'
-              ? '기본 저장소에 남아 있던 다른 사본은 덮어쓰지 않고 따로 보관했습니다 — 지금 데이터를 그대로 씁니다'
-              : '데이터를 대용량 저장소로 옮겼습니다 — 이제 용량 걱정 없이 쓸 수 있습니다',
-        ),
-      400,
-    );
 });
-// 데이터 원본은 브라우저. 사진·첨부 폴더와 백업 폴더만 이 PC 폴더에 사본으로 저장 (예전 OneDrive 연결 정보는 정리)
-(async () => {
-  if (RO || SRV) return;
-  await bootReady;
-  try {
-    for (const k of ['qmsDir', 'dataFile']) await hDel(k).catch(() => {});
-    const root = await hGet('rootDir');
-    if (root && (await permOK(root, false))) await attachRoot(root, true);
-    else {
-      if (root) lazyH.rootDir = root;
-      for (const k of ['photoDir', 'backupDir']) {
-        const h = await hGet(k);
-        if (!h) continue;
-        if (await permOK(h, false)) dirAttach(k, h, true);
-        else lazyH[k] = h;
-      }
-    }
-    updateSaveInfo();
-    if (state.tab === 'data') render();
-  } catch (e) {}
-})();
-/* ---- 설치형 앱 (PWA) ---- */
-const isWebApp = /^https?:$/.test(location.protocol);
 const isStandalone = () => window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
-let pwaPrompt = null;
-if (!RO && !SRV && isWebApp && 'serviceWorker' in navigator)
-  navigator.serviceWorker.register('sw.js').catch((e) => console.warn('서비스 워커 등록 실패', e));
-window.addEventListener('beforeinstallprompt', (e) => {
-  e.preventDefault();
-  pwaPrompt = e;
-  const b = $('#hdrInstall');
-  if (b && !isStandalone()) b.style.display = '';
-});
-window.addEventListener('appinstalled', () => {
-  pwaPrompt = null;
-  const b = $('#hdrInstall');
-  if (b) b.style.display = 'none';
-  toast('앱으로 설치했습니다 — 바탕화면 · 시작 메뉴의 ‘QIS’로 여세요');
-});
-async function pwaInstall() {
-  if (!pwaPrompt) {
-    toast('브라우저 메뉴(⋯) → 앱 → ‘이 사이트를 앱으로 설치’를 누르세요');
-    return;
-  }
-  pwaPrompt.prompt();
-  try {
-    await pwaPrompt.userChoice;
-  } catch (e) {}
-  pwaPrompt = null;
-  $('#hdrInstall').style.display = 'none';
-}
 // 앱 아이콘 바로가기 (불량 등록 · NCR)
 bootReady.then(() => {
   const g = new URLSearchParams(location.search).get('go');

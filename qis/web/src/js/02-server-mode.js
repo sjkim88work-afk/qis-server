@@ -73,7 +73,6 @@ function srvDelLocal(coll, id) {
   if (coll !== 'doc' && db[coll]) db[coll] = db[coll].filter((r) => r.id !== id);
 }
 async function srvBoot() {
-  dataStore = 'srv';
   const j = await srvApi('/api/boot');
   const d = { meta: {}, settings: {}, bom: { updatedAt: '', rows: [] } };
   COLLS.forEach((c) => (d[c] = []));
@@ -356,253 +355,33 @@ function srvPanel() {
   );
 }
 
-// 서버 없이 열었을 때의 안내 (v2.0.0 부터 서버판 전용)
-function noServerNotice() {
-  const d = document.createElement('div');
-  d.id = 'nosrv';
-  d.innerHTML = `<div class="box"><h1>QIS 는 데스크톱 프로그램으로 엽니다</h1>
-    <p>v2.0.0 부터 QIS 는 <b>서버판 (데스크톱 프로그램 QIS.app · QIS.exe)</b> 만 씁니다. 이 파일을 직접 열어서는 쓸 수 없습니다.</p>
-    <p>혼자 쓰는 경우에도 데스크톱 프로그램의 <b>‘이 PC 혼자 쓰기’</b> 로 같은 기능을 씁니다.</p>
-    <p class="sub">예전에 이 파일로 쓰던 데이터가 있으면: 예전 버전 (v1.x) 의 파일로 열어 <b>설정 · 백업 › 백업 파일 내보내기</b> 를 한 뒤, 데스크톱 프로그램의 <b>관리 › 백업 · 데이터 › 가져오기</b> 로 넣으세요. 이 화면은 예전 데이터를 읽거나 지우지 않습니다.</p></div>`;
-  document.body.appendChild(d);
-  document.body.classList.add('nosrv');
-}
 async function bootData() {
-  if (NO_SERVER) {
-    noServerNotice();
-    dataReady = true;
-    return;
-  }
   if (SHARE) {
     dataReady = true;
     return;
   }
-  if (SRV) {
-    try {
-      await srvBoot();
-    } catch (e) {
-      console.error(e);
-      loadFailed = '서버에서 데이터를 받지 못했습니다 — ' + e.message;
-    }
-    dataReady = true;
-    return;
-  }
-  let rec;
-  let usedIdb = false;
   try {
-    usedIdb = localStorage.getItem(KEY + '_idb') === '1';
-  } catch (e) {}
-  try {
-    rec = await dGet(KEY);
+    await srvBoot();
   } catch (e) {
-    // 대용량 저장소를 쓰던 PC에서 열지 못하면, 빈 데이터로 진행했다가 다음 실행 때 원본을 덮어쓸 수 있으므로 저장을 멈춤
-    if (usedIdb) {
-      console.error('대용량 저장소 열기 실패', e);
-      loadFailed = '브라우저 대용량 저장소를 열지 못했습니다 — ' + String((e && e.message) || e) + '. 브라우저를 모두 닫았다 다시 열어 보세요';
-      dataStore = 'idb';
-      dataReady = true;
-      return;
-    }
-    console.warn('IndexedDB 사용 불가 — 기본 저장소로 동작', e);
-    dataStore = 'ls';
-    dataReady = true;
-    return;
+    console.error(e);
+    loadFailed = '서버에서 데이터를 받지 못했습니다 — ' + e.message;
   }
-  dataStore = 'idb';
-  try {
-    localStorage.setItem(KEY + '_idb', '1');
-  } catch (e) {}
-  let legacy = null;
-  try {
-    legacy = localStorage.getItem(KEY);
-  } catch (e) {}
-  if (rec != null) {
-    try {
-      db = migrate(JSON.parse(rec));
-      loadFailed = null;
-      storageBlocked = false;
-      dataBytes = rec.length;
-    } catch (e) {
-      console.error(e);
-      loadFailed = String((e && e.message) || e);
-      brokenRaw = rec;
-      db = defaultDB();
-      dataReady = true;
-      return;
-    }
-    // 옮긴 뒤에도 기본 저장소에 남은 사본(예전 버전 창에서 저장된 것 등) — 더 최근이면 가져오고 정리
-    if (legacy) {
-      let ld = null;
-      try {
-        ld = JSON.parse(legacy);
-      } catch (e) {}
-      if (ld) {
-        const cnt = (x) => COLLS.reduce((a, c) => a + ((x && x[c]) || []).length, 0);
-        if (savedMs(ld) > savedMs(db) && cnt(db) === 0) {
-          db = migrate(ld);
-          try {
-            const j = JSON.stringify(db);
-            await dPut(KEY + '_prev', rec);
-            await dPut(KEY, j);
-            dataBytes = j.length;
-            dataMigrated = 'newer';
-          } catch (e) {
-            console.error(e);
-          }
-        } else if (savedMs(ld) > savedMs(db)) {
-          try {
-            await dPut(KEY + '_legacy_' + Date.now(), legacy);
-          } catch (e) {
-            console.error(e);
-          }
-          dataMigrated = 'legacyKept';
-        }
-        try {
-          localStorage.removeItem(KEY);
-        } catch (e) {}
-      }
-    }
-  } else if (legacy && !loadFailed) {
-    // 처음: 기본 저장소 → 대용량 저장소로 옮기고, 다시 읽어 같은지 확인한 뒤에만 기본 저장소를 비움
-    try {
-      const j = JSON.stringify(db);
-      await dPut(KEY, j);
-      const back = await dGet(KEY);
-      if (back === j) {
-        try {
-          localStorage.removeItem(KEY);
-        } catch (e) {}
-        dataMigrated = true;
-        dataBytes = j.length;
-      } else throw new Error('확인 실패');
-    } catch (e) {
-      console.error('데이터 이전 실패 — 기본 저장소 유지', e);
-      dataStore = 'ls';
-    }
-  }
-  if (dataStore === 'idb') storageBlocked = false;
   dataReady = true;
 }
-let _pw = null,
-  _pAgain = false;
-const dataCh = (() => {
-    try {
-      return RO || SRV ? null : new BroadcastChannel('personalQMS_data');
-    } catch (e) {
-      return null;
-    }
-  })(),
-  TAB_ID = Math.random().toString(36).slice(2);
-function persist() {
-  if (SRV) return srvPersist();
-  if (dataStore !== 'idb') return Promise.resolve();
-  if (_pw) {
-    _pAgain = true;
-    return _pw;
-  }
-  let j;
-  try {
-    j = JSON.stringify(db);
-  } catch (e) {
-    saveFailed = String(e.message || e);
-    renderAlert();
-    return Promise.resolve();
-  }
-  _pw = dPut(KEY, j)
-    .then(() => {
-      dataBytes = j.length;
-      if (saveFailed) {
-        saveFailed = null;
-        renderAlert();
-      }
-      try {
-        dataCh && dataCh.postMessage({ t: 'saved', from: TAB_ID });
-      } catch (e) {}
-      updateSaveInfo();
-    })
-    .catch((e) => {
-      console.error(e);
-      saveFailed = String((e && e.message) || e);
-      renderAlert();
-      updateSaveInfo();
-    })
-    .finally(() => {
-      _pw = null;
-      if (_pAgain) {
-        _pAgain = false;
-        persist();
-      }
-    });
-  return _pw;
-}
-// 화면을 닫기 직전에 저장 중인 내용이 있으면 확인
+const persist = () => (SHARE ? Promise.resolve() : srvPersist());
+// 화면을 닫기 직전에 서버로 보내지 못한 내용이 있으면 확인
 window.addEventListener('beforeunload', (e) => {
-  if (_pw || _pAgain || saveFailed || (SRV && srvUnsaved())) {
+  if (SRV && srvUnsaved()) {
     e.preventDefault();
     e.returnValue = '';
   }
 });
-if (dataCh)
-  dataCh.onmessage = async (ev) => {
-    const m = ev.data || {};
-    if (m.t !== 'saved' || m.from === TAB_ID || !dataReady || dataStore !== 'idb') return;
-    try {
-      const r = await dGet(KEY);
-      if (r) {
-        db = migrate(JSON.parse(r));
-        dataBytes = r.length;
-        render();
-        updateSaveInfo();
-        toast('다른 창에서 변경된 내용을 불러왔습니다');
-      }
-    } catch (e) {
-      console.error(e);
-    }
-  };
 const bootReady = bootData().catch((e) => {
   console.error(e);
   dataReady = true;
 });
-let tabLocked = false; // 다른 창에서 편집 중 — 이 창은 저장하지 않음
-(function editorLock() {
-  if (RO || (typeof SRV !== 'undefined' && SRV) || !navigator.locks) return;
-  let got = false;
-  navigator.locks
-    .request('qis-editor', { ifAvailable: true }, (lk) => {
-      if (!lk) return null;
-      got = true;
-      return new Promise(() => {});
-    })
-    .then(() => {
-      if (got) return;
-      tabLocked = true;
-      bootReady.then(() => {
-        renderAlert();
-        updateSaveInfo();
-      });
-      navigator.locks.request('qis-editor', async () => {
-        await bootReady;
-        try {
-          const r = dataStore === 'idb' ? await dGet(KEY) : null;
-          if (r) db = migrate(JSON.parse(r));
-        } catch (e) {
-          console.error(e);
-        }
-        tabLocked = false;
-        render();
-        renderAlert();
-        updateSaveInfo();
-        toast('다른 창이 닫혀 이제 이 창에서 편집할 수 있습니다');
-        return new Promise(() => {});
-      });
-    })
-    .catch((e) => console.warn('창 잠금 사용 불가', e));
-})();
-let backupDir = null,
-  photoDir = null; // 사진 · 첨부 폴더, 백업 폴더 (이 PC, 선택)
-
 function save() {
-  if (RO) return; // 읽기 전용 사본은 저장하지 않음
+  if (RO) return; // 공유본 · 조회 권한은 저장하지 않음
   if (!dataReady) {
     console.warn('데이터를 가져오기 전 저장 요청 — 무시');
     return;
@@ -613,60 +392,28 @@ function save() {
     toast('데이터를 읽지 못해 저장을 멈췄습니다 — 위 빨간 안내를 확인하세요');
     return;
   }
-  if (tabLocked) {
-    renderAlert();
-    toast('다른 창에서 QIS가 열려 있어 이 창은 보기 전용입니다 — 그 창에서 입력하세요');
-    return;
-  }
   lockSev();
-  const prevSaved = db.meta.saved;
   db.meta.saved = now();
   db.meta.appVer = APP_VER;
   try {
     czSyncAll();
   } catch (e) {}
-  if (storageBlocked) {
-    updateSaveInfo();
-    return;
-  }
-  if (dataStore === 'idb' || dataStore === 'srv') persist();
-  else
-    try {
-      localStorage.setItem(KEY, JSON.stringify(db));
-      if (saveFailed) {
-        saveFailed = null;
-        renderAlert();
-      }
-    } catch (e) {
-      db.meta.saved = prevSaved;
-      saveFailed = String((e && e.message) || e);
-      renderAlert();
-      updateSaveInfo();
-      return;
-    }
-  if (photoDir) {
-    clearTimeout(save._ph);
-    save._ph = setTimeout(() => syncPhotoFiles(false), 1500);
-  } else if (lazyH.photoDir && !lazyNo.photoDir && navigator.userActivation && navigator.userActivation.isActive)
-    setTimeout(() => {
-      if (phNeedWrite()) ensureDir('photoDir');
-    }, 300);
-  if (backupDir && db.meta.lastAutoBackup !== today()) {
-    clearTimeout(save._ab);
-    save._ab = setTimeout(() => autoBackup(false), 3000);
-  }
-  scheduleLatestBackup();
+  persist();
   updateSaveInfo();
 }
 function renderAlert() {
   const b = $('#alertBar');
   if (!b) return;
-  if (tabLocked && !loadFailed) {
-    b.style.display = 'flex';
-    b.innerHTML = `<span><b>다른 창(또는 탭)에서 QIS가 열려 있어 이 창은 보기 전용입니다.</b> 두 창에서 동시에 저장하면 한쪽 입력이 사라질 수 있어 막았습니다. 입력은 먼저 연 창에서 하세요 — 그 창을 닫으면 이 창이 최신 내용으로 바뀌고 편집할 수 있게 됩니다.</span>`;
+  if (SHARE) {
+    b.style.display = 'none';
     return;
   }
-  if (SRV && !loadFailed) {
+  if (loadFailed) {
+    b.style.display = 'flex';
+    b.innerHTML = `<span><b>${esc(loadFailed)}</b> 덮어쓰지 않도록 저장을 멈췄습니다. 서버가 켜져 있는지 확인한 뒤 다시 여세요.</span><span style="flex:1"></span><button class="b s p" onclick="location.reload()">다시 열기</button>`;
+    return;
+  }
+  {
     if (srvState.expired) {
       b.style.display = 'flex';
       b.innerHTML = `<span><b>로그인이 만료되었습니다.</b> 아직 서버에 보내지 못한 변경은 이 창에 남아 있습니다 — 창을 닫지 말고 다시 로그인하세요. 로그인하면 자동으로 저장됩니다.</span><span style="flex:1"></span><button class="b s p" onclick="window.open('/login','qisLogin')">다시 로그인</button><button class="b s" onclick="srvState.expired=false;srvSync()">저장 다시 시도</button>`;
@@ -682,56 +429,15 @@ function renderAlert() {
       return;
     }
   }
-  if (storageBlocked) {
-    b.style.display = 'flex';
-    b.style.background = '#fff7e0';
-    b.style.borderBottomColor = '#f0d49b';
-    b.style.color = '#5c4210';
-    b.innerHTML = `<span><b>미리보기 화면에서는 데이터가 저장되지 않습니다.</b> 이 창은 보안상 브라우저 저장소가 막혀 있어, 여기서 입력한 내용은 창을 닫으면 사라집니다. 실제로 쓰려면 파일을 내려받아 <b>Edge 또는 Chrome에서 직접</b> 여세요.</span>`;
-    return;
-  }
-  if (loadFailed) {
-    b.style.display = 'flex';
-    b.innerHTML = `<span><b>저장된 데이터를 읽지 못했습니다</b> (${esc(loadFailed)}). 원본은 보존해 두었고, 덮어쓰지 않도록 <b>저장을 멈췄습니다.</b> 백업 파일로 복원하거나 원본을 내려받아 확인하세요.</span><span style="flex:1"></span><button class="b s" onclick="downloadBroken()">원본 내려받기</button><button class="b s p" onclick="pickImport('replace')">백업으로 복원</button>`;
-    return;
-  }
-  if (saveFailed) {
-    b.style.display = 'flex';
-    b.innerHTML = `<span><b>브라우저 저장 실패</b> — 마지막 변경이 저장되지 않았습니다 (${esc(saveFailed)}). ${
-      dataStore === 'idb'
-        ? 'PC 디스크 공간이 부족하거나 브라우저가 저장을 막았을 수 있습니다. 지금 <b>백업 내려받기</b>를 하고, 디스크 여유 공간을 확인하세요.'
-        : '저장 공간이 가득 찼을 수 있습니다. 지금 <b>백업 내려받기</b>를 하고, 설정 › 데이터 · 백업 › 고급 설정에서 저장 공간을 확인하세요.'
-    }</span><span style="flex:1"></span><button class="b s p" onclick="exportJSON(true)">백업 내려받기</button>`;
-    return;
-  }
   b.style.display = 'none';
 }
-function downloadBroken() {
-  let r = brokenRaw || '';
-  if (!r)
-    try {
-      r = localStorage.getItem(KEY + '_broken') || localStorage.getItem(KEY) || '';
-    } catch (e) {}
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([r], { type: 'application/json' }));
-  a.download = 'QMS_원본데이터.json';
-  a.click();
-}
-const backupDays = () => Math.max(1, num(db.settings.backupDays) || 7);
-const backupDue = () => !db.meta.lastBackup || diffDays(loc(db.meta.lastBackup, 10), today()) >= backupDays();
 function updateSaveInfo() {
-  {
-    const bk = $('#hdrBk');
-    if (bk && !RO && !SRV) {
-      const due = !loadFailed && !storageBlocked && COLLS.some((c) => (db[c] || []).length) && backupDue();
-      bk.textContent = due ? '백업 필요' : '백업';
-      bk.classList.toggle('due', due);
-      bk.title =
-        (due ? `마지막 백업: ${db.meta.lastBackup ? loc(db.meta.lastBackup, 10) : '없음'} — 눌러서 지금 백업. ` : '') +
-        (backupDir || lazyH.backupDir ? '백업 폴더에 저장합니다' : '백업 파일을 내려받기합니다 (설정에서 백업 폴더를 지정하면 하루 한 번 자동 백업)');
-    }
+  if (SHARE) {
+    const e = $('#saveInfo');
+    if (e) e.textContent = '읽기 전용 사본';
+    return;
   }
-  if (SRV) {
+  {
     const e = $('#saveInfo'),
       st = srvState,
       t = st.at;
@@ -751,31 +457,7 @@ function updateSaveInfo() {
                   : '';
     const l = $('#linkInfo');
     if (l) l.textContent = '';
-    return;
   }
-  if (RO) {
-    const e = $('#saveInfo');
-    if (e) e.textContent = '읽기 전용 사본';
-    const l = $('#linkInfo');
-    if (l) l.textContent = '';
-    return;
-  }
-  const s = db.meta.saved ? new Date(db.meta.saved) : null;
-  $('#saveInfo').textContent = storageBlocked
-    ? '미리보기 · 저장 안 됨'
-    : saveFailed
-      ? '⚠ 저장 실패'
-      : loadFailed
-        ? '⚠ 저장 중지'
-        : s
-          ? `자동저장 ${pad(s.getHours())}:${pad(s.getMinutes())}:${pad(s.getSeconds())}`
-          : '';
-  $('#linkInfo').textContent = [
-    photoDir ? `사진 폴더 ${photoDir.name}` : lazyH.photoDir ? `사진 폴더 ${lazyH.photoDir.name} (저장할 때 허용)` : '',
-    backupDir ? `백업 폴더 ${backupDir.name}` : lazyH.backupDir ? `백업 폴더 ${lazyH.backupDir.name} (백업할 때 허용)` : '',
-  ]
-    .filter(Boolean)
-    .join('  ');
 }
 let actTimer = null;
 // 알림 + 바로 하기 버튼 (예: 불량 저장 직후 NCR 발행)

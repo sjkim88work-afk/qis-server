@@ -316,145 +316,40 @@ async function buildSqlite() {
   return { bytes: out, n };
 }
 let sqliteBusy = false;
-// toDir: 백업 폴더가 있으면 QIS.sqlite로 덮어쓰기, 없으면 내려받기 · quiet: 자동 백업 때 조용히
-async function exportSqlite(quiet) {
+// QIS.sqlite 내려받기 (SQL 조회용 사본)
+async function exportSqlite() {
   if (RO || sqliteBusy) return;
   sqliteBusy = true;
   try {
-    if (!quiet) toast('SQLite 파일을 만드는 중…');
+    toast('SQLite 파일을 만드는 중…');
     const { bytes, n } = await buildSqlite(),
       blob = new Blob([bytes], { type: 'application/vnd.sqlite3' });
-    let where = '';
-    if (backupDir || (!quiet && lazyH.backupDir && (await ensureDir('backupDir')))) {
-      if (!(await permOK(backupDir, false))) throw new Error('백업 폴더 사용이 허용되지 않았습니다');
-      const fh = await backupDir.getFileHandle('QIS.sqlite', { create: true }),
-        w = await fh.createWritable();
-      await w.write(blob);
-      await w.close();
-      where = `‘${backupDir.name}’ 폴더의 QIS.sqlite`;
-    } else if (!quiet) {
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = 'QIS.sqlite';
-      a.click();
-      setTimeout(() => URL.revokeObjectURL(a.href), 5000);
-      where = '내려받기한 QIS.sqlite';
-    } else return;
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'QIS.sqlite';
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    const where = '내려받기한 QIS.sqlite';
     db.meta.lastSqlite = now();
     db.meta.lastSqliteN = n;
-    if (!quiet) save();
-    if (!quiet)
-      toast(`${where} — 불량 ${n.defects} · NCR ${n.ncrs} · 부품 ${n.parts} · 입고 ${n.receipts} (${(bytes.length / 1048576).toFixed(1)}MB)`);
+    save();
+    toast(`${where} — 불량 ${n.defects} · NCR ${n.ncrs} · 부품 ${n.parts} · 입고 ${n.receipts} (${(bytes.length / 1048576).toFixed(1)}MB)`);
     if (state.tab === 'data') render();
   } catch (e) {
     console.error(e);
-    if (!quiet) toast('SQLite 만들기 실패: ' + e.message);
+    toast('SQLite 만들기 실패: ' + e.message);
   } finally {
     sqliteBusy = false;
   }
-}
-async function fullJSON(withPhotos = true) {
-  const base = JSON.stringify(db);
-  if (!withPhotos) return base;
-  let ph = '[]';
-  try {
-    ph = await photosJSON(withPhotos === 'meta');
-  } catch (e) {
-    toast('사진을 읽지 못해 사진 없이 저장합니다: ' + e.message);
-  }
-  return base.slice(0, -1) + ',"photos":' + ph + '}';
 }
 /* ---- 사진 · 첨부 폴더 (이 PC에서 지정한 폴더) ----
    이 PC의 IndexedDB는 화면 표시용 사본이고, 사진 본체는 폴더의 파일로 옮겨 QMS_data.json에는 사진 정보만 남긴다.
    다른 PC에서 아직 받지 못한 사진은 고정된 회색 자리표시 이미지(PH_IMG)로 두었다가 파일이 도착하면 바꾼다. */
 const PH_IMG =
   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAkCAIAAABAJy5dAAAANElEQVR42u3OQQkAAAgEsOvf0I9Pc1hDYbAAS/WcEiEhISEhISEhISEhISEhISEhIaFPoQXCU6TAPfWPWAAAAABJRU5ErkJggg==';
-const PH_PEND = 'personalQMS_phPending';
-let phFiles = null,
-  phBusy = false,
-  phAgain = false;
-const phName = (id) => id + '.jpg';
 const phIsPending = (p) => !p || p.data === PH_IMG || (isDocRec(p) ? !isFileURL(p.data) : !isImgURL(p.data));
-const phMeta = ({ data, thumb, pending, ...m }) => ({ ...m, file: m.file || phName(m.id) });
-const PH_DELQ = 'personalQMS_phDelQ';
-function phDelQ() {
-  try {
-    return new Set(JSON.parse(localStorage.getItem(PH_DELQ) || '[]'));
-  } catch (e) {
-    return new Set();
-  }
-}
-function phDelQSet(s) {
-  try {
-    localStorage.setItem(PH_DELQ, JSON.stringify([...s]));
-  } catch (e) {}
-}
 /* 사진 파일 이름: <NCR번호>_<YYYYMMDD>_<연번>.jpg  (NCR 발행 전: 미발행_<품번>_…, 날짜 = 사진 첨부일)
    NCR이 발행되거나 번호가 바뀌면 다음 동기화 때 새 이름으로 바꾼다 */
-function phOwners() {
-  const m = {},
-    put = (ids, no, part) =>
-      (ids || []).forEach((i) => {
-        if (!m[i]) m[i] = { no, part };
-      });
-  const logIds = (o) => (o.logs || []).flatMap((l) => [...(l.photos || []), ...(l.hist || []).flatMap((h) => h.photos || [])]);
-  const nById = new Map(db.ncrs.map((n) => [n.id, n]));
-  db.ncrs.forEach((n) => {
-    put(logIds(n), n.no, n.partNo);
-    put(ncrDocIds(n), n.no, n.partNo);
-  });
-  db.defects.forEach((d) => {
-    const n = d.ncrId && nById.get(d.ncrId);
-    put(d.photos, n ? n.no : '', d.partNo);
-    put(logIds(d), n ? n.no : '', d.partNo);
-  });
-  (db.issues || []).forEach((i) => {
-    put(i.photos, i.no, i.partNo);
-    put(logIds(i), i.no, i.partNo);
-  });
-  return m;
-}
-const phSafe = (v) =>
-  String(v || '')
-    .trim()
-    .replace(/[\\/:*?"<>|\s]+/g, '-')
-    .replace(/^-+|-+$/g, '');
-function phPrefix(r, o) {
-  const day = (loc(r.createdAt, 10) || today()).replace(/-/g, '');
-  const head = o && phSafe(o.no) ? phSafe(o.no) : `미발행_${phSafe(o && o.part) || '사진'}`;
-  return `${head}_${day}`;
-}
-function phNextName(pre, files) {
-  let mx = 0;
-  const rx = new RegExp('^' + pre.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '_(\\d+)\\.jpg$', 'i');
-  files.forEach((n) => {
-    const m = rx.exec(n);
-    if (m) mx = Math.max(mx, +m[1]);
-  });
-  return `${pre}_${String(mx + 1).padStart(2, '0')}.jpg`;
-}
-function phDocName(pre, r, files) {
-  const nm = `${pre}_${phSafe(r.name) || '첨부'}`;
-  return files.has(nm) ? `${pre}_${String(r.id).slice(-5)}_${phSafe(r.name) || '첨부'}` : nm;
-}
-function phPend() {
-  try {
-    return new Set(JSON.parse(localStorage.getItem(PH_PEND) || '[]'));
-  } catch (e) {
-    return new Set();
-  }
-}
-function phPendSet(s) {
-  try {
-    localStorage.setItem(PH_PEND, JSON.stringify([...s]));
-  } catch (e) {}
-}
-function phPendAdd(ids) {
-  if (!ids.length) return;
-  const s = phPend();
-  ids.forEach((i) => s.add(i));
-  phPendSet(s);
-}
 const fileToURL = (f) =>
   new Promise((res, rej) => {
     const fr = new FileReader();
@@ -462,127 +357,6 @@ const fileToURL = (f) =>
     fr.onerror = () => rej(fr.error);
     fr.readAsDataURL(f);
   });
-const urlToImg = (u) =>
-  new Promise((res, rej) => {
-    const im = new Image();
-    im.onload = () => res(im);
-    im.onerror = () => rej(new Error('사진 파일을 열 수 없습니다'));
-    im.src = u;
-  });
-async function syncPhotoFiles(relist) {
-  if (!photoDir) return;
-  if (phBusy) {
-    phAgain = true;
-    return;
-  }
-  phBusy = true;
-  let wrote = 0,
-    removed = 0,
-    loaded = 0,
-    renamed = 0;
-  try {
-    if (!(await permOK(photoDir, false))) {
-      permLost('photoDir', photoDir);
-      return;
-    }
-    if (relist || !phFiles) {
-      const s = new Set();
-      for await (const [n, h] of photoDir.entries()) if (h.kind === 'file') s.add(n);
-      phFiles = s;
-    }
-    const files = phFiles,
-      keys = new Set(await pTx('readonly', (s) => s.getAllKeys())),
-      pend = phPend(),
-      own = phOwners(),
-      live = new Set();
-    // 1) 이 PC의 사진 → 정해진 이름의 파일로 저장 · 이름이 바뀌어야 하면 새 이름으로 옮김 (자리표시 이미지는 절대 쓰지 않음)
-    for (const id of keys) {
-      const r = await photoGet(id);
-      if (!r) continue;
-      const cur = r.file || (files.has(phName(id)) ? phName(id) : '');
-      if (pend.has(id) || phIsPending(r)) {
-        if (cur) live.add(cur);
-        continue;
-      }
-      const pre = phPrefix(r, own[id]);
-      if (cur && files.has(cur) && cur.startsWith(pre + '_')) {
-        live.add(cur);
-        if (r.file !== cur) await photoPut([{ ...r, file: cur }]);
-        continue;
-      }
-      const nm = isDocRec(r) ? phDocName(pre, r, files) : phNextName(pre, files);
-      const w = await (await photoDir.getFileHandle(nm, { create: true })).createWritable();
-      await w.write(await (await fetch(r.data)).blob());
-      await w.close();
-      files.add(nm);
-      live.add(nm);
-      if (cur && files.has(cur)) {
-        try {
-          await photoDir.removeEntry(cur);
-          files.delete(cur);
-        } catch (e) {}
-        renamed++;
-      } else wrote++;
-      await photoPut([{ ...r, file: nm }]);
-      delete phCache[id];
-    }
-    // 2) 지운 사진 → 파일도 삭제 (지금 쓰는 사진의 파일은 남김)
-    const dq = phDelQ();
-    for (const n of [...dq]) {
-      if (!live.has(n) && files.has(n)) {
-        try {
-          await photoDir.removeEntry(n);
-          files.delete(n);
-          removed++;
-        } catch (e) {
-          continue;
-        }
-      }
-      dq.delete(n);
-    }
-    phDelQSet(dq);
-    // 3) 다른 PC에서 올린 사진 ← 파일에서 가져오기
-    for (const id of [...pend]) {
-      if (!keys.has(id)) {
-        pend.delete(id);
-        continue;
-      }
-      const r = await photoGet(id);
-      if (!phIsPending(r)) {
-        pend.delete(id);
-        continue;
-      }
-      const nm = r.file || phName(id);
-      if (!files.has(nm)) continue;
-      try {
-        const data = await fileToURL(await (await photoDir.getFileHandle(nm)).getFile());
-        if (isDocRec(r) ? !isFileURL(data) : !isImgURL(data)) continue;
-        await photoPut([{ ...r, pending: undefined, file: nm, data, thumb: isDocRec(r) ? '' : shrink(await urlToImg(data), 320, 0.7) }]);
-        delete phCache[id];
-        pend.delete(id);
-        loaded++;
-      } catch (e) {}
-    }
-    phPendSet(pend);
-    if (loaded || wrote || renamed) photoStr = null;
-    if (wrote || renamed) save(); // 바뀐 파일 이름을 기록
-    phDirtySet(false);
-    if (loaded) {
-      toast(`사진 폴더에서 사진 ${loaded}장을 불러왔습니다`);
-      if (!$('#cfm.on')) render();
-    }
-  } catch (e) {
-    toast('사진 폴더 동기화 실패: ' + e.message);
-  } finally {
-    phBusy = false;
-    updateSaveInfo();
-    if (phAgain) {
-      phAgain = false;
-      setTimeout(() => syncPhotoFiles(false), 500);
-    }
-  }
-  return { wrote, renamed, removed, loaded };
-}
 function photoBadge(d) {
   const n = (d.photos || []).length;
   return n
@@ -781,4 +555,3 @@ function oneLineLabels(root) {
     });
   }).observe(document.body, { childList: true, subtree: true });
 }
-if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});

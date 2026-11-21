@@ -34,7 +34,7 @@ def run(c):
     ok(s4["mob"] and s4["outIn"] == "header" and s4["out"], "창을 한 번에 좁혀도(1400 → 700) 로그아웃 단추가 있음")
     A.set_viewport_size({"width": 1399, "height": 900}); settle(A, 600)
     s5 = A.evaluate(NAVST)
-    ok(not s5["side"] and not s5["mob"] and s5["outIn"] == "header" and s5["gh"] == "" and s5["order"].endswith("copyInfo,hdrInstall,srvUser,hdrPw,hdrOut,hdrBk"),
+    ok(not s5["side"] and not s5["mob"] and s5["outIn"] == "header" and s5["gh"] == "" and s5["order"].endswith("copyInfo,srvUser,hdrPw,hdrOut,hdrBk"),
        f"창 1399px: 위쪽 탭 · 머리글 단추는 원래 순서 ({s5['order'][-48:]})")
     # 표 밀도: 사이드바 옆에서도 관리대장 테마의 좁은 여백 · 작은 머리글을 씀 / 카드 여백
     A.evaluate("()=>{state.nf.status='';go('ncr')}"); settle(A, 350)
@@ -234,10 +234,33 @@ def run(c):
     pgN.goto(urlN)
     pgN.evaluate("()=>{localStorage.setItem('personalQMS_v1',JSON.stringify({keep:1}))}")
     pgN.reload(); pgN.wait_for_timeout(1500)
-    r = pgN.evaluate("""()=>({notice:!!document.querySelector('#nosrv'),text:(document.querySelector('#nosrv')||{}).textContent||'',
+    r = pgN.evaluate("""async()=>({notice:!!document.querySelector('#nosrv'),text:(document.querySelector('#nosrv')||{}).textContent||'',
       vis:[...document.body.children].filter(e=>getComputedStyle(e).display!=='none').map(e=>e.id||e.tagName).join(),
-      keys:Object.keys(localStorage).sort().join(),old:localStorage.getItem('personalQMS_v1'),ro:RO})""")
+      keys:Object.keys(localStorage).sort().join(),old:localStorage.getItem('personalQMS_v1'),
+      app:(()=>{try{return db?'started':'started'}catch(e){return 'undefined'}})(),dbs:!!(window.indexedDB&&indexedDB.databases)?(await indexedDB.databases()).map(d=>d.name).join():''})""")
     pgN.close()
-    ok(r["notice"] and r["vis"] == "nosrv" and "데스크톱 프로그램" in r["text"] and r["ro"] and not errsN, f"서버 없이 열면 안내만 보임 (보이는 것: {r['vis']} · 오류 {len(errsN)})")
+    ok(r["notice"] and r["vis"] == "nosrv" and "데스크톱 프로그램" in r["text"] and r["app"] == "undefined" and errsN and all("서버 없이 열림" in e for e in errsN),
+       f"서버 없이 열면 안내만 보이고 프로그램은 시작하지 않음 (보이는 것: {r['vis']} · 화면 {r['app']} · 멈춤 알림 {len(errsN)})")
+    ok(r["dbs"] == "", f"서버 없이 열어도 브라우저 저장소 (IndexedDB) 를 만들지 않음 ({r['dbs'] or '없음'})")
+
+    # 읽기 전용 공유본: 서버판에서 만든 HTML 파일은 서버 없이 열려도 읽기 전용으로 동작 (서버 요청 · 저장 없음)
+    import tempfile
+    with B.expect_download(timeout=20000) as dl:
+        B.evaluate("makeShareFile(false)")
+    shp = os.path.join(tempfile.mkdtemp(), "share.html")
+    dl.value.save_as(shp)
+    pgS = b.new_page(viewport={"width": 1300, "height": 800})
+    errsS, reqS = [], []
+    pgS.on("pageerror", lambda e: errsS.append(str(e)[:120]))
+    pgS.on("request", lambda q: reqS.append(q.url) if "/api/" in q.url else None)
+    pgS.goto("file://" + shp); pgS.wait_for_timeout(1500)
+    rs = pgS.evaluate("""async()=>{go('defect');await new Promise(r=>setTimeout(r,400));
+      return {bar:(document.querySelector('.roBar')||{}).textContent||'',n:db.defects.length,rows:document.querySelectorAll('main tbody tr').length,
+        ro:RO,srv:!!SRV,tabs:RO_TABS.join(),nav:document.querySelector('nav').innerText,
+        nosrv:!!document.querySelector('#nosrv'),save:(document.querySelector('#saveInfo')||{}).textContent||''}}""")
+    pgS.close()
+    ok("읽기 전용 사본" in rs["bar"] and rs["ro"] and not rs["srv"] and not rs["nosrv"] and rs["n"] > 0 and rs["rows"] > 0 and not errsS and not reqS,
+       f"읽기 전용 공유본: 서버 없이 열림 — 불량 {rs['n']}건 · 표 {rs['rows']}줄 · 오류 {len(errsS)} · 서버 요청 {len(reqS)}")
+    ok("dash" in rs["tabs"] and "data" not in rs["tabs"].split(",") and "master" not in rs["tabs"].split(",") and "설정" not in rs["nav"] and "불량" in rs["nav"], f"읽기 전용 공유본: 설정 · 기준정보 메뉴 없음 ({rs['tabs']})")
     ok(r["keys"] == "personalQMS_v1" and r["old"] == '{"keep":1}', f"서버 없이 열어도 브라우저의 예전 데이터를 바꾸지 않음 ({r['keys']})")
 

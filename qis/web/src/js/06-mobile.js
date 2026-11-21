@@ -475,7 +475,7 @@ function render() {
   }
 }
 function renderInner() {
-  if ((RO || SRV) && !RO_TABS.includes(state.tab) && state.tab !== 'prog') state.tab = 'dash'; // 공유본: 허용한 화면만
+  if (!RO_TABS.includes(state.tab)) state.tab = 'dash'; // 권한에 없는 화면
   try {
     czSyncAll();
   } catch (e) {}
@@ -498,7 +498,7 @@ function renderInner() {
     window.__navFt = navFt0;
   } // 사이드바 하단(사용자 · 관리 · 저작권)은 innerHTML 교체 전에 떼어 두고 기억함
   let navG = '';
-  $('#nav').innerHTML = TABS.filter(([k]) => !(RO || SRV) || RO_TABS.includes(k))
+  $('#nav').innerHTML = TABS.filter(([k]) => RO_TABS.includes(k))
     .map(([k, l]) => {
       const n = k === 'case' ? czBadgeN() : k === 'prog' ? progBadgeN() : k === 'inv' ? invLateN() : k === 'issue' ? issWaitN() : 0;
       const g = NAV_GRP[k] || navG,

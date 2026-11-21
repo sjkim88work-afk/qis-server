@@ -466,93 +466,17 @@ function mailLink(v) {
 function cLabel(c) {
   return `${c.name}${c.role ? ` (${c.role})` : ''}`;
 }
-let loadFailed = null,
-  saveFailed = null;
-let storageBlocked = false;
+let loadFailed = null;
+// 데이터: 서버판은 서버에서 받음 (bootData → srvBoot). 공유본은 파일 안의 데이터
 function load() {
-  if (SHARE) {
-    const d = { ...SHARE.db };
-    delete d.photos;
-    return migrate(d);
-  }
-  if (SRV) return defaultDB();
-  try {
-    localStorage.getItem('__t');
-  } catch (e) {
-    storageBlocked = true;
-    return defaultDB();
-  }
-  let r = null;
-  try {
-    r = localStorage.getItem(KEY);
-    if (r) return migrate(JSON.parse(r));
-  } catch (e) {
-    console.error(e);
-    loadFailed = String((e && e.message) || e);
-    try {
-      if (r) localStorage.setItem(KEY + '_broken', r);
-    } catch (_) {}
-  }
-  return defaultDB();
+  if (!SHARE) return defaultDB();
+  const d = { ...SHARE.db };
+  delete d.photos;
+  return migrate(d);
 }
 let db = load();
 /* ---- 데이터 원본 저장소 ----
    브라우저 대용량 저장소(IndexedDB, 수백 MB)에 저장. 기본 저장소(localStorage)는 사이트당 약 5MB라
    BOM · 입고 라인이 쌓이면 가득 차므로 옮김. 처음 열 때 기존 데이터를 자동으로 옮기고 확인 후 정리.
    IndexedDB를 쓸 수 없는 환경에서만 예전 방식(localStorage)으로 동작. */
-const DDB = 'personalQMS_data';
-let _ddb = null,
-  dataStore = 'ls',
-  dataReady = !!SHARE,
-  brokenRaw = null,
-  dataMigrated = false,
-  dataBytes = 0;
-function ddb() {
-  if (!_ddb)
-    _ddb = new Promise((res, rej) => {
-      if (!window.indexedDB) return rej(new Error('IndexedDB 미지원'));
-      let r;
-      try {
-        r = indexedDB.open(DDB, 1);
-      } catch (e) {
-        return rej(e);
-      }
-      r.onupgradeneeded = () => {
-        if (!r.result.objectStoreNames.contains('kv')) r.result.createObjectStore('kv');
-      };
-      r.onsuccess = () => {
-        const d = r.result;
-        d.onversionchange = () => d.close();
-        res(d);
-      };
-      r.onerror = () => rej(r.error || new Error('저장소를 열 수 없습니다'));
-      r.onblocked = () => rej(new Error('저장소가 다른 창에서 사용 중입니다'));
-    });
-  return _ddb;
-}
-function dTx(mode, fn) {
-  return ddb().then(
-    (d) =>
-      new Promise((res, rej) => {
-        let tx;
-        try {
-          tx = d.transaction('kv', mode);
-        } catch (e) {
-          return rej(e);
-        }
-        const out = fn(tx.objectStore('kv'));
-        tx.oncomplete = () => res(out instanceof IDBRequest ? out.result : out);
-        tx.onerror = () => rej(tx.error || new Error('저장 실패'));
-        tx.onabort = () => rej(tx.error || new Error('저장 공간 부족 또는 중단'));
-      }),
-  );
-}
-const dGet = (k) => dTx('readonly', (s) => s.get(k)),
-  dPut = (k, v) =>
-    dTx('readwrite', (s) => {
-      s.put(v, k);
-    });
-const savedMs = (d) => {
-  const t = new Date((d && d.meta && d.meta.saved) || 0).getTime();
-  return isFinite(t) ? t : 0;
-};
+let dataReady = !!SHARE;
