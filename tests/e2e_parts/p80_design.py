@@ -186,3 +186,18 @@ def run(c):
       return {bad,vars:['xs','sm','md','lg','xl','num'].map(k=>v.getPropertyValue('--fs-'+k).trim()).join(',')}}""")
     ok(r["vars"] == "11px,12px,13px,15px,18px,22px" and not r["bad"], f"글자 크기: 6단계만 씀 (어긋난 곳: {r['bad']})")
 
+    # 조건 줄: 창 1240px 에서도 한 줄 · 협력사 선택 칸은 좁게 · 엑셀 버튼과 긴 안내는 접는 메뉴 안
+    vpT = A.viewport_size
+    A.set_viewport_size({"width": 1240, "height": 800}); settle(A, 400)
+    r = A.evaluate("""async()=>{const wait=ms=>new Promise(r=>setTimeout(r,ms)),o={};
+      for(const t of ['defect','ncr','inv','prog']){go(t);await wait(300);const tb=document.querySelector('.pltool'),k=[...tb.querySelector('.row').children].filter(e=>e.offsetParent);
+        const mid=k.map(e=>{const r=e.getBoundingClientRect();return Math.round((r.top+r.bottom)/2)});
+        o[t]={one:Math.max(...mid)-Math.min(...mid)<6,h:tb.offsetHeight,sel:Math.max(0,...[...tb.querySelectorAll('select')].map(s=>s.offsetWidth)),help:!!tb.querySelector(':scope > .help')}}
+      go('defect');await wait(300);const m=document.querySelector('.pltool details.tbm');o.items=[...m.querySelectorAll('.mn button')].map(b=>b.firstChild.textContent.trim()).join('|');
+      m.open=true;await wait(100);const mn=m.querySelector('.mn').getBoundingClientRect();o.inView=mn.right<=innerWidth&&mn.left>=0&&mn.height>40;
+      m.querySelector('.mn button').click();await wait(400);o.imp=document.querySelector('#modal').classList.contains('on')||!!(document.querySelector('#toast')||{}).textContent;o.closed=!m.open;mfDirty=false;closeModal(true);return o}""")
+    bad = [k for k in ("defect", "ncr", "inv", "prog") if not (r[k]["one"] and r[k]["h"] <= 50 and r[k]["sel"] <= 140 and not r[k]["help"])]
+    ok(not bad, f"조건 줄 (1240px): 네 화면 모두 한 줄 · 선택 칸 140px 이하 · 긴 안내 없음 (어긋난 화면: {bad} · {[r[k]['h'] for k in ('defect','ncr','inv','prog')]})")
+    ok(r["items"] == "엑셀 일괄 등록|엑셀 내보내기" and r["inView"] and r["imp"] and r["closed"], f"불량 목록의 ‘엑셀’ 메뉴: 일괄 등록 · 내보내기 ({r['items']} · {r['inView']} {r['imp']} {r['closed']})")
+    A.set_viewport_size(vpT); settle(A, 300)
+

@@ -196,3 +196,23 @@ body:not(.mob) .pld textarea,body:not(.mob) .pld .card input{border-radius:3px;b
 .pg .pgl td>b:first-child{white-space:normal}.pg .pgl .tw{overflow:visible}.pg .pgl table{table-layout:auto}
 .pgh button.b:disabled{opacity:.45;cursor:default}
 @media print{body.pgprint .pgl,body.pgprint .pltool,body.pgprint .pgf{display:none!important}body.pgprint .pgr{flex:1 1 100%}body.pgprint .pl{border:0}body.pgprint .pgw{display:block}}
+/* ── 조건 줄 (.pltool): 한 줄에 들어가게 — 칸 폭을 정하고, 긴 안내와 엑셀 버튼은 접는 메뉴로 ── */
+@media screen{
+  body:not(.mob) .pl .card.pltool{padding:8px 12px}
+  body:not(.mob) .pl .pltool .row{flex-wrap:wrap;gap:6px;align-items:center}
+  body:not(.mob) .pl .pltool input,body:not(.mob) .pl .pltool select,body:not(.mob) .pl .pltool button.b,body:not(.mob) .pl .pltool .tbm>summary{height:30px;min-height:0;font-size:var(--fs-md);box-sizing:border-box}
+  body:not(.mob) .pl .pltool select{width:auto;max-width:132px;padding:0 4px 0 8px;text-overflow:ellipsis}
+  body:not(.mob) .pl .pltool input[type=date]{width:124px;padding:0 6px}
+  body:not(.mob) .pl .pltool input[type=text],body:not(.mob) .pl .pltool input:not([type]),body:not(.mob) .pl .pltool input[type=search]{flex:1 1 150px;min-width:120px;max-width:260px!important;width:auto!important}
+  body:not(.mob) .pl .pltool .muted{font-size:var(--fs-sm);white-space:nowrap}
+}
+.tbm{position:relative;display:inline-block}
+.tbm>summary{list-style:none;display:inline-flex;align-items:center;gap:6px;padding:0 10px;border:1px solid #b8bec9;border-radius:3px;background:#fff;color:var(--ink);cursor:pointer;white-space:nowrap;user-select:none}
+.tbm>summary::-webkit-details-marker{display:none}
+.tbm>summary::after{content:'';width:5px;height:5px;border-right:1.5px solid var(--sub);border-bottom:1.5px solid var(--sub);transform:rotate(45deg);margin-top:-3px}
+.tbm[open]>summary{border-color:var(--ink)}
+.tbm>.mn{position:absolute;right:0;top:34px;z-index:8;min-width:220px;padding:6px;background:#fff;border:1px solid #b8bec9;border-radius:3px;box-shadow:0 8px 24px rgba(29,36,51,.16)}
+.tbm>.mn button{display:block;width:100%;min-height:34px;padding:6px 10px;border:0;border-radius:3px;background:none;text-align:left;font:inherit;font-size:var(--fs-md);color:var(--ink);cursor:pointer;white-space:nowrap}
+.tbm>.mn button:hover,.tbm>.mn button:focus-visible{background:#f0f2f5}
+.tbm>.mn button span{margin-left:6px;font-size:var(--fs-sm);color:var(--sub)}
+.tbm.tbh>.mn{width:min(520px,80vw);padding:10px 12px;font-size:var(--fs-sm);line-height:1.6;color:var(--sub);white-space:normal;margin:0}

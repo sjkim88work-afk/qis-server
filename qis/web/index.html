@@ -886,6 +886,26 @@ body:not(.mob) .pld textarea,body:not(.mob) .pld .card input{border-radius:3px;b
 .pg .pgl td>b:first-child{white-space:normal}.pg .pgl .tw{overflow:visible}.pg .pgl table{table-layout:auto}
 .pgh button.b:disabled{opacity:.45;cursor:default}
 @media print{body.pgprint .pgl,body.pgprint .pltool,body.pgprint .pgf{display:none!important}body.pgprint .pgr{flex:1 1 100%}body.pgprint .pl{border:0}body.pgprint .pgw{display:block}}
+/* ── 조건 줄 (.pltool): 한 줄에 들어가게 — 칸 폭을 정하고, 긴 안내와 엑셀 버튼은 접는 메뉴로 ── */
+@media screen{
+  body:not(.mob) .pl .card.pltool{padding:8px 12px}
+  body:not(.mob) .pl .pltool .row{flex-wrap:wrap;gap:6px;align-items:center}
+  body:not(.mob) .pl .pltool input,body:not(.mob) .pl .pltool select,body:not(.mob) .pl .pltool button.b,body:not(.mob) .pl .pltool .tbm>summary{height:30px;min-height:0;font-size:var(--fs-md);box-sizing:border-box}
+  body:not(.mob) .pl .pltool select{width:auto;max-width:132px;padding:0 4px 0 8px;text-overflow:ellipsis}
+  body:not(.mob) .pl .pltool input[type=date]{width:124px;padding:0 6px}
+  body:not(.mob) .pl .pltool input[type=text],body:not(.mob) .pl .pltool input:not([type]),body:not(.mob) .pl .pltool input[type=search]{flex:1 1 150px;min-width:120px;max-width:260px!important;width:auto!important}
+  body:not(.mob) .pl .pltool .muted{font-size:var(--fs-sm);white-space:nowrap}
+}
+.tbm{position:relative;display:inline-block}
+.tbm>summary{list-style:none;display:inline-flex;align-items:center;gap:6px;padding:0 10px;border:1px solid #b8bec9;border-radius:3px;background:#fff;color:var(--ink);cursor:pointer;white-space:nowrap;user-select:none}
+.tbm>summary::-webkit-details-marker{display:none}
+.tbm>summary::after{content:'';width:5px;height:5px;border-right:1.5px solid var(--sub);border-bottom:1.5px solid var(--sub);transform:rotate(45deg);margin-top:-3px}
+.tbm[open]>summary{border-color:var(--ink)}
+.tbm>.mn{position:absolute;right:0;top:34px;z-index:8;min-width:220px;padding:6px;background:#fff;border:1px solid #b8bec9;border-radius:3px;box-shadow:0 8px 24px rgba(29,36,51,.16)}
+.tbm>.mn button{display:block;width:100%;min-height:34px;padding:6px 10px;border:0;border-radius:3px;background:none;text-align:left;font:inherit;font-size:var(--fs-md);color:var(--ink);cursor:pointer;white-space:nowrap}
+.tbm>.mn button:hover,.tbm>.mn button:focus-visible{background:#f0f2f5}
+.tbm>.mn button span{margin-left:6px;font-size:var(--fs-sm);color:var(--sub)}
+.tbm.tbh>.mn{width:min(520px,80vw);padding:10px 12px;font-size:var(--fs-sm);line-height:1.6;color:var(--sub);white-space:normal;margin:0}
 /* ================= 휴대폰 화면 ================= */
 #mswitch{display:none;text-align:center;padding:14px 0 22px;font-size:13px}
 #mswitch a{display:none}
@@ -6781,7 +6801,6 @@ function renderDefect() {
     S = db.settings;
   return `<div class="pl"><div class="card noprint pltool"><div class="row">
     <button class="b p" onclick="editDefect()">+ 불량 등록</button>
-    <button class="b" onclick="openImport()">엑셀 일괄 등록</button>
     <span class="muted">기간</span><input type="date" value="${f.from}" onchange="state.df.from=this.value;refreshDT()"> ~ <input type="date" value="${f.to}" onchange="state.df.to=this.value;refreshDT()">
     <select onchange="state.df.sup=this.value;refreshDT()">${supOpts(f.sup, '전체 협력사')}</select>
     <select onchange="state.df.type=this.value;refreshDT()"><option value="">전체 유형</option>${opts(S.defectTypes, f.type)}</select>
@@ -6807,7 +6826,7 @@ function renderDefect() {
       .map(([v, l]) => `<option value="${v}" ${v === f.status ? 'selected' : ''}>${l}</option>`)
       .join('')}</select>
     <input placeholder="검색 (부품·납품일·내용·담당)" value="${esc(f.q)}" oninput="state.df.q=this.value;deb(refreshDT)" style="width:200px">
-    <span style="flex:1"></span><button class="b" onclick="exportDefectsCSV()">엑셀 내보내기</button>
+    <span style="flex:1"></span><details class="tbm"><summary>엑셀</summary><div class="mn"><button type="button" onclick="this.closest('details').open=false;openImport()">엑셀 일괄 등록 <span>여러 건을 한 번에 넣기</span></button><button type="button" onclick="this.closest('details').open=false;exportDefectsCSV()">엑셀 내보내기 <span>지금 보이는 목록</span></button></div></details>
   </div></div>
   <div class="card" id="dtab">${defectTable()}</div></div>`;
 }
@@ -7108,8 +7127,7 @@ function renderInv() {
     '기한 경과',
     all.filter((d) => invOpen(d) && (invInfo(d).late || (d.date && today() > ntfDue(d)))).length,
   )}${chip('done', '판정 완료', all.filter((d) => d.inv && d.inv.verdict).length)}${chip('all', '전체', all.length)}
-    <input type="search" placeholder="검색 (부품·품명·유형·협력사·판정)" value="${esc(f.q)}" oninput="state.ivf.q=this.value;$('#ivtab').innerHTML=invTable()" style="flex:1;min-width:200px;max-width:360px"></div>
-    <div class="help" style="margin-top:8px">귀책이 ‘미정’인 불량이 여기 모입니다. 격리·선별 후 협력사에 FAR(원인 분석)을 요청하고, 사내 분석(간단하면 메모, 큰 건은 RCA)을 함께 진행한 뒤 판정합니다. 판정하면 불량의 귀책이 바뀌고 협력사는 NCR, 사내는 사내 대책·RCA로 넘어갑니다.</div></div>
+    <input type="search" placeholder="검색 (부품·품명·유형·협력사·판정)" value="${esc(f.q)}" oninput="state.ivf.q=this.value;$('#ivtab').innerHTML=invTable()" style="flex:1;min-width:200px;max-width:360px"><span style="flex:1"></span><details class="tbm tbh"><summary>안내</summary><div class="mn help">귀책이 ‘미정’인 불량이 여기 모입니다. 격리·선별 후 협력사에 FAR(원인 분석)을 요청하고, 사내 분석(간단하면 메모, 큰 건은 RCA)을 함께 진행한 뒤 판정합니다. 판정하면 불량의 귀책이 바뀌고 협력사는 NCR, 사내는 사내 대책·RCA로 넘어갑니다.</div></details></div></div>
   <div class="card" id="ivtab">${invTable()}</div></div>`;
 }
 function invTable() {
@@ -10385,9 +10403,8 @@ function renderNcr() {
         ? `<button class="b s" onclick="Object.assign(state.nf,{sup:'',type:'',from:'',to:'',q:''});render()">필터 해제</button>`
         : ''
     }
-    <span style="flex:1"></span><button class="b" onclick="exportNcrCSV()">엑셀 내보내기</button>
-  </div>
-  <div class="help" style="margin-top:8px">기준: 협력사 통보일 = 대책 요청일 (통보 전에는 회신 지연을 따지지 않고, 발행 후 ${NOTIFY_GRACE}일 넘게 미통보면 ‘통보 지연’) · 요청 후 D3 봉쇄 ${num(S.d3Days) || 1}일 · 8D ${num(S.reply8D) || 7}일 / 간이 ${num(S.replySimple) || 5}일 내 대책서 회신 · 발행 후 D+${S.verifyDays} 내 유효성 검증. 상태는 입력한 날짜·판정으로 자동 결정됩니다 (회신일 입력 → 대책서 검토, 타당성 ‘적정’ → 승인(검증대기), 검증일+결과 ‘유효’ → 종결).</div></div>
+    <span style="flex:1"></span><details class="tbm tbh"><summary>기준</summary><div class="mn help">기준: 협력사 통보일 = 대책 요청일 (통보 전에는 회신 지연을 따지지 않고, 발행 후 ${NOTIFY_GRACE}일 넘게 미통보면 ‘통보 지연’) · 요청 후 D3 봉쇄 ${num(S.d3Days) || 1}일 · 8D ${num(S.reply8D) || 7}일 / 간이 ${num(S.replySimple) || 5}일 내 대책서 회신 · 발행 후 D+${S.verifyDays} 내 유효성 검증. 상태는 입력한 날짜·판정으로 자동 결정됩니다 (회신일 입력 → 대책서 검토, 타당성 ‘적정’ → 승인(검증대기), 검증일+결과 ‘유효’ → 종결).</div></details><button class="b" onclick="exportNcrCSV()">엑셀 내보내기</button>
+  </div></div>
   <div class="card" id="ntab">${ncrTable()}</div></div>`;
 }
 // ── NCR — 창 (화면) ──
