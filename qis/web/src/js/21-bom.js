@@ -247,7 +247,7 @@ function bomTreeHTML(fg, w) {
       }</td><td class="nw">${esc(isRoot ? 'EA' : r.unit || '')}</td>
       <td class="n" title="${isRoot ? '' : `제품 1개당 총 ${bomQ(bTot(r))}`}">${isRoot ? '1' : bomQ(r.qty)}</td></tr>`;
   };
-  return `<div class="row" style="margin:0 0 6px;gap:8px;align-items:baseline"><b style="font-size:14px">${esc(fg)}</b><span>${esc(m.name)}</span>${
+  return `<div class="row" style="margin:0 0 6px;gap:8px;align-items:baseline"><b style="font-size:13px">${esc(fg)}</b><span>${esc(m.name)}</span>${
     m.model ? `<span class="bg inf">${esc(m.model)}</span>` : ''
   }${
     m.type ? `<span class="bg mut">${esc(m.type)}</span>` : ''

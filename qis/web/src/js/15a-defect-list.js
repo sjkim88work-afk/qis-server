@@ -77,7 +77,7 @@ function actCell(d) {
   if (n)
     line(
       'NCR',
-      `<a class="bg inf" onclick="editNcr('${n.id}')">${esc(n.no)}</a> <span class="muted" style="font-size:11.5px">${esc(ncrStatus(n))}</span>`,
+      `<a class="bg inf" onclick="editNcr('${n.id}')">${esc(n.no)}</a> <span class="muted" style="font-size:12px">${esc(ncrStatus(n))}</span>`,
     );
   else if (['협력사', '공동'].includes(r) && !done) {
     const rs = ncrReasons(d);
@@ -96,7 +96,7 @@ function actCell(d) {
   if (c)
     line(
       'RCA',
-      `<a class="bg inf" onclick="czOpenCase('${c.id}','cause')" title="${esc(c.Title || '')}">${esc(c.CaseNo)}</a> <span class="muted" style="font-size:11.5px">${esc(c.Stage || '')}</span>`,
+      `<a class="bg inf" onclick="czOpenCase('${c.id}','cause')" title="${esc(c.Title || '')}">${esc(c.CaseNo)}</a> <span class="muted" style="font-size:12px">${esc(c.Stage || '')}</span>`,
     );
   else if (
     !done &&
@@ -222,7 +222,7 @@ function refreshDT() {
 function defHeadBox(d, badge, tail) {
   return `<div class="route" style="margin-top:0;margin-bottom:6px"><div class="ri"><div class="tx"><b>${esc(d.partNo || d.fgNo || '')} ${esc(d.partName || d.fgName || '')}</b> ${sevBadge(d)}${badge || ''}<br>
     <span class="muted">${esc(d.date)} · ${esc(d.source || '')} · ${esc(d.type || '')} · ${num(d.qty).toLocaleString()}EA${tail || ''}</span>${
-      d.desc ? `<br><span style="font-size:12.5px">${esc(d.desc)}</span>` : ''
+      d.desc ? `<br><span style="font-size:13px">${esc(d.desc)}</span>` : ''
     }</div>
     <button type="button" class="b s" onclick="routeGo(&quot;editDefect('${d.id}')&quot;)">불량 열기</button></div></div>`;
 }

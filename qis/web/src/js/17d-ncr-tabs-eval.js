@@ -275,7 +275,7 @@ function renderEval() {
       return `<tr><td style="white-space:nowrap"><b>${it.t}</b>${
         it.must ? '<br><span class="bg bad" title="미흡이면 총점과 관계없이 반려">필수</span>' : ''
       }</td><td class="n">${it.w}</td>
-    <td style="font-size:11.5px;color:#3d4659;line-height:1.5">${it.c.map((x) => '· ' + esc(x)).join('<br>')}</td>
+    <td style="font-size:12px;color:#3d4659;line-height:1.5">${it.c.map((x) => '· ' + esc(x)).join('<br>')}</td>
     <td style="white-space:nowrap">${EV_LV.map(
       ([val, sym, lb]) =>
         `<button type="button" class="b s evb ${
@@ -287,7 +287,7 @@ function renderEval() {
     })
     .join('')}
   </tbody><tfoot><tr><td colspan="4" style="text-align:right"><b>총점</b> <span class="muted" style="font-size:12px">(승인 ≥ ${S.evalPass} · 보완요청 ≥ ${S.evalCond} · 그 미만 또는 필수항목 미흡은 반려)</span></td>
-    <td class="n" style="font-size:16px"><b>${t}</b></td><td>${
+    <td class="n" style="font-size:18px"><b>${t}</b></td><td>${
       done
         ? `<span class="bg ${VD_CLS[vd]}" style="font-size:13px;padding:3px 12px">${vd}</span> <span class="muted" style="font-size:12px">→ 저장 시 대책 타당성 ‘${vd === '승인' ? '적정' : '보완요청'}’ 반영</span>`
         : `<span class="muted">${evItems(e).filter((it) => e.sc?.[it.k] == null).length}개 항목 미평가</span>`

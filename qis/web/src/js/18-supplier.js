@@ -56,7 +56,7 @@ function renderSup() {
     <button class="b p" onclick="openRcvLineImport()">입고 내역 가져오기 (MES 거래명세서)</button><button class="b" onclick="openRcvImport()">월별 입고수량 가져오기</button><button class="b" onclick="editReceipts()">직접 입력·수정</button><button class="b" onclick="editSup()">+ 협력사</button>
     <span style="flex:1"></span><button class="b" onclick="exportSupCSV()">엑셀 내보내기</button></div>
     <div class="help" style="margin-top:8px">불량건수·A등급·PPM은 협력사 귀책·공동 귀책분만 집계합니다 (사내·고객 귀책과 귀책 조사 중·원인 불명 건은 제외). PPM = 불량수량 ÷ 기간 입고수량 × 1,000,000. 등급: A ≤ ${S.gradeA} / B ≤ ${S.gradeB} / C ≤ ${S.gradeC} / D 초과 (설정에서 변경). 입고수량이 없으면 PPM·등급은 '-'로 표시됩니다.</div></div>
-  <details class="card" ${state.sqOpen !== false ? 'open' : ''} ontoggle="state.sqOpen=this.open"><summary style="cursor:pointer;font-weight:bold;font-size:14px">협력사별 품질 현황 <span class="muted" style="font-weight:normal;font-size:12px">— ${st.length}개사 · 협력사 이름을 누르면 상세 · 제목 줄을 누르면 정렬</span></summary>
+  <details class="card" ${state.sqOpen !== false ? 'open' : ''} ontoggle="state.sqOpen=this.open"><summary style="cursor:pointer;font-weight:bold;font-size:13px">협력사별 품질 현황 <span class="muted" style="font-weight:normal;font-size:12px">— ${st.length}개사 · 협력사 이름을 누르면 상세 · 제목 줄을 누르면 정렬</span></summary>
   <div class="tw" style="margin-top:10px"><table><thead>
     <tr>${sth('supq', 'name', '협력사')}${sth('supq', 'items', '주요 품목')}${sth('supq', 'cnt', '불량건수', 'n')}${sth('supq', 'nA', 'A등급', 'n')}${sth('supq', 'qty', '불량수량', 'n')}${sth('supq', 'rcv', '입고수량', 'n')}${sth('supq', 'ppm', 'PPM', 'n')}${sth('supq', 'grade', '등급')}${sth('supq', 'ncr', 'NCR', 'n')}${sth('supq', 'open', '미종결', 'n')}${sth('supq', 'late', '회신지연', 'n')}${sth(
       'supq',
@@ -131,7 +131,7 @@ function rcvOverview() {
       tot: (x) => x.tot,
       ...Object.fromEntries(ms.map((m, i) => ['m' + (i + 1), (x) => x.row[i] || ''])),
     });
-  return `<details class="card" ${state.rcvOpen ? 'open' : ''} ontoggle="state.rcvOpen=this.open"><summary style="cursor:pointer;font-weight:bold;font-size:14px">월별 입고수량 현황 <span class="muted" style="font-weight:normal;font-size:12px">— 가져오기 결과 확인용 · 칸을 누르면 그 달 직접 수정</span></summary>
+  return `<details class="card" ${state.rcvOpen ? 'open' : ''} ontoggle="state.rcvOpen=this.open"><summary style="cursor:pointer;font-weight:bold;font-size:13px">월별 입고수량 현황 <span class="muted" style="font-weight:normal;font-size:12px">— 가져오기 결과 확인용 · 칸을 누르면 그 달 직접 수정</span></summary>
   <div class="row" style="margin:10px 0"><b>연도</b><select onchange="state.rcvYear=this.value;state.rcvOpen=true;render()">${yrs
     .map((x) => `<option ${x === y ? 'selected' : ''}>${x}</option>`)
     .join('')}</select></div>
@@ -494,7 +494,7 @@ function rcvLinesCard() {
   });
   const tq = L.reduce((a, r) => a + num(r.qty), 0),
     ng = L.filter((r) => r.verdict === '불합격').length;
-  return `<details class="card" ${state.rlOpen !== false ? 'open' : ''} ontoggle="state.rlOpen=this.open"><summary style="cursor:pointer;font-weight:bold;font-size:14px">입고 내역 (거래명세서 · 수입검사) <span class="muted" style="font-weight:normal;font-size:12px">— ${L.length.toLocaleString()}줄 · 입고량 ${tq.toLocaleString()}${
+  return `<details class="card" ${state.rlOpen !== false ? 'open' : ''} ontoggle="state.rlOpen=this.open"><summary style="cursor:pointer;font-weight:bold;font-size:13px">입고 내역 (거래명세서 · 수입검사) <span class="muted" style="font-weight:normal;font-size:12px">— ${L.length.toLocaleString()}줄 · 입고량 ${tq.toLocaleString()}${
     ng ? ` · <span style="color:var(--bad)">불합격 ${ng}</span>` : ''
   }</span></summary>
   <div class="row" style="margin:10px 0;gap:6px"><select onchange="state.rl.m=this.value;render()"><option value="all" ${f.m === 'all' ? 'selected' : ''}>전체 기간</option>${months

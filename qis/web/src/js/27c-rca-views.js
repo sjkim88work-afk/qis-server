@@ -198,7 +198,7 @@ function czRender() {
     .map(
       ([x, l, n]) =>
         `<a class="${v === x ? 'on' : ''}" data-act="czNav" data-v="${x}">${l}${
-          n ? ` <span class="bg bad" style="font-size:10.5px">${n}</span>` : ''
+          n ? ` <span class="bg bad" style="font-size:11px">${n}</span>` : ''
         }</a>`,
     )
     .join('')}</div><span class="grow"></span><button class="btn pri" data-act="newCase">+ 새 RCA</button></div>`;
@@ -395,7 +395,7 @@ function czLinkHTML(c) {
     .sort((a, b) => (b.issueDate || '').localeCompare(a.issueDate || ''))
     .slice(0, 80);
   return `<div class="lkbox"><div class="sec-t" style="margin-bottom:6px">연결된 불량 · NCR <span class="muted" style="font-weight:400">비용·구상은 불량 기록에서, 대책서 회신·평가는 NCR에서 관리합니다</span></div>
-    <div class="row" style="gap:8px;margin-bottom:6px"><b style="font-size:12.5px">NCR</b>${
+    <div class="row" style="gap:8px;margin-bottom:6px"><b style="font-size:13px">NCR</b>${
       n
         ? `<a class="bg inf" style="cursor:pointer" onclick="editNcr('${n.id}')">${esc(n.no)}</a> ${stB(ncrStatus(n))} <span class="muted" style="font-size:12px">${esc(n.reqType || '')} · 회신 기한 ${esc(n.dueDate || '-')}${
             n.replyDate ? ' · 회신 ' + esc(n.replyDate) : ''

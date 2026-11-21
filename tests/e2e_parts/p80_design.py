@@ -41,10 +41,10 @@ def run(c):
     DENS = """()=>{const q=s=>document.querySelector(s),cs=e=>getComputedStyle(e),td=q('#ntab .tw tbody td:nth-child(2)'),th=q('#ntab .tw thead th:nth-child(2)'),last=q('#ntab .tw tbody tr td:last-child'),w=q('#ntab .tw');
       return {tdPad:cs(td).paddingLeft,thFs:cs(th).fontSize,card:cs(q('#ntab')).paddingLeft,pos:cs(last).position,cls:last.className.includes('noprint'),over:w.scrollWidth-w.clientWidth}}"""
     d1 = A.evaluate(DENS)
-    ok(d1["tdPad"] == "5px" and d1["thFs"] == "11.5px" and d1["card"] == "0px", f"위쪽 탭(1399px): NCR 표는 현장 도구 모양 — 칸 여백 5px · 머리글 11.5px · 카드 여백 없음 ({d1['tdPad']} · {d1['thFs']})")
+    ok(d1["tdPad"] == "5px" and d1["thFs"] == "12px" and d1["card"] == "0px", f"위쪽 탭(1399px): NCR 표는 현장 도구 모양 — 칸 여백 5px · 머리글 12px · 카드 여백 없음 ({d1['tdPad']} · {d1['thFs']})")
     A.set_viewport_size({"width": 1400, "height": 900}); settle(A, 600)
     d2 = A.evaluate(DENS)
-    ok(A.evaluate(NAVST)["side"] and d2["tdPad"] == "5px" and d2["thFs"] == "11.5px" and d2["card"] == "0px", f"사이드바(1400px): NCR 표 칸 여백 5px · 카드 여백 없음 ({d2['tdPad']} · {d2['card']} · 넘침 {d2['over']}px)")
+    ok(A.evaluate(NAVST)["side"] and d2["tdPad"] == "5px" and d2["thFs"] == "12px" and d2["card"] == "0px", f"사이드바(1400px): NCR 표 칸 여백 5px · 카드 여백 없음 ({d2['tdPad']} · {d2['card']} · 넘침 {d2['over']}px)")
     ok(d2["pos"] == "sticky" and d2["cls"], "목록의 단추 칸(마지막 열)은 오른쪽에 고정")
     r = A.evaluate("""()=>{const w=document.querySelector('#ntab .tw');w.style.width='620px';w.scrollLeft=0;const td=w.querySelector('tbody tr td:last-child').getBoundingClientRect(),c=w.getBoundingClientRect(),b=w.querySelector('tbody tr td:last-child button').getBoundingClientRect();
       const o={over:w.scrollWidth-w.clientWidth,in:td.right<=c.right+1&&td.left>=c.left,btn:b.right<=c.right+1&&b.left>=c.left};w.style.width='';return o}""")
@@ -174,4 +174,15 @@ def run(c):
     ok(r["nav"] == "대시보드|진행 현황|이슈" and r["th"] == "건|협력사|지금 단계|기한" and r["rows"] >= 1 and r["empty"], f"진행 현황: 메뉴는 대시보드 아래 · 표의 칸 ({r['th']})")
     ok(r["sel"] == 1 and r["hth"] == "일자|구분|내용|출처|기록자" and r["hist"] >= 2 and "NCR" in r["flow"] and r.get("onlyNcr") and r["opened"] and r["over"] <= 0,
        f"진행 현황: 줄을 누르면 전체 이력 · 종류로 거름 · 출처를 누르면 창이 열림 (흐름 {r['flow']} · {r['hist']}줄 · {r['kinds']})")
+
+    # 글자 크기 6단계: 화면에 보이는 글자의 크기는 11 · 12 · 13 · 15 · 18 · 22px 만 (인쇄 문서 · 휴대폰 화면 · 그림표 제외)
+    r = A.evaluate("""async()=>{const wait=ms=>new Promise(r=>setTimeout(r,ms)),ok=new Set(['11px','12px','13px','15px','18px','22px']),bad={};
+      const scan=(root,tag)=>{root.querySelectorAll('*').forEach(e=>{if(!e.offsetParent||e.closest('svg'))return;
+        if(![...e.childNodes].some(n=>n.nodeType===3&&n.textContent.trim()))return;const f=getComputedStyle(e).fontSize;if(!ok.has(f)){const k=tag+' '+f;bad[k]=(bad[k]||0)+1}})};
+      for(const t of ['dash','prog','issue','defect','inv','ncr','case','sup','copq','master']){go(t);await wait(250);scan(document.body,t)}
+      editDefect(db.defects[0].id);await wait(350);scan(document.querySelector('#modal'),'불량 창');mfDirty=false;closeModal(true);
+      editNcr(db.ncrs[0].id);await wait(350);scan(document.querySelector('#modal'),'NCR 창');mfDirty=false;closeModal(true);
+      const v=getComputedStyle(document.documentElement);go('dash');
+      return {bad,vars:['xs','sm','md','lg','xl','num'].map(k=>v.getPropertyValue('--fs-'+k).trim()).join(',')}}""")
+    ok(r["vars"] == "11px,12px,13px,15px,18px,22px" and not r["bad"], f"글자 크기: 6단계만 씀 (어긋난 곳: {r['bad']})")
 

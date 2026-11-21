@@ -149,7 +149,7 @@ function renderCostBox() {
     <b id="cbAmt">${won(bq * bp)}</b><span class="muted">원</span>
     <span style="flex:1"></span>
     <select id="cbCat" style="width:auto">${opts(COST_CATS, defCat)}</select><button type="button" class="b s p" onclick="addBaseCost()">비용 내역에 추가</button>
-    <div class="muted" style="flex-basis:100%;font-size:11.5px">${
+    <div class="muted" style="flex-basis:100%;font-size:12px">${
       ptp
         ? ptCur === 'KRW'
           ? `부품 마스터 단가 ${won(ptp)}원`

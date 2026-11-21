@@ -374,7 +374,7 @@ function progHistHTML(c) {
   return `<div class="pgh"><h3>${esc(progName(c))}</h3><span class="muted">${esc(c.sup || '')} · 전체 이력 ${all.length}건</span><span style="flex:1"></span>${(() => {
     const why = a3Ready(B);
     return `<button type="button" class="b s noprint" ${why ? 'disabled' : ''} title="${esc(why || '경영진 보고용 한 장 (A3 가로)')}" onclick="a3Report('${c.kind === 'rca' ? 'case' : c.kind}','${c.id}')">A3 보고서</button>${
-      why ? `<span class="muted noprint" style="font-size:11.5px">${esc(why)}</span>` : ''
+      why ? `<span class="muted noprint" style="font-size:12px">${esc(why)}</span>` : ''
     }`;
   })()}<button type="button" class="b s noprint" onclick="progPrint()">이력 출력</button><button type="button" class="b s noprint" onclick="openCase('${c.kind}','${c.id}')">${progKind(c.kind)} 열기</button><button type="button" class="b s noprint" onclick="progSel('${c.kind}','${c.id}')">닫기</button></div>
     <div class="pgflow">${steps

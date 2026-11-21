@@ -148,9 +148,9 @@ function ncrNotifyCell(n) {
       (n.noticeDocs || []).length
         ? ` <span class="bg inf" title="발송한 통보서 파일 ${(n.noticeDocs || []).length}개">${LG_ICO.clip} ${(n.noticeDocs || []).length}</span>`
         : ''
-    }${n.notifyMethod ? `<br><span class="muted" style="font-size:11.5px">${esc(n.notifyMethod)}</span>` : ''}${
+    }${n.notifyMethod ? `<br><span class="muted" style="font-size:12px">${esc(n.notifyMethod)}</span>` : ''}${
       n.requestDate && n.requestDate !== n.notifyDate && n.reqType !== '단순 통보'
-        ? `<br><span class="muted" style="font-size:11.5px">대책 요청 ${esc(n.requestDate)}</span>`
+        ? `<br><span class="muted" style="font-size:12px">대책 요청 ${esc(n.requestDate)}</span>`
         : ''
     }`;
   if (ncrNotified(n)) return `<span class="bg ok">통보</span> <span class="muted">(일자 미기록)</span>`;
@@ -343,7 +343,7 @@ function ncrTable() {
       : '<span class="muted">-</span>')
   }${
     (n.resubs || []).length
-      ? `<br><span class="muted" style="font-size:11.5px" title="보완 대책서를 다시 받은 날">재회신 ${esc(
+      ? `<br><span class="muted" style="font-size:12px" title="보완 대책서를 다시 받은 날">재회신 ${esc(
           n.resubs[n.resubs.length - 1].date.slice(5),
         )}${n.resubs.length > 1 ? ` (${n.resubs.length}회)` : ''}</span>`
       : ''
@@ -351,7 +351,7 @@ function ncrTable() {
     st === '보완요청'
       ? `<br><button class="b s noprint" style="margin-top:3px" onclick="ncrQuickReply('${n.id}')" title="협력사가 보완해서 다시 낸 대책서의 접수일을 오늘로 기록">재회신 접수</button>`
       : ''
-  }${!n.replyDate && nudgeLogs(n).length ? `<br><span class="muted" style="font-size:11.5px">독촉 ${nudgeLogs(n).length}회</span>` : ''}${
+  }${!n.replyDate && nudgeLogs(n).length ? `<br><span class="muted" style="font-size:12px">독촉 ${nudgeLogs(n).length}회</span>` : ''}${
     (n.replyDocs || []).length
       ? ` <span class="bg inf" title="협력사 대책서 파일 ${(n.replyDocs || []).length}개">${LG_ICO.clip} ${(n.replyDocs || []).length}</span>`
       : ''
