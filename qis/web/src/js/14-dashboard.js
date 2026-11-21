@@ -265,21 +265,6 @@ function renderDash() {
       ms.map((x) => x.slice(2).replace('-', '.')),
       [{ name: '수량', values: byM.map((a) => sum(a, 'qty')), color: '#3a4252' }],
     )}</div>
-    ${
-      db.cases.length
-        ? `<div class="card"><h3>RCA 월별 등록 · 종결 (최근 12개월)</h3>${barChart(
-            ms.map((x) => x.slice(2).replace('-', '.')),
-            [
-              { name: '등록', values: ms.map((x) => db.cases.filter((c) => (c.Created || '').startsWith(x)).length), color: '#d9822b' },
-              {
-                name: '종결',
-                values: ms.map((x) => db.cases.filter((c) => c.Status === '종결' && (c.CloseDate || '').startsWith(x)).length),
-                color: '#1a8f5a',
-              },
-            ],
-          )}</div>`
-        : ''
-    }
     <div class="card"><h3>${m} 협력사별 불량 수량 (파레토)</h3>${pareto(supMap, '개')}</div>
     <div class="card"><h3>${m} 불량유형별 건수 (파레토)</h3>${pareto(typeMap, '건')}</div>
     ${
