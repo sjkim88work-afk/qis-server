@@ -121,3 +121,16 @@ def run(c):
     ok(r["cards"] >= 5 and r["folds"].startswith("심각도 평가") and "비용" in r["folds"] and "사진" in r["folds"], f"불량 창: 번호 카드 {r['cards']}개 + 접는 줄 ({r['folds']})")
     ok(not r["sevOpen"] and r["newSev"] and r["route"] and not r["newNext"], "불량 창: 심각도 평가는 등록된 불량에서 접힘 · 새 불량에서 펼침 · 다음 단계는 등록된 불량에만")
     ok("진행 기록" in r["recBtn"], f"불량 창: 진행 기록 버튼 ({r['recBtn'].strip()})")
+
+    # 현장 도구 모양 (불량 목록): 카드 테두리 없음 · 정상 값은 배지 배경 없음 · 색 버튼은 ‘+ 불량 등록’ 한 개
+    r = A.evaluate("""async()=>{const wait=ms=>new Promise(r=>setTimeout(r,ms));go('defect');await wait(300);
+      const cs=e=>getComputedStyle(e),clear=c=>c==='rgba(0, 0, 0, 0)'||c==='transparent',pri=cs(document.querySelector('.pl .pltool button.b.p')).backgroundColor;
+      const bgs=[...document.querySelectorAll('.pl .tw .bg')];
+      return {card:parseFloat(cs(document.querySelector('.pl #dtab')).borderTopWidth),
+        badge:bgs.length>0&&bgs.every(b=>clear(cs(b).backgroundColor)),
+        colored:[...document.querySelectorAll('.pl button.b')].filter(b=>cs(b).backgroundColor===pri).map(b=>b.textContent.trim()).join(),
+        radius:parseFloat(cs(document.querySelector('.pl .tw button.b')).borderTopLeftRadius),
+        emoji:/[\\u{1F4DD}\\u{1F4F7}]/u.test(document.querySelector('.pl').textContent)}}""")
+    ok(r["card"] == 0 and r["badge"], "불량 목록: 카드 테두리 없음 · 표 안의 배지는 배경 없는 글자")
+    ok(r["colored"] == "+ 불량 등록" and r["radius"] <= 4 and not r["emoji"], f"불량 목록: 색 버튼은 ‘+ 불량 등록’ 한 개 · 모서리 {r['radius']}px · 그림 문자 없음 ({r['colored']})")
+

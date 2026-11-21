@@ -687,6 +687,47 @@ details>summary.sec:hover{color:var(--pri-d,#005F5D)}
   body:not(.mob) #ntab .tw td:first-child,body:not(.mob) #ntab .tw th:first-child{padding-left:10px}
   body:not(.mob) #ntab .tw td.noprint:has(.b:nth-of-type(3)){min-width:132px}
 }
+/* ── 현장 도구 모양 (.pl) — 카드 · 알약 배지 · 색 버튼을 줄임. 색은 이상이 있는 값에만. 지금은 불량 목록에만 적용 ── */
+body:not(.mob) .pl .card{border:0;border-radius:0;box-shadow:none;background:none;padding:0;margin:0}
+body:not(.mob) .pl{background:var(--card);border:1px solid #d8dce3}
+body:not(.mob) .pl .pltool{padding:8px 12px;background:#f5f6f8;border-bottom:1px solid #d8dce3}
+body:not(.mob) .pl .pltool .row{gap:6px}
+body:not(.mob) .pl .pltool input,body:not(.mob) .pl .pltool select{height:30px;min-height:0;padding:0 8px;border:1px solid #b8bec9;border-radius:3px;font-size:12.5px;background:#fff}
+body:not(.mob) .pl button.b,body:not(.mob) .pl label.b{border-radius:3px;border-color:#b8bec9}
+body:not(.mob) .pl .pltool button.b{height:30px;min-height:0;padding:0 11px;font-size:12.5px}
+body:not(.mob) .pl button.b.p{border-color:var(--pri)}
+body:not(.mob) .pl .plsum{margin:0;padding:7px 12px;font-size:12px;color:var(--sub);border-bottom:1px solid #d8dce3}
+body:not(.mob) .pl .plsum b{color:var(--ink)}
+body:not(.mob) .pl .tw{border:0;border-radius:0;max-height:calc(100vh - 230px)}
+body:not(.mob) .pl .tw table{font-size:13px;line-height:1.4}
+body:not(.mob) .pl #dtab .tw th{padding:6px 7px;background:#fff;border-bottom:1px solid #9aa2af;color:var(--sub);font-size:11.5px;font-weight:600;white-space:nowrap;vertical-align:bottom}
+body:not(.mob) .pl #dtab .tw td{padding:5px 7px;border-bottom:1px solid #eceef2}
+body:not(.mob) .pl #dtab .tw td:first-child,body:not(.mob) .pl #dtab .tw th:first-child{padding-left:12px}
+body:not(.mob) .pl .tw tbody tr:hover>td{background:#f5f7fa}
+body:not(.mob) .pl .tw td.n{font-family:var(--f-mono);font-size:12.5px}
+/* 배지 → 글자. 정상 값은 색이 없음 */
+body:not(.mob) .pl .bg{display:inline;padding:0;border-radius:0;background:none;font-size:12.5px;font-weight:400;color:var(--ink)}
+body:not(.mob) .pl .bg.ok,body:not(.mob) .pl .bg.mut,body:not(.mob) .pl .bg.svC{color:var(--sub)}
+body:not(.mob) .pl .bg.inf{color:var(--ink)}
+body:not(.mob) .pl .bg.svB{color:var(--ink);font-weight:600}
+body:not(.mob) .pl .bg.warn,body:not(.mob) .pl .bg.bad,body:not(.mob) .pl .bg.svA{font-weight:600;white-space:nowrap}
+body:not(.mob) .pl .bg.warn{color:#9a5b00}body:not(.mob) .pl .bg.bad,body:not(.mob) .pl .bg.svA{color:#b42318}
+body:not(.mob) .pl .bg.warn::before,body:not(.mob) .pl .bg.bad::before,body:not(.mob) .pl .bg.svA::before{content:'';display:inline-block;width:7px;height:7px;margin-right:5px;background:currentColor;vertical-align:1px}
+body:not(.mob) .pl a.bg,body:not(.mob) .pl a.lk{text-decoration:underline;text-underline-offset:2px;cursor:pointer}
+body:not(.mob) .pl a.bg.inf{color:var(--pri);font-family:var(--f-mono);font-size:12px}
+body:not(.mob) .pl a.lk.muted{color:#9aa2af;text-decoration:none}
+body:not(.mob) .pl td .muted[style]{font-size:12px!important}
+/* 표 안의 버튼: 회색 테두리만. 색 버튼은 ‘+ 불량 등록’ 한 개 */
+body:not(.mob) .pl .tw button.b{height:24px;min-height:0;padding:0 8px;font-size:12px;background:#fff;color:var(--ink);border-color:#b8bec9;font-weight:500}
+body:not(.mob) .pl .tw button.b:hover{background:#f0f2f5}
+body:not(.mob) .pl td.actc div.act{margin:0}
+body:not(.mob) .pl td.actc div.act.nx{margin-top:2px}
+body:not(.mob) .pl div.act .ak{font-family:inherit;font-size:11.5px;font-weight:400;width:auto;min-width:26px}
+body:not(.mob) .pl .actm>summary{height:24px;min-height:0;border-radius:3px;border-color:#b8bec9}
+body:not(.mob) .pl button.lgchip{min-height:0;margin-top:2px;padding:0;border:0;background:none;color:#9aa2af;font-size:12px;font-weight:400}
+body:not(.mob) .pl button.lgchip.on{color:var(--ink);text-decoration:underline;text-underline-offset:2px}
+body:not(.mob) .pl button.lgchip:hover{background:none;color:var(--pri)}
+body:not(.mob) .pl .tw td.noprint:last-child::before{display:none}
 /* ================= 휴대폰 화면 ================= */
 #mswitch{display:none;text-align:center;padding:14px 0 22px;font-size:13px}
 #mswitch a{display:none}
@@ -6269,7 +6310,7 @@ function defectTable() {
   const ds = filteredDefects();
   const gc = { A: 0, B: 0, C: 0 };
   ds.forEach((d) => gc[sevOf(d).grade]++);
-  return `<div class="row" style="margin-bottom:8px"><span>심각도 <span class="bg svA">A ${gc.A}</span> <span class="bg svB">B ${gc.B}</span> <span class="bg svC">C ${gc.C}</span> · </span><span><b>${ds.length.toLocaleString()}</b>건 · 수량 <b>${sum(ds, 'qty').toLocaleString()}</b> · 비용 <b>${won(sum(ds, costTotal))}</b>원</span></div>
+  return `<div class="row plsum" style="margin-bottom:8px"><span>심각도 <span class="bg svA">A ${gc.A}</span> <span class="bg svB">B ${gc.B}</span> <span class="bg svC">C ${gc.C}</span> · </span><span><b>${ds.length.toLocaleString()}</b>건 · 수량 <b>${sum(ds, 'qty').toLocaleString()}</b> · 비용 <b>${won(sum(ds, costTotal))}</b>원</span></div>
   <div class="tw"><table><thead><tr><th>발생일</th><th>발생처</th><th>심각도</th><th>부품</th><th>사진</th><th>차종</th><th>협력사</th><th>유형</th>
     <th class="n">수량</th><th>처리</th><th>귀책</th><th class="n">비용(원)</th>
       <th>진행 · 다음 할 일</th><th>담당</th><th>상태</th><th class="noprint"></th></tr></thead><tbody>
@@ -6288,7 +6329,7 @@ function defectTable() {
               ? `<br><span class="muted" style="font-size:11px" title="발견 품목 (완성품)">▸ 발견: ${esc(d.fgNo || d.fgName)}${d.fgQty ? ` (${num(d.fgQty)})` : ''}</span>`
               : ''
           }</td><td>${photoBadge(d)}</td><td>${esc(d.model)}</td><td>${esc(supName(d.supplierId))}</td>
-            <td>${esc(d.type)}</td><td class="n">${num(d.qty).toLocaleString()}</td><td>${esc(d.disposition)}</td><td>${esc(d.resp)}${
+            <td>${esc(d.type)}</td><td class="n">${num(d.qty).toLocaleString()}</td><td>${esc(d.disposition)}</td><td>${d.resp === '미정' && !isDone(d) ? '<span class="bg warn">미정</span>' : esc(d.resp)}${
               d.resp === '공동' && d.inv && d.inv.share !== '' && d.inv.share != null
                 ? `<br><span class="muted" style="font-size:11px">협력사 ${num(d.inv.share)}%</span>`
                 : ''
@@ -6315,7 +6356,7 @@ function defectTable() {
 function renderDefect() {
   const f = state.df,
     S = db.settings;
-  return `<div class="card noprint"><div class="row">
+  return `<div class="pl"><div class="card noprint pltool"><div class="row">
     <button class="b p" onclick="editDefect()">+ 불량 등록</button>
     <button class="b" onclick="openImport()">엑셀 일괄 등록</button>
     <span class="muted">기간</span><input type="date" value="${f.from}" onchange="state.df.from=this.value;refreshDT()"> ~ <input type="date" value="${f.to}" onchange="state.df.to=this.value;refreshDT()">
@@ -6345,7 +6386,7 @@ function renderDefect() {
     <input placeholder="검색 (부품·납품일·내용·담당)" value="${esc(f.q)}" oninput="state.df.q=this.value;deb(refreshDT)" style="width:200px">
     <span style="flex:1"></span><button class="b" onclick="exportDefectsCSV()">엑셀 내보내기</button>
   </div></div>
-  <div class="card" id="dtab">${defectTable()}</div>`;
+  <div class="card" id="dtab">${defectTable()}</div></div>`;
 }
 function refreshDT() {
   const own = !sevMemo;
@@ -17276,7 +17317,9 @@ async function syncPhotoFiles(relist) {
 }
 function photoBadge(d) {
   const n = (d.photos || []).length;
-  return n ? `<a class="bg inf" style="cursor:pointer" onclick="viewDefectPhotos('${d.id}')" title="사진 보기">📷 ${n}</a>` : '';
+  return n
+    ? `<a class="bg inf" style="cursor:pointer" onclick="viewDefectPhotos('${d.id}')" title="사진 보기"><svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.2"/></svg> ${n}</a>`
+    : '';
 }
 let curPhotos = [],
   curRemoved = [];
