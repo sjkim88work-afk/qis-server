@@ -218,9 +218,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-    env:
-      # if: 에서는 secrets 를 직접 쓸 수 없어(워크플로 문법 오류) env 로 옮겨 판정
-      HAS_RELEASES_TOKEN: ${{ secrets.RELEASES_TOKEN != '' }}
     steps:
       - name: 체크섬 만들기 (SHA256SUMS.txt)
         env:
@@ -233,33 +230,3 @@ jobs:
           for f in QIS-mac.zip QIS-windows.zip; do [ -f "out/$f" ] || { echo "missing $f"; exit 1; }; done
           (cd out && sha256sum QIS-*.zip $( [ -f QIS-Setup.exe ] && echo QIS-Setup.exe ) > SHA256SUMS.txt && cat SHA256SUMS.txt)
           gh release upload "$TAG" out/SHA256SUMS.txt --clobber -R "$GITHUB_REPOSITORY"
-      # ---- 공개 배포 저장소(qis-releases)에도 올림: 고객 · 프로그램의 업데이트 확인(latest.json)이 여기를 봄.
-      #      RELEASES_TOKEN(공개 저장소 contents:write 권한의 PAT) 시크릿이 있을 때만. 없으면 이 단계는 건너뜀.
-      - name: 공개 배포 저장소에 올리기 (qis-releases)
-        if: env.HAS_RELEASES_TOKEN == 'true'
-        env:
-          GH_TOKEN: ${{ secrets.RELEASES_TOKEN }}
-          TAG: ${{ inputs.tag || github.ref_name }}
-          PUB: ${{ github.repository_owner }}/qis-releases
-          NOTES_TXT: ${{ github.event.release.body }}
-        run: |
-          VER="${TAG#v}"; TODAY="$(date -u +%F)"
-          python3 - <<EOF
-          import json, os
-          pub, tag = os.environ["PUB"], os.environ["TAG"]
-          base = f"https://github.com/{pub}/releases/download/{tag}"
-          json.dump({"version": "$VER", "build": "$TODAY", "page": f"https://github.com/{pub}/releases/tag/{tag}",
-                     "notes": os.environ.get("NOTES_TXT", ""),
-                     "assets": {"windows": base + ("/QIS-Setup.exe" if os.path.exists("out/QIS-Setup.exe") else "/QIS-windows.zip"),
-                                "windows_zip": base + "/QIS-windows.zip",
-                                "mac": base + "/QIS-mac.zip", "mac_zip": base + "/QIS-mac.zip"}},
-                    open("out/latest.json", "w", encoding="utf-8"), ensure_ascii=False, indent=1)
-          EOF
-          if ! gh release view "$TAG" -R "$PUB" >/dev/null 2>&1; then
-            gh release create "$TAG" -R "$PUB" --title "QIS $TAG" --notes "QIS 데스크톱 프로그램 $TAG — 윈도우: QIS-windows.zip · 맥(Apple Silicon): QIS-mac.zip"
-          fi
-          FILES="out/QIS-mac.zip out/QIS-windows.zip out/SHA256SUMS.txt out/latest.json"
-          [ -f out/QIS-Setup.exe ] && FILES="$FILES out/QIS-Setup.exe"
-          gh release upload "$TAG" $FILES --clobber -R "$PUB"
-          # 최신 릴리스로 표시해야 /releases/latest/download/latest.json 이 이 버전을 가리킴
-          gh release edit "$TAG" -R "$PUB" --latest
