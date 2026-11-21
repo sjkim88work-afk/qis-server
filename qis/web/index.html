@@ -247,6 +247,20 @@ ul.act{margin:0;padding-left:18px}ul.act li{margin:4px 0}
 #sevBox,#costBox,#evalBox,#stockBox,#linkBox,#ctBox{overflow-x:auto;max-width:100%}
 @media(max-width:600px){.g2{grid-template-columns:1fr}main{padding:12px}.card h3{flex-wrap:wrap}.card{min-width:0;overflow-wrap:anywhere}.card .row{flex-wrap:wrap}.card .row input{min-width:0;max-width:100%}}
 .updbadge{display:inline-block;margin-left:8px;padding:2px 8px;border-radius:10px;font:600 11px/1.6 var(--f);vertical-align:middle;background:#dcfce7;color:#14532d;text-decoration:none}
+
+/* 대시보드 — 진행 현황이 먼저 · 요약 수치는 세 묶음 (지연 → 진행 중 → 이번 달 발생) */
+.pc1 h3{flex-wrap:wrap}.pc1 h3 .cnt{font-size:12px;font-weight:400}.pc1 h3 button.bg{border:0;font:inherit;font-size:11.5px;font-weight:600;cursor:pointer}.pc1 h3 button.bg:hover{box-shadow:0 0 0 2px var(--bad) inset}
+.pc1 ul.todo li{min-height:38px;gap:8px}
+.kgs{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(300px,100%),1fr));gap:12px;margin-bottom:18px}
+.kg{display:flex;flex-direction:column;gap:2px;padding:14px 8px 8px;background:var(--card);border:1px solid var(--line);border-radius:12px}
+.kg h4{margin:0 10px 6px;font-size:13px;font-weight:600}.kg h4 span{font-size:12px;font-weight:400;color:var(--sub)}
+.kgs .kg .kpi{display:flex;align-items:baseline;gap:10px;padding:8px 10px;border:0;border-radius:8px;background:none;box-shadow:none}
+.kgs .kg .kpi .l{flex:1 1 auto;min-width:0;font-size:13px;font-weight:500;color:var(--ink);line-height:1.4}
+.kgs .kg .kpi .s{display:block;margin:0;font-size:12px;font-weight:400;color:var(--sub);line-height:1.4}
+.kgs .kg .kpi .v{margin:0;font-family:var(--f-mono,monospace);font-size:20px;font-weight:600;letter-spacing:0;line-height:1.1;color:var(--ink);font-variant-numeric:tabular-nums}
+.kgs .kg .kpi.z .v{color:#6b7689;font-weight:500}
+.kgs .kg .kpi.bad{background:#fbe7e4}.kgs .kg .kpi.bad .v{color:#b9321f;font-weight:700}
+.kgs .kg .kpi.go:hover{box-shadow:0 0 0 2px var(--pri) inset}
 /* ================= RCA · 사내 8D ================= */
 .cz{--line2:#eef0f3;--ink2:#56606a;--ink3:#8b949d;--acc:#007A78;--acc-bg:#e9f0fb;--red:#c0392b;--red-bg:#fdeceb;--amb:#9a5b00;--amb-bg:#fff3de;--grn:#1d7a3b;--grn-bg:#e6f4eb;font-size:13.5px}
 .cz h1{font-size:18px;margin:0 0 4px}
@@ -5770,15 +5784,19 @@ function progCard() {
   if (!C.length) return '';
   const line = (c) =>
     `<li>${nxBadge(c.next.nextDate)} <a class="lk" onclick="openCase('${c.kind}','${c.id}')">${esc(c.title)}</a> <span class="muted" style="font-size:12px">${esc(c.next.next)} · ${esc(c.sup)}</span></li>`;
-  return `<div class="card"><h3>진행 현황 <span class="bg inf">RCA ${C.filter((c) => c.kind === 'rca').length} · NCR ${
-    C.filter((c) => c.kind === 'ncr').length
-  } · 불량 ${C.filter((c) => c.kind === 'defect').length}</span>${od.length ? ` <span class="bg bad">기한 초과 ${od.length}</span>` : ''}${
-    C.filter((c) => c.stale >= 14).length ? ` <span class="bg warn">14일+ 정체 ${C.filter((c) => c.stale >= 14).length}</span>` : ''
-  }<span class="sp"></span><button class="b s" onclick="go('prog')">전체 보기</button></h3>
-    <div class="grid g2" style="gap:16px"><div><div class="muted" style="font-size:12px;margin-bottom:4px">기한 임박 · 초과 (3일 이내)</div>${
+  const lateN = C.filter((c) => c.late.length).length, // 지연 = 미종결 + 기한 경과 (진행 현황 화면과 같은 기준)
+    soonN = due.length - od.length,
+    staleN = C.filter((c) => c.stale >= 14).length;
+  return `<div class="card pc1"><h3>진행 현황${
+    lateN ? ` <button type="button" class="bg bad" onclick="dashGo('late')" title="누르면 지연 건만 보기">지연 ${lateN}</button>` : ''
+  }${soonN ? ` <span class="bg warn">3일 안에 기한 ${soonN}</span>` : ''}${staleN ? ` <span class="bg warn">14일+ 정체 ${staleN}</span>` : ''}
+    <span class="muted cnt">미종결 — RCA ${C.filter((c) => c.kind === 'rca').length} · NCR ${C.filter((c) => c.kind === 'ncr').length} · 불량 ${
+      C.filter((c) => c.kind === 'defect').length
+    }</span><span class="sp"></span><button class="b s" onclick="go('prog')">전체 보기</button></h3>
+    <div class="grid g2" style="gap:16px"><div><div class="muted" style="font-size:12px;margin-bottom:4px">기한 초과 · 3일 안에 기한</div>${
       due.length ? `<ul class="todo">${due.slice(0, 6).map(line).join('')}</ul>` : '<div class="muted" style="font-size:12px">임박한 기한 없음</div>'
     }</div>
-    <div><div class="muted" style="font-size:12px;margin-bottom:4px">오래 정체된 건</div>${
+    <div><div class="muted" style="font-size:12px;margin-bottom:4px">오래 정체된 건 — 직접 쓴 기록이 14일 넘게 없음</div>${
       st.length
         ? `<ul class="todo">${st
             .map(
@@ -6018,39 +6036,33 @@ function renderDash() {
       banner;
   return `${banner}
   <div class="row noprint" style="margin-bottom:12px"><b>기준월</b><input type="month" value="${m}" onchange="state.dashMonth=this.value||today().slice(0,7);render()"><span class="sp" style="flex:1"></span><button class="b" onclick="editDefect()">+ 불량 등록</button><button class="b" onclick="weekReport()" title="오늘까지 최근 7일 — 신규 불량 · NCR · RCA · 지연 · 다음 주 기한">주간 보고 (최근 7일)</button><button class="b p" onclick="dashReport()">월간 보고 인쇄 / PDF</button></div>
-  <div class="kpis">
-    <div class="kpi ${kGo('defM')}"><div class="l">${m} 불량 건수</div>
-      <div class="v">${ds.length.toLocaleString()}</div><div class="s">${delta(ds.length, pds.length)}</div></div>
-    <div class="kpi ${kGo('defM')}"><div class="l">불량 수량</div>
-      <div class="v">${qty.toLocaleString()}</div><div class="s">${delta(qty, pqty)}</div></div>
-    <div class="kpi ${kGo('copq')}"><div class="l">실패비용 (COPQ)</div><div class="v">${fmtShort(cost)}</div><div class="s">회수 ${won(rec)}원 (${
-      cost ? Math.round((rec / cost) * 100) : 0
-    }%)</div></div>
-    <div class="kpi ${open.length ? 'warn' : 'ok'} ${kGo('ncrOpen')}"><div class="l">미종결 NCR</div>
-      <div class="v">${open.length}</div><div class="s">전체 ${db.ncrs.length}건</div></div>
-    <div class="kpi ${replyLate.length ? 'bad' : 'ok'} ${kGo('replyLate')}"><div class="l">대책서 회신 지연</div><div class="v">${replyLate.length}</div>
-      <div class="s">회신 기한 (8D ${num(db.settings.reply8D) || 7}일 · 간이 ${num(db.settings.replySimple) || 5}일) 기준</div></div>
-    <div class="kpi ${verLate.length ? 'bad' : 'ok'} ${kGo('verifyLate')}"><div class="l">유효성 검증 지연</div>
-      <div class="v">${verLate.length}</div><div class="s">승인 후 D+${db.settings.verifyDays} 기준</div></div>
-    <div class="kpi ${
-      farLate.length ? 'bad' : invs.length ? 'warn' : 'ok'
-    } ${kGo('inv')}"><div class="l">귀책 조사 중</div><div class="v">${invs.length}</div>
-      <div class="s">FAR 지연 ${farLate.length} · 사내 대책 ${icas.length}</div></div>
-    <div class="kpi ${recs.length ? 'warn' : 'ok'} ${kGo('ncrRec')}"><div class="l">NCR 미발행 (A·B등급)</div>
-      <div class="v">${recs.length}</div><div class="s">최근 90일</div></div>
-    <div class="kpi ${gA ? 'bad' : 'ok'} ${kGo('sevA')}"><div class="l">${m} 심각도 A</div>
-      <div class="v">${gA}</div><div class="s">B ${gB} · C ${ds.length - gA - gB}</div></div>
-    ${(() => {
-      const P = progCases(),
-        L = P.filter((c) => c.late.length);
-      return `<div class="kpi ${L.length ? 'bad' : 'ok'} ${kGo('late')}"><div class="l">지연 중인 건 (오늘)</div>
-        <div class="v">${L.length}</div><div class="s">RCA ${
-          L.filter((c) => c.kind === 'rca').length
-        } · NCR ${L.filter((c) => c.kind === 'ncr').length} · 불량 ${L.filter((c) => c.kind === 'defect').length} — 미종결 + 기한 경과</div></div>`;
-    })()}
-  </div>
   ${progCard()}
-  ${reviewCard(m)}
+  ${(() => {
+    // 요약 수치 — 급한 순서로 세 묶음 (지연 → 진행 중 → 이번 달 발생). 값이 0 이면 약하게, 지연은 강하게
+    const k = (key, cls, label, v, sub, zero) =>
+      `<div class="kpi ${zero ? 'z' : cls} ${kGo(key)}"><div class="l">${label}<span class="s">${sub}</span></div><div class="v">${v}</div></div>`;
+    const g = (t, note, rows) => `<div class="kg"><h4>${t} <span>${note}</span></h4>${rows.join('')}</div>`;
+    return `<div class="kgs">${g('지연', '기한이 지난 것', [
+      k(
+        'replyLate',
+        'bad',
+        '대책서 회신 지연',
+        replyLate.length,
+        `회신 기한 (8D ${num(db.settings.reply8D) || 7}일 · 간이 ${num(db.settings.replySimple) || 5}일) 기준`,
+        !replyLate.length,
+      ),
+      k('verifyLate', 'bad', '유효성 검증 지연', verLate.length, `승인 후 D+${db.settings.verifyDays} 기준`, !verLate.length),
+    ])}${g('진행 중', '끝나지 않은 것', [
+      k('ncrOpen', 'on', '미종결 NCR', open.length, `전체 ${db.ncrs.length}건`, !open.length),
+      k('inv', farLate.length ? 'bad' : 'on', '귀책 조사 중', invs.length, `FAR 지연 ${farLate.length} · 사내 대책 ${icas.length}`, !invs.length),
+      k('ncrRec', 'on', 'NCR 미발행 (A·B등급)', recs.length, '최근 90일', !recs.length),
+    ])}${g(`${m} 발생`, '이번 달', [
+      k('defM', 'on', '불량 건수', ds.length.toLocaleString(), delta(ds.length, pds.length), !ds.length),
+      k('defM', 'on', '불량 수량', qty.toLocaleString(), delta(qty, pqty), !qty),
+      k('copq', 'on', '실패비용 (COPQ)', fmtShort(cost), `회수 ${won(rec)}원 (${cost ? Math.round((rec / cost) * 100) : 0}%)`, !cost),
+      k('sevA', 'bad', '심각도 A', gA, `B ${gB} · C ${ds.length - gA - gB}`, !gA),
+    ])}</div>`;
+  })()}
   ${(() => {
     const it = (dashItems = actions.match(/<li[\s\S]*?<\/li>/g) || []),
       all = !!state.dashAll,
@@ -6069,6 +6081,7 @@ function renderDash() {
         : '<div class="muted">지연·임박 항목이 없습니다.</div>'
     }</div>`;
   })()}
+  ${reviewCard(m)}
   <div class="grid g2">
     <div class="card"><h3>월별 불량 건수 (최근 12개월)</h3>${barChart(
       ms.map((x) => x.slice(2).replace('-', '.')),
