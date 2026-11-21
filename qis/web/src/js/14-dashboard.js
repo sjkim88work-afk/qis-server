@@ -223,8 +223,8 @@ function renderDash() {
     banner =
       `<div class="banner noprint">지금은 미리보기 화면 안에서 열려 있어 <b>인쇄·파일 저장이 막힐 수 있습니다.</b> 파일을 내려받아 Edge/Chrome에서 직접 여세요.</div>` +
       banner;
-  return `${banner}
-  <div class="row noprint" style="margin-bottom:12px"><b>기준월</b><input type="month" value="${m}" onchange="state.dashMonth=this.value||today().slice(0,7);render()"><span class="sp" style="flex:1"></span><button class="b" onclick="editDefect()">+ 불량 등록</button><button class="b" onclick="weekReport()" title="오늘까지 최근 7일 — 신규 불량 · NCR · RCA · 지연 · 다음 주 기한">주간 보고 (최근 7일)</button><button class="b p" onclick="dashReport()">월간 보고 인쇄 / PDF</button></div>
+  return `${banner}<div class="pl pld">
+  <div class="row noprint pldtop" style="margin-bottom:12px"><b>기준월</b><input type="month" value="${m}" onchange="state.dashMonth=this.value||today().slice(0,7);render()"><span class="sp" style="flex:1"></span><button class="b" onclick="editDefect()">+ 불량 등록</button><button class="b" onclick="weekReport()" title="오늘까지 최근 7일 — 신규 불량 · NCR · RCA · 지연 · 다음 주 기한">주간 보고 (최근 7일)</button><button class="b p" onclick="dashReport()">월간 보고 인쇄 / PDF</button></div>
   ${progCard()}
   ${(() => {
     // 요약 수치 — 급한 순서로 세 묶음 (지연 → 진행 중 → 이번 달 발생). 값이 0 이면 약하게, 지연은 강하게
@@ -274,11 +274,11 @@ function renderDash() {
   <div class="grid g2">
     <div class="card"><h3>월별 불량 건수 (최근 12개월)</h3>${barChart(
       ms.map((x) => x.slice(2).replace('-', '.')),
-      [{ name: '건수', values: byM.map((a) => a.length), color: '#007A78' }],
+      [{ name: '건수', values: byM.map((a) => a.length), color: '#3a4252' }],
     )}</div>
     <div class="card"><h3>월별 불량 수량</h3>${barChart(
       ms.map((x) => x.slice(2).replace('-', '.')),
-      [{ name: '수량', values: byM.map((a) => sum(a, 'qty')), color: '#5b8def' }],
+      [{ name: '수량', values: byM.map((a) => sum(a, 'qty')), color: '#3a4252' }],
     )}</div>
     ${
       db.cases.length
@@ -315,5 +315,5 @@ function renderDash() {
           })()
         : ''
     }
-  </div>`;
+  </div></div>`;
 }
