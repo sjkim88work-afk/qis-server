@@ -148,3 +148,12 @@ def run(c):
       return {xs:cells.map(c=>Math.round(c.getBoundingClientRect().left+parseFloat(getComputedStyle(c).paddingLeft))),over:document.documentElement.scrollWidth-innerWidth}}""")
     ok(r and len(set(r["xs"])) == 1 and r["over"] <= 0, f"좁은 창의 할 일: 칸의 왼쪽 시작 자리가 같음 · 옆으로 넘치지 않음 ({r})")
     A.evaluate("()=>mobSet('auto')"); A.set_viewport_size(vpA); settle(A, 400)
+
+    # 대시보드 그림표: RCA 그림표 없음 · 같은 종류끼리 한 줄 (월별 2개 → 파레토 2개 → 완성품 2개)
+    A.evaluate("()=>{state.dashMonth='2026-10';go('dash')}"); settle(A, 500)
+    r = A.evaluate("""()=>{const hs=[...document.querySelectorAll('.pld>.grid>.card')].map(c=>({t:c.querySelector('h3').textContent,y:Math.round(c.getBoundingClientRect().top)}));
+      const o={titles:hs.map(h=>h.t),rows:[]};for(let i=0;i+1<hs.length;i+=2)o.rows.push(hs[i].y===hs[i+1].y);
+      state.dashMonth=today().slice(0,7);render();return o}""")
+    ok(not any("RCA" in t for t in r["titles"]) and len(r["titles"]) >= 4 and r["titles"][0].startswith("월별") and r["titles"][1].startswith("월별") and "파레토" in r["titles"][2] and "파레토" in r["titles"][3] and all(r["rows"]),
+       f"대시보드 그림표: RCA 없음 · 월별끼리 · 파레토끼리 한 줄 ({r['titles']})")
+

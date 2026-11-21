@@ -70,7 +70,7 @@ function paretoSvg(map, unit = '', W = 620) {
     const x = pl + gw * i,
       bh = (ih * it.v) / max,
       bw = Math.min(46, gw - 10);
-    g += `<rect x="${x + (gw - bw) / 2}" y="${pt + ih - bh}" width="${bw}" height="${bh}" fill="#007A78" rx="2"><title>${esc(it.k)}: ${it.v.toLocaleString()}${unit}</title></rect>`;
+    g += `<rect x="${x + (gw - bw) / 2}" y="${pt + ih - bh}" width="${bw}" height="${bh}" fill="#3a4252" rx="2"><title>${esc(it.k)}: ${it.v.toLocaleString()}${unit}</title></rect>`;
     g += `<text x="${x + gw / 2}" y="${pt + ih - bh - 4}" text-anchor="middle" font-size="11.5" fill="#16202a">${fmtShort(it.v)}</text>`;
     const lb = it.k.length > 7 ? it.k.slice(0, 7) + '…' : it.k;
     g += `<text x="${x + gw / 2}" y="${H - pb + 15}" text-anchor="middle" font-size="11.5" fill="#16202a">${esc(lb)}</text>`;
@@ -80,7 +80,7 @@ function paretoSvg(map, unit = '', W = 620) {
   g += `<polyline points="${pts.map((p) => p[0] + ',' + p[1]).join(' ')}" fill="none" stroke="#c0392b" stroke-width="2"/>`;
   pts.forEach(
     (p) =>
-      (g += `<circle cx="${p[0]}" cy="${p[1]}" r="3" fill="#c0392b"/><text x="${p[0]}" y="${p[1] - 6}" text-anchor="middle" font-size="10.5" fill="#c0392b">${p[2]}%</text>`),
+      (g += `<circle cx="${p[0]}" cy="${p[1]}" r="3" fill="#c0392b"/><text x="${p[0] + 7}" y="${p[1] + 4}" text-anchor="start" font-size="10.5" font-weight="600" fill="#c0392b" stroke="#fff" stroke-width="3" paint-order="stroke">${p[2]}%</text>`),
   );
   if (items.length > 8)
     g += `<text x="${W - pr}" y="${H - 6}" text-anchor="end" font-size="11.5" fill="#5b6875">외 ${items.length - 8}개 항목 (누적%는 전체 기준)</text>`;
