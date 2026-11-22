@@ -3,6 +3,7 @@ function editIca(id) {
   const d = db.defects.find((x) => x.id === id);
   if (!d) return;
   icaCurId = id;
+  vfLotsInit(d.ica);
   const cs = defCase(d),
     lv = icaLevel(d);
   const body = `${defHeadBox(d, ` <span class="bg mut">귀책 ${esc(d.resp || '-')}</span>`, '')}
@@ -21,6 +22,7 @@ function editIca(id) {
   openModal(`사내 대책 — ${defLabel(d)}`, body, btns);
   if (d.ica && d.ica.doneDate) $('#mt').insertAdjacentHTML('beforeend', '<span class="qstamp">완료</span>');
   icaShow();
+  renderVLots();
 }
 function saveIca(id, keep) {
   const d = db.defects.find((x) => x.id === id);
@@ -31,6 +33,25 @@ function saveIca(id, keep) {
     if (k.startsWith('ica_std_')) c.std[k.slice(8)] = true;
     else if (k.startsWith('ica_')) c[k.slice(4)] = o[k];
   });
+  // 유효성 검증 (공통 부품): 검증 LOT · 이전 검증 이력을 이어 받고, ‘유효’ 로 끝낼 수 있는지 봄
+  c.vlots = vfLotsOut();
+  if (d.ica && d.ica.verifyHist) c.verifyHist = d.ica.verifyHist;
+  if (c.verifyResult && !c.doneDate) {
+    toast('대책 완료일을 먼저 입력하세요 — 대책을 완료한 뒤에 유효성을 검증합니다');
+    return false;
+  }
+  if (c.verifyDate && c.doneDate && c.verifyDate < c.doneDate) {
+    toast(`유효성 검증일이 대책 완료일 (${c.doneDate}) 보다 빠릅니다`);
+    return false;
+  }
+  if (vfOk(c.verifyResult) && !(d.ica && vfOk(d.ica.verifyResult))) {
+    const m = vfValidMsg(curVLots, 0); // 사내 대책은 LOT 수를 요구하지 않음 (LOT 가 없는 공정도 있음). 불합격 LOT 만 막음
+    if (m) {
+      toast(m);
+      return false;
+    }
+  }
+  if (c.verifyResult && !c.verifyDate) c.verifyDate = today();
   if (c.doneDate && !c.verifyDue) c.verifyDue = addDays(c.doneDate, num(db.settings.verifyDays) || 21);
   const lvEff = c.level || ICA_NONE;
   if (!c.due && lvEff !== ICA_NONE) c.due = addDays((d.inv && d.inv.verdictDate) || d.date, typeDays(lvEff === '8D' ? '8D 보고서' : '간이 대책서'));
@@ -43,6 +64,40 @@ function saveIca(id, keep) {
   render();
   toast(c.doneDate ? `사내 대책 완료 — 유효성 검증 기한 ${c.verifyDue}` : '사내 대책을 저장했습니다');
   return true;
+}
+// 사내 대책 뒤 재발 (검증 무효) → 재대책: 이번 검증 기록은 이력으로 남기고, 대책을 다시 완료해야 하는 상태로 되돌림 (NCR 의 재대책 요청과 같은 방식)
+async function icaRework(id) {
+  const d = db.defects.find((x) => x.id === id),
+    c = d && d.ica;
+  if (!c || !vfNg(c.verifyResult)) return;
+  if (
+    mfDirty &&
+    !(await askConfirm({ title: '저장하지 않은 변경이 있습니다', msg: '먼저 저장하려면 취소 후 저장을 누르세요.', ok: '계속', danger: false }))
+  )
+    return;
+  const lv = icaLevel(d);
+  if (
+    !(await askConfirm({
+      title: '사내 대책을 다시 시작할까요?',
+      items: [
+        '이번 검증 결과(무효)와 검증 LOT는 이력으로 남깁니다',
+        '대책 완료일을 비우고 오늘 날짜부터 대책 기한을 다시 잡습니다',
+        '적어 둔 대책 내용은 그대로 둡니다 — 원인과 대책을 고쳐서 다시 완료하세요',
+      ],
+      ok: '재대책 시작',
+      danger: false,
+    }))
+  )
+    return;
+  vfArchive(c, { doneDate: c.doneDate || '' });
+  c.doneDate = '';
+  c.due = addDays(today(), typeDays(lv === '8D' ? '8D 보고서' : '간이 대책서'));
+  touch(d);
+  save();
+  closeModal(true);
+  render();
+  toast(`사내 대책을 다시 시작했습니다 — 대책 기한 ${c.due}`);
+  editIca(id);
 }
 // 불량 목록 ‘진행 · 다음 할 일’ 칸의 사내 대책 상태
 function icaChip(d) {
@@ -82,9 +137,7 @@ function icaSection(d, force) {
     <label>대책 수준<select name="ica_level" ${c.level ? 'data-touched="1"' : ''} onchange="this.dataset.touched=1;icaShow()">${opts(ICA_LV, lv)}</select></label>
     <label>대책 기한<input type="date" name="ica_due" value="${esc(c.due)}"></label>
     <label>대책 완료일 (승인)<input type="date" name="ica_doneDate" value="${esc(c.doneDate)}"></label>
-    <label>유효성 검증 기한<input type="date" name="ica_verifyDue" value="${esc(c.verifyDue)}" placeholder="완료일 + ${db.settings.verifyDays}일"></label>
-    <label>검증일<input type="date" name="ica_verifyDate" value="${esc(c.verifyDate)}"></label>
-    <label>검증 결과<select name="ica_verifyResult">${opts(['유효', '무효(재발)'], c.verifyResult, true)}</select></label>
+    ${vfFieldsHTML(c, { pre: 'ica_', dueLabel: `유효성 검증 기한 (완료+${db.settings.verifyDays}일)`, dueTitle: `비우면 대책 완료일 + ${db.settings.verifyDays}일로 자동 설정` })}
   </div>
   <div id="icaD">${ICA_KEYS.map(
     (k) =>
@@ -94,6 +147,7 @@ function icaSection(d, force) {
     ([k, l]) => `<label class="row" style="gap:4px"><input type="checkbox" name="ica_std_${k}" ${c.std && c.std[k] ? 'checked' : ''}> ${l}</label>`,
   ).join('')}
     ${d.id ? `<span style="flex:1"></span><button type="button" class="b s" onclick="icaPrint('${d.id}')">사내 대책서 출력</button>` : ''}</div>
+  <div id="icaVf">${vfLotsHTML('— 대책 적용 뒤의 LOT 별 결과 (LOT 가 없으면 비워 둠)')}${vfReworkHTML(c, d.id ? `icaRework('${d.id}')` : '', '재대책 시작')}</div>
   </div>`;
 }
 function icaPrint(id) {
@@ -146,6 +200,7 @@ async function printIca(id, w0) {
   ${iv.rca ? `<tr><th>사내 RCA</th><td colspan="3">${nl(iv.rca)}</td></tr>` : ''}
   <tr><th>대책 기한 / 완료일</th><td>${esc(c.due)} / ${esc(c.doneDate)}</td><th>유효성 검증</th>
     <td>${esc(c.verifyDue)} / ${esc(c.verifyDate)} ${esc(c.verifyResult)}${vi ? ` (${esc(vi.label)})` : ''}</td></tr></table>
+  ${vfLotsPrint(c.vlots)}
   <table>${keys
     .map((k) => `<tr><th>${simple ? SL[k] : (D8.find((x) => x[0] === k) || [k, k])[1]}</th><td style="height:46px">${nl(c[k])}</td></tr>`)
     .join('')}
@@ -268,6 +323,7 @@ function icaShow() {
     lb.textContent = simple && SL[k] ? SL[k] : lb.dataset.o;
   });
   $('#icaStd').style.display = none ? 'none' : '';
+  if ($('#icaVf')) $('#icaVf').style.display = none ? 'none' : '';
 }
 function invAuto() {
   const f = $('#mf');

@@ -22,12 +22,7 @@ function editNcr(id, preset, mode) {
     ng: r.ng ?? '',
     done: r.done || '',
   }));
-  curVLots = (n.vlots && n.vlots.length ? n.vlots : [{}, {}, {}]).map((r) => ({
-    lot: r.lot || '',
-    date: r.date || '',
-    insp: r.insp ?? '',
-    ng: r.ng ?? '',
-  }));
+  vfLotsInit(n);
   curEvals = JSON.parse(JSON.stringify(n.evals || []));
   curEvIdx = Math.max(0, curEvals.length - 1);
   const has8D = !!n.replyDate || ['d4', 'd5', 'd6', 'd7', 'd8'].some((k) => String(n[k] || '').trim());
@@ -172,28 +167,14 @@ function editNcr(id, preset, mode) {
   <div class="sec">유효성 검증</div>
   <div class="banner" id="vfInfo" style="margin:0 0 8px" hidden>단순 통보는 유효성 검증이 필요 없습니다. 협력사에 통보하면 종결합니다. 같은 불량이 재발했을 때만 검증일과 결과 ‘무효(재발)’을 입력하세요.</div>
   <div class="fg">
-    <label title="비우면 대책 승인일 + ${S.verifyDays}일로 자동 설정">유효성 검증 기한 (승인+${S.verifyDays}일)<input type="date" name="verifyDue" value="${esc(n.verifyDue)}"></label>
-    <label>유효성 검증일<input type="date" name="verifyDate" value="${esc(n.verifyDate)}"></label>
-    <label>검증 결과<select name="verifyResult">${opts(['유효', '무효(재발)'], n.verifyResult, true)}</select></label>
+    ${vfFieldsHTML(n, { dueLabel: `유효성 검증 기한 (승인+${S.verifyDays}일)`, dueTitle: `비우면 대책 승인일 + ${S.verifyDays}일로 자동 설정` })}
     <label>특채 여부<select name="concession" onchange="concShow()">${opts(['없음', '특채 진행', '특채 승인'], n.concession || '없음')}</select></label>
     <div id="concWrap" style="grid-column:1/-1"><div style="font-size:12px;color:var(--sub);margin-bottom:6px">특채 신청서 · 고객 승인 문서 <span class="muted">(PDF · 이미지 · 엑셀 · 워드 등 · 끌어다 놓기 가능)</span></div>
       <div id="concBox" class="docbox"></div></div>
   </div>
-  ${
-    id && String(n.verifyResult || '').startsWith('무효')
-      ? `<div class="banner" style="background:var(--badb);border-color:transparent;margin-top:10px">검증 결과 <b>무효(재발)</b> — 대책이 효과가 없었습니다. <button type="button" class="b s p" onclick="ncrRework('${n.id}')">재대책 요청</button> <span class="muted">이번 검증 기록은 이력으로 남고 대책서를 다시 요청합니다</span></div>`
-      : ''
-  }
-  ${
-    (n.verifyHist || []).length
-      ? `<div class="muted" style="font-size:12px;margin-top:8px">이전 검증 이력: ${n.verifyHist
-          .map((h, i) => `${i + 1}차 ${esc(h.date)} ${esc(h.result)}`)
-          .join(' · ')}</div>`
-      : ''
-  }
+  ${vfReworkHTML(n, id ? `ncrRework('${n.id}')` : '', '재대책 요청')}
   <div class="sec">유효성 검증 LOT · 종결 <span class="muted" style="font-weight:normal;font-size:12px">— 대책 적용 후 입고 LOT별 결과 · 종결 시 협력사 평가 감점</span></div>
-  <div style="font-size:12px;color:var(--sub)">검증 LOT <button type="button" class="b s" onclick="curVLots.push({lot:'',date:'',insp:'',ng:''});mfDirty=true;renderVLots()">+ 행</button></div>
-  <div id="vlotBox"></div>
+  ${vfLotsHTML()}
   <div class="fg" style="margin-top:10px">
     <label style="max-width:320px">협력사 평가 감점 (점)<input type="number" name="penalty" min="0" step="0.5" value="${esc(n.penalty)}" placeholder="종결된 NCR만 협력사 품질 표에 합산"></label>
   </div>
