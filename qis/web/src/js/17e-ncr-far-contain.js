@@ -132,7 +132,8 @@ async function farGoInv(did) {
   )
     return;
   closeModal(true);
-  state.tab = 'inv';
+  state.tab = 'defect';
+  state.defView = 'inv';
   render();
   editInv(did);
 }

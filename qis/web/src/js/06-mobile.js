@@ -459,6 +459,11 @@ function mobCardClose() {
   $('#mcard').classList.remove('on');
 }
 function render() {
+  // 예전 메뉴 이름 'inv' (FAR) 로 온 경우: 불량 관리의 보기 ‘귀책 조사 중’ 으로 맞춤
+  if (state.tab === 'inv') {
+    state.tab = 'defect';
+    state.defView = 'inv';
+  }
   const own = !sevMemo;
   if (own) {
     sevMemo = new Map();
@@ -500,7 +505,7 @@ function renderInner() {
   let navG = '';
   $('#nav').innerHTML = TABS.filter(([k]) => RO_TABS.includes(k))
     .map(([k, l]) => {
-      const n = k === 'case' ? czBadgeN() : k === 'prog' ? progBadgeN() : k === 'inv' ? invLateN() : k === 'issue' ? issWaitN() : 0;
+      const n = k === 'case' ? czBadgeN() : k === 'prog' ? progBadgeN() : k === 'defect' ? invLateN() : k === 'issue' ? issWaitN() : 0;
       const g = NAV_GRP[k] || navG,
         gh = g !== navG ? `<div class="gh">${g}</div>` : '';
       navG = g;
@@ -524,7 +529,6 @@ function renderInner() {
       dash: renderDash,
       prog: renderProg,
       defect: renderDefect,
-      inv: renderInv,
       ncr: renderNcr,
       sup: renderSup,
       copq: renderCopq,

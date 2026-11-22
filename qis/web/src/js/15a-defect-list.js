@@ -173,11 +173,25 @@ function defectTable() {
   }
   </tbody></table></div>`;
 }
+// 불량 관리의 맨 위 줄: 등록 단추 + 보기 고르기 (전체 · 귀책 조사 중). ‘귀책 조사 중’ 은 예전의 FAR 메뉴
+function defViewBar() {
+  const v = state.defView === 'inv' ? 'inv' : 'all',
+    open = db.defects.filter(invOpen).length,
+    late = invLateN();
+  const chip = (k, l, n, x) =>
+    `<button type="button" class="b s ${v === k ? 'on' : ''}" data-dv="${k}" onclick="state.defView='${k}';render()">${l} <span class="mono">${n}</span>${x || ''}</button>`;
+  return `<div class="dvb noprint"><button class="b p" onclick="editDefect()">+ 불량 등록</button>${chip('all', '전체', db.defects.length)}${chip(
+    'inv',
+    '귀책 조사 중',
+    open,
+    late ? ` <span class="dvl">지연 ${late}</span>` : '',
+  )}<span class="muted dvn">${v === 'inv' ? 'FAR 요청 · 회신 · 귀책 판정' : ''}</span></div>`;
+}
 function renderDefect() {
+  if (state.defView === 'inv') return defViewBar() + renderInv();
   const f = state.df,
     S = db.settings;
-  return `<div class="pl"><div class="card noprint pltool"><div class="row">
-    <button class="b p" onclick="editDefect()">+ 불량 등록</button>
+  return `${defViewBar()}<div class="pl"><div class="card noprint pltool"><div class="row">
     <span class="muted">기간</span><input type="date" value="${f.from}" onchange="state.df.from=this.value;refreshDT()"> ~ <input type="date" value="${f.to}" onchange="state.df.to=this.value;refreshDT()">
     <select onchange="state.df.sup=this.value;refreshDT()">${supOpts(f.sup, '전체 협력사')}</select>
     <select onchange="state.df.type=this.value;refreshDT()"><option value="">전체 유형</option>${opts(S.defectTypes, f.type)}</select>

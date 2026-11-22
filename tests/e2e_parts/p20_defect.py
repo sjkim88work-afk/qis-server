@@ -124,11 +124,11 @@ def run(c):
 
     # 현장 도구 모양 (불량 목록): 카드 테두리 없음 · 정상 값은 배지 배경 없음 · 색 버튼은 ‘+ 불량 등록’ 한 개
     r = A.evaluate("""async()=>{const wait=ms=>new Promise(r=>setTimeout(r,ms));go('defect');await wait(300);
-      const cs=e=>getComputedStyle(e),clear=c=>c==='rgba(0, 0, 0, 0)'||c==='transparent',pri=cs(document.querySelector('.pl .pltool button.b.p')).backgroundColor;
+      const cs=e=>getComputedStyle(e),clear=c=>c==='rgba(0, 0, 0, 0)'||c==='transparent',pri=cs(document.querySelector('.dvb button.b.p')).backgroundColor;
       const bgs=[...document.querySelectorAll('.pl .tw .bg')];
       return {card:parseFloat(cs(document.querySelector('.pl #dtab')).borderTopWidth),
         badge:bgs.length>0&&bgs.every(b=>clear(cs(b).backgroundColor)),
-        colored:[...document.querySelectorAll('.pl button.b')].filter(b=>cs(b).backgroundColor===pri).map(b=>b.textContent.trim()).join(),
+        colored:[...document.querySelectorAll('.dvb button.b,.pl button.b')].filter(b=>cs(b).backgroundColor===pri).map(b=>b.textContent.trim()).join(),
         radius:parseFloat(cs(document.querySelector('.pl .tw button.b')).borderTopLeftRadius),
         emoji:/[\\u{1F4DD}\\u{1F4F7}]/u.test(document.querySelector('.pl').textContent)}}""")
     ok(r["card"] == 0 and r["badge"], "불량 목록: 카드 테두리 없음 · 표 안의 배지는 배경 없는 글자")

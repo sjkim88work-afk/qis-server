@@ -914,6 +914,15 @@ body.nosrv>*:not(#nosrv){display:none!important}
 #nosrv{position:fixed;inset:0;z-index:999;display:flex;align-items:center;justify-content:center;padding:24px;background:#f4f6f9;color:#1d2433;font-family:"IBM Plex Sans KR","Malgun Gothic","Apple SD Gothic Neo",sans-serif}
 #nosrv .box{max-width:560px;padding:28px 30px;background:#fff;border:1px solid #d8dce3;border-radius:4px;line-height:1.7;font-size:14px}
 #nosrv h1{margin:0 0 12px;font-size:18px}#nosrv p{margin:0 0 10px}#nosrv .sub{margin-top:16px;padding-top:12px;border-top:1px solid #eceef2;color:#5a6372;font-size:13px}
+
+/* ── 불량 관리의 맨 위 줄 (.dvb): 등록 단추 + 보기 고르기 (전체 · 귀책 조사 중) ── */
+.dvb{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:0 0 8px}
+.dvb button.b{height:30px;min-height:0;padding:0 11px;font-size:var(--fs-md);border-radius:3px}
+.dvb button.b.p{margin-right:8px}
+.dvb button.b.s.on{background:#fff;color:var(--ink);border-color:var(--ink);font-weight:600}
+.dvb .mono{opacity:.75}
+.dvb .dvl{margin-left:4px;color:var(--bad);font-weight:600;font-size:var(--fs-sm)}
+.dvb .dvn{margin-left:6px;font-size:var(--fs-sm)}
 /* ================= 휴대폰 화면 ================= */
 #mswitch{display:none;text-align:center;padding:14px 0 22px;font-size:13px}
 #mswitch a{display:none}
@@ -3438,7 +3447,6 @@ const TABS = [
   ['prog', '진행 현황'],
   ['issue', '이슈'],
   ['defect', '불량 관리'],
-  ['inv', 'FAR'],
   ['ncr', 'NCR / 8D'],
   ['case', 'RCA'],
   ['sup', '협력사 품질'],
@@ -3452,6 +3460,7 @@ const state = {
   dashMonth: today().slice(0, 7),
   df: { from: today().slice(0, 4) + '-01-01', to: '', sup: '', status: '', type: '', q: '' },
   nf: { status: 'open', q: '', sup: '', type: '', from: '', to: '' },
+  defView: 'all', // 불량 관리의 보기: all = 불량 목록 · inv = 귀책 조사 중 (FAR). 예전의 FAR 메뉴가 여기로 옴
   ivf: { status: 'open', q: '' },
   supFrom: today().slice(0, 4) + '-01-01',
   supTo: today(),
@@ -3459,11 +3468,16 @@ const state = {
 };
 // 보이는 화면: 공유본은 협력사 품질 · 기준정보 · 설정을 숨김. 서버판은 관리자가 아니면 설정 · 백업을 숨김
 const RO_TABS = SHARE
-  ? ['dash', 'prog', 'issue', 'defect', 'inv', 'ncr', 'case', 'copq']
+  ? ['dash', 'prog', 'issue', 'defect', 'ncr', 'case', 'copq']
   : !srvCanAdmin()
-    ? ['dash', 'prog', 'issue', 'defect', 'inv', 'ncr', 'case', 'sup', 'copq', 'master']
+    ? ['dash', 'prog', 'issue', 'defect', 'ncr', 'case', 'sup', 'copq', 'master']
     : TABS.map((t) => t[0]);
 function go(t) {
+  // FAR 는 불량 관리 안의 보기 ‘귀책 조사 중’ — go('inv') 는 그 보기를 엶 (예전 메뉴 이름을 쓰는 곳과 맞춤)
+  if (t === 'inv') {
+    state.defView = 'inv';
+    t = 'defect';
+  } else if (t === 'defect') state.defView = 'all';
   if (!RO_TABS.includes(t)) t = 'dash';
   state.tab = t;
   render();
@@ -3930,6 +3944,11 @@ function mobCardClose() {
   $('#mcard').classList.remove('on');
 }
 function render() {
+  // 예전 메뉴 이름 'inv' (FAR) 로 온 경우: 불량 관리의 보기 ‘귀책 조사 중’ 으로 맞춤
+  if (state.tab === 'inv') {
+    state.tab = 'defect';
+    state.defView = 'inv';
+  }
   const own = !sevMemo;
   if (own) {
     sevMemo = new Map();
@@ -3971,7 +3990,7 @@ function renderInner() {
   let navG = '';
   $('#nav').innerHTML = TABS.filter(([k]) => RO_TABS.includes(k))
     .map(([k, l]) => {
-      const n = k === 'case' ? czBadgeN() : k === 'prog' ? progBadgeN() : k === 'inv' ? invLateN() : k === 'issue' ? issWaitN() : 0;
+      const n = k === 'case' ? czBadgeN() : k === 'prog' ? progBadgeN() : k === 'defect' ? invLateN() : k === 'issue' ? issWaitN() : 0;
       const g = NAV_GRP[k] || navG,
         gh = g !== navG ? `<div class="gh">${g}</div>` : '';
       navG = g;
@@ -3995,7 +4014,6 @@ function renderInner() {
       dash: renderDash,
       prog: renderProg,
       defect: renderDefect,
-      inv: renderInv,
       ncr: renderNcr,
       sup: renderSup,
       copq: renderCopq,
@@ -6445,11 +6463,25 @@ function defectTable() {
   }
   </tbody></table></div>`;
 }
+// 불량 관리의 맨 위 줄: 등록 단추 + 보기 고르기 (전체 · 귀책 조사 중). ‘귀책 조사 중’ 은 예전의 FAR 메뉴
+function defViewBar() {
+  const v = state.defView === 'inv' ? 'inv' : 'all',
+    open = db.defects.filter(invOpen).length,
+    late = invLateN();
+  const chip = (k, l, n, x) =>
+    `<button type="button" class="b s ${v === k ? 'on' : ''}" data-dv="${k}" onclick="state.defView='${k}';render()">${l} <span class="mono">${n}</span>${x || ''}</button>`;
+  return `<div class="dvb noprint"><button class="b p" onclick="editDefect()">+ 불량 등록</button>${chip('all', '전체', db.defects.length)}${chip(
+    'inv',
+    '귀책 조사 중',
+    open,
+    late ? ` <span class="dvl">지연 ${late}</span>` : '',
+  )}<span class="muted dvn">${v === 'inv' ? 'FAR 요청 · 회신 · 귀책 판정' : ''}</span></div>`;
+}
 function renderDefect() {
+  if (state.defView === 'inv') return defViewBar() + renderInv();
   const f = state.df,
     S = db.settings;
-  return `<div class="pl"><div class="card noprint pltool"><div class="row">
-    <button class="b p" onclick="editDefect()">+ 불량 등록</button>
+  return `${defViewBar()}<div class="pl"><div class="card noprint pltool"><div class="row">
     <span class="muted">기간</span><input type="date" value="${f.from}" onchange="state.df.from=this.value;refreshDT()"> ~ <input type="date" value="${f.to}" onchange="state.df.to=this.value;refreshDT()">
     <select onchange="state.df.sup=this.value;refreshDT()">${supOpts(f.sup, '전체 협력사')}</select>
     <select onchange="state.df.type=this.value;refreshDT()"><option value="">전체 유형</option>${opts(S.defectTypes, f.type)}</select>
@@ -11073,7 +11105,8 @@ async function farGoInv(did) {
   )
     return;
   closeModal(true);
-  state.tab = 'inv';
+  state.tab = 'defect';
+  state.defView = 'inv';
   render();
   editInv(did);
 }
