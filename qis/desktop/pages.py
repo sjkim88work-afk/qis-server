@@ -22,6 +22,10 @@ button{height:34px;padding:0 14px;border-radius:3px;border:1px solid #c9cfd8;bac
 button.p{background:#00635f;border-color:#00635f;color:#fff;font-weight:600;padding:0 18px}button:disabled{opacity:.5}
 .err{color:#b91c1c;margin:10px 0;font-weight:600;white-space:pre-wrap}.ok{color:#047857}
 ul{padding-left:18px;line-height:1.6}
+.path{display:block;margin-top:8px;padding:6px 10px;border:1px solid #d5dae2;background:#f7f8fa;word-break:break-all;font-size:12.5px}
+.kv{display:flex;gap:8px;padding:3px 0;font-size:12.5px}.kv:first-of-type{margin-top:8px}.kv>span:first-child{flex:0 0 96px;color:#5a6372}
+.btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.btns button{height:30px;padding:0 12px;font-size:12.5px}
+.warn{margin:10px 0;padding:8px 10px;border-left:3px solid #b4530a;background:#fff8ec;font-size:12.5px}.warn[bad]{border-color:#a62a1a;background:#fdf1ef}
 code{background:#eef2f7;padding:2px 6px;border-radius:3px}
 .spin{width:28px;height:28px;border:3px solid #d5dae2;border-top-color:#00635f;border-radius:50%;animation:s 1s linear infinite;margin:30px 0 12px}
 @keyframes s{to{transform:rotate(360deg)}}
@@ -91,6 +95,65 @@ function go(){{
 }}
 """
     return _page("QIS — 접속 설정", body, script)
+
+
+def _mb(n) -> str:
+    if n is None:
+        return "-"
+    return f"{n / 1073741824:.1f}GB" if n >= 1073741824 else f"{n / 1048576:.1f}MB"
+
+
+def storage_page(info: dict, msg: str = "", can_move: bool = True) -> str:
+    """메뉴 ‘설정 › 저장 위치’: 데이터 폴더와 자동 백업 폴더를 따로 정함. info = core.storage_info()."""
+    e = html.escape
+    last = info.get("last")
+    last_txt = (f"{e(str(last.get('at', ''))[:16].replace('T', ' '))} · {'수동' if last.get('reason') == 'manual' else '자동'} · "
+                f"첨부 {last.get('files_copied', 0)}개 복사") if last else "아직 없음"
+    warn = []
+    if info.get("data_risky"):
+        warn.append(f"<div class=warn bad><b>데이터 폴더가 {e(info['data_risky'])}(으)로 보입니다.</b><br>"
+                    "기록 파일이 손상될 수 있습니다. 이 PC의 디스크로 옮기고, 백업 폴더만 NAS · 공유 폴더에 두세요.</div>")
+    if not info.get("backup_ok"):
+        warn.append(f"<div class=warn bad><b>백업 폴더에 쓸 수 없습니다.</b><br>{e(info.get('backup_error', ''))}<br>"
+                    "폴더가 연결되어 있는지 확인하거나 ‘폴더 바꾸기’ 로 다른 폴더를 고르세요. 그때까지 자동 백업이 되지 않습니다.</div>")
+    elif info.get("backup_inside") or info.get("same_disk"):
+        warn.append("<div class=warn><b>백업 폴더가 데이터 폴더와 같은 디스크에 있습니다.</b><br>"
+                    "디스크가 고장 나면 원본과 백업을 같이 잃습니다. 다른 디스크나 NAS · 공유 폴더로 바꾸세요.</div>")
+    state = "쓸 수 없음" if not info.get("backup_ok") else ("쓸 수 있음 · 데이터 폴더와 같은 디스크" if (info.get("backup_inside") or info.get("same_disk"))
+                                                       else "쓸 수 있음 · 데이터 폴더와 다른 디스크")
+    move = ('<button onclick="act(\'move_data\')">폴더 옮기기…</button>' if can_move else "")
+    body = f"""
+<h1>저장 위치</h1>
+<div class=muted>데이터와 자동 백업을 두는 폴더를 따로 정합니다.</div>
+<div class=err id=msg style="color:#1a1f29;font-weight:400">{e(msg)}</div>
+{''.join(warn)}
+<div class=box>
+  <h2>1. 데이터 폴더</h2>
+  <div class=muted>기록 (qis.db) 과 사진 · 첨부 (files) 가 있는 곳입니다. 이 PC의 디스크에 두세요.</div>
+  <code class=path>{e(info['data'])}</code>
+  <div class=kv><span>크기</span><span>기록 {_mb(info.get('db_bytes'))} · 첨부 {_mb(info.get('files_bytes'))} ({info.get('files', 0)}개)</span></div>
+  <div class=kv><span>디스크</span><span>남은 용량 {_mb(info.get('data_free'))}</span></div>
+  <div class=btns>{move}<button onclick="act('open_data')">폴더 열기</button></div>
+  <div class=muted style="margin-top:8px">{'옮기기: QIS를 잠시 멈추고 새 폴더로 복사한 뒤 QIS를 닫습니다. 다시 열면 새 폴더로 열립니다. 예전 폴더는 지우지 않습니다.' if can_move else '--data 옵션으로 시작한 QIS 는 여기서 옮길 수 없습니다.'}</div>
+</div>
+<div class=box>
+  <h2>2. 자동 백업 폴더</h2>
+  <div class=muted>하루 한 번 ({int(info.get('hour', 2))}시 이후 처음 켜져 있을 때) 기록의 사본과 새 첨부를 여기에 복사합니다. 다른 디스크나 NAS · 공유 폴더를 권장합니다.</div>
+  <code class=path>{e(info['backup'])}</code>
+  <div class=kv><span>마지막 백업</span><span>{last_txt}</span></div>
+  <div class=kv><span>보관</span><span>날짜별 사본 {int(info.get('keep', 30))}개</span></div>
+  <div class=kv><span>상태</span><span>{state} · 남은 용량 {_mb(info.get('backup_free'))}</span></div>
+  <div class=btns><button onclick="act('pick_backup')">폴더 바꾸기…</button><button onclick="act('backup_now')">지금 백업</button><button onclick="act('open_backup')">폴더 열기</button></div>
+</div>
+<div style="display:flex;gap:8px"><button class=p onclick="ready(function(){{api().go_app()}})">QIS로 돌아가기</button></div>
+"""
+    script = API_JS + """
+var busy=false;
+function act(a){if(busy)return;busy=true;var m=document.getElementById('msg');
+  if(a==='backup_now')m.textContent='백업하는 중…';
+  ready(function(){api().storage(a).then(function(r){busy=false;if(r&&r.error)m.textContent=r.error},function(){busy=false})})}
+"""
+    return _page("QIS — 저장 위치", body, script)
 
 
 def _tailscale_info_page(addresses: list[str], port: int, windows: bool) -> str:

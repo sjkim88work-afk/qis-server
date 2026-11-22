@@ -55,6 +55,11 @@ class DesktopApi:
             return None
         return self._c.apply_setup(d if isinstance(d, dict) else {})
 
+    def storage(self, action):
+        if not self._ok("storage"):
+            return None
+        return self._c.apply_storage(str(action))
+
     def cancel_setup(self):
         if not self._ok("cancel_setup"):
             return None
@@ -127,7 +132,21 @@ class ReportApi:
 
 class Controller:
     def __init__(self, data_dir: Path | None = None):
-        self.data_dir = Path(data_dir) if data_dir else user_data_dir()
+        # home = 기본 폴더 (데이터 폴더를 옮기면 그 위치를 적은 표지 location.json 이 여기에 남음).
+        # --data 로 폴더를 직접 준 실행은 표지를 쓰지 않음 (home 없음 → 화면에서 옮기기 불가)
+        self.home: Path | None = None
+        self.missing_data: Path | None = None    # 표지가 가리키는 폴더가 없음 (외장 디스크 분리 등) → 안내만 보이고 시작하지 않음
+        if data_dir:
+            self.data_dir = Path(data_dir)
+        else:
+            self.home = user_data_dir()
+            self.data_dir = self.home
+            t = core.read_pointer(self.home)
+            if t is not None:
+                if core.has_qis_data(t):
+                    self.data_dir = t
+                else:
+                    self.missing_data = t
         self.lock = InstanceLock(self.data_dir)
         self.cfg = None
         self.settings = None
@@ -144,6 +163,18 @@ class Controller:
     # ------------------------------------------------------------ 실행
     def run(self) -> int:
         import webview
+        if self.missing_data is not None:
+            # 옮긴 데이터 폴더가 보이지 않음: 기본 폴더로 조용히 열면 빈 QIS 가 떠서 데이터가 사라진 것처럼 보임 → 시작하지 않음
+            core.setup_logging(self.home)
+            log.error("데이터 폴더를 찾지 못함: %s (표지 %s)", self.missing_data, self.home / core.POINTER)
+            webview.create_window(TITLE, html=pages.message_page(
+                "데이터 폴더를 찾을 수 없습니다",
+                f"{self.missing_data}\n\n이 폴더가 있는 디스크 · 네트워크를 연결한 뒤 QIS를 다시 여세요.\n\n"
+                f"폴더를 다른 곳으로 옮겼다면: {self.home / core.POINTER} 파일을 메모장으로 열어 \"data_dir\" 값을 새 위치로 고치세요.\n"
+                "이 파일을 지우면 기본 위치의 데이터로 엽니다 (옮기기 전의 예전 데이터일 수 있습니다)."),
+                width=760, height=420)
+            webview.start()
+            return 1
         core.setup_logging(self.data_dir)
         log.info("QIS 데스크톱 %s 시작 · 데이터 폴더 %s", __version__, self.data_dir)
         if paths.migration_note:
@@ -388,6 +419,123 @@ class Controller:
             return
         self.state = "setup"
         self.show(html=self._setup_html())
+
+    # ------------------------------------------------------------ 저장 위치 (데이터 폴더 · 자동 백업 폴더)
+    def _storage_html(self, msg: str = "") -> str:
+        info = core.storage_info(self.cfg, self.runner.app if self.runner else None)
+        return pages.storage_page(info, msg=msg, can_move=self.home is not None)
+
+    def m_storage(self):
+        if self.state not in ("app", "storage") or not self.runner:
+            self.tell("먼저 처음 설정을 마치고 QIS를 시작하세요")
+            return
+        self.flush_screen()
+        self.state = "storage"
+        self.show(html=self._storage_html())
+
+    def _pick_folder(self, start: Path | None = None) -> Path | None:
+        import webview
+        r = self.window.create_file_dialog(webview.FileDialog.FOLDER, directory=str(start or Path.home()))
+        return Path(r[0] if isinstance(r, (list, tuple)) else r) if r else None
+
+    def apply_storage(self, action: str):
+        if self.state != "storage":
+            return {"error": "지금은 할 수 없습니다"}
+        if action == "open_data":
+            core.open_in_os(self.data_dir)
+            return {"ok": True}
+        if action == "open_backup":
+            p = self.cfg.backup_path
+            p.mkdir(parents=True, exist_ok=True)
+            core.open_in_os(p)
+            return {"ok": True}
+        if not self._op.acquire(blocking=False):
+            return {"error": "다른 작업이 진행 중입니다"}
+        try:
+            if action == "backup_now":
+                try:
+                    info = self.runner.app.state.backup.run("manual")
+                    msg = f"백업했습니다: {info['db']} · 첨부 {info['files_copied']}개 복사"
+                except Exception as e:
+                    log.exception("백업 실패")
+                    msg = f"백업 실패: {e}"
+                self.show(html=self._storage_html(msg))
+            elif action == "pick_backup":
+                p = self._pick_folder(self.cfg.backup_path if self.cfg.backup_path.is_dir() else None)
+                if p:
+                    try:
+                        new = core.set_backup_dir(self.cfg, p)
+                        if self.runner:                      # 켜져 있는 서버에도 바로 적용 (서버는 설정의 사본을 쓸 수 있음)
+                            self.runner.cfg.backup_dir = self.cfg.backup_dir
+                            self.runner.base_cfg.backup_dir = self.cfg.backup_dir
+                        log.info("자동 백업 폴더 변경: %s", new)
+                        msg = f"자동 백업 폴더를 바꿨습니다: {new} — ‘지금 백업’ 으로 확인하세요. 예전 백업 파일은 그대로 있습니다."
+                    except core.StorageError as e:
+                        msg = str(e)
+                    self.show(html=self._storage_html(msg))
+            elif action == "move_data":
+                self._move_data()
+            else:
+                return {"error": "모르는 요청입니다"}
+            return {"ok": True}
+        finally:
+            self._op.release()
+
+    def _move_data(self):
+        """데이터 폴더 옮기기: 고르기 → 경고 확인 → 서버 멈춤 → 복사 · 검사 → 표지 저장 → 프로그램을 닫음 (다시 열면 새 폴더).
+        실패하면 예전 폴더로 서버를 다시 켬. 예전 폴더는 지우지 않음."""
+        ask = self.window.create_confirmation_dialog
+        if self.home is None:
+            self.show(html=self._storage_html("--data 옵션으로 시작한 QIS 는 여기서 옮길 수 없습니다. 시작할 때의 --data 폴더를 바꾸세요."))
+            return
+        new = self._pick_folder()
+        if not new:
+            return
+        if new.resolve() == self.data_dir.resolve():
+            self.show(html=self._storage_html("지금 데이터 폴더와 같은 폴더입니다."))
+            return
+        risk = core.risky_folder(new)
+        if risk and not ask("QIS — 데이터 폴더 옮기기",
+                            f"{new}\n\n고른 폴더가 {risk}(으)로 보입니다.\n"
+                            "NAS · OneDrive 같은 곳에 데이터 폴더를 두면 기록 파일이 손상될 수 있습니다. 백업 폴더만 그곳에 두는 것을 권장합니다.\n\n"
+                            "그래도 이 폴더로 옮길까요?"):
+            return
+        if core.has_qis_data(new):
+            if not ask("QIS — 데이터 폴더 옮기기",
+                       f"{new}\n\n이 폴더에 QIS 데이터가 이미 있습니다. 덮어쓰지 않습니다.\n\n"
+                       "지금 데이터는 옮기지 않고, 다음부터 이 폴더의 데이터로 열까요?\n(QIS 를 닫습니다. 다시 열면 그 데이터가 열립니다)"):
+                return
+            core.write_pointer(self.home, new)
+            log.info("데이터 폴더를 기존 데이터가 있는 곳으로 바꿈: %s", new)
+            self._quit_after("다음부터 이 폴더의 데이터로 엽니다.\n" + str(new))
+            return
+        n = self._lan_others() if self.runner and self.runner.scope != "local" else 0
+        if not ask("QIS — 데이터 폴더 옮기기",
+                   f"지금: {self.data_dir}\n새 폴더: {new}\n\n"
+                   + (f"지금 다른 사용자 {n}명이 접속해 있습니다. 옮기는 동안 접속이 끊깁니다.\n" if n else "")
+                   + "QIS 를 잠시 멈추고 데이터를 새 폴더로 복사합니다. 예전 폴더는 지우지 않습니다.\n끝나면 QIS 를 닫습니다. 다시 열면 새 폴더로 열립니다.\n\n옮길까요?"):
+            return
+        self.state = "busy"
+        self.show(html=pages.busy_page("데이터 폴더를 옮기는 중…"))
+        if self.runner:
+            self.runner.stop()
+            self.runner = None
+        try:
+            r = core.copy_data_dir(self.data_dir, new)
+            core.write_pointer(self.home, new)
+        except Exception as e:
+            log.exception("데이터 폴더 옮기기 실패")
+            self.restart_server()                      # 예전 폴더로 그대로 다시 엶
+            self.tell(f"옮기지 못했습니다 — 예전 폴더로 계속 씁니다.\n\n{e}")
+            return
+        log.info("데이터 폴더 옮김: %s → %s (%s)", self.data_dir, new, r)
+        self._quit_after(f"데이터 폴더를 옮겼습니다 ({r['bytes'] / 1048576:.0f}MB · 첨부 {r['files']}개).\n{new}\n\n"
+                         f"예전 폴더는 그대로 있습니다: {self.data_dir}")
+
+    def _quit_after(self, msg: str):
+        self.tell(msg + "\n\nQIS 를 닫습니다. 다시 열어 주세요.")
+        self._closing_ok = True
+        self.window.destroy()
 
     # ------------------------------------------------------------ 창 닫기
     def _on_closing(self):
