@@ -228,7 +228,7 @@ def run(c):
       const save0=window.save,toast0=window.toast,msgs=[];window.save=()=>{};window.toast=(x)=>{msgs.push(String(x));toast0(x)};
       const D=T<RULES_FROM?RULES_FROM:T;
       const d={id:'vf1',date:D,source:'수입검사',partNo:'VF-1',partName:'검증부품시험',supplierId:sup.id,type:'치수',qty:3,inspQty:100,disposition:'선별',resp:'사내',owner:'kim',logs:[],photos:[],
-        ica:{level:'간이 대책',std:{},d4:'원인',d5:'대책',d6:'확인',doneDate:T,verifyDue:addDays(T,21)}};db.defects.push(d);
+        ica:{level:'간이 대책',std:{},docs:{fmea:{st:'완료',rev:'Rev.07'},cp:{st:'완료'},ws:{st:'해당없음'},insp:{st:'해당없음'}},docNA:'시험',d4:'원인',d5:'대책',d6:'확인',doneDate:T,verifyDue:addDays(T,21)}};db.defects.push(d);
       const fields=()=>['verifyDue','verifyDate','verifyResult'].map(k=>{const e=document.querySelector(`#mf [name="${k}"],#mf [name="ica_${k}"]`);
         return e?e.tagName+':'+[...(e.options||[])].map(x=>x.value).join('|'):'없음'}).join(' ; ');
       go('defect');editIca('vf1');await wait(300);let f=document.querySelector('#mf');
@@ -268,3 +268,69 @@ def run(c):
        f"사내 대책 재대책: 검증 기록은 이력으로, 대책 내용은 그대로, 완료일은 비움 ({r['rework']['st']} · 이력 {r['rework']['hist']})")
     ok(r["names"] == ["검증 대기 D-10", "검증 지연 D+2", "검증 완료", "재발(검증 무효)"] and r["rca"] == ["검증 완료", "검증 완료(조건부)", "재발(검증 무효)", "검증 지연 D+1"] and r["same"],
        f"유효성 검증 판정 이름: 불량 · NCR · RCA 가 같음 ({r['names']} · RCA {r['rca']})")
+
+    # ---- 공통 부품 ‘봉쇄 · 재고 처리 표’ · ‘표준화 문서 표’ (03c-contain-docs): 불량 · NCR · RCA 가 같은 표를 씀 ----
+    r = A.evaluate("""async()=>{const wait=ms=>window.__settle(ms),o={},T=today(),sup=db.suppliers[0];
+      mfDirty=false;closeModal(true);
+      const save0=window.save,toast0=window.toast,msgs=[];window.save=()=>{};window.toast=(x)=>{msgs.push(String(x));toast0(x)};
+      const D=T<RULES_FROM?RULES_FROM:T;
+      const head=(q)=>[...document.querySelectorAll(q+' thead th')].map(x=>x.textContent.trim()).filter(Boolean).join('|');
+      // 1) 불량 창 (NCR 없음): 고치는 표
+      const d={id:'ct1',date:D,source:'수입검사',partNo:'CT-1',partName:'봉쇄부품시험',supplierId:sup.id,type:'치수',qty:3,inspQty:100,disposition:'선별',resp:'협력사',owner:'kim',logs:[],photos:[],containment:'적색 라벨'};
+      db.defects.push(d);go('defect');editDefect('ct1');await wait(300);
+      o.defHead=head('#containBox');o.defRows=document.querySelectorAll('#containBox tbody tr').length;o.mode=ctMode;
+      o.memo=(document.querySelector('#mf [name=containment]')||{}).value;
+      curContain[0].target='100';curContain[0].sorted='60';curContain[0].ng='2';curContain[0].act='선별 중';containFoot();
+      o.foot=document.querySelector('#containFoot').innerText.replace(/\s+/g,' ').trim();
+      await saveDefect('ct1');await wait(300);
+      o.saved=(d.contain||[]).map(x=>[x.loc,x.target,x.sorted,x.ng,x.act].join('/')).join(';');
+      o.text=defContainText(d);
+      // 2) NCR 창: 같은 표 · 비어 있으면 불량의 표를 가져옴
+      mfDirty=false;closeModal(true);
+      const n={id:'ctn',no:'QNCN-CT-1',issueDate:D,supplierId:sup.id,reqType:'8D 보고서',defectIds:['ct1'],logs:[],contain:[]};db.ncrs.push(n);d.ncrId='ctn';
+      go('ncr');editNcr('ctn');await wait(300);
+      o.ncrHead=head('#containBox');o.ncrSeed=curContain.map(x=>x.loc+'/'+x.target).join(';');o.ncrMode=ctMode;
+      mfDirty=false;closeModal(true);n.contain=[{loc:'협력사 창고',target:'2000',sorted:'800',ng:'5',act:'선별 중',done:''}];
+      // 3) 불량 창 (NCR 있음): NCR 의 표를 보기만 함
+      go('defect');editDefect('ct1');await wait(300);
+      o.ro={box:!!document.querySelector('#containBox'),view:(document.querySelector('#defCt')||{}).innerText||'',mode:ctMode,inputs:document.querySelectorAll('#defCt input,#defCt select').length};
+      mfDirty=false;closeModal(true);
+      // 4) RCA: 예전 격리 수량 4칸은 줄로 읽음 · 표가 없으면 연결된 표를 씀
+      const gate=(c)=>CZ_GATES_T(c);
+      const old={id:'cc1',Created:'2026-01-05',QtyStock:'5',QtyWIP:'0',QtyTransit:'0',QtyCustomer:'1',DefectIds:[]};
+      o.oldRows=czCtOwn(old).map(x=>x.loc+'/'+x.target).join(';');o.oldSum=ctSumText(czCtAll(old));
+      const lk={id:'cc2',Created:D,DefectIds:['ct1']};
+      o.lkTitle=czCtLinked(lk).map(x=>x.title).join();o.lkSum=ctSumText(czCtAll(lk));
+      const emp={id:'cc3',Created:D,DefectIds:[]};o.empAll=czCtAll(emp).length;o.empOwn=czCtOwn(emp).map(x=>x.loc).join('|');
+      // 5) 표준화 문서: 예전 체크는 ‘완료’ 로 읽음 · 미정이 남으면 끝낼 수 없음
+      o.legacy=SD_DOCS.map(([k])=>sdOf({std:{fmea:true,ws:true}})[k].st||'미정').join('|');
+      o.msgOpen=sdValidMsg(sdOf({std:{fmea:true}}),'');
+      o.msgNA=sdValidMsg(sdOf({docs:{fmea:{st:'완료'},cp:{st:'완료'},ws:{st:'해당없음'},insp:{st:'완료'}}}),'');
+      o.msgOk=sdValidMsg(sdOf({docs:{fmea:{st:'완료'},cp:{st:'완료'},ws:{st:'해당없음'},insp:{st:'완료'}}}),'공정 변경 없음');
+      o.caseDocs=SD_DOCS.map(([k])=>sdOfCase({FMEAUpdate:'완료',FMEARev:'Rev.07',CPUpdate:'필요',WSUpdate:'해당없음'})[k].st||'미정').join('|');
+      // 사내 대책 창: 표 4줄 · 미정이 있으면 완료로 저장하지 않음
+      const e={id:'ct2',date:D,source:'공정',partNo:'CT-2',partName:'문서부품시험',supplierId:sup.id,type:'치수',qty:3,inspQty:100,disposition:'선별',resp:'사내',owner:'kim',logs:[],photos:[],
+        ica:{level:'간이 대책',std:{fmea:true},d4:'원인',d5:'대책',d6:'확인'}};db.defects.push(e);
+      go('defect');editIca('ct2');await wait(300);let f=document.querySelector('#mf');
+      o.sdHead=head('#icaStd');o.sdRows=document.querySelectorAll('#icaStd tbody tr').length;o.sdFirst=f.ica_doc_fmea_st.value;
+      f.ica_doneDate.value=T;o.block=[saveIca('ct2',true),msgs.pop()||''];
+      ['cp','ws','insp'].forEach(k=>f['ica_doc_'+k+'_st'].value='완료');f.ica_doc_fmea_rev.value='Rev.07';
+      o.pass=saveIca('ct2',true);o.after={st:e.ica.docs.cp.st,rev:e.ica.docs.fmea.rev,std:Object.keys(e.ica.std).sort().join(),done:e.ica.doneDate};
+      mfDirty=false;closeModal(true);
+      db.defects=db.defects.filter(x=>x!==d&&x!==e);db.ncrs=db.ncrs.filter(x=>x!==n);window.save=save0;window.toast=toast0;render();return o}""".replace("const gate=(c)=>CZ_GATES_T(c);", ""))
+    HEAD = "위치|대상 (EA)|선별 (EA)|불량 (EA)|처리|완료일"
+    ok(r["defHead"] == HEAD == r["ncrHead"] and r["defRows"] == 3 and r["mode"] == "defect" and r["ncrMode"] == "ncr" and r["memo"] == "적색 라벨",
+       f"봉쇄 표 부품: 불량 창과 NCR 창의 표가 같음 ({r['defHead']}) · 예전 임시조치 글은 메모 칸에 남음")
+    ok("남음 40" in r["foot"] and r["saved"] == "당사 재고/100/60/2/선별 중" and "대상 100" in r["text"] and "적색 라벨" in r["text"],
+       f"봉쇄 표: 합계 · 남음을 계산하고 불량에 저장 ({r['foot']} · {r['saved']})")
+    ok(r["ncrSeed"] == "당사 재고/100" and not r["ro"]["box"] and r["ro"]["inputs"] == 0 and "QNCN-CT-1" in r["ro"]["view"] and "협력사 창고" in r["ro"]["view"] and r["ro"]["mode"] == "",
+       f"봉쇄 표는 한 건에 한 개: NCR 창은 불량의 표를 가져오고 ({r['ncrSeed']}), 불량 창은 NCR 의 표를 보기만 함")
+    ok(r["oldRows"] == "사내 재고/5;재공/0;이송 중/0;고객처/1" and r["oldSum"].startswith("대상 6") and r["lkTitle"] == "NCR QNCN-CT-1" and r["lkSum"].startswith("대상 2,000")
+       and r["empAll"] == 0 and r["empOwn"] == "사내 재고|재공|이송 중|고객처",
+       f"RCA 봉쇄 표: 예전 격리 수량 4칸을 줄로 읽음 ({r['oldRows']}) · 연결된 표를 씀 ({r['lkTitle']} {r['lkSum']})")
+    ok(r["legacy"] == "완료|미정|완료|미정" and "관리계획서" in r["msgOpen"] and "사유" in r["msgNA"] and r["msgOk"] == "" and r["caseDocs"] == "완료|필요|해당없음|미정",
+       f"표준화 문서 부품: 예전 체크는 ‘완료’ 로 읽음 ({r['legacy']}) · 미정 · 사유 없음은 막음")
+    ok(r["sdHead"] == "문서|갱신|개정번호|개정일" and r["sdRows"] == 4 and r["sdFirst"] == "완료" and r["block"][0] is False and "표준화 문서" in r["block"][1]
+       and r["pass"] is True and r["after"] == {"st": "완료", "rev": "Rev.07", "std": "cp,fmea,insp,ws", "done": r["after"]["done"]},
+       f"사내 대책 창: 문서 표 4줄 · 미정이 있으면 완료로 저장하지 않음 ({r['block'][1][:40]}…) · 정하면 저장 ({r['after']})")
+

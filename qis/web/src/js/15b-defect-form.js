@@ -29,6 +29,7 @@ function editDefect(id, copy, preset) {
     id = null;
   }
   const iss = d.issueId && issById(d.issueId);
+  const dct = defContain(copy ? {} : d); // 봉쇄 표 (공통 부품 03c): NCR 이 있으면 NCR 의 표를 보기만 함
   const body = `${
     iss
       ? `<div class="banner" style="background:var(--pri2);border-color:#c9d8f2;color:#1d2433;margin-bottom:10px">이슈 <b>${esc(iss.no)}</b> ${esc(iss.title)}${
@@ -67,7 +68,14 @@ function editDefect(id, copy, preset) {
     <label style="grid-column:span 2" title="NCR 통보서의 Specification(도면사양) 칸으로 들어갑니다">도면 규격 (Specification)<textarea name="spec" style="min-height:44px" placeholder="예: Ø12.0 ±0.05 / 작동력 3 ~ 5 N / 스크래치 없을 것">${esc(d.spec)}</textarea></label>
     <label style="grid-column:span 2" title="NCR 통보서의 Actual(실제) 칸으로 들어갑니다">실측 · 실제 (Actual)<textarea name="actual" style="min-height:44px" placeholder="예: Ø12.12 (n=5 중 최대) / 작동력 8.2 N / 길이 3mm 스크래치">${esc(d.actual)}</textarea></label>
     <label class="full">불량 내용 (현상)<textarea name="desc">${esc(d.desc)}</textarea></label>
-    <label class="full">임시조치 (봉쇄 · 재고 처리)<textarea name="containment">${esc(d.containment)}</textarea></label>
+    <div class="full" id="defCt">${
+      dct.ro
+        ? `<div class="ctl">봉쇄 · 재고 처리 <span class="muted">— NCR ${esc(dct.ncr.no || '')} 의 표입니다. 고치는 곳은 NCR 창입니다${
+            dct.fromNcr ? '' : dct.rows.length ? ' (NCR 창을 열면 이 표를 가져갑니다)' : ''
+          }</span></div>${ctViewHTML(dct.rows)}`
+        : ctBoxHTML('봉쇄 · 재고 처리')
+    }</div>
+    <label class="full">식별 방법 · 메모 (임시조치)<textarea name="containment" style="min-height:44px">${esc(d.containment)}</textarea></label>
   </div></div>
   <div class="fgrp dfn"><div class="gh">처리 · 귀책</div><div class="fg">
     <label>처리<select name="disposition">${opts(S.dispositions, d.disposition, true)}</select></label>
@@ -116,6 +124,11 @@ function editDefect(id, copy, preset) {
   // NCR 발행은 불량 등록과 별도 — ‘다음 단계’의 NCR 발행 · 불량 목록의 발행 단추 · NCR 탭에서 함
   if (id) btns.unshift({ label: '삭제', cls: 'd', fn: () => delDefect(id) });
   openModal(id ? '불량 상세' : '불량 등록', body, btns);
+  if (dct.ro) ctMode = '';
+  else {
+    ctInit(copy ? [] : d.contain, CT_DEF_IN, 'defect');
+    renderContain();
+  }
   initPhotoBox(copy ? [] : d.photos || []);
   srcLayout();
   {

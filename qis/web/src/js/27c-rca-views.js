@@ -304,6 +304,25 @@ function czField(c, fd, missSet) {
         (u.includes('미정') ? ' — 불량의 처리를 입력하면 자동 반영' : ' — 처리가 섞여 있어 RCA 처분은 직접 고릅니다'),
     });
   }
+  if (fd.type === 'cttable') {
+    // 봉쇄 표 (공통 부품 03c) — 바꾸면 바로 저장. 연결된 불량 · NCR 의 표는 아래에 보기만
+    const lk = czCtLinked(c);
+    return `<div class="fld w4 ${missSet.has('Contain') ? 'miss' : ''}"><div class="ctl">${esc(fd.label)} <button type="button" class="btn" onclick="czCtAdd()">+ 위치 추가</button></div>
+      <div id="czCt">${ctEditHTML(czCtOwn(c), 'case')}</div>${lk
+        .map(
+          (x) =>
+            `<div class="ctl" style="margin-top:10px">연결된 표 — ${esc(x.title)} <span class="muted">(보기만)</span></div>${ctViewHTML(x.rows)}`,
+        )
+        .join('')}${lk.length ? '<div class="hint">RCA 의 표가 비어 있으면 연결된 표의 숫자를 판정과 보고서에 씁니다</div>' : ''}</div>`;
+  }
+  if (fd.type === 'sdtable') {
+    // 표준화 문서 표 (공통 부품 03c)
+    const sdMiss = Object.values(SD_CASE).some((a) => missSet.has(a[0]));
+    return `<div class="fld w4 ${sdMiss ? 'miss' : ''}"><div class="ctl">${esc(fd.label)}</div>${sdTableHTML(
+      sdOfCase(c),
+      (k, p) => `data-scope="case" data-f="${SD_CASE[k][['st', 'rev', 'date'].indexOf(p)]}"`,
+    )}<div class="hint">‘해당 없음’ 은 사유를 적습니다. ‘미정’ · ‘필요’ 가 남으면 종결할 수 없습니다.</div></div>`;
+  }
   const v = c[fd.key],
     id = `czf_${fd.key}`,
     attr = `id="${id}" data-scope="case" data-f="${fd.key}"`;

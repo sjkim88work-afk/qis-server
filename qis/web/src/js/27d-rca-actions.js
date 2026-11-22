@@ -70,6 +70,20 @@ function czCreateAction(d) {
   db.actions.push(a);
   return a;
 }
+/* 봉쇄 표 (공통 부품 03c) — RCA 는 바꾸면 바로 저장 */
+function czCtEdit(fn) {
+  const c = czById('cases', czUi.caseId);
+  if (!c) return;
+  const rows = czCtOwn(c);
+  fn(rows);
+  c.Contain = rows;
+  touch(c);
+  save();
+  czSoft();
+}
+const czCtSet = (i, k, v) => czCtEdit((rows) => rows[i] && (rows[i][k] = v));
+const czCtDel = (i) => czCtEdit((rows) => rows.splice(i, 1));
+const czCtAdd = () => czCtEdit((rows) => rows.push(ctRow({})));
 function czSetField(c, k, v) {
   if (k === 'PartId') {
     if (!String(v).trim()) {

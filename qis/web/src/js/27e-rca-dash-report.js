@@ -401,7 +401,14 @@ function czReport() {
   }
   <h3>D3 임시 봉쇄 · 처분</h3><table>${row(
     '격리 수량',
-    `재고 ${c.QtyStock || 0} · 재공 ${c.QtyWIP || 0} · 이송중 ${c.QtyTransit || 0} · 고객처 ${c.QtyCustomer || 0} EA`,
+    [ctSumText(czCtAll(c)) || '-']
+      .concat(
+        czCtAll(c).map(
+          (x) =>
+            `${x.loc || '-'}: 대상 ${x.target || 0} · 선별 ${x.sorted || 0} · 불량 ${x.ng || 0}${x.act ? ' · ' + x.act : ''}${x.done ? ' · ' + x.done : ''}`,
+        ),
+      )
+      .join('\n'),
   )}
     ${row('격리 완료일 / 식별', `${c.ContainDate || ''} / ${c.ContainMethod || ''}`)}${row('소급 범위', c.ContainScope)}
     ${row(
@@ -422,10 +429,10 @@ function czReport() {
     '불량률',
     `개선 전 ${c.RateBefore || ''} → 개선 후 ${c.RateAfter || ''}`,
   )}${row('재발 / 판정', `${c.Recurred || ''} / ${c.VerifyResult || ''}`)}</table>
-  <h3>D7 재발 방지 · 표준화</h3><table>${row('공정 FMEA', `${c.FMEAUpdate || ''} ${c.FMEARev || ''}`)}${row(
-    '관리계획서',
-    `${c.CPUpdate || ''} ${c.CPRev || ''}`,
-  )}${row('해당없음 사유', c.DocNAReason)}${row('수평전개', c.Yokoten)}</table>${actTable(['문서개정', '수평전개', '교육'])}
+  <h3>D7 재발 방지 · 표준화</h3><table>${SD_DOCS.map(([k, l]) => {
+    const x = sdOfCase(c)[k];
+    return row(l, `${x.st} ${x.rev} ${x.date}`.trim());
+  }).join('')}${row('해당없음 사유', c.DocNAReason)}${row('수평전개', c.Yokoten)}</table>${actTable(['문서개정', '수평전개', '교육'])}
   <h3>D8 종결</h3><table>${row('종결일', c.CloseDate)}${row('종결 승인자', c.CloseApprover)}${row('보관기간', c.Retention)}</table>
   </body></html>`);
   reportShow(w, html, `8D_${c.CaseNo}.html`);
@@ -474,6 +481,7 @@ function czCSV(list) {
       'QtyWIP',
       'QtyTransit',
       'QtyCustomer',
+      'ContainTotal',
       'ContainDate',
       'ContainMethod',
       'ContainScope',
@@ -506,6 +514,10 @@ function czCSV(list) {
       'FMEARev',
       'CPUpdate',
       'CPRev',
+      'WSUpdate',
+      'WSRev',
+      'InspUpdate',
+      'InspRev',
       'DocNAReason',
       'Yokoten',
       'VerifyStart',
@@ -534,6 +546,14 @@ function czCSV(list) {
         TierAuto: czTierAuto(c),
         FARTotal: c.Response === 'FAR' ? czFar(c) : '',
         AnalysisTools: (c.AnalysisTools || []).join(';'),
+        // 격리 수량 4칸은 봉쇄 표 (공통 부품 03c) 의 줄에서 읽음 — 이전 자료와 같은 열 이름을 지킴
+        ...Object.fromEntries(
+          CZ_QTY_OLD.map(([k, l]) => {
+            const r = czCtAll(c).filter((x) => x.loc === l);
+            return [k, r.length ? ctTot(r).T : has(c[k]) && !Array.isArray(c.Contain) ? c[k] : ''];
+          }),
+        ),
+        ContainTotal: ctSumText(czCtAll(c)),
       }),
     );
   } else if (list === 'actions') {

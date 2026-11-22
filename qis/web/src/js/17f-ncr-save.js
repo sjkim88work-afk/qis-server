@@ -404,7 +404,7 @@ function saveNcr(id) {
   concCommit(n);
   dkCommit('notice', n);
   dkCommit('reply', n);
-  n.contain = curContain.filter((r) => r.target || r.sorted || r.ng || r.done);
+  n.contain = ctClean(curContain);
   n.vlots = vfLotsOut();
   n.photoExcl = [...curExcl];
   n.evals = curEvals.map((e) => ({ ...e, score: evalScore(e), verdict: evalVerdict(e) }));
@@ -522,13 +522,9 @@ async function print8D(id) {
     n.concession && n.concession !== '없음'
       ? `<tr><th>특채</th><td colspan="3">${esc(n.concession)}${(n.concDocs || []).length ? ` · 첨부 문서 ${n.concDocs.length}건` : ''}</td></tr>`
       : ''
-  }${n.penalty !== undefined && n.penalty !== '' ? `<tr><th>협력사 평가 감점</th><td colspan="3">${esc(n.penalty)}점</td></tr>` : ''}</table>${
-    (n.contain || []).length
-      ? `<table class="sm"><tr><th>재고 위치</th><th>대상 (EA)</th><th>선별 (EA)</th><th>불량 (EA)</th><th>완료일</th></tr>${n.contain
-          .map((r) => `<tr><td>${esc(r.loc)}</td><td>${esc(r.target)}</td><td>${esc(r.sorted)}</td><td>${esc(r.ng)}</td><td>${esc(r.done)}</td></tr>`)
-          .join('')}</table>`
-      : ''
-  }${vfLotsPrint(n.vlots)}
+  }${n.penalty !== undefined && n.penalty !== '' ? `<tr><th>협력사 평가 감점</th><td colspan="3">${esc(n.penalty)}점</td></tr>` : ''}</table>${ctPrintHTML(
+    n.contain,
+  )}${vfLotsPrint(n.vlots)}
   <table>${D8.map(([k, l]) => `<tr><th>${l}</th><td style="height:48px">${nl(n[k])}</td></tr>`).join('')}</table>
   ${(n.evals || [])
     .filter(evalDone)

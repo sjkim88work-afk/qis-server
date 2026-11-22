@@ -193,7 +193,8 @@ async function saveDefect(id) {
     const inForm = !!$('#mf').inv_verdict,
       exInv = id ? (db.defects.find((x) => x.id === id) || {}).inv : null;
     const iv = !inForm && exInv ? JSON.parse(JSON.stringify(exInv)) : {},
-      c = { std: {} };
+      sd = sdGather(o, 'ica_'), // 표준화 문서 표 (공통 부품 03c)
+      c = { std: sd.std, docs: sd.docs, docNA: sd.docNA };
     Object.keys(o).forEach((k) => {
       if (k.startsWith('inv_')) {
         iv[k.slice(4)] = o[k];
@@ -228,13 +229,20 @@ async function saveDefect(id) {
           lv !== ICA_NONE ? { std: {}, due: addDays(iv.verdictDate || o.date, typeDays(lv === '8D' ? '8D 보고서' : '간이 대책서')) } : undefined;
       } else o.ica = undefined;
     } else {
-      const hasIca = ICA_KEYS.some((k) => (c[k] || '').trim()) || c.doneDate || c.due || Object.keys(c.std).length;
+      const hasIca = ICA_KEYS.some((k) => (c[k] || '').trim()) || c.doneDate || c.due || sdAny(c.docs);
       if (o.resp === '사내' || hasIca) {
         const lvEff = ($('#mf').ica_level || {}).value || ICA_NONE;
         if (c.doneDate && lvEff === '8D') {
           const miss = ['d4', 'd5', 'd6', 'd7'].filter((k) => !String(c[k] || '').trim());
           if (miss.length) {
             toast(`사내 8D 완료 전에 ${miss.map((k) => k.toUpperCase()).join(' · ')}을(를) 작성하세요 (원인 · 대책 · 효과 · 재발방지)`);
+            return null;
+          }
+        }
+        if (c.doneDate && lvEff !== ICA_NONE && newRules(o)) {
+          const m = sdValidMsg(c.docs, c.docNA);
+          if (m) {
+            toast(`사내 대책 완료 전에 — ${m}`);
             return null;
           }
         }
@@ -258,6 +266,7 @@ async function saveDefect(id) {
     toast('심각도를 수동 조정한 사유를 입력하세요');
     return null;
   }
+  if (ctMode === 'defect' && $('#containBox')) o.contain = ctClean(curContain); // 봉쇄 표 (공통 부품 03c)
   {
     const sv = { special: !!curSev.special };
     if (curSev._touched.impact) sv.impact = curSev.impact;

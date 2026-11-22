@@ -233,3 +233,12 @@ body.nosrv>*:not(#nosrv){display:none!important}
 .dvb .mono{opacity:.75}
 .dvb .dvl{margin-left:4px;color:var(--bad);font-weight:600;font-size:var(--fs-sm)}
 .dvb .dvn{margin-left:6px;font-size:var(--fs-sm)}
+
+/* 공통 부품 — 봉쇄 · 재고 처리 표 / 표준화 문서 표 (03c-contain-docs.js) */
+.ctl{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--sub);margin-top:6px}
+.ctl .b.s,.ctl .btn{font-size:12px}
+table.ctb td,table.sdt td{padding:3px 6px}
+table.ctb select,table.sdt select{height:30px}
+table.ctro td{padding:5px 8px}
+table.sdt{margin-top:4px}
+table.sdt td:first-child{white-space:nowrap}

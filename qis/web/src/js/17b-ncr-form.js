@@ -15,13 +15,12 @@ function editNcr(id, preset, mode) {
     ng: r.ng ?? '',
   }));
   curExcl = new Set(n.photoExcl || []);
-  curContain = (n.contain && n.contain.length ? n.contain : CONTAIN_DEF.map((l) => ({ loc: l }))).map((r) => ({
-    loc: r.loc || '',
-    target: r.target ?? '',
-    sorted: r.sorted ?? '',
-    ng: r.ng ?? '',
-    done: r.done || '',
-  }));
+  {
+    // 봉쇄 표 (공통 부품). NCR 의 표가 비어 있으면 연결된 불량의 표를 가져옴 — 표는 한 건에 한 개
+    const seed =
+      n.contain && n.contain.length ? null : curLinks.map((i) => db.defects.find((x) => x.id === i)).find((x) => x && ctClean(x.contain).length);
+    ctInit(seed ? seed.contain : n.contain, CONTAIN_DEF, 'ncr');
+  }
   vfLotsInit(n);
   curEvals = JSON.parse(JSON.stringify(n.evals || []));
   curEvIdx = Math.max(0, curEvals.length - 1);
@@ -160,8 +159,7 @@ function editNcr(id, preset, mode) {
     <label>클린 포인트 (첫 양품 LOT / 납품일)<input name="cleanPoint" value="${esc(n.cleanPoint)}" placeholder="예: LOT 20261028 · 10/29 납품분부터"></label>
     <label>양품 식별 표시<input name="cleanMark" value="${esc(n.cleanMark)}" placeholder="예: 박스 측면 녹색 ‘D3 OK’ 라벨"></label>
   </div>
-  <div style="margin-top:10px;font-size:12px;color:var(--sub)">재고 위치별 선별 결과 <button type="button" class="b s" onclick="curContain.push({loc:'',target:'',sorted:'',ng:'',done:''});mfDirty=true;renderContain()">+ 행</button></div>
-  <div id="containBox"></div></div>
+  ${ctBoxHTML('봉쇄 · 재고 처리 — 재고 위치별 선별 결과')}</div>
   </div>
 <div class="ntp" data-p="c">
   <div class="sec">유효성 검증</div>
