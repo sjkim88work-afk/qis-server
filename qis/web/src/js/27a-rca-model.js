@@ -144,9 +144,9 @@ const CZ_RULES = [
   {
     st: '격리',
     tab: 'contain',
-    f: 'QtyStock',
-    t: '격리 수량 4칸 (없으면 0)',
-    ok: (c) => ['QtyStock', 'QtyWIP', 'QtyTransit', 'QtyCustomer'].every((k) => has(c[k])),
+    f: 'Contain',
+    t: '봉쇄 표 — 대상 수량 1줄 이상 (없으면 0)',
+    ok: (c) => czCtAll(c).some((r) => String(r.target ?? '') !== ''),
   },
   { st: '격리', tab: 'contain', f: 'ContainDate', t: '격리 완료일', ok: (c) => has(c.ContainDate) },
   { st: '격리', tab: 'contain', f: 'ContainMethod', t: '식별 방법', ok: (c) => has(c.ContainMethod) },
@@ -251,7 +251,24 @@ const CZ_RULES = [
     tab: 'close',
     f: 'DocNAReason',
     t: '문서 개정 해당없음 사유',
-    ok: (c) => !(c.FMEAUpdate === '해당없음' || c.CPUpdate === '해당없음') || has(c.DocNAReason),
+    ok: (c) => !sdHasNA(sdOfCase(c)) || has(c.DocNAReason),
+  },
+  // 작업표준 · 검사기준 판정은 새 규칙을 쓰는 날부터 등록한 건에만 요구 (이전 건은 그대로 종결 가능)
+  {
+    st: '표준화',
+    close: true,
+    tab: 'close',
+    f: 'WSUpdate',
+    t: '작업표준 갱신 판정 (완료/해당없음)',
+    ok: (c) => (c.Created || '') < RULES_FROM || sdDone(c.WSUpdate),
+  },
+  {
+    st: '표준화',
+    close: true,
+    tab: 'close',
+    f: 'InspUpdate',
+    t: '검사기준 갱신 판정 (완료/해당없음)',
+    ok: (c) => (c.Created || '') < RULES_FROM || sdDone(c.InspUpdate),
   },
   { st: '표준화', tab: 'close', f: 'Yokoten', t: '수평전개 판정 (해당없음/완료)', ok: (c) => ['해당없음', '완료'].includes(c.Yokoten) },
   { close: true, tab: 'actions', t: '미완료 조치 0건', ok: (c) => czActs(c).every((a) => ['완료', '취소'].includes(a.ActionStatus)) },
@@ -271,6 +288,40 @@ function czGate(c, target) {
     const si = r.st ? p.indexOf(r.st) : -1;
     return (si >= 0 && si < ti) || (r.close && target === '종결');
   }).filter((r) => !r.ok(c));
+}
+/* 봉쇄 표 (공통 부품 03c) — RCA 의 표: c.Contain. 예전 자료는 격리 수량 4칸 (Qty…) 을 줄로 읽음 */
+const CZ_QTY_OLD = [
+  ['QtyStock', '사내 재고'],
+  ['QtyWIP', '재공'],
+  ['QtyTransit', '이송 중'],
+  ['QtyCustomer', '고객처'],
+];
+function czCtOwn(c) {
+  if (Array.isArray(c.Contain)) return c.Contain.map(ctRow);
+  const old = CZ_QTY_OLD.filter(([k]) => has(c[k])).map(([k, l]) => ctRow({ loc: l, target: String(c[k]) }));
+  return old.length ? old : CT_DEF_CASE.map((l) => ctRow({ loc: l }));
+}
+// 연결된 불량 · NCR 의 표 (같은 NCR 은 한 번만)
+function czCtLinked(c) {
+  const out = [],
+    seen = new Set();
+  (c.DefectIds || []).forEach((i) => {
+    const d = db.defects.find((x) => x.id === i);
+    if (!d) return;
+    const o = defContain(d),
+      key = o.fromNcr ? 'n' + o.ncr.id : 'd' + d.id;
+    if (seen.has(key) || !o.rows.length) return;
+    seen.add(key);
+    out.push({ title: o.fromNcr ? `NCR ${o.ncr.no || ''}` : `불량 ${defLabel(d)}`, rows: o.rows });
+  });
+  const n = c.NcrId ? db.ncrs.find((x) => x.id === c.NcrId) : null;
+  if (n && !seen.has('n' + n.id) && ctClean(n.contain).length) out.push({ title: `NCR ${n.no || ''}`, rows: ctClean(n.contain) });
+  return out;
+}
+// 판정 · 보고서에 쓰는 줄: RCA 의 표가 있으면 그것, 없으면 연결된 표
+function czCtAll(c) {
+  const own = ctClean(czCtOwn(c));
+  return own.length ? own : czCtLinked(c).flatMap((x) => x.rows);
 }
 const F = (key, label, type, opt, x) => Object.assign({ key, label, type, opt }, x || {});
 const CZ_TABS = [
@@ -307,12 +358,9 @@ const CZ_TABS = [
   {
     id: 'contain',
     label: '격리·처분',
-    note: 'IATF 8.7.1 — 부적합품은 식별·격리·기록 후 처분합니다. 격리 수량은 없으면 0을 입력하세요.',
+    note: 'IATF 8.7.1 — 부적합품은 식별·격리·기록 후 처분합니다. 봉쇄 표의 대상 수량은 없으면 0을 입력하세요.',
     fields: [
-      F('QtyStock', '격리 · 사내 재고', 'number'),
-      F('QtyWIP', '격리 · 재공', 'number'),
-      F('QtyTransit', '격리 · 이송중', 'number'),
-      F('QtyCustomer', '격리 · 고객처', 'number'),
+      F('Contain', '봉쇄 · 재고 처리', 'cttable', null, { w: 4 }),
       F('ContainDate', '격리 완료일', 'date'),
       F('ContainMethod', '식별 방법', 'select', 'ContainMethod'),
       F('ContainScope', '소급 범위 (로트/기간)', 'text', null, { w: 2 }),
@@ -381,11 +429,8 @@ const CZ_TABS = [
     label: '표준화·종결',
     note: 'IATF 10.2.3 — 근본원인이 확정되면 FMEA와 관리계획서 갱신 여부를 반드시 판정합니다.',
     fields: [
-      F('FMEAUpdate', '공정 FMEA 갱신', 'select', 'DocUpd'),
-      F('FMEARev', 'FMEA 개정번호', 'text'),
-      F('CPUpdate', '관리계획서 갱신', 'select', 'DocUpd'),
-      F('CPRev', '관리계획서 개정번호', 'text'),
-      F('DocNAReason', '해당없음 사유', 'textarea', null, { w: 4, showIf: (c) => c.FMEAUpdate === '해당없음' || c.CPUpdate === '해당없음' }),
+      F('StdDocs', '표준화 문서', 'sdtable', null, { w: 4 }),
+      F('DocNAReason', '해당없음 사유', 'textarea', null, { w: 4, showIf: (c) => sdHasNA(sdOfCase(c)) }),
       F('Yokoten', '수평전개', 'select', 'Yokoten'),
       F('CloseApprover', '종결 승인자', 'text'),
       F('Retention', '보관기간 (IATF 7.5.3.2.1)', 'select', 'Retention'),

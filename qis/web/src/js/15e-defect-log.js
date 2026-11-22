@@ -807,7 +807,7 @@ function openLog(id) {
   openModal(
     `불량 진행 — ${defLabel(d)} (${supName(d.supplierId) || '-'})`,
     `<div class="psum">
-    <div><span class="muted">현상</span> ${nl(d.desc || '-')}</div><div><span class="muted">임시조치</span> ${nl(d.containment || '-')}</div>
+    <div><span class="muted">현상</span> ${nl(d.desc || '-')}</div><div><span class="muted">임시조치</span> ${nl(defContainText(d) || '-')}</div>
     <div class="row" style="gap:6px;margin-top:4px">${sevBadge(d)} <span class="bg mut">${esc(d.type || '')} ${num(d.qty).toLocaleString()}개</span> <span class="bg mut">처리 ${esc(d.disposition || '-')}</span> <span class="bg mut">귀책 ${esc(d.resp || '-')}</span> ${stageBadges(d).replace('<br>', ' ')}
       ${
         n

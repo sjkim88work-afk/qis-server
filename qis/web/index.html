@@ -923,6 +923,15 @@ body.nosrv>*:not(#nosrv){display:none!important}
 .dvb .mono{opacity:.75}
 .dvb .dvl{margin-left:4px;color:var(--bad);font-weight:600;font-size:var(--fs-sm)}
 .dvb .dvn{margin-left:6px;font-size:var(--fs-sm)}
+
+/* 공통 부품 — 봉쇄 · 재고 처리 표 / 표준화 문서 표 (03c-contain-docs.js) */
+.ctl{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--sub);margin-top:6px}
+.ctl .b.s,.ctl .btn{font-size:12px}
+table.ctb td,table.sdt td{padding:3px 6px}
+table.ctb select,table.sdt select{height:30px}
+table.ctro td{padding:5px 8px}
+table.sdt{margin-top:4px}
+table.sdt td:first-child{white-space:nowrap}
 /* ================= 휴대폰 화면 ================= */
 #mswitch{display:none;text-align:center;padding:14px 0 22px;font-size:13px}
 #mswitch a{display:none}
@@ -3285,6 +3294,212 @@ function vfLotsPrint(rows) {
         .join('')}</table>`
     : '';
 }
+// ── 공통 부품 — 봉쇄 · 재고 처리 표 / 표준화 문서 표 ──
+// 불량 창 · NCR 창 · RCA 가 같은 표를 씀. 여기를 고치면 세 곳이 같이 바뀜.
+
+/* 1. 봉쇄 · 재고 처리 표 — 줄: { loc 위치, target 대상, sorted 선별, ng 불량, act 처리, done 완료일 } */
+const CT_ACT = ['', '선별 중', '선별', '재작업', '폐기', '반품', '특채'];
+const CT_DEF_IN = ['당사 재고', '생산 라인', '협력사 재고'];
+const CT_DEF_CASE = ['사내 재고', '재공', '이송 중', '고객처'];
+const ctRow = (r) => ({
+  loc: r.loc || '',
+  target: r.target ?? '',
+  sorted: r.sorted ?? '',
+  ng: r.ng ?? '',
+  act: r.act || '',
+  done: r.done || '',
+});
+const ctUsed = (r) => !!(String(r.target ?? '') !== '' || String(r.sorted ?? '') !== '' || String(r.ng ?? '') !== '' || r.done || r.act);
+// 저장 · 계산에 쓰는 줄 (빈 줄은 뺌)
+const ctClean = (rows) => (rows || []).map(ctRow).filter(ctUsed);
+function ctTot(rows) {
+  const t = (k) => (rows || []).reduce((a, r) => a + numC(r[k]), 0),
+    T = t('target'),
+    S = t('sorted');
+  return { T, S, N: t('ng'), left: Math.max(0, T - S) };
+}
+const ctSumText = (rows) => {
+  const r = ctClean(rows);
+  if (!r.length) return '';
+  const o = ctTot(r);
+  return `대상 ${o.T.toLocaleString()} · 선별 ${o.S.toLocaleString()} · 불량 ${o.N.toLocaleString()} · 남음 ${o.left.toLocaleString()} EA`;
+};
+const ctFootHTML = (rows) => {
+  const o = ctTot(rows);
+  return `<tr><td><b>합계</b></td><td style="padding-left:12px">${o.T.toLocaleString()}</td>
+    <td style="padding-left:12px">${o.S.toLocaleString()}</td>
+    <td style="padding-left:12px">${o.N.toLocaleString()}</td><td colspan="3" class="muted" style="font-size:12px">${
+      o.T ? `남음 ${o.left.toLocaleString()} EA` : ''
+    }</td></tr>`;
+};
+const CT_HEAD = '<th>위치</th><th>대상 (EA)</th><th>선별 (EA)</th><th>불량 (EA)</th><th>처리</th><th>완료일</th>';
+// 고치는 표. mode: 'form' = 창 (curContain · 저장 단추로 저장) / 'case' = RCA (바꾸면 바로 저장)
+function ctEditHTML(rows, mode) {
+  const ev = (i, k) =>
+    mode === 'case'
+      ? `onchange="czCtSet(${i},'${k}',this.value)"`
+      : `oninput="curContain[${i}].${k}=this.value;mfDirty=true${['target', 'sorted', 'ng'].includes(k) ? ';containFoot()' : ''}"`;
+  const del = (i) => (mode === 'case' ? `czCtDel(${i})` : `curContain.splice(${i},1);mfDirty=true;renderContain()`);
+  return `<table class="ct ctb" style="margin-top:4px"><thead><tr>${CT_HEAD}<th></th></tr></thead><tbody>${rows
+    .map(
+      (r, i) => `<tr>
+    <td><input value="${esc(r.loc)}" style="width:140px" placeholder="예: 협력사 창고" ${ev(i, 'loc')}></td>
+    ${['target', 'sorted', 'ng']
+      .map((k) => `<td><input value="${esc(r[k])}" style="width:90px" inputmode="numeric" data-ct="${k}" ${ev(i, k)}></td>`)
+      .join('')}
+    <td><select data-ct="act" ${ev(i, 'act').replace('oninput', 'onchange')}>${CT_ACT.map(
+      (a) => `<option value="${a}" ${a === r.act ? 'selected' : ''}>${a || '-'}</option>`,
+    ).join('')}</select></td>
+    <td><input type="date" value="${esc(r.done)}" ${ev(i, 'done')}></td>
+    <td><button type="button" class="b s d" title="이 줄 지우기" onclick="${del(i)}">✕</button></td></tr>`,
+    )
+    .join('')}</tbody>
+    <tfoot id="containFoot">${ctFootHTML(rows)}</tfoot></table>`;
+}
+// 보기만 하는 표
+function ctViewHTML(rows) {
+  const r = ctClean(rows);
+  if (!r.length) return '<div class="muted" style="font-size:12px;padding:6px 0">입력한 줄이 없습니다</div>';
+  return `<table class="ct ctb ctro" style="margin-top:4px"><thead><tr>${CT_HEAD}</tr></thead><tbody>${r
+    .map(
+      (x) =>
+        `<tr><td>${esc(x.loc)}</td><td>${esc(x.target)}</td><td>${esc(x.sorted)}</td><td>${esc(x.ng)}</td><td>${esc(x.act || '-')}</td><td>${esc(x.done || '-')}</td></tr>`,
+    )
+    .join('')}</tbody><tfoot>${ctFootHTML(r).replace('colspan="3"', 'colspan="2"')}</tfoot></table>`;
+}
+// 인쇄용 표
+function ctPrintHTML(rows) {
+  const r = ctClean(rows);
+  if (!r.length) return '';
+  return `<table class="sm"><tr><th>재고 위치</th><th>대상 (EA)</th><th>선별 (EA)</th><th>불량 (EA)</th><th>처리</th><th>완료일</th></tr>${r
+    .map(
+      (x) =>
+        `<tr><td>${esc(x.loc)}</td><td>${esc(x.target)}</td><td>${esc(x.sorted)}</td><td>${esc(x.ng)}</td><td>${esc(x.act)}</td><td>${esc(x.done)}</td></tr>`,
+    )
+    .join('')}</table>`;
+}
+// 창 (불량 · NCR) 에서 쓰는 상태 — 한 번에 창 한 개만 열림
+let curContain = [],
+  ctMode = ''; // '' | 'defect' | 'ncr'
+function ctInit(rows, defs, mode) {
+  curContain = (rows && rows.length ? rows : (defs || []).map((l) => ({ loc: l }))).map(ctRow);
+  ctMode = mode || '';
+}
+function renderContain() {
+  const b = $('#containBox');
+  if (b) b.innerHTML = ctEditHTML(curContain, 'form');
+}
+function containFoot() {
+  const e = $('#containFoot');
+  if (e) e.innerHTML = ctFootHTML(curContain);
+}
+function ctAddRow() {
+  curContain.push(ctRow({}));
+  mfDirty = true;
+  renderContain();
+}
+// 창 안의 봉쇄 칸 (제목 줄 + 표 자리)
+const ctBoxHTML = (title) =>
+  `<div class="ctl">${title} <button type="button" class="b s" onclick="ctAddRow()">+ 위치 추가</button></div><div id="containBox"></div>`;
+// 불량 한 건의 봉쇄 표: NCR 이 있으면 NCR 의 표 (보기만), 없으면 불량의 표
+function defContain(d) {
+  const n = d && d.ncrId ? db.ncrs.find((x) => x.id === d.ncrId) : null;
+  if (n) {
+    const nr = ctClean(n.contain);
+    return { ncr: n, ro: true, rows: nr.length ? nr : ctClean(d.contain), fromNcr: !!nr.length };
+  }
+  return { ncr: null, ro: false, rows: ctClean(d && d.contain), fromNcr: false };
+}
+// 불량의 임시조치를 글 한 줄로 (목록 · 출력용): 표 요약 + 메모
+const defContainText = (d) => {
+  if (!d) return '';
+  const s = ctSumText(defContain(d).rows);
+  return [s, d.containment].filter(Boolean).join('\n');
+};
+
+/* 2. 표준화 문서 표 — 문서마다 { st 갱신, rev 개정번호, date 개정일 } */
+const SD_DOCS = [
+  ['fmea', '공정 FMEA'],
+  ['cp', '관리계획서 (CP)'],
+  ['ws', '작업표준'],
+  ['insp', '검사기준'],
+];
+const SD_ST = [
+  ['', '미정'],
+  ['필요', '필요'],
+  ['완료', '완료'],
+  ['해당없음', '해당 없음'],
+];
+// RCA 는 칸 이름이 따로 있음 (이전 자료와 맞춤)
+const SD_CASE = {
+  fmea: ['FMEAUpdate', 'FMEARev', 'FMEADate'],
+  cp: ['CPUpdate', 'CPRev', 'CPDate'],
+  ws: ['WSUpdate', 'WSRev', 'WSDate'],
+  insp: ['InspUpdate', 'InspRev', 'InspDate'],
+};
+const sdDone = (st) => st === '완료' || st === '해당없음';
+// 사내 대책 (ica) 에서 읽음 — 예전 체크 (std) 는 ‘완료’ 로 읽음
+function sdOf(c) {
+  const o = {};
+  SD_DOCS.forEach(([k]) => {
+    const x = c && c.docs && c.docs[k];
+    o[k] = x ? { st: x.st || '', rev: x.rev || '', date: x.date || '' } : { st: c && c.std && c.std[k] ? '완료' : '', rev: '', date: '' };
+  });
+  return o;
+}
+function sdOfCase(c) {
+  const o = {};
+  SD_DOCS.forEach(([k]) => {
+    const [a, b, d] = SD_CASE[k];
+    o[k] = { st: c[a] || '', rev: c[b] || '', date: c[d] || '' };
+  });
+  return o;
+}
+const sdOpen = (docs) => SD_DOCS.filter(([k]) => !sdDone(docs[k].st)).map((x) => x[1]);
+const sdHasNA = (docs) => SD_DOCS.some(([k]) => docs[k].st === '해당없음');
+const sdAny = (docs) => SD_DOCS.some(([k]) => docs[k].st || docs[k].rev || docs[k].date);
+// 끝낼 수 있는지 — 안 되면 이유 글, 되면 ''
+function sdValidMsg(docs, naReason) {
+  const open = sdOpen(docs);
+  if (open.length) return `표준화 문서의 갱신 판정이 남았습니다: ${open.join(' · ')} (완료 또는 해당 없음)`;
+  if (sdHasNA(docs) && !String(naReason || '').trim()) return '표준화 문서가 ‘해당 없음’ 이면 사유를 적으세요';
+  return '';
+}
+// at(k, part) → 칸의 속성 글 (part: st · rev · date)
+function sdTableHTML(docs, at) {
+  return `<table class="ct sdt"><thead><tr><th>문서</th><th>갱신</th><th>개정번호</th><th>개정일</th></tr></thead><tbody>${SD_DOCS.map(
+    ([k, l]) => `<tr><td>${l}</td>
+    <td><select ${at(k, 'st')}>${SD_ST.map(([v, t]) => `<option value="${v}" ${v === docs[k].st ? 'selected' : ''}>${t}</option>`).join('')}</select></td>
+    <td><input type="text" ${at(k, 'rev')} value="${esc(docs[k].rev)}" placeholder="예: Rev.07" style="width:110px"></td>
+    <td><input type="date" ${at(k, 'date')} value="${esc(docs[k].date)}"></td></tr>`,
+  ).join('')}</tbody></table>`;
+}
+// 창에서 모은 값 (gather) 에서 문서 칸을 빼내어 { docs, docNA, std } 로 돌려줌
+function sdGather(o, pre) {
+  const docs = {};
+  SD_DOCS.forEach(([k]) => {
+    docs[k] = {};
+    ['st', 'rev', 'date'].forEach((p) => {
+      const key = `${pre}doc_${k}_${p}`;
+      docs[k][p] = o[key] || '';
+      delete o[key];
+    });
+  });
+  const docNA = o[`${pre}docNA`] || '';
+  delete o[`${pre}docNA`];
+  const std = {};
+  SD_DOCS.forEach(([k]) => {
+    if (docs[k].st === '완료') std[k] = true;
+  });
+  return { docs, docNA, std };
+}
+// 글 한 줄 (출력용)
+const sdText = (docs, naReason) =>
+  SD_DOCS.map(([k, l]) => {
+    const x = docs[k],
+      st = (SD_ST.find((s) => s[0] === x.st) || ['', '미정'])[1];
+    return `${l}: ${st}${x.rev || x.date ? ` (${[x.rev, x.date].filter(Boolean).join(', ')})` : ''}`;
+  }).join(' · ') + (naReason ? ` — 해당 없음 사유: ${naReason}` : '');
 /* ================= 차트 (SVG, 외부 라이브러리 없음) ================= */
 function barChart(labels, series, opts = {}) {
   return chartBox((W) => barSvg(labels, series, opts, W), opts.h || 230);
@@ -6560,6 +6775,7 @@ function editDefect(id, copy, preset) {
     id = null;
   }
   const iss = d.issueId && issById(d.issueId);
+  const dct = defContain(copy ? {} : d); // 봉쇄 표 (공통 부품 03c): NCR 이 있으면 NCR 의 표를 보기만 함
   const body = `${
     iss
       ? `<div class="banner" style="background:var(--pri2);border-color:#c9d8f2;color:#1d2433;margin-bottom:10px">이슈 <b>${esc(iss.no)}</b> ${esc(iss.title)}${
@@ -6598,7 +6814,14 @@ function editDefect(id, copy, preset) {
     <label style="grid-column:span 2" title="NCR 통보서의 Specification(도면사양) 칸으로 들어갑니다">도면 규격 (Specification)<textarea name="spec" style="min-height:44px" placeholder="예: Ø12.0 ±0.05 / 작동력 3 ~ 5 N / 스크래치 없을 것">${esc(d.spec)}</textarea></label>
     <label style="grid-column:span 2" title="NCR 통보서의 Actual(실제) 칸으로 들어갑니다">실측 · 실제 (Actual)<textarea name="actual" style="min-height:44px" placeholder="예: Ø12.12 (n=5 중 최대) / 작동력 8.2 N / 길이 3mm 스크래치">${esc(d.actual)}</textarea></label>
     <label class="full">불량 내용 (현상)<textarea name="desc">${esc(d.desc)}</textarea></label>
-    <label class="full">임시조치 (봉쇄 · 재고 처리)<textarea name="containment">${esc(d.containment)}</textarea></label>
+    <div class="full" id="defCt">${
+      dct.ro
+        ? `<div class="ctl">봉쇄 · 재고 처리 <span class="muted">— NCR ${esc(dct.ncr.no || '')} 의 표입니다. 고치는 곳은 NCR 창입니다${
+            dct.fromNcr ? '' : dct.rows.length ? ' (NCR 창을 열면 이 표를 가져갑니다)' : ''
+          }</span></div>${ctViewHTML(dct.rows)}`
+        : ctBoxHTML('봉쇄 · 재고 처리')
+    }</div>
+    <label class="full">식별 방법 · 메모 (임시조치)<textarea name="containment" style="min-height:44px">${esc(d.containment)}</textarea></label>
   </div></div>
   <div class="fgrp dfn"><div class="gh">처리 · 귀책</div><div class="fg">
     <label>처리<select name="disposition">${opts(S.dispositions, d.disposition, true)}</select></label>
@@ -6647,6 +6870,11 @@ function editDefect(id, copy, preset) {
   // NCR 발행은 불량 등록과 별도 — ‘다음 단계’의 NCR 발행 · 불량 목록의 발행 단추 · NCR 탭에서 함
   if (id) btns.unshift({ label: '삭제', cls: 'd', fn: () => delDefect(id) });
   openModal(id ? '불량 상세' : '불량 등록', body, btns);
+  if (dct.ro) ctMode = '';
+  else {
+    ctInit(copy ? [] : d.contain, CT_DEF_IN, 'defect');
+    renderContain();
+  }
   initPhotoBox(copy ? [] : d.photos || []);
   srcLayout();
   {
@@ -7104,10 +7332,10 @@ function saveIca(id, keep) {
   const d = db.defects.find((x) => x.id === id);
   if (!d) return false;
   const o = gather(),
-    c = { std: {} };
+    sd = sdGather(o, 'ica_'), // 표준화 문서 표 (공통 부품 03c)
+    c = { std: sd.std, docs: sd.docs, docNA: sd.docNA };
   Object.keys(o).forEach((k) => {
-    if (k.startsWith('ica_std_')) c.std[k.slice(8)] = true;
-    else if (k.startsWith('ica_')) c[k.slice(4)] = o[k];
+    if (k.startsWith('ica_')) c[k.slice(4)] = o[k];
   });
   // 유효성 검증 (공통 부품): 검증 LOT · 이전 검증 이력을 이어 받고, ‘유효’ 로 끝낼 수 있는지 봄
   c.vlots = vfLotsOut();
@@ -7130,6 +7358,13 @@ function saveIca(id, keep) {
   if (c.verifyResult && !c.verifyDate) c.verifyDate = today();
   if (c.doneDate && !c.verifyDue) c.verifyDue = addDays(c.doneDate, num(db.settings.verifyDays) || 21);
   const lvEff = c.level || ICA_NONE;
+  if (c.doneDate && lvEff !== ICA_NONE && newRules(d)) {
+    const m = sdValidMsg(c.docs, c.docNA);
+    if (m) {
+      toast(`사내 대책 완료 전에 — ${m}`);
+      return false;
+    }
+  }
   if (!c.due && lvEff !== ICA_NONE) c.due = addDays((d.inv && d.inv.verdictDate) || d.date, typeDays(lvEff === '8D' ? '8D 보고서' : '간이 대책서'));
   const sel = $('#mf').ica_level;
   if (!(sel && sel.dataset.touched)) delete c.level;
@@ -7219,10 +7454,10 @@ function icaSection(d, force) {
     (k) =>
       `<label class="full" data-ik="${k}" style="display:block;margin-top:6px"><span class="il" data-o="${lbl8[k]}">${lbl8[k]}</span><textarea name="ica_${k}" style="min-height:44px">${esc(c[k])}</textarea></label>`,
   ).join('')}</div>
-  <div class="row" id="icaStd" style="margin-top:8px;gap:12px;font-size:13px"><b>표준화 반영 확인</b>${ICA_STD.map(
-    ([k, l]) => `<label class="row" style="gap:4px"><input type="checkbox" name="ica_std_${k}" ${c.std && c.std[k] ? 'checked' : ''}> ${l}</label>`,
-  ).join('')}
+  <div id="icaStd" style="margin-top:8px"><div class="ctl">표준화 문서 <span class="muted">— 대책을 완료하려면 문서 4개를 모두 ‘완료’ 또는 ‘해당 없음’ 으로 정합니다</span>
     ${d.id ? `<span style="flex:1"></span><button type="button" class="b s" onclick="icaPrint('${d.id}')">사내 대책서 출력</button>` : ''}</div>
+    ${sdTableHTML(sdOf(c), (k, p) => `name="ica_doc_${k}_${p}"`)}
+    <label class="full" style="display:block;margin-top:6px;font-size:12px">‘해당 없음’ 사유<input type="text" name="ica_docNA" style="display:block;width:100%;margin-top:2px" value="${esc(c.docNA)}" placeholder="예: 공정 변경 없음 — 작업자 교육으로 끝냄"></label></div>
   <div id="icaVf">${vfLotsHTML('— 대책 적용 뒤의 LOT 별 결과 (LOT 가 없으면 비워 둠)')}${vfReworkHTML(c, d.id ? `icaRework('${d.id}')` : '', '재대책 시작')}</div>
   </div>`;
 }
@@ -7280,7 +7515,7 @@ async function printIca(id, w0) {
   <table>${keys
     .map((k) => `<tr><th>${simple ? SL[k] : (D8.find((x) => x[0] === k) || [k, k])[1]}</th><td style="height:46px">${nl(c[k])}</td></tr>`)
     .join('')}
-  <tr><th>표준화 반영</th><td>${ICA_STD.map(([k, l]) => `${c.std && c.std[k] ? '☑' : '☐'} ${l}`).join(' &nbsp; ')}</td></tr></table>
+  <tr><th>표준화 문서</th><td>${esc(sdText(sdOf(c), c.docNA))}</td></tr></table>
   ${phs.length ? `<div class="pg">${phs.map((p) => `<figure><img src="${p.data}"></figure>`).join('')}</div>` : ''}
   </body></html>`);
   reportShow(w, html, `사내대책서_${d.date}.html`);
@@ -7323,7 +7558,7 @@ async function printFar(id, w0) {
   ${row('불량 유형 / 수량', `${esc(d.type)} / ${num(d.qty).toLocaleString()} EA${d.inspQty ? ` (로트 ${num(d.inspQty).toLocaleString()} EA 중)` : ''}`)}
   ${row('LOT / 납품일자', esc(lotOf(d)))}
   ${row('불량 현상', nl(d.desc))}
-  ${row('당사 임시조치', nl(d.containment))}
+  ${row('당사 임시조치', nl(defContainText(d)))}
   ${iv.farPurpose ? row('요청 목적', esc(iv.farPurpose)) : ''}
   ${(iv.farItems || []).length ? row('요청 분석 항목', esc(iv.farItems.join(' / '))) : ''}
   ${
@@ -8232,7 +8467,7 @@ function openLog(id) {
   openModal(
     `불량 진행 — ${defLabel(d)} (${supName(d.supplierId) || '-'})`,
     `<div class="psum">
-    <div><span class="muted">현상</span> ${nl(d.desc || '-')}</div><div><span class="muted">임시조치</span> ${nl(d.containment || '-')}</div>
+    <div><span class="muted">현상</span> ${nl(d.desc || '-')}</div><div><span class="muted">임시조치</span> ${nl(defContainText(d) || '-')}</div>
     <div class="row" style="gap:6px;margin-top:4px">${sevBadge(d)} <span class="bg mut">${esc(d.type || '')} ${num(d.qty).toLocaleString()}개</span> <span class="bg mut">처리 ${esc(d.disposition || '-')}</span> <span class="bg mut">귀책 ${esc(d.resp || '-')}</span> ${stageBadges(d).replace('<br>', ' ')}
       ${
         n
@@ -8795,7 +9030,8 @@ async function saveDefect(id) {
     const inForm = !!$('#mf').inv_verdict,
       exInv = id ? (db.defects.find((x) => x.id === id) || {}).inv : null;
     const iv = !inForm && exInv ? JSON.parse(JSON.stringify(exInv)) : {},
-      c = { std: {} };
+      sd = sdGather(o, 'ica_'), // 표준화 문서 표 (공통 부품 03c)
+      c = { std: sd.std, docs: sd.docs, docNA: sd.docNA };
     Object.keys(o).forEach((k) => {
       if (k.startsWith('inv_')) {
         iv[k.slice(4)] = o[k];
@@ -8830,13 +9066,20 @@ async function saveDefect(id) {
           lv !== ICA_NONE ? { std: {}, due: addDays(iv.verdictDate || o.date, typeDays(lv === '8D' ? '8D 보고서' : '간이 대책서')) } : undefined;
       } else o.ica = undefined;
     } else {
-      const hasIca = ICA_KEYS.some((k) => (c[k] || '').trim()) || c.doneDate || c.due || Object.keys(c.std).length;
+      const hasIca = ICA_KEYS.some((k) => (c[k] || '').trim()) || c.doneDate || c.due || sdAny(c.docs);
       if (o.resp === '사내' || hasIca) {
         const lvEff = ($('#mf').ica_level || {}).value || ICA_NONE;
         if (c.doneDate && lvEff === '8D') {
           const miss = ['d4', 'd5', 'd6', 'd7'].filter((k) => !String(c[k] || '').trim());
           if (miss.length) {
             toast(`사내 8D 완료 전에 ${miss.map((k) => k.toUpperCase()).join(' · ')}을(를) 작성하세요 (원인 · 대책 · 효과 · 재발방지)`);
+            return null;
+          }
+        }
+        if (c.doneDate && lvEff !== ICA_NONE && newRules(o)) {
+          const m = sdValidMsg(c.docs, c.docNA);
+          if (m) {
+            toast(`사내 대책 완료 전에 — ${m}`);
             return null;
           }
         }
@@ -8860,6 +9103,7 @@ async function saveDefect(id) {
     toast('심각도를 수동 조정한 사유를 입력하세요');
     return null;
   }
+  if (ctMode === 'defect' && $('#containBox')) o.contain = ctClean(curContain); // 봉쇄 표 (공통 부품 03c)
   {
     const sv = { special: !!curSev.special };
     if (curSev._touched.impact) sv.impact = curSev.impact;
@@ -10177,13 +10421,12 @@ function editNcr(id, preset, mode) {
     ng: r.ng ?? '',
   }));
   curExcl = new Set(n.photoExcl || []);
-  curContain = (n.contain && n.contain.length ? n.contain : CONTAIN_DEF.map((l) => ({ loc: l }))).map((r) => ({
-    loc: r.loc || '',
-    target: r.target ?? '',
-    sorted: r.sorted ?? '',
-    ng: r.ng ?? '',
-    done: r.done || '',
-  }));
+  {
+    // 봉쇄 표 (공통 부품). NCR 의 표가 비어 있으면 연결된 불량의 표를 가져옴 — 표는 한 건에 한 개
+    const seed =
+      n.contain && n.contain.length ? null : curLinks.map((i) => db.defects.find((x) => x.id === i)).find((x) => x && ctClean(x.contain).length);
+    ctInit(seed ? seed.contain : n.contain, CONTAIN_DEF, 'ncr');
+  }
   vfLotsInit(n);
   curEvals = JSON.parse(JSON.stringify(n.evals || []));
   curEvIdx = Math.max(0, curEvals.length - 1);
@@ -10322,8 +10565,7 @@ function editNcr(id, preset, mode) {
     <label>클린 포인트 (첫 양품 LOT / 납품일)<input name="cleanPoint" value="${esc(n.cleanPoint)}" placeholder="예: LOT 20261028 · 10/29 납품분부터"></label>
     <label>양품 식별 표시<input name="cleanMark" value="${esc(n.cleanMark)}" placeholder="예: 박스 측면 녹색 ‘D3 OK’ 라벨"></label>
   </div>
-  <div style="margin-top:10px;font-size:12px;color:var(--sub)">재고 위치별 선별 결과 <button type="button" class="b s" onclick="curContain.push({loc:'',target:'',sorted:'',ng:'',done:''});mfDirty=true;renderContain()">+ 행</button></div>
-  <div id="containBox"></div></div>
+  ${ctBoxHTML('봉쇄 · 재고 처리 — 재고 위치별 선별 결과')}</div>
   </div>
 <div class="ntp" data-p="c">
   <div class="sec">유효성 검증</div>
@@ -11116,41 +11358,8 @@ function typeDays(t, S) {
   return t === '간이 대책서' ? num(S.replySimple) || 5 : num(S.reply8D) || num(S.replyDays) || 7;
 }
 let curStock = [],
-  curExcl = new Set(),
-  curContain = [];
-function renderContain() {
-  const b = $('#containBox');
-  if (!b) return;
-  b.innerHTML = `<table class="ct" style="margin-top:4px"><thead><tr><th>재고 위치</th><th>대상 (EA)</th>
-    <th>선별 (EA)</th><th>불량 (EA)</th><th>완료일</th><th></th></tr></thead><tbody>${curContain
-      .map(
-        (r, i) => `<tr>
-    <td><input value="${esc(r.loc)}" style="width:140px" placeholder="예: 협력사 창고" oninput="curContain[${i}].loc=this.value;mfDirty=true"></td>
-    ${['target', 'sorted', 'ng']
-      .map(
-        (k) =>
-          `<td><input value="${esc(r[k])}" style="width:100px" inputmode="numeric" oninput="curContain[${i}].${k}=this.value;mfDirty=true;containFoot()"></td>`,
-      )
-      .join('')}
-    <td><input type="date" value="${esc(r.done)}" oninput="curContain[${i}].done=this.value;mfDirty=true"></td>
-    <td><button type="button" class="b s d" onclick="curContain.splice(${i},1);mfDirty=true;renderContain()">✕</button></td></tr>`,
-      )
-      .join('')}</tbody>
-    <tfoot id="containFoot"></tfoot></table>`;
-  containFoot();
-}
-function containFoot() {
-  const e = $('#containFoot');
-  if (!e) return;
-  const tot = (k) => curContain.reduce((a, r) => a + numC(r[k]), 0),
-    T = tot('target'),
-    So = tot('sorted');
-  e.innerHTML = `<tr><td><b>합계</b></td><td style="padding-left:12px">${T.toLocaleString()}</td>
-    <td style="padding-left:12px">${So.toLocaleString()}</td>
-    <td style="padding-left:12px">${tot('ng').toLocaleString()}</td><td colspan="2" class="muted" style="font-size:12px">${
-      T && So < T ? `미선별 ${(T - So).toLocaleString()} EA` : ''
-    }</td></tr>`;
-}
+  curExcl = new Set();
+// 봉쇄 표 (curContain · renderContain) 는 공통 부품 03c-contain-docs.js
 function renderStock() {
   const b = $('#stockBox');
   if (!b) return;
@@ -11571,7 +11780,7 @@ function saveNcr(id) {
   concCommit(n);
   dkCommit('notice', n);
   dkCommit('reply', n);
-  n.contain = curContain.filter((r) => r.target || r.sorted || r.ng || r.done);
+  n.contain = ctClean(curContain);
   n.vlots = vfLotsOut();
   n.photoExcl = [...curExcl];
   n.evals = curEvals.map((e) => ({ ...e, score: evalScore(e), verdict: evalVerdict(e) }));
@@ -11689,13 +11898,9 @@ async function print8D(id) {
     n.concession && n.concession !== '없음'
       ? `<tr><th>특채</th><td colspan="3">${esc(n.concession)}${(n.concDocs || []).length ? ` · 첨부 문서 ${n.concDocs.length}건` : ''}</td></tr>`
       : ''
-  }${n.penalty !== undefined && n.penalty !== '' ? `<tr><th>협력사 평가 감점</th><td colspan="3">${esc(n.penalty)}점</td></tr>` : ''}</table>${
-    (n.contain || []).length
-      ? `<table class="sm"><tr><th>재고 위치</th><th>대상 (EA)</th><th>선별 (EA)</th><th>불량 (EA)</th><th>완료일</th></tr>${n.contain
-          .map((r) => `<tr><td>${esc(r.loc)}</td><td>${esc(r.target)}</td><td>${esc(r.sorted)}</td><td>${esc(r.ng)}</td><td>${esc(r.done)}</td></tr>`)
-          .join('')}</table>`
-      : ''
-  }${vfLotsPrint(n.vlots)}
+  }${n.penalty !== undefined && n.penalty !== '' ? `<tr><th>협력사 평가 감점</th><td colspan="3">${esc(n.penalty)}점</td></tr>` : ''}</table>${ctPrintHTML(
+    n.contain,
+  )}${vfLotsPrint(n.vlots)}
   <table>${D8.map(([k, l]) => `<tr><th>${l}</th><td style="height:48px">${nl(n[k])}</td></tr>`).join('')}</table>
   ${(n.evals || [])
     .filter(evalDone)
@@ -17042,9 +17247,9 @@ const CZ_RULES = [
   {
     st: '격리',
     tab: 'contain',
-    f: 'QtyStock',
-    t: '격리 수량 4칸 (없으면 0)',
-    ok: (c) => ['QtyStock', 'QtyWIP', 'QtyTransit', 'QtyCustomer'].every((k) => has(c[k])),
+    f: 'Contain',
+    t: '봉쇄 표 — 대상 수량 1줄 이상 (없으면 0)',
+    ok: (c) => czCtAll(c).some((r) => String(r.target ?? '') !== ''),
   },
   { st: '격리', tab: 'contain', f: 'ContainDate', t: '격리 완료일', ok: (c) => has(c.ContainDate) },
   { st: '격리', tab: 'contain', f: 'ContainMethod', t: '식별 방법', ok: (c) => has(c.ContainMethod) },
@@ -17149,7 +17354,24 @@ const CZ_RULES = [
     tab: 'close',
     f: 'DocNAReason',
     t: '문서 개정 해당없음 사유',
-    ok: (c) => !(c.FMEAUpdate === '해당없음' || c.CPUpdate === '해당없음') || has(c.DocNAReason),
+    ok: (c) => !sdHasNA(sdOfCase(c)) || has(c.DocNAReason),
+  },
+  // 작업표준 · 검사기준 판정은 새 규칙을 쓰는 날부터 등록한 건에만 요구 (이전 건은 그대로 종결 가능)
+  {
+    st: '표준화',
+    close: true,
+    tab: 'close',
+    f: 'WSUpdate',
+    t: '작업표준 갱신 판정 (완료/해당없음)',
+    ok: (c) => (c.Created || '') < RULES_FROM || sdDone(c.WSUpdate),
+  },
+  {
+    st: '표준화',
+    close: true,
+    tab: 'close',
+    f: 'InspUpdate',
+    t: '검사기준 갱신 판정 (완료/해당없음)',
+    ok: (c) => (c.Created || '') < RULES_FROM || sdDone(c.InspUpdate),
   },
   { st: '표준화', tab: 'close', f: 'Yokoten', t: '수평전개 판정 (해당없음/완료)', ok: (c) => ['해당없음', '완료'].includes(c.Yokoten) },
   { close: true, tab: 'actions', t: '미완료 조치 0건', ok: (c) => czActs(c).every((a) => ['완료', '취소'].includes(a.ActionStatus)) },
@@ -17169,6 +17391,40 @@ function czGate(c, target) {
     const si = r.st ? p.indexOf(r.st) : -1;
     return (si >= 0 && si < ti) || (r.close && target === '종결');
   }).filter((r) => !r.ok(c));
+}
+/* 봉쇄 표 (공통 부품 03c) — RCA 의 표: c.Contain. 예전 자료는 격리 수량 4칸 (Qty…) 을 줄로 읽음 */
+const CZ_QTY_OLD = [
+  ['QtyStock', '사내 재고'],
+  ['QtyWIP', '재공'],
+  ['QtyTransit', '이송 중'],
+  ['QtyCustomer', '고객처'],
+];
+function czCtOwn(c) {
+  if (Array.isArray(c.Contain)) return c.Contain.map(ctRow);
+  const old = CZ_QTY_OLD.filter(([k]) => has(c[k])).map(([k, l]) => ctRow({ loc: l, target: String(c[k]) }));
+  return old.length ? old : CT_DEF_CASE.map((l) => ctRow({ loc: l }));
+}
+// 연결된 불량 · NCR 의 표 (같은 NCR 은 한 번만)
+function czCtLinked(c) {
+  const out = [],
+    seen = new Set();
+  (c.DefectIds || []).forEach((i) => {
+    const d = db.defects.find((x) => x.id === i);
+    if (!d) return;
+    const o = defContain(d),
+      key = o.fromNcr ? 'n' + o.ncr.id : 'd' + d.id;
+    if (seen.has(key) || !o.rows.length) return;
+    seen.add(key);
+    out.push({ title: o.fromNcr ? `NCR ${o.ncr.no || ''}` : `불량 ${defLabel(d)}`, rows: o.rows });
+  });
+  const n = c.NcrId ? db.ncrs.find((x) => x.id === c.NcrId) : null;
+  if (n && !seen.has('n' + n.id) && ctClean(n.contain).length) out.push({ title: `NCR ${n.no || ''}`, rows: ctClean(n.contain) });
+  return out;
+}
+// 판정 · 보고서에 쓰는 줄: RCA 의 표가 있으면 그것, 없으면 연결된 표
+function czCtAll(c) {
+  const own = ctClean(czCtOwn(c));
+  return own.length ? own : czCtLinked(c).flatMap((x) => x.rows);
 }
 const F = (key, label, type, opt, x) => Object.assign({ key, label, type, opt }, x || {});
 const CZ_TABS = [
@@ -17205,12 +17461,9 @@ const CZ_TABS = [
   {
     id: 'contain',
     label: '격리·처분',
-    note: 'IATF 8.7.1 — 부적합품은 식별·격리·기록 후 처분합니다. 격리 수량은 없으면 0을 입력하세요.',
+    note: 'IATF 8.7.1 — 부적합품은 식별·격리·기록 후 처분합니다. 봉쇄 표의 대상 수량은 없으면 0을 입력하세요.',
     fields: [
-      F('QtyStock', '격리 · 사내 재고', 'number'),
-      F('QtyWIP', '격리 · 재공', 'number'),
-      F('QtyTransit', '격리 · 이송중', 'number'),
-      F('QtyCustomer', '격리 · 고객처', 'number'),
+      F('Contain', '봉쇄 · 재고 처리', 'cttable', null, { w: 4 }),
       F('ContainDate', '격리 완료일', 'date'),
       F('ContainMethod', '식별 방법', 'select', 'ContainMethod'),
       F('ContainScope', '소급 범위 (로트/기간)', 'text', null, { w: 2 }),
@@ -17279,11 +17532,8 @@ const CZ_TABS = [
     label: '표준화·종결',
     note: 'IATF 10.2.3 — 근본원인이 확정되면 FMEA와 관리계획서 갱신 여부를 반드시 판정합니다.',
     fields: [
-      F('FMEAUpdate', '공정 FMEA 갱신', 'select', 'DocUpd'),
-      F('FMEARev', 'FMEA 개정번호', 'text'),
-      F('CPUpdate', '관리계획서 갱신', 'select', 'DocUpd'),
-      F('CPRev', '관리계획서 개정번호', 'text'),
-      F('DocNAReason', '해당없음 사유', 'textarea', null, { w: 4, showIf: (c) => c.FMEAUpdate === '해당없음' || c.CPUpdate === '해당없음' }),
+      F('StdDocs', '표준화 문서', 'sdtable', null, { w: 4 }),
+      F('DocNAReason', '해당없음 사유', 'textarea', null, { w: 4, showIf: (c) => sdHasNA(sdOfCase(c)) }),
       F('Yokoten', '수평전개', 'select', 'Yokoten'),
       F('CloseApprover', '종결 승인자', 'text'),
       F('Retention', '보관기간 (IATF 7.5.3.2.1)', 'select', 'Retention'),
@@ -18312,6 +18562,25 @@ function czField(c, fd, missSet) {
         (u.includes('미정') ? ' — 불량의 처리를 입력하면 자동 반영' : ' — 처리가 섞여 있어 RCA 처분은 직접 고릅니다'),
     });
   }
+  if (fd.type === 'cttable') {
+    // 봉쇄 표 (공통 부품 03c) — 바꾸면 바로 저장. 연결된 불량 · NCR 의 표는 아래에 보기만
+    const lk = czCtLinked(c);
+    return `<div class="fld w4 ${missSet.has('Contain') ? 'miss' : ''}"><div class="ctl">${esc(fd.label)} <button type="button" class="btn" onclick="czCtAdd()">+ 위치 추가</button></div>
+      <div id="czCt">${ctEditHTML(czCtOwn(c), 'case')}</div>${lk
+        .map(
+          (x) =>
+            `<div class="ctl" style="margin-top:10px">연결된 표 — ${esc(x.title)} <span class="muted">(보기만)</span></div>${ctViewHTML(x.rows)}`,
+        )
+        .join('')}${lk.length ? '<div class="hint">RCA 의 표가 비어 있으면 연결된 표의 숫자를 판정과 보고서에 씁니다</div>' : ''}</div>`;
+  }
+  if (fd.type === 'sdtable') {
+    // 표준화 문서 표 (공통 부품 03c)
+    const sdMiss = Object.values(SD_CASE).some((a) => missSet.has(a[0]));
+    return `<div class="fld w4 ${sdMiss ? 'miss' : ''}"><div class="ctl">${esc(fd.label)}</div>${sdTableHTML(
+      sdOfCase(c),
+      (k, p) => `data-scope="case" data-f="${SD_CASE[k][['st', 'rev', 'date'].indexOf(p)]}"`,
+    )}<div class="hint">‘해당 없음’ 은 사유를 적습니다. ‘미정’ · ‘필요’ 가 남으면 종결할 수 없습니다.</div></div>`;
+  }
   const v = c[fd.key],
     id = `czf_${fd.key}`,
     attr = `id="${id}" data-scope="case" data-f="${fd.key}"`;
@@ -18881,6 +19150,20 @@ function czCreateAction(d) {
   db.actions.push(a);
   return a;
 }
+/* 봉쇄 표 (공통 부품 03c) — RCA 는 바꾸면 바로 저장 */
+function czCtEdit(fn) {
+  const c = czById('cases', czUi.caseId);
+  if (!c) return;
+  const rows = czCtOwn(c);
+  fn(rows);
+  c.Contain = rows;
+  touch(c);
+  save();
+  czSoft();
+}
+const czCtSet = (i, k, v) => czCtEdit((rows) => rows[i] && (rows[i][k] = v));
+const czCtDel = (i) => czCtEdit((rows) => rows.splice(i, 1));
+const czCtAdd = () => czCtEdit((rows) => rows.push(ctRow({})));
 function czSetField(c, k, v) {
   if (k === 'PartId') {
     if (!String(v).trim()) {
@@ -19739,7 +20022,14 @@ function czReport() {
   }
   <h3>D3 임시 봉쇄 · 처분</h3><table>${row(
     '격리 수량',
-    `재고 ${c.QtyStock || 0} · 재공 ${c.QtyWIP || 0} · 이송중 ${c.QtyTransit || 0} · 고객처 ${c.QtyCustomer || 0} EA`,
+    [ctSumText(czCtAll(c)) || '-']
+      .concat(
+        czCtAll(c).map(
+          (x) =>
+            `${x.loc || '-'}: 대상 ${x.target || 0} · 선별 ${x.sorted || 0} · 불량 ${x.ng || 0}${x.act ? ' · ' + x.act : ''}${x.done ? ' · ' + x.done : ''}`,
+        ),
+      )
+      .join('\n'),
   )}
     ${row('격리 완료일 / 식별', `${c.ContainDate || ''} / ${c.ContainMethod || ''}`)}${row('소급 범위', c.ContainScope)}
     ${row(
@@ -19760,10 +20050,10 @@ function czReport() {
     '불량률',
     `개선 전 ${c.RateBefore || ''} → 개선 후 ${c.RateAfter || ''}`,
   )}${row('재발 / 판정', `${c.Recurred || ''} / ${c.VerifyResult || ''}`)}</table>
-  <h3>D7 재발 방지 · 표준화</h3><table>${row('공정 FMEA', `${c.FMEAUpdate || ''} ${c.FMEARev || ''}`)}${row(
-    '관리계획서',
-    `${c.CPUpdate || ''} ${c.CPRev || ''}`,
-  )}${row('해당없음 사유', c.DocNAReason)}${row('수평전개', c.Yokoten)}</table>${actTable(['문서개정', '수평전개', '교육'])}
+  <h3>D7 재발 방지 · 표준화</h3><table>${SD_DOCS.map(([k, l]) => {
+    const x = sdOfCase(c)[k];
+    return row(l, `${x.st} ${x.rev} ${x.date}`.trim());
+  }).join('')}${row('해당없음 사유', c.DocNAReason)}${row('수평전개', c.Yokoten)}</table>${actTable(['문서개정', '수평전개', '교육'])}
   <h3>D8 종결</h3><table>${row('종결일', c.CloseDate)}${row('종결 승인자', c.CloseApprover)}${row('보관기간', c.Retention)}</table>
   </body></html>`);
   reportShow(w, html, `8D_${c.CaseNo}.html`);
@@ -19812,6 +20102,7 @@ function czCSV(list) {
       'QtyWIP',
       'QtyTransit',
       'QtyCustomer',
+      'ContainTotal',
       'ContainDate',
       'ContainMethod',
       'ContainScope',
@@ -19844,6 +20135,10 @@ function czCSV(list) {
       'FMEARev',
       'CPUpdate',
       'CPRev',
+      'WSUpdate',
+      'WSRev',
+      'InspUpdate',
+      'InspRev',
       'DocNAReason',
       'Yokoten',
       'VerifyStart',
@@ -19872,6 +20167,14 @@ function czCSV(list) {
         TierAuto: czTierAuto(c),
         FARTotal: c.Response === 'FAR' ? czFar(c) : '',
         AnalysisTools: (c.AnalysisTools || []).join(';'),
+        // 격리 수량 4칸은 봉쇄 표 (공통 부품 03c) 의 줄에서 읽음 — 이전 자료와 같은 열 이름을 지킴
+        ...Object.fromEntries(
+          CZ_QTY_OLD.map(([k, l]) => {
+            const r = czCtAll(c).filter((x) => x.loc === l);
+            return [k, r.length ? ctTot(r).T : has(c[k]) && !Array.isArray(c.Contain) ? c[k] : ''];
+          }),
+        ),
+        ContainTotal: ctSumText(czCtAll(c)),
       }),
     );
   } else if (list === 'actions') {
@@ -19992,10 +20295,8 @@ async function a3Report(kind, id) {
       (c && c.Description) ||
       '',
     T(
-      d && d.containment && `임시조치: ${d.containment}`,
-      c && (c.QtyStock || c.QtyCustomer)
-        ? `격리: 재고 ${c.QtyStock || 0} · 재공 ${c.QtyWIP || 0} · 이송 ${c.QtyTransit || 0} · 고객처 ${c.QtyCustomer || 0}`
-        : '',
+      d && defContainText(d) && `임시조치: ${defContainText(d).replace(/\n/g, ' / ')}`,
+      c && ctSumText(czCtAll(c)) ? `격리: ${ctSumText(czCtAll(c))}` : '',
       d && d.disposition ? `처리: ${d.disposition}` : '',
     ),
   );

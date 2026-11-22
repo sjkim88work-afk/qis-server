@@ -28,10 +28,10 @@ function saveIca(id, keep) {
   const d = db.defects.find((x) => x.id === id);
   if (!d) return false;
   const o = gather(),
-    c = { std: {} };
+    sd = sdGather(o, 'ica_'), // 표준화 문서 표 (공통 부품 03c)
+    c = { std: sd.std, docs: sd.docs, docNA: sd.docNA };
   Object.keys(o).forEach((k) => {
-    if (k.startsWith('ica_std_')) c.std[k.slice(8)] = true;
-    else if (k.startsWith('ica_')) c[k.slice(4)] = o[k];
+    if (k.startsWith('ica_')) c[k.slice(4)] = o[k];
   });
   // 유효성 검증 (공통 부품): 검증 LOT · 이전 검증 이력을 이어 받고, ‘유효’ 로 끝낼 수 있는지 봄
   c.vlots = vfLotsOut();
@@ -54,6 +54,13 @@ function saveIca(id, keep) {
   if (c.verifyResult && !c.verifyDate) c.verifyDate = today();
   if (c.doneDate && !c.verifyDue) c.verifyDue = addDays(c.doneDate, num(db.settings.verifyDays) || 21);
   const lvEff = c.level || ICA_NONE;
+  if (c.doneDate && lvEff !== ICA_NONE && newRules(d)) {
+    const m = sdValidMsg(c.docs, c.docNA);
+    if (m) {
+      toast(`사내 대책 완료 전에 — ${m}`);
+      return false;
+    }
+  }
   if (!c.due && lvEff !== ICA_NONE) c.due = addDays((d.inv && d.inv.verdictDate) || d.date, typeDays(lvEff === '8D' ? '8D 보고서' : '간이 대책서'));
   const sel = $('#mf').ica_level;
   if (!(sel && sel.dataset.touched)) delete c.level;
@@ -143,10 +150,10 @@ function icaSection(d, force) {
     (k) =>
       `<label class="full" data-ik="${k}" style="display:block;margin-top:6px"><span class="il" data-o="${lbl8[k]}">${lbl8[k]}</span><textarea name="ica_${k}" style="min-height:44px">${esc(c[k])}</textarea></label>`,
   ).join('')}</div>
-  <div class="row" id="icaStd" style="margin-top:8px;gap:12px;font-size:13px"><b>표준화 반영 확인</b>${ICA_STD.map(
-    ([k, l]) => `<label class="row" style="gap:4px"><input type="checkbox" name="ica_std_${k}" ${c.std && c.std[k] ? 'checked' : ''}> ${l}</label>`,
-  ).join('')}
+  <div id="icaStd" style="margin-top:8px"><div class="ctl">표준화 문서 <span class="muted">— 대책을 완료하려면 문서 4개를 모두 ‘완료’ 또는 ‘해당 없음’ 으로 정합니다</span>
     ${d.id ? `<span style="flex:1"></span><button type="button" class="b s" onclick="icaPrint('${d.id}')">사내 대책서 출력</button>` : ''}</div>
+    ${sdTableHTML(sdOf(c), (k, p) => `name="ica_doc_${k}_${p}"`)}
+    <label class="full" style="display:block;margin-top:6px;font-size:12px">‘해당 없음’ 사유<input type="text" name="ica_docNA" style="display:block;width:100%;margin-top:2px" value="${esc(c.docNA)}" placeholder="예: 공정 변경 없음 — 작업자 교육으로 끝냄"></label></div>
   <div id="icaVf">${vfLotsHTML('— 대책 적용 뒤의 LOT 별 결과 (LOT 가 없으면 비워 둠)')}${vfReworkHTML(c, d.id ? `icaRework('${d.id}')` : '', '재대책 시작')}</div>
   </div>`;
 }
@@ -204,7 +211,7 @@ async function printIca(id, w0) {
   <table>${keys
     .map((k) => `<tr><th>${simple ? SL[k] : (D8.find((x) => x[0] === k) || [k, k])[1]}</th><td style="height:46px">${nl(c[k])}</td></tr>`)
     .join('')}
-  <tr><th>표준화 반영</th><td>${ICA_STD.map(([k, l]) => `${c.std && c.std[k] ? '☑' : '☐'} ${l}`).join(' &nbsp; ')}</td></tr></table>
+  <tr><th>표준화 문서</th><td>${esc(sdText(sdOf(c), c.docNA))}</td></tr></table>
   ${phs.length ? `<div class="pg">${phs.map((p) => `<figure><img src="${p.data}"></figure>`).join('')}</div>` : ''}
   </body></html>`);
   reportShow(w, html, `사내대책서_${d.date}.html`);
@@ -247,7 +254,7 @@ async function printFar(id, w0) {
   ${row('불량 유형 / 수량', `${esc(d.type)} / ${num(d.qty).toLocaleString()} EA${d.inspQty ? ` (로트 ${num(d.inspQty).toLocaleString()} EA 중)` : ''}`)}
   ${row('LOT / 납품일자', esc(lotOf(d)))}
   ${row('불량 현상', nl(d.desc))}
-  ${row('당사 임시조치', nl(d.containment))}
+  ${row('당사 임시조치', nl(defContainText(d)))}
   ${iv.farPurpose ? row('요청 목적', esc(iv.farPurpose)) : ''}
   ${(iv.farItems || []).length ? row('요청 분석 항목', esc(iv.farItems.join(' / '))) : ''}
   ${

@@ -143,41 +143,8 @@ function typeDays(t, S) {
   return t === '간이 대책서' ? num(S.replySimple) || 5 : num(S.reply8D) || num(S.replyDays) || 7;
 }
 let curStock = [],
-  curExcl = new Set(),
-  curContain = [];
-function renderContain() {
-  const b = $('#containBox');
-  if (!b) return;
-  b.innerHTML = `<table class="ct" style="margin-top:4px"><thead><tr><th>재고 위치</th><th>대상 (EA)</th>
-    <th>선별 (EA)</th><th>불량 (EA)</th><th>완료일</th><th></th></tr></thead><tbody>${curContain
-      .map(
-        (r, i) => `<tr>
-    <td><input value="${esc(r.loc)}" style="width:140px" placeholder="예: 협력사 창고" oninput="curContain[${i}].loc=this.value;mfDirty=true"></td>
-    ${['target', 'sorted', 'ng']
-      .map(
-        (k) =>
-          `<td><input value="${esc(r[k])}" style="width:100px" inputmode="numeric" oninput="curContain[${i}].${k}=this.value;mfDirty=true;containFoot()"></td>`,
-      )
-      .join('')}
-    <td><input type="date" value="${esc(r.done)}" oninput="curContain[${i}].done=this.value;mfDirty=true"></td>
-    <td><button type="button" class="b s d" onclick="curContain.splice(${i},1);mfDirty=true;renderContain()">✕</button></td></tr>`,
-      )
-      .join('')}</tbody>
-    <tfoot id="containFoot"></tfoot></table>`;
-  containFoot();
-}
-function containFoot() {
-  const e = $('#containFoot');
-  if (!e) return;
-  const tot = (k) => curContain.reduce((a, r) => a + numC(r[k]), 0),
-    T = tot('target'),
-    So = tot('sorted');
-  e.innerHTML = `<tr><td><b>합계</b></td><td style="padding-left:12px">${T.toLocaleString()}</td>
-    <td style="padding-left:12px">${So.toLocaleString()}</td>
-    <td style="padding-left:12px">${tot('ng').toLocaleString()}</td><td colspan="2" class="muted" style="font-size:12px">${
-      T && So < T ? `미선별 ${(T - So).toLocaleString()} EA` : ''
-    }</td></tr>`;
-}
+  curExcl = new Set();
+// 봉쇄 표 (curContain · renderContain) 는 공통 부품 03c-contain-docs.js
 function renderStock() {
   const b = $('#stockBox');
   if (!b) return;

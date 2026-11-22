@@ -91,10 +91,8 @@ async function a3Report(kind, id) {
       (c && c.Description) ||
       '',
     T(
-      d && d.containment && `임시조치: ${d.containment}`,
-      c && (c.QtyStock || c.QtyCustomer)
-        ? `격리: 재고 ${c.QtyStock || 0} · 재공 ${c.QtyWIP || 0} · 이송 ${c.QtyTransit || 0} · 고객처 ${c.QtyCustomer || 0}`
-        : '',
+      d && defContainText(d) && `임시조치: ${defContainText(d).replace(/\n/g, ' / ')}`,
+      c && ctSumText(czCtAll(c)) ? `격리: ${ctSumText(czCtAll(c))}` : '',
       d && d.disposition ? `처리: ${d.disposition}` : '',
     ),
   );
