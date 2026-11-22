@@ -470,7 +470,7 @@ function czCaseHTML(c) {
   else
     body =
       (tab.id === 'basic' ? czLinkHTML(c) : '') +
-      (tab.id === 'verify' ? czNcrNote(c, 'verify') : '') +
+      (tab.id === 'verify' ? czNcrNote(c, 'verify') + czVerifyState(c) : '') +
       (tab.note ? `<div class="note">${esc(tab.note)}</div>` : '') +
       `<div class="grid">${tab.fields.map((fd) => czField(c, fd, missSet)).join('')}</div>`;
   const nOpen = czActs(c).filter((a) => !['완료', '취소'].includes(a.ActionStatus)).length;
@@ -657,6 +657,14 @@ function czNcrNote(c, where) {
       : `효과검증은 ${open}의 유효성 검증(기한 ${esc(n.verifyDue || '-')})이 ‘유효’로 끝나면 자동으로 충족됩니다.`,
   };
   return `<div class="note">${M[where]}</div>`;
+}
+// 효과검증의 지금 상태를 불량 · NCR 과 같은 이름으로 보임 (공통 부품 vfRcaInfo): 검증 대기 · 검증 지연 · 검증 완료 · 재발
+function czVerifyState(c) {
+  const v = vfRcaInfo(c);
+  if (!v) return '';
+  return `<div class="muted" id="czVfState" style="margin:6px 0;font-size:12px">유효성 검증 상태 <span class="bg ${v.cls}">${esc(v.label)}</span>${
+    v.k === 'ng' ? ' — 대책이 효과가 없었습니다. 원인분석 · 대책 단계로 돌아가 다시 진행하세요.' : ''
+  }</div>`;
 }
 function czCaseActions(c) {
   const list = czActs(c).sort((a, b) => (a.DueDate || '9').localeCompare(b.DueDate || '9'));

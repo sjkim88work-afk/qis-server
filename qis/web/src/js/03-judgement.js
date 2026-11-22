@@ -386,8 +386,8 @@ const NOTIFY_GRACE = 1; // 발행 후 이 일수가 지나도 통보 안 하면 
 const notifyLate = (n) => !ncrNotified(n) && !!n.issueDate && today() > addDays(n.issueDate, NOTIFY_GRACE);
 const NOTIFY_METHODS = ['메일', '협력사 포털', '공문', '유선', '방문', '기타'];
 function ncrStatus(n) {
-  if (n.verifyDate && n.verifyResult === '유효') return '종결';
-  if (n.verifyDate && String(n.verifyResult || '').startsWith('무효')) return '검증 무효';
+  if (n.verifyDate && vfOk(n.verifyResult)) return '종결';
+  if (n.verifyDate && vfNg(n.verifyResult)) return '검증 무효';
   if (!ncrNotified(n)) return '미통보';
   if (n.reqType === '단순 통보') return '종결';
   if (n.validity === '적정') return '승인(검증대기)';
@@ -528,14 +528,10 @@ const ICA_STD = [
   ['ws', '작업표준'],
   ['insp', '검사기준'],
 ];
+// 사내 대책의 유효성 검증 판정 (대책을 완료한 뒤부터) — 공통 부품 vfInfo
 function icaVerify(d) {
   const c = d && d.ica;
-  if (!c || !c.doneDate) return null;
-  if (c.verifyDate && c.verifyResult === '유효') return { k: 'ok', label: '검증 완료', cls: 'ok' };
-  if (c.verifyDate && String(c.verifyResult || '').startsWith('무효')) return { k: 'ng', label: '재발(검증 무효)', cls: 'bad' };
-  if (!c.verifyDue) return { k: 'wait', label: '검증 대기', cls: 'mut' };
-  const x = diffDays(today(), c.verifyDue);
-  return x < 0 ? { k: 'late', label: `검증 지연 D+${-x}`, cls: 'bad' } : { k: 'wait', label: `검증 대기 D-${x}`, cls: x <= 3 ? 'warn' : 'mut' };
+  return c && c.doneDate ? vfInfo(c) : null;
 }
 const defCase = (d) => (d && d.caseId && typeof czById === 'function' ? czById('cases', d.caseId) : null);
 // 사내 대책이 필요한 불량: 사내 귀책 (NCR 없음) · 공동 귀책 (NCR 이 있어도 사내 몫은 따로)
@@ -554,15 +550,11 @@ function a3Ready(B) {
         : '연결된 불량의 처리가 끝난 뒤에 출력할 수 있습니다';
   return B.defs.length && B.defs.every(isDone) ? '' : '불량 처리가 완료된 뒤에 출력할 수 있습니다';
 }
+// NCR 의 유효성 검증 판정 — 공통 부품 vfInfo
 function verifyInfo(n) {
   if (!n) return null;
   if (n.reqType === '단순 통보' && !n.verifyDate) return null; // 단순 통보는 유효성 검증 대상이 아님
-  if (n.verifyDate && n.verifyResult === '유효') return { k: 'ok', label: '검증 완료', cls: 'ok' };
-  if (n.verifyDate && String(n.verifyResult || '').startsWith('무효')) return { k: 'ng', label: '재발(검증 무효)', cls: 'bad' };
-  const due = n.verifyDue;
-  if (!due) return { k: 'wait', label: '검증 대기', cls: 'mut' };
-  const x = diffDays(today(), due);
-  return x < 0 ? { k: 'late', label: `검증 지연 D+${-x}`, cls: 'bad' } : { k: 'wait', label: `검증 대기 D-${x}`, cls: x <= 3 ? 'warn' : 'mut' };
+  return vfInfo(n);
 }
 function stageBadges(d) {
   const s = defStage(d),
@@ -845,16 +837,12 @@ function ncrRejects(n) {
   try {
     k = (n.evals || []).filter((e) => evalDone(e) && evalVerdict(e) !== '승인').length;
   } catch (e) {}
-  return (
-    k +
-    (String(n.verifyResult || '').startsWith('무효') ? 1 : 0) +
-    (n.verifyHist || []).filter((h) => String(h.result || '').startsWith('무효')).length
-  );
+  return k + vfNgCount(n);
 }
 // 검증 무효(재발) → 재대책 요청: 이번 검증 기록은 이력으로 남기고, 협력사에 대책서를 다시 요청한 상태로 되돌림
 async function ncrRework(id) {
   const n = db.ncrs.find((x) => x.id === id);
-  if (!n || !String(n.verifyResult || '').startsWith('무효')) return;
+  if (!n || !vfNg(n.verifyResult)) return;
   if (
     mfDirty &&
     !(await askConfirm({ title: '저장하지 않은 변경이 있습니다', msg: '먼저 저장하려면 취소 후 저장을 누르세요.', ok: '계속', danger: false }))
@@ -873,25 +861,12 @@ async function ncrRework(id) {
     }))
   )
     return;
-  n.verifyHist = (n.verifyHist || []).concat([
-    {
-      date: n.verifyDate || today(),
-      result: n.verifyResult,
-      vlots: n.vlots || [],
-      approvedDate: n.approvedDate || '',
-      replyDate: n.replyDate || '',
-      at: today(),
-    },
-  ]);
-  n.verifyDate = '';
-  n.verifyResult = '';
-  n.vlots = [];
+  vfArchive(n, { approvedDate: n.approvedDate || '', replyDate: n.replyDate || '' });
   n.validity = '';
   delete n.approvedDate;
   n.replyDate = '';
   n.requestDate = today();
   n.dueDate = addDays(n.requestDate, typeDays(n.reqType));
-  n.verifyDue = '';
   delete n._vdAuto;
   touch(n);
   save();

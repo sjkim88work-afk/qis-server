@@ -221,3 +221,50 @@ def run(c):
     ok(r["ppmShare"] == 3 and r["ppmAll"] == 10 and r["ppmNoShare"] == 10 and r["ppmUnk"] == 0, f"PPM 수량: 공동 30% → {r['ppmShare']} · 설정 ‘전량’ {r['ppmAll']} · 분담 비율 없음 {r['ppmNoShare']} · 귀책 미정 {r['ppmUnk']}")
     ok(r["vFuture"][0] is None and "오늘보다 뒤" in r["vFuture"][1] and r["vQty"][0] is None and "보다 큽니다" in r["vQty"][1], f"불량 저장 검사: 미래 날짜 · 수량 > 입고 수량은 저장하지 않음 ({r['vFuture'][1]} / {r['vQty'][1]})")
     ok(r["vReply"][0] is None and "발행일" in r["vReply"][1] and r["vVerify"][0] is None and "회신일" in r["vVerify"][1], f"NCR 저장 검사: 날짜 순서 ({r['vReply'][1]} / {r['vVerify'][1]})")
+
+    # ---- 공통 부품 ‘유효성 검증’ (03b-verify): 사내 대책 · NCR 이 같은 칸 · 같은 규칙을 씀 ----
+    r = A.evaluate("""async()=>{const wait=ms=>window.__settle(ms),o={},T=today(),sup=db.suppliers[0];
+      mfDirty=false;closeModal(true);
+      const save0=window.save,toast0=window.toast,msgs=[];window.save=()=>{};window.toast=(x)=>{msgs.push(String(x));toast0(x)};
+      const D=T<RULES_FROM?RULES_FROM:T;
+      const d={id:'vf1',date:D,source:'수입검사',partNo:'VF-1',partName:'검증부품시험',supplierId:sup.id,type:'치수',qty:3,inspQty:100,disposition:'선별',resp:'사내',owner:'kim',logs:[],photos:[],
+        ica:{level:'간이 대책',std:{},d4:'원인',d5:'대책',d6:'확인',doneDate:T,verifyDue:addDays(T,21)}};db.defects.push(d);
+      const fields=()=>['verifyDue','verifyDate','verifyResult'].map(k=>{const e=document.querySelector(`#mf [name="${k}"],#mf [name="ica_${k}"]`);
+        return e?e.tagName+':'+[...(e.options||[])].map(x=>x.value).join('|'):'없음'}).join(' ; ');
+      go('defect');editIca('vf1');await wait(300);let f=document.querySelector('#mf');
+      o.icaFields=fields();o.icaLots=document.querySelectorAll('#vlotBox tbody tr').length;
+      // 불합격 LOT 가 있으면 ‘유효’ 로 저장하지 않음
+      curVLots[0]={lot:'L1',date:T,insp:'100',ng:'2'};f.ica_verifyResult.value='유효';
+      o.ngSave=[saveIca('vf1',true),msgs.pop()||''];
+      curVLots[0].ng='0';o.okSave=saveIca('vf1',true);
+      o.afterOk={date:d.ica.verifyDate,lots:d.ica.vlots.length,st:defStage(d).label,v:icaVerify(d).label};
+      // 무효(재발) → 불량이 다시 열림 → ‘재대책 시작’
+      mfDirty=false;closeModal(true);editIca('vf1');await wait(300);f=document.querySelector('#mf');
+      f.ica_verifyResult.value='무효(재발)';saveIca('vf1',true);
+      o.ng={st:defStage(d).label,done:!!defStage(d).done};
+      mfDirty=false;closeModal(true);editIca('vf1');await wait(300);
+      o.reworkBtn=[...document.querySelectorAll('#mbody button')].some(b=>b.textContent.includes('재대책 시작'));
+      o.pre={res:d.ica.verifyResult,dirty:mfDirty};const p=icaRework('vf1');await wait(400);o.cfm=(document.querySelector('#cfm')||{}).innerText||'';const okb=document.querySelector('#cfmOk');if(okb)okb.click();await p;await wait(400);
+      o.rework={hist:(d.ica.verifyHist||[]).map(h=>h.result+'/'+(h.vlots||[]).length).join(),done:d.ica.doneDate,res:d.ica.verifyResult,lots:(d.ica.vlots||[]).length,
+        text:d.ica.d5,st:defStage(d).label,isDone:!!defStage(d).done,histShown:((document.querySelector('#mbody')||{}).innerText||'').includes('이전 검증 이력')};
+      f=document.querySelector('#mf');f.ica_doneDate.value=T;saveIca('vf1',true);
+      o.keepHist=(d.ica.verifyHist||[]).length;                       // 다시 저장해도 이력이 남음
+      mfDirty=false;closeModal(true);
+      // NCR 창의 칸이 같은 부품인지
+      const n0=db.ncrs.find(x=>x.reqType!=='단순 통보');go('ncr');editNcr(n0.id);await wait(300);
+      o.ncrFields=fields();o.ncrLots=!!document.querySelector('#vlotBox table');mfDirty=false;closeModal(true);
+      // 판정 이름: 세 기록이 같은 이름을 씀
+      o.names=[vfInfo({verifyDue:addDays(T,10)}).label,vfInfo({verifyDue:addDays(T,-2)}).label,vfInfo({verifyDate:T,verifyResult:'유효'}).label,vfInfo({verifyDate:T,verifyResult:'무효(재발)'}).label];
+      o.rca=['합격','조건부','불합격'].map(x=>vfRcaInfo({VerifyResult:x}).label).concat(vfRcaInfo({VerifyEnd:addDays(T,-1)}).label);
+      o.same=verifyInfo({verifyDate:T,verifyResult:'무효(재발)'}).label===icaVerify({ica:{doneDate:T,verifyDate:T,verifyResult:'무효(재발)'}}).label;
+      db.defects=db.defects.filter(x=>x!==d);window.save=save0;window.toast=toast0;render();return o}""")
+    ok(r["icaFields"] == r["ncrFields"] == "INPUT: ; INPUT: ; SELECT:|유효|무효(재발)" and r["icaLots"] == 3 and r["ncrLots"],
+       f"유효성 검증 부품: 사내 대책 창과 NCR 창의 칸이 같음 ({r['icaFields']}) · 검증 LOT 표 있음")
+    ok(r["ngSave"][0] is False and "불합격" in r["ngSave"][1] and r["okSave"] is True and r["afterOk"]["lots"] == 1 and r["afterOk"]["v"] == "검증 완료",
+       f"사내 대책: 불합격 LOT 가 있으면 ‘유효’ 로 저장하지 않음 ({r['ngSave'][1][:30]}…) · 고치면 저장 ({r['afterOk']})")
+    ok(r["ng"] == {"st": "재발 — 재대책 필요", "done": False} and r["reworkBtn"], f"사내 대책 검증 무효: 불량이 다시 열리고 ‘재대책 시작’ 단추가 나옴 ({r['ng']})")
+    ok(r["rework"]["hist"] == "무효(재발)/1" and r["rework"]["done"] == "" and r["rework"]["res"] == "" and r["rework"]["lots"] == 0 and r["rework"]["text"] == "대책"
+       and not r["rework"]["isDone"] and r["rework"]["histShown"] and r["keepHist"] == 1,
+       f"사내 대책 재대책: 검증 기록은 이력으로, 대책 내용은 그대로, 완료일은 비움 ({r['rework']['st']} · 이력 {r['rework']['hist']})")
+    ok(r["names"] == ["검증 대기 D-10", "검증 지연 D+2", "검증 완료", "재발(검증 무효)"] and r["rca"] == ["검증 완료", "검증 완료(조건부)", "재발(검증 무효)", "검증 지연 D+1"] and r["same"],
+       f"유효성 검증 판정 이름: 불량 · NCR · RCA 가 같음 ({r['names']} · RCA {r['rca']})")

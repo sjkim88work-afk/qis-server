@@ -143,8 +143,7 @@ function typeDays(t, S) {
 }
 let curStock = [],
   curExcl = new Set(),
-  curContain = [],
-  curVLots = [];
+  curContain = [];
 function renderContain() {
   const b = $('#containBox');
   if (!b) return;
@@ -177,44 +176,6 @@ function containFoot() {
     <td style="padding-left:12px">${tot('ng').toLocaleString()}</td><td colspan="2" class="muted" style="font-size:12px">${
       T && So < T ? `미선별 ${(T - So).toLocaleString()} EA` : ''
     }</td></tr>`;
-}
-function vlotVerdict(r) {
-  const i = numC(r.insp),
-    g = numC(r.ng);
-  if (!i && !String(r.ng || '').trim()) return '';
-  return g > 0 ? '불합격' : i > 0 ? '합격' : '';
-}
-function renderVLots() {
-  const b = $('#vlotBox');
-  if (!b) return;
-  b.innerHTML = `<table class="ct" style="margin-top:4px"><thead><tr><th>LOT No.</th>
-    <th>입고일</th><th>검사 (EA)</th><th>불량 (EA)</th><th>판정</th><th></th></tr></thead><tbody>${curVLots
-      .map(
-        (r, i) => `<tr>
-    <td><input value="${esc(r.lot)}" style="width:150px" oninput="curVLots[${i}].lot=this.value;mfDirty=true"></td>
-    <td><input type="date" value="${esc(r.date)}" oninput="curVLots[${i}].date=this.value;mfDirty=true"></td>
-    <td><input value="${esc(r.insp)}" style="width:90px" inputmode="numeric" oninput="curVLots[${i}].insp=this.value;mfDirty=true;vlotRefresh()"></td>
-    <td><input value="${esc(r.ng)}" style="width:90px" inputmode="numeric" oninput="curVLots[${i}].ng=this.value;mfDirty=true;vlotRefresh()"></td>
-    <td data-vv="${i}"></td>
-    <td><button type="button" class="b s d" onclick="curVLots.splice(${i},1);mfDirty=true;renderVLots()">✕</button></td></tr>`,
-      )
-      .join('')}</tbody></table>
-    <div class="muted" id="vlotNote" style="font-size:12px;margin-top:4px"></div>`;
-  vlotRefresh();
-}
-function vlotRefresh() {
-  const vs = curVLots.map(vlotVerdict),
-    ok = vs.filter((v) => v === '합격').length,
-    ng = vs.filter((v) => v === '불합격').length;
-  document.querySelectorAll('#vlotBox [data-vv]').forEach((td) => {
-    const v = vs[td.dataset.vv];
-    td.innerHTML = v ? `<span class="bg ${v === '합격' ? 'ok' : 'bad'}">${v}</span>` : '<span class="muted">-</span>';
-  });
-  const e = $('#vlotNote');
-  if (e)
-    e.innerHTML = `합격 ${ok} LOT${ng ? ` · <span style="color:var(--bad)">불합격 ${ng} LOT — 검증 결과 ‘무효(재발)’ 검토</span>` : ''}${
-      ok >= 3 && !ng ? ' · 3 LOT 무불량 충족 — 검증일·결과 ‘유효’를 입력하면 종결됩니다' : ''
-    }`;
 }
 function renderStock() {
   const b = $('#stockBox');

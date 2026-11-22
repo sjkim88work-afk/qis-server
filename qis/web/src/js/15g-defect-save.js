@@ -243,6 +243,12 @@ async function saveDefect(id) {
           c.due = addDays(iv.verdictDate || o.date, typeDays(lvEff === '8D' ? '8D 보고서' : '간이 대책서'));
         const sel = $('#mf').ica_level;
         if (!(sel && sel.dataset.touched)) delete c.level;
+        {
+          // 유효성 검증의 LOT · 이력은 이 창의 칸에 없음 → 있던 것을 이어 받음 (공통 부품 03b-verify)
+          const ex0 = id ? (db.defects.find((x) => x.id === id) || {}).ica : null;
+          if (ex0 && ex0.verifyHist) c.verifyHist = ex0.verifyHist;
+          c.vlots = $('#vlotBox') ? vfLotsOut() : (ex0 && ex0.vlots) || [];
+        }
         o.ica = c;
       } else o.ica = undefined;
     }

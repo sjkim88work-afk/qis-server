@@ -349,18 +349,10 @@ function saveNcr(id) {
       toast('대책서가 승인(적정)되지 않아 ‘유효’로 종결할 수 없습니다 — 먼저 대책서를 평가·승인하세요');
       return null;
     }
-    const vs = curVLots.map(vlotVerdict),
-      okN = vs.filter((v) => v === '합격').length,
-      ngN = vs.filter((v) => v === '불합격').length,
-      need = o.reqType === '단순 통보' ? 0 : num(S.verifyLots);
-    if (ngN) {
+    const vmsg = vfValidMsg(curVLots, o.reqType === '단순 통보' ? 0 : num(S.verifyLots));
+    if (vmsg) {
       ncrTab('c');
-      toast(`검증 LOT에 불합격 ${ngN}건이 있어 ‘유효’로 할 수 없습니다 — ‘무효(재발)’을 검토하세요`);
-      return null;
-    }
-    if (need && okN < need) {
-      ncrTab('c');
-      toast(`검증 LOT 합격이 ${okN}개입니다 — ${need}개 이상이어야 ‘유효’로 종결합니다 (설정에서 변경)`);
+      toast(vmsg);
       return null;
     }
     if (!o.verifyDate) o.verifyDate = today();
@@ -413,7 +405,7 @@ function saveNcr(id) {
   dkCommit('notice', n);
   dkCommit('reply', n);
   n.contain = curContain.filter((r) => r.target || r.sorted || r.ng || r.done);
-  n.vlots = curVLots.filter((r) => r.lot || r.date || r.insp || r.ng);
+  n.vlots = vfLotsOut();
   n.photoExcl = [...curExcl];
   n.evals = curEvals.map((e) => ({ ...e, score: evalScore(e), verdict: evalVerdict(e) }));
   const le = latestEval(n);
@@ -536,13 +528,7 @@ async function print8D(id) {
           .map((r) => `<tr><td>${esc(r.loc)}</td><td>${esc(r.target)}</td><td>${esc(r.sorted)}</td><td>${esc(r.ng)}</td><td>${esc(r.done)}</td></tr>`)
           .join('')}</table>`
       : ''
-  }${
-    (n.vlots || []).length
-      ? `<table class="sm"><tr><th>검증 LOT</th><th>입고일</th><th>검사 (EA)</th><th>불량 (EA)</th><th>판정</th></tr>${n.vlots
-          .map((r) => `<tr><td>${esc(r.lot)}</td><td>${esc(r.date)}</td><td>${esc(r.insp)}</td><td>${esc(r.ng)}</td><td>${vlotVerdict(r)}</td></tr>`)
-          .join('')}</table>`
-      : ''
-  }
+  }${vfLotsPrint(n.vlots)}
   <table>${D8.map(([k, l]) => `<tr><th>${l}</th><td style="height:48px">${nl(n[k])}</td></tr>`).join('')}</table>
   ${(n.evals || [])
     .filter(evalDone)
