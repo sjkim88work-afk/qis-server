@@ -115,14 +115,16 @@ const A={items:[],more:false,f:{coll:'',user:'',action:'',q:'',from:'',to:'',id:
 
 function nav(){$('#nav').innerHTML=TABS.map(([k,l])=>`<button class="${tab===k?'on':''}" onclick="go('${k}')">${l}</button>`).join('')}
 function go(t){tab=t;history.replaceState(null,'','#'+t);nav();render()}
+// 그리는 동안 (서버 응답을 기다리는 동안) 다른 묶음을 고르면, 늦게 온 앞의 결과가 화면을 덮어쓰지 않게 순번으로 가림
+let renderSeq=0;
 async function render(){
-  const v=$('#view');
+  const v=$('#view'),t=tab,my=++renderSeq;
   try{
-    if(tab==='users')v.innerHTML=await renderUsers();
-    else if(tab==='audit')v.innerHTML=await renderAudit();
-    else if(tab==='telegram')v.innerHTML=await renderTelegram();
-    else{v.innerHTML=await renderBackup();phMissLoad()}
-  }catch(e){v.innerHTML=`<div class="card"><b>불러오지 못했습니다</b> — ${esc(e.message)}</div>`}
+    const h=t==='users'?await renderUsers():t==='audit'?await renderAudit():t==='telegram'?await renderTelegram():await renderBackup();
+    if(my!==renderSeq)return;
+    v.innerHTML=h;
+    if(t!=='users'&&t!=='audit'&&t!=='telegram')phMissLoad();
+  }catch(e){if(my===renderSeq)v.innerHTML=`<div class="card"><b>불러오지 못했습니다</b> — ${esc(e.message)}</div>`}
 }
 
 /* ---- 사용자 ---- */

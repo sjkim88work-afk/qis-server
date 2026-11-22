@@ -119,7 +119,7 @@ def admin_info(cfg: Config, username: str = "") -> tuple[str, str]:
     """프로그램 설정 화면에 채울 관리자 (아이디, 이름): 적어 둔 아이디가 관리자면 그 계정, 아니면 첫 관리자."""
     db = open_db(cfg)
     try:
-        u = db.q1("SELECT username, name FROM users WHERE username=? AND role='admin' AND active=1", (username.strip().lower(),)) if username else None
+        u = db.q1("SELECT username, name FROM users WHERE lower(username)=lower(?) AND role='admin' AND active=1", (username.strip(),)) if username else None
         u = u or db.q1("SELECT username, name FROM users WHERE role='admin' AND active=1 ORDER BY id LIMIT 1")
         return (u["username"], u["name"] or "") if u else (username or "admin", "")
     finally:
