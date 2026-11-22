@@ -36,8 +36,7 @@ class MenuActions:
                 MenuAction("백업에서 복원…", self.restore),
             ]),
             Menu("설정", [
-                MenuAction("접속 설정 바꾸기 (접속 범위 · 관리자 비밀번호)…", c.m_switch_mode),
-                MenuAction("저장 위치 (데이터 · 백업 폴더)…", c.m_storage),
+                MenuAction("프로그램 설정 (접속 · 저장 위치)…", c.m_settings),
                 MenuAction("접속 주소 보기", self.addresses),
             ]),
             Menu("보기", [
@@ -183,7 +182,7 @@ class MenuActions:
             return
         if c.runner.scope == "local":
             self._tell("지금 접속 범위는 ‘이 PC만’ 입니다 — 다른 PC · 휴대폰에서는 접속할 수 없습니다.\n"
-                       "같이 쓰려면 ‘설정 › 접속 설정 바꾸기’ 에서 ‘사내망 전체’ 또는 ‘Tailscale 만’ 을 고르세요.")
+                       "같이 쓰려면 ‘설정 › 프로그램 설정’ 의 ‘접속’ 에서 ‘사내망 전체’ 또는 ‘Tailscale 만’ 을 고르세요.")
             return
         c.state = "app"
         c.show(html=c.lan_html())
@@ -197,6 +196,9 @@ class MenuActions:
         c = self.c
         st = c.settings
         mode = {"local": "이 PC만", "lan": "사내망 전체", "tailscale": "Tailscale 만"}.get(st.lan_scope, "") if st and st.mode else "미설정"
+        if c.state in ("app", "settings") and c.runner:      # 켜져 있으면 프로그램 설정 › 정보 화면으로
+            c.m_settings("info")
+            return
         self._tell(f"QIS 품질정보시스템 데스크톱 · 서버 {__version__} (빌드 {__build__})\n접속 범위: {mode}\n데이터 폴더: {c.data_dir}\n\n"
                    f"{COPYRIGHT}\n오픈소스 구성요소: FastAPI · uvicorn · pywebview · sql.js 등 (NOTICE 파일 참고)")
 

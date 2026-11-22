@@ -351,18 +351,19 @@ def test_controller_setup_and_switch(ctl, data):
     s = core.DesktopSettings.load(data)
     assert (s.mode, s.lan_scope, s.setup_user) == ("lan", "local", "admin")
     assert ctl.apply_setup(SETUP)["error"]                            # 설정 화면이 아닐 때는 거부 (화면에서 함부로 못 바꿈)
-    ctl.m_switch_mode()
-    assert ctl.state == "setup"
+    ctl.m_settings()
+    assert ctl.state == "settings"
     html = ctl.window.loaded[-1][1]
-    assert "접속 설정 바꾸기" in html and 'value="admin"' in html and "비워 두기" in html
+    assert "프로그램 설정" in html and 'value="admin"' in html and 'value="김선중"' in html and "비워 두기" in html   # 아이디 · 이름이 채워져 있음
+    assert "이미 있는 아이디면" not in html and 'class="on" data-tab="conn"' in html and "QIS로 돌아가기" in html
     assert "포트" in ctl.apply_setup({**SETUP, "scope": "lan", "port": "0"})["error"]
     port = core.free_port()
     r = ctl.apply_setup({"admin": "admin", "admin_name": "", "password": "", "scope": "lan", "port": str(port)})   # 비밀번호를 비워 두면 그대로
     assert r == {"ok": True}, r
-    assert ctl.runner.bound == ("0.0.0.0", port) and "접속 주소" in ctl.window.loaded[-1][1]
+    assert ctl.runner.bound == ("0.0.0.0", port) and ctl.state == "settings"            # 같은 화면으로 돌아옴
+    assert "바꿨습니다" in ctl.window.loaded[-1][1] and "value=lan checked" in ctl.window.loaded[-1][1]
     assert core.desktop_config(data).port == port                     # 포트는 qis.json 에 저장
     assert login(opener(), ctl.runner)[0] == 200                      # 처음 정한 비밀번호로 로그인
-    ctl.m_switch_mode()
     assert ctl.apply_setup({"admin": "nobody", "admin_name": "누구", "password": "", "scope": "local"})["error"]   # 없는 아이디 + 빈 비밀번호
     assert ctl.apply_setup({"admin": "admin", "password": "Qnew2026y", "scope": "local"}) == {"ok": True}
     assert ctl.runner.bound[0] == "127.0.0.1"
@@ -830,7 +831,7 @@ def test_controller_storage_backup_folder(ctl, data, tmp_path):
     assert ctl.apply_storage("pick_backup")["error"]             # 저장 위치 화면이 아닐 때는 거부
     ctl.m_storage()
     html = ctl.window.loaded[-1][1]
-    assert ctl.state == "storage" and "저장 위치" in html and "같은 디스크" in html and str(data) in html
+    assert ctl.state == "settings" and 'class="on" data-tab="store"' in html and "같은 디스크" in html and str(data) in html
     nas = tmp_path / "nas" / "QIS_백업"
     ctl._pick_folder = lambda start=None: nas
     assert ctl.apply_storage("pick_backup") == {"ok": True}
@@ -840,8 +841,35 @@ def test_controller_storage_backup_folder(ctl, data, tmp_path):
     ctl._pick_folder = lambda start=None: data                   # 데이터 폴더를 고르면 거부하고 그대로
     ctl.apply_storage("pick_backup")
     assert "다른 폴더" in ctl.window.loaded[-1][1] and core.desktop_config(data).backup_path == nas
+    ctl.api.settings_tab("info")                                 # 왼쪽 메뉴로 묶음을 바꿈
+    html = ctl.window.loaded[-1][1]
+    assert 'class="on" data-tab="info"' in html and "desktop.log" in html and "이 PC만" in html
+    ctl.api.settings_tab("conn")
+    assert 'class="on" data-tab="conn"' in ctl.window.loaded[-1][1] and ctl.state == "settings"
     ctl.api.go_app()
-    assert ctl.state == "app"
+    assert ctl.state == "app" and ctl.window.loaded[-1] == ("url", ctl.runner.enter_url)
+
+
+def test_settings_screen_when_server_cannot_start(ctl, data):
+    """설정을 마친 뒤 서버를 못 켜면 (포트 충돌 등) 처음 설정이 아니고 프로그램 설정 › 접속이 나옴 — 비밀번호 없이 포트만 바꿀 수 있음."""
+    import socket
+    port = core.free_port()
+    assert ctl.apply_setup({**SETUP, "scope": "lan", "port": str(port)}) == {"ok": True}
+    ctl.runner.stop()
+    ctl.runner = None
+    busy = socket.socket()
+    busy.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 0)
+    busy.bind(("0.0.0.0", port))
+    busy.listen(1)
+    try:
+        ctl.restart_server()
+        html = ctl.window.loaded[-1][1]
+        assert ctl.state == "settings" and "시작하지 못했습니다" in html and "QIS 처음 설정" not in html and "비워 두기" in html
+        port2 = core.free_port()
+        assert ctl.apply_setup({"admin": "admin", "admin_name": "", "password": "", "scope": "lan", "port": str(port2)}) == {"ok": True}
+        assert ctl.runner.bound == ("0.0.0.0", port2)
+    finally:
+        busy.close()
 
 
 def test_controller_move_data_folder(ctl, data, tmp_path):

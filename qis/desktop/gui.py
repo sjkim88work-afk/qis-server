@@ -16,7 +16,7 @@ import webbrowser
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from .. import __version__
+from .. import __build__, __version__
 from . import attach, core, pages, paths
 from .attach import OPEN_DIR, open_name  # noqa: F401  (open_name 은 시험 · 바깥에서 gui.open_name 으로 참조)
 from .lock import AlreadyRunning, InstanceLock
@@ -59,6 +59,11 @@ class DesktopApi:
         if not self._ok("storage"):
             return None
         return self._c.apply_storage(str(action))
+
+    def settings_tab(self, tab):
+        if not self._ok("settings_tab"):
+            return None
+        self._c.settings_tab(str(tab))
 
     def cancel_setup(self):
         if not self._ok("cancel_setup"):
@@ -297,14 +302,61 @@ class Controller:
             self.show(url=self._start_server())
         except Exception as e:
             log.exception("서버 시작 실패")
-            self.state = "setup"
             self.show(html=self._setup_html(error=f"시작하지 못했습니다: {e}"))
 
     def _setup_html(self, error: str = "") -> str:
+        """서버가 켜지기 전에 보이는 화면: 처음이면 처음 설정, 설정을 마친 뒤 (포트 충돌 등으로 못 켬) 면 프로그램 설정 › 접속."""
         s, c = self.settings, self.cfg
-        return pages.setup_page(first=not s.mode, admin=s.setup_user or "admin", admin_name=s.setup_name, port=c.port,
-                                error=error, scope=s.lan_scope if s.mode or s.setup_user else "local",
-                                can_cancel=bool(self.runner and self.runner.running), version=__version__)
+        if s.mode:
+            self.state = "settings"
+            return self._settings_html("conn", error)
+        self.state = "setup"
+        return pages.setup_page(admin=s.setup_user or "admin", admin_name=s.setup_name, port=c.port,
+                                error=error, scope=s.lan_scope if s.setup_user else "local", version=__version__)
+
+    # ------------------------------------------------------------ 프로그램 설정 (접속 · 저장 위치 · 정보)
+    def _settings_html(self, tab: str = "conn", msg: str = "") -> str:
+        s, c, r = self.settings, self.cfg, self.runner
+        kw = {}
+        if tab == "store":
+            kw["store"] = core.storage_info(c, r.app if r else None)
+        elif tab == "info":
+            scope = {"local": "이 PC만", "lan": "사내망 전체", "tailscale": "Tailscale 만"}.get(s.lan_scope, "")
+            kw["about"] = {"rows": [("버전", f"{__version__} (빌드 {__build__})"), ("접속 범위", scope),
+                                    ("데이터 폴더", self.data_dir), ("자동 백업 폴더", c.backup_path),
+                                    ("기록 파일", self.data_dir / "logs" / "desktop.log")], "copyright": COPYRIGHT}
+        else:
+            tab = "conn"
+            try:
+                user, name = core.admin_info(c, s.setup_user)
+            except Exception:
+                log.exception("관리자 정보를 읽지 못함")
+                user, name = s.setup_user or "admin", ""
+            addrs = []
+            if r and r.running and r.scope != "local":
+                from ..launcher import _lan_addresses
+                addrs = ([f"{r.scheme}://{r.ts_ip}:{r.port}"] if r.ts_ip else []) if r.scope == "tailscale" else list(_lan_addresses(r.cfg))
+            kw["conn"] = {"admin": user, "admin_name": name, "port": c.port, "scope": s.lan_scope, "addresses": addrs}
+        return pages.settings_page(tab, version=__version__, msg=msg, can_move=self.home is not None, **kw)
+
+    def m_settings(self, tab: str = "conn", msg: str = ""):
+        if self.state not in ("app", "settings") or not (self.runner or self.state == "settings"):
+            self.tell("먼저 처음 설정을 마치고 QIS를 시작하세요")
+            return
+        if self.state == "app":
+            self.flush_screen()
+        self.state = "settings"
+        self.show(html=self._settings_html(tab, msg))
+
+    def settings_tab(self, tab: str):
+        if self.state != "settings":
+            return
+        if tab == "addr":                      # 접속 안내 (주소 · 방화벽) 화면
+            if self.runner and self.runner.scope != "local":
+                self.state = "app"
+                self.show(html=self.lan_html())
+            return
+        self.show(html=self._settings_html(tab))
 
     def lan_html(self) -> str:
         from ..launcher import _lan_addresses
@@ -349,8 +401,9 @@ class Controller:
 
     # ------------------------------------------------------------ 모드 · 복구 화면
     def apply_setup(self, d: dict):
-        if self.state != "setup":
+        if self.state not in ("setup", "settings"):
             return {"error": "지금은 바꿀 수 없습니다"}
+        from_settings = self.state == "settings"
         if not self._op.acquire(blocking=False):
             return {"error": "다른 작업이 진행 중입니다"}
         try:
@@ -375,14 +428,19 @@ class Controller:
                     self.cfg.save()
                 self.settings.lan_scope = scope
                 self.settings.mode = "lan"
-                self.settings.setup_user = str(d.get("admin") or "").strip()   # 다음에 ‘접속 설정 바꾸기’ 를 열 때 채울 아이디
+                self.settings.setup_user = str(d.get("admin") or "").strip()   # 다음에 ‘프로그램 설정 › 접속’ 를 열 때 채울 아이디
                 self.settings.setup_name = ""
                 url = self._start_server()
             except Exception as e:
                 log.exception("설정 적용 실패")
+                self.state = "settings" if from_settings else "setup"
                 return {"error": str(e)}
             self.settings.save(self.data_dir)
-            if scope == "local":
+            if from_settings:                  # 프로그램 설정에서 바꿈: 같은 화면으로 (주소가 있으면 그 화면에 보임)
+                self.state = "settings"
+                self.show(html=self._settings_html("conn", "바꿨습니다. QIS 를 다시 켰습니다." + (
+                    "" if scope == "local" else " 아래의 접속 주소로 다른 PC · 휴대폰에서 엽니다.")))
+            elif scope == "local":
                 self.show(url=url)
             else:
                 self.show(html=self.lan_html())
@@ -415,23 +473,10 @@ class Controller:
         return {"ok": True}
 
     def m_switch_mode(self):
-        if self.state not in ("app", "setup"):
-            return
-        self.state = "setup"
-        self.show(html=self._setup_html())
-
-    # ------------------------------------------------------------ 저장 위치 (데이터 폴더 · 자동 백업 폴더)
-    def _storage_html(self, msg: str = "") -> str:
-        info = core.storage_info(self.cfg, self.runner.app if self.runner else None)
-        return pages.storage_page(info, msg=msg, can_move=self.home is not None)
+        self.m_settings("conn")
 
     def m_storage(self):
-        if self.state not in ("app", "storage") or not self.runner:
-            self.tell("먼저 처음 설정을 마치고 QIS를 시작하세요")
-            return
-        self.flush_screen()
-        self.state = "storage"
-        self.show(html=self._storage_html())
+        self.m_settings("store")
 
     def _pick_folder(self, start: Path | None = None) -> Path | None:
         import webview
@@ -439,8 +484,13 @@ class Controller:
         return Path(r[0] if isinstance(r, (list, tuple)) else r) if r else None
 
     def apply_storage(self, action: str):
-        if self.state != "storage":
+        if self.state != "settings":
             return {"error": "지금은 할 수 없습니다"}
+        if action == "open_logs":
+            p = self.data_dir / "logs"
+            p.mkdir(parents=True, exist_ok=True)
+            core.open_in_os(p)
+            return {"ok": True}
         if action == "open_data":
             core.open_in_os(self.data_dir)
             return {"ok": True}
@@ -454,12 +504,14 @@ class Controller:
         try:
             if action == "backup_now":
                 try:
+                    if not self.runner:
+                        raise RuntimeError("QIS 가 꺼져 있습니다")
                     info = self.runner.app.state.backup.run("manual")
                     msg = f"백업했습니다: {info['db']} · 첨부 {info['files_copied']}개 복사"
                 except Exception as e:
                     log.exception("백업 실패")
                     msg = f"백업 실패: {e}"
-                self.show(html=self._storage_html(msg))
+                self.show(html=self._settings_html("store", msg))
             elif action == "pick_backup":
                 p = self._pick_folder(self.cfg.backup_path if self.cfg.backup_path.is_dir() else None)
                 if p:
@@ -472,7 +524,7 @@ class Controller:
                         msg = f"자동 백업 폴더를 바꿨습니다: {new} — ‘지금 백업’ 으로 확인하세요. 예전 백업 파일은 그대로 있습니다."
                     except core.StorageError as e:
                         msg = str(e)
-                    self.show(html=self._storage_html(msg))
+                    self.show(html=self._settings_html("store", msg))
             elif action == "move_data":
                 self._move_data()
             else:
@@ -486,13 +538,13 @@ class Controller:
         실패하면 예전 폴더로 서버를 다시 켬. 예전 폴더는 지우지 않음."""
         ask = self.window.create_confirmation_dialog
         if self.home is None:
-            self.show(html=self._storage_html("--data 옵션으로 시작한 QIS 는 여기서 옮길 수 없습니다. 시작할 때의 --data 폴더를 바꾸세요."))
+            self.show(html=self._settings_html("store", "--data 옵션으로 시작한 QIS 는 여기서 옮길 수 없습니다. 시작할 때의 --data 폴더를 바꾸세요."))
             return
         new = self._pick_folder()
         if not new:
             return
         if new.resolve() == self.data_dir.resolve():
-            self.show(html=self._storage_html("지금 데이터 폴더와 같은 폴더입니다."))
+            self.show(html=self._settings_html("store", "지금 데이터 폴더와 같은 폴더입니다."))
             return
         risk = core.risky_folder(new)
         if risk and not ask("QIS — 데이터 폴더 옮기기",

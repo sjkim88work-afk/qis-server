@@ -115,8 +115,19 @@ def desktop_config(data_dir: Path) -> Config:
 
 
 # ---------------------------------------------------------------- 계정
+def admin_info(cfg: Config, username: str = "") -> tuple[str, str]:
+    """프로그램 설정 화면에 채울 관리자 (아이디, 이름): 적어 둔 아이디가 관리자면 그 계정, 아니면 첫 관리자."""
+    db = open_db(cfg)
+    try:
+        u = db.q1("SELECT username, name FROM users WHERE lower(username)=lower(?) AND role='admin' AND active=1", (username.strip(),)) if username else None
+        u = u or db.q1("SELECT username, name FROM users WHERE role='admin' AND active=1 ORDER BY id LIMIT 1")
+        return (u["username"], u["name"] or "") if u else (username or "admin", "")
+    finally:
+        db.close()
+
+
 def set_lan_admin(cfg: Config, username: str, name: str, password: str, *, keep_password: bool = False) -> dict:
-    """처음 설정 · 접속 설정 바꾸기: 로그인할 관리자 계정을 만들거나(없으면) 비밀번호를 정함(있으면)."""
+    """처음 설정 · 프로그램 설정 › 접속: 로그인할 관리자 계정을 만들거나(없으면) 비밀번호를 정함(있으면)."""
     username = (username or "").strip()
     name = (name or "").strip()
     db = open_db(cfg)
@@ -126,7 +137,7 @@ def set_lan_admin(cfg: Config, username: str, name: str, password: str, *, keep_
         if not u:
             auth.create_user(username, name, "admin", password, must_change=False)
         elif keep_password and not password:
-            # 접속 설정 바꾸기에서 비밀번호를 비워 둠: 지금 쓰는 관리자 계정이면 그대로 (이름만 맞춤)
+            # 프로그램 설정 › 접속에서 비밀번호를 비워 둠: 지금 쓰는 관리자 계정이면 그대로 (이름만 맞춤)
             if u["role"] != "admin" or not u["active"]:
                 raise AuthError("이 아이디는 관리자 계정이 아닙니다 — 비밀번호를 넣어 관리자로 정하세요", "no_admin")
             if name and name != u["name"]:
