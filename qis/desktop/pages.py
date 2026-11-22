@@ -44,27 +44,24 @@ function ready(fn){if(api())fn();else window.addEventListener('pywebviewready',f
 """
 
 
-def setup_page(*, first: bool = True, admin: str = "admin", admin_name: str = "", port: int = 8080, error: str = "",
-               can_cancel: bool = False, version: str = "", scope: str = "local") -> str:
-    """처음 설정 · 접속 설정 바꾸기 — 한 화면: 관리자 계정 + 접속 범위 (이 PC만 / 사내망 전체 / Tailscale 만).
+def _conn_parts(*, first: bool, admin: str, admin_name: str, port: int, scope: str, error: str = "") -> tuple[str, str]:
+    """관리자 계정 + 접속 범위 칸과 그 스크립트. 처음 설정 화면과 프로그램 설정 › 접속이 같이 씀.
     first=False (바꾸기) 에서는 비밀번호를 비워 두면 그대로 둠."""
     def radio(v: str, title: str, desc: str) -> str:
         return (f'<label class=opt><input type=radio name=sc value={v}{" checked" if scope == v else ""} onchange="scx()">'
                 f"<span><b>{title}</b> <span class=muted>— {desc}</span></span></label>")
-    keep = "" if first else ", 바꾸지 않으려면 비워 두기"
+    pw = "비밀번호 <span class=muted>(8자 이상, 영문+숫자)</span>" if first else "새 비밀번호 <span class=muted>(바꾸지 않으려면 비워 두기)</span>"
     body = f"""
-<h1>{'QIS 처음 설정' if first else 'QIS 접속 설정 바꾸기'}</h1>
-<div class=muted>QIS 품질정보시스템 {html.escape(version)} · 나중에 메뉴 ‘설정 › 접속 설정 바꾸기’에서 바꿀 수 있습니다. 데이터는 그대로 둡니다.</div>
 <div class=box>
-  <h2>1. 관리자 계정</h2>
-  <div class=muted>QIS 를 열 때 이 계정으로 로그인합니다. 다른 사용자는 관리 화면에서 추가합니다. 이미 있는 아이디면 비밀번호를 새로 정합니다.</div>
+  <h2>{'1. ' if first else ''}관리자 계정</h2>
+  <div class=muted>QIS 를 열 때 이 계정으로 로그인합니다. 다른 사용자는 관리 화면에서 추가합니다.{' 이미 있는 아이디면 비밀번호를 새로 정합니다.' if first else ''}</div>
   <div class=row><div><label for=au>아이디</label><input id=au value="{html.escape(admin)}"></div>
   <div><label for=an>이름 <span class=muted>(담당자 · 변경 이력에 남음)</span></label><input id=an value="{html.escape(admin_name)}" placeholder="예: 김선중"></div></div>
-  <div class=row><div><label for=ap>비밀번호 <span class=muted>(8자 이상, 영문+숫자{keep})</span></label><input id=ap type=password autocomplete="new-password"></div>
+  <div class=row><div><label for=ap>{pw}</label><input id=ap type=password autocomplete="new-password"></div>
   <div><label for=ap2>한 번 더</label><input id=ap2 type=password autocomplete="new-password"></div></div>
 </div>
 <div class=box>
-  <h2>2. 접속 범위</h2>
+  <h2>{'2. ' if first else ''}접속 범위</h2>
   <div class=opts>
   {radio("local", "이 PC만", "다른 PC · 휴대폰에서는 열리지 않습니다. 혼자 쓸 때")}
   {radio("lan", "사내망 전체", "같은 사내망 · Wi-Fi 의 PC · 휴대폰. 이 PC가 켜져 있고 QIS가 열려 있어야 합니다")}
@@ -74,11 +71,8 @@ def setup_page(*, first: bool = True, admin: str = "admin", admin_name: str = ""
     <span class=muted id=ptn></span></div>
 </div>
 <div class=err id=err>{html.escape(error)}</div>
-<div style="display:flex;gap:8px"><button class=p id=go onclick="go()">{'시작' if first else '바꾸기'}</button>
-{'<button onclick="ready(function(){api().cancel_setup()})">취소</button>' if can_cancel else ''}</div>
-<p class=muted style="margin-top:18px">기존 데이터(백업 파일 · 서버판 data 폴더)는 시작한 뒤 메뉴 ‘파일 › 가져오기’로 넣습니다.</p>
 """
-    script = API_JS + f"""
+    script = f"""
 var first={json.dumps(bool(first))};
 function $(i){{return document.getElementById(i)}}
 function sc(){{return (document.querySelector('input[name=sc]:checked')||{{}}).value||''}}
@@ -90,11 +84,26 @@ function go(){{
   if(!d.scope){{$('err').textContent='접속 범위를 고르세요';return}}
   if($('ap').value!==$('ap2').value){{$('err').textContent='두 번 입력한 비밀번호가 다릅니다';return}}
   if(first&&!$('ap').value){{$('err').textContent='비밀번호를 정하세요';return}}
-  $('go').disabled=true;$('err').textContent='시작하는 중…';
+  $('go').disabled=true;$('err').textContent=first?'시작하는 중…':'바꾸는 중…';
   ready(function(){{api().setup(d).then(function(r){{if(r&&r.error){{$('err').textContent=r.error;$('go').disabled=false}}}})}});
 }}
 """
-    return _page("QIS — 접속 설정", body, script)
+    return body, script
+
+
+def setup_page(*, admin: str = "admin", admin_name: str = "", port: int = 8080, error: str = "",
+               version: str = "", scope: str = "local") -> str:
+    """처음 설정 (처음 설치했을 때 · 예전 ‘혼자 쓰기’ 에서 올라왔을 때) — 관리자 계정 + 접속 범위.
+    나중에 바꾸는 화면은 settings_page (메뉴 ‘설정 › 프로그램 설정’)."""
+    form, js = _conn_parts(first=True, admin=admin, admin_name=admin_name, port=port, scope=scope, error=error)
+    body = f"""
+<h1>QIS 처음 설정</h1>
+<div class=muted>QIS 품질정보시스템 {html.escape(version)} · 나중에 메뉴 ‘설정 › 프로그램 설정’에서 바꿀 수 있습니다. 데이터는 그대로 둡니다.</div>
+{form}
+<div style="display:flex;gap:8px"><button class=p id=go onclick="go()">시작</button></div>
+<p class=muted style="margin-top:18px">기존 데이터(백업 파일 · 서버판 data 폴더)는 시작한 뒤 메뉴 ‘파일 › 가져오기’로 넣습니다.</p>
+"""
+    return _page("QIS — 처음 설정", body, API_JS + js)
 
 
 def _mb(n) -> str:
@@ -103,8 +112,8 @@ def _mb(n) -> str:
     return f"{n / 1073741824:.1f}GB" if n >= 1073741824 else f"{n / 1048576:.1f}MB"
 
 
-def storage_page(info: dict, msg: str = "", can_move: bool = True) -> str:
-    """메뉴 ‘설정 › 저장 위치’: 데이터 폴더와 자동 백업 폴더를 따로 정함. info = core.storage_info()."""
+def _storage_parts(info: dict, can_move: bool = True) -> str:
+    """데이터 폴더 · 자동 백업 폴더 (프로그램 설정 › 저장 위치). info = core.storage_info()."""
     e = html.escape
     last = info.get("last")
     last_txt = (f"{e(str(last.get('at', ''))[:16].replace('T', ' '))} · {'수동' if last.get('reason') == 'manual' else '자동'} · "
@@ -122,13 +131,10 @@ def storage_page(info: dict, msg: str = "", can_move: bool = True) -> str:
     state = "쓸 수 없음" if not info.get("backup_ok") else ("쓸 수 있음 · 데이터 폴더와 같은 디스크" if (info.get("backup_inside") or info.get("same_disk"))
                                                        else "쓸 수 있음 · 데이터 폴더와 다른 디스크")
     move = ('<button onclick="act(\'move_data\')">폴더 옮기기…</button>' if can_move else "")
-    body = f"""
-<h1>저장 위치</h1>
-<div class=muted>데이터와 자동 백업을 두는 폴더를 따로 정합니다.</div>
-<div class=err id=msg style="color:#1a1f29;font-weight:400">{e(msg)}</div>
+    return f"""
 {''.join(warn)}
 <div class=box>
-  <h2>1. 데이터 폴더</h2>
+  <h2>데이터 폴더</h2>
   <div class=muted>기록 (qis.db) 과 사진 · 첨부 (files) 가 있는 곳입니다. 이 PC의 디스크에 두세요.</div>
   <code class=path>{e(info['data'])}</code>
   <div class=kv><span>크기</span><span>기록 {_mb(info.get('db_bytes'))} · 첨부 {_mb(info.get('files_bytes'))} ({info.get('files', 0)}개)</span></div>
@@ -137,7 +143,7 @@ def storage_page(info: dict, msg: str = "", can_move: bool = True) -> str:
   <div class=muted style="margin-top:8px">{'옮기기: QIS를 잠시 멈추고 새 폴더로 복사한 뒤 QIS를 닫습니다. 다시 열면 새 폴더로 열립니다. 예전 폴더는 지우지 않습니다.' if can_move else '--data 옵션으로 시작한 QIS 는 여기서 옮길 수 없습니다.'}</div>
 </div>
 <div class=box>
-  <h2>2. 자동 백업 폴더</h2>
+  <h2>자동 백업 폴더</h2>
   <div class=muted>하루 한 번 ({int(info.get('hour', 2))}시 이후 처음 켜져 있을 때) 기록의 사본과 새 첨부를 여기에 복사합니다. 다른 디스크나 NAS · 공유 폴더를 권장합니다.</div>
   <code class=path>{e(info['backup'])}</code>
   <div class=kv><span>마지막 백업</span><span>{last_txt}</span></div>
@@ -145,15 +151,72 @@ def storage_page(info: dict, msg: str = "", can_move: bool = True) -> str:
   <div class=kv><span>상태</span><span>{state} · 남은 용량 {_mb(info.get('backup_free'))}</span></div>
   <div class=btns><button onclick="act('pick_backup')">폴더 바꾸기…</button><button onclick="act('backup_now')">지금 백업</button><button onclick="act('open_backup')">폴더 열기</button></div>
 </div>
-<div style="display:flex;gap:8px"><button class=p onclick="ready(function(){{api().go_app()}})">QIS로 돌아가기</button></div>
 """
-    script = API_JS + """
+
+
+SETTINGS_TABS = (("conn", "접속", "계정 · 접속 범위"), ("store", "저장 위치", "데이터 · 백업 폴더"), ("info", "정보", "버전 · 기록 파일"))
+
+
+def settings_page(tab: str, *, version: str = "", msg: str = "", conn: dict | None = None, store: dict | None = None,
+                  about: dict | None = None, can_move: bool = True) -> str:
+    """메뉴 ‘설정 › 프로그램 설정’ — 왼쪽 메뉴로 묶음을 고름: 접속 · 저장 위치 · 정보. 한 화면에 한 묶음."""
+    e = html.escape
+    tab = tab if tab in [t[0] for t in SETTINGS_TABS] else "conn"
+    nav = "".join(f'<a class="{"on" if k == tab else ""}" data-tab="{k}" onclick="tab(\'{k}\')"><b>{t}</b><span>{d}</span></a>'
+                  for k, t, d in SETTINGS_TABS)
+    js = ""
+    if tab == "conn":
+        c = conn or {}
+        form, js = _conn_parts(first=False, admin=c.get("admin", "admin"), admin_name=c.get("admin_name", ""),
+                               port=c.get("port", 8080), scope=c.get("scope", "local"))
+        addrs = c.get("addresses") or []
+        addr = ("<div class=box><h2>접속 주소</h2><div class=muted>다른 PC · 휴대폰의 브라우저에 이 주소를 넣습니다.</div>"
+                + "".join(f"<code class=path>{e(a)}</code>" for a in addrs)
+                + '<div class=btns><button onclick="ready(function(){api().settings_tab(\'addr\')})">접속 안내 보기</button></div></div>') if addrs else ""
+        main = f"""<h1>접속</h1>
+<div class=muted>‘바꾸기’ 를 누르면 적용합니다. QIS 를 잠시 다시 켭니다. 접속 중인 다른 사용자는 다시 로그인합니다.</div>
+{form}
+<div style="display:flex;gap:8px"><button class=p id=go onclick="go()">바꾸기</button></div>
+{addr}"""
+    elif tab == "store":
+        main = f"""<h1>저장 위치</h1>
+<div class=muted>데이터와 자동 백업을 두는 폴더를 따로 정합니다. 단추를 누르면 바로 적용합니다.</div>
+{_storage_parts(store or {}, can_move)}"""
+    else:
+        a = about or {}
+        rows = "".join(f"<div class=kv><span>{e(k)}</span><span>{e(str(v))}</span></div>" for k, v in a.get("rows", []))
+        main = f"""<h1>정보</h1>
+<div class=muted>QIS 품질정보시스템 데스크톱 프로그램</div>
+<div class=box>{rows}
+  <div class=btns><button onclick="act('open_logs')">기록 파일 폴더 열기</button><button onclick="act('open_data')">데이터 폴더 열기</button></div>
+</div>
+<div class=muted>{e(a.get('copyright', ''))}<br>오픈소스 구성요소: FastAPI · uvicorn · pywebview · sql.js 등 (NOTICE 파일 참고)</div>"""
+    body = f"""<div class=side><div class=sh><b>프로그램 설정</b><span>QIS {e(version)}</span></div>
+{nav}
+<div class=sb><button onclick="ready(function(){{api().go_app()}})">QIS로 돌아가기</button></div></div>
+<div class=main><div class=note id=msg>{e(msg)}</div>{main}</div>"""
+    script = API_JS + js + """
 var busy=false;
+function tab(t){ready(function(){api().settings_tab(t)})}
 function act(a){if(busy)return;busy=true;var m=document.getElementById('msg');
   if(a==='backup_now')m.textContent='백업하는 중…';
   ready(function(){api().storage(a).then(function(r){busy=false;if(r&&r.error)m.textContent=r.error},function(){busy=false})})}
 """
-    return _page("QIS — 저장 위치", body, script)
+    return (f'<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>QIS — 프로그램 설정</title>'
+            f"<style>{CSS}{SETTINGS_CSS}</style></head><body class=set>{body}<script>{script}</script></body></html>")
+
+
+SETTINGS_CSS = """
+body.set{display:flex;min-height:100vh}
+.side{flex:0 0 168px;padding:20px 0;border-right:1px solid #d5dae2;background:#e9edf2}
+.side .sh{padding:0 16px 14px}.side .sh b{display:block;font-size:15px}.side .sh span{font-size:11px;color:#5a6372}
+.side a{display:block;padding:8px 12px 8px 13px;border-left:3px solid transparent;cursor:pointer}
+.side a b{display:block;font-size:13px;font-weight:400}.side a span{display:block;font-size:11px;color:#5a6372}
+.side a.on{border-left-color:#00635f;background:#fff}.side a.on b{font-weight:600}.side a:hover{background:#f3f5f8}.side a.on:hover{background:#fff}
+.side .sb{margin:18px 12px 0;padding-top:14px;border-top:1px solid #d5dae2}.side .sb button{width:100%;height:30px;padding:0 8px;font-size:12.5px}
+.main{flex:1;min-width:0;max-width:740px;padding:24px 28px 32px}
+.note{min-height:0;margin:0 0 10px;font-size:12.5px;white-space:pre-wrap}.note:not(:empty){padding:8px 10px;border-left:3px solid #00635f;background:#eef5f4}
+"""
 
 
 def _tailscale_info_page(addresses: list[str], port: int, windows: bool) -> str:
