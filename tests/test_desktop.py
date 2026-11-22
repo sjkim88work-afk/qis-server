@@ -743,3 +743,173 @@ def test_save_dialog_file_types_have_the_format_the_window_library_accepts():
     for ext in sorted(set(attach.SAVE_MIME_EXT.values()) | {".msg", ".eml", ".hwpx", ".xlsm"}):
         assert pat.match(f"{ext[1:].upper()} 파일 (*{ext})"), ext
     assert pat.match("모든 파일 (*.*)")
+
+
+# ---------------------------------------------------------------- 저장 위치: 데이터 폴더 · 자동 백업 폴더
+def test_risky_folder_detects_network_and_sync_folders():
+    for p in (r"\\nas\품질\QIS", "C:\\Users\\a\\OneDrive - 회사\\QIS", "/Users/a/Library/CloudStorage/OneDrive-x/QIS", "/Users/a/Dropbox/q"):
+        assert core.risky_folder(Path(p) if p.startswith("/") else p), p
+    for p in ("D:\\QIS_데이터", "/home/a/QIS", "/Users/a/Documents/QIS"):
+        assert core.risky_folder(p) == "", p
+
+
+def test_pointer_roundtrip(data, tmp_path):
+    assert core.read_pointer(data) is None
+    core.write_pointer(data, tmp_path / "다른곳")
+    assert core.read_pointer(data) == tmp_path / "다른곳"
+    core.write_pointer(data, data)                               # 기본 폴더로 되돌리면 표지를 지움
+    assert core.read_pointer(data) is None and not (data / core.POINTER).exists()
+    (data / core.POINTER).write_text("{broken", encoding="utf-8")
+    assert core.read_pointer(data) is None                       # 깨진 표지는 없는 것으로
+
+
+def test_set_backup_dir(data, tmp_path):
+    cfg = core.desktop_config(data)
+    assert cfg.backup_path == data / "backup"
+    with pytest.raises(core.StorageError):
+        core.set_backup_dir(cfg, data)                           # 데이터 폴더 자체는 안 됨
+    with pytest.raises(core.StorageError):
+        core.set_backup_dir(cfg, data.parent)                    # 데이터 폴더를 품은 폴더도 안 됨
+    nas = tmp_path / "nas" / "QIS_백업"
+    assert core.set_backup_dir(cfg, nas) == nas and nas.is_dir()
+    assert core.desktop_config(data).backup_path == nas          # qis.json 에 저장됨
+    core.set_backup_dir(cfg, data / "backup")                    # 기본 위치로 되돌리면 값을 비움
+    assert core.desktop_config(data).backup_dir == ""
+
+
+def test_copy_data_dir(data, tmp_path):
+    cfg, r = local_runner(data)
+    op = opener()
+    assert login(op, r)[0] == 200
+    H = {"Content-Type": "application/json", "X-QIS": "1"}
+    get(op, r.base_url + "/api/sync", data=json.dumps({"since": 0, "changes": [
+        {"coll": "suppliers", "id": "s1", "rev": 0, "data": {"id": "s1", "name": "가나"}}]}).encode(), headers=H)
+    get(op, r.base_url + "/api/files/put", data=json.dumps({"files": [
+        {"id": "ph1", "name": "a.png", "data": "data:image/png;base64,AAAA"}]}).encode(), headers=H)
+    r.stop()
+    (data / "webview").mkdir()
+    (data / "webview" / "cookie").write_text("x")
+    (data / "restore_before_20260101_000000").mkdir()
+    new = tmp_path / "D" / "QIS_데이터"
+    res = core.copy_data_dir(data, new)
+    assert res["files"] == 1 and (new / "qis.db").is_file() and list((new / "files").rglob("ph1.json"))
+    assert not (new / "webview").exists() and not (new / "restore_before_20260101_000000").exists()   # 창 저장소 · 보관본은 복사하지 않음
+    assert (data / "qis.db").is_file() and (data / core.OLD_NOTE).is_file()                             # 예전 폴더는 그대로 + 안내 파일
+    con = sqlite3.connect(str(new / "qis.db"))
+    assert con.execute("SELECT COUNT(*) FROM records WHERE coll='suppliers'").fetchone()[0] == 1
+    assert con.execute("SELECT COUNT(*) FROM users WHERE username='admin'").fetchone()[0] == 1
+    con.close()
+    with pytest.raises(core.StorageError):
+        core.copy_data_dir(data, new)                            # 이미 QIS 데이터가 있는 폴더: 덮어쓰지 않음
+    busy = tmp_path / "busy"
+    busy.mkdir()
+    (busy / "다른파일.txt").write_text("x")
+    with pytest.raises(core.StorageError):
+        core.copy_data_dir(data, busy)                           # 빈 폴더가 아님
+    with pytest.raises(core.StorageError):
+        core.copy_data_dir(data, data / "안쪽")                  # 데이터 폴더의 안쪽
+
+
+def test_copy_data_dir_failure_leaves_nothing_behind(data, tmp_path, monkeypatch):
+    cfg = core.desktop_config(data)
+    core.set_lan_admin(cfg, "admin", "관리자", PW)
+    from qis.db import SqliteDB
+    monkeypatch.setattr(SqliteDB, "check_file", staticmethod(lambda p: "깨짐"))
+    new = tmp_path / "new"
+    with pytest.raises(core.StorageError):
+        core.copy_data_dir(data, new)
+    assert not has_any(new) and (data / "qis.db").is_file() and not (data / core.OLD_NOTE).exists()
+
+
+def has_any(p):
+    return p.exists() and any(p.iterdir())
+
+
+def test_controller_storage_backup_folder(ctl, data, tmp_path):
+    assert ctl.apply_setup(SETUP) == {"ok": True}
+    assert ctl.apply_storage("pick_backup")["error"]             # 저장 위치 화면이 아닐 때는 거부
+    ctl.m_storage()
+    html = ctl.window.loaded[-1][1]
+    assert ctl.state == "storage" and "저장 위치" in html and "같은 디스크" in html and str(data) in html
+    nas = tmp_path / "nas" / "QIS_백업"
+    ctl._pick_folder = lambda start=None: nas
+    assert ctl.apply_storage("pick_backup") == {"ok": True}
+    assert str(nas) in ctl.window.loaded[-1][1] and core.desktop_config(data).backup_path == nas
+    assert ctl.apply_storage("backup_now") == {"ok": True}       # 켜져 있는 서버가 바로 새 폴더에 백업
+    assert list((nas / "db").glob("qis_*.sqlite")) and not (data / "backup" / "db").exists()
+    ctl._pick_folder = lambda start=None: data                   # 데이터 폴더를 고르면 거부하고 그대로
+    ctl.apply_storage("pick_backup")
+    assert "다른 폴더" in ctl.window.loaded[-1][1] and core.desktop_config(data).backup_path == nas
+    ctl.api.go_app()
+    assert ctl.state == "app"
+
+
+def test_controller_move_data_folder(ctl, data, tmp_path):
+    from qis.desktop.gui import Controller
+    assert ctl.apply_setup(SETUP) == {"ok": True}
+    op = opener()
+    assert login(op, ctl.runner)[0] == 200
+    get(op, ctl.runner.base_url + "/api/sync", data=json.dumps({"since": 0, "changes": [
+        {"coll": "parts", "id": "p1", "rev": 0, "data": {"id": "p1", "partNo": "A-1"}}]}).encode(),
+        headers={"Content-Type": "application/json", "X-QIS": "1"})
+    ctl.m_storage()
+    assert "옮길 수 없습니다" in ctl.window.loaded[-1][1] and "폴더 옮기기" not in ctl.window.loaded[-1][1]   # --data 로 연 경우
+    ctl.home = data                                              # 기본 폴더로 연 경우
+    ctl.m_storage()
+    assert "폴더 옮기기" in ctl.window.loaded[-1][1]
+    bad = tmp_path / "busy"
+    bad.mkdir()
+    (bad / "x.txt").write_text("x")
+    ctl._pick_folder = lambda start=None: bad                    # 실패: 예전 폴더로 서버를 다시 켬
+    ctl.apply_storage("move_data")
+    assert ctl.runner and ctl.runner.running and ctl.state == "app" and not ctl.window.destroyed
+    assert core.read_pointer(data) is None and "옮기지 못했습니다" in ctl.window.dialogs[-1]
+    new = tmp_path / "D" / "QIS_데이터"
+    ctl.m_storage()
+    ctl.window.confirm = False                                   # 확인 창에서 ‘아니요’ → 아무 일도 없음
+    ctl._pick_folder = lambda start=None: new
+    ctl.apply_storage("move_data")
+    assert ctl.runner.running and not new.exists()
+    ctl.window.confirm = True
+    ctl.apply_storage("move_data")
+    assert ctl.window.destroyed and ctl.runner is None and core.read_pointer(data) == new
+    assert "다시 열어 주세요" in ctl.window.dialogs[-1] and (data / "qis.db").is_file()
+    ctl.shutdown()
+    # 다시 열면 새 폴더로
+    import qis.desktop.gui as gui
+    orig = gui.user_data_dir
+    gui.user_data_dir = lambda: data
+    try:
+        c2 = Controller()
+        assert c2.data_dir == new and c2.missing_data is None
+        c2.lock.acquire()
+        c2.cfg, c2.settings = core.desktop_config(c2.data_dir), core.DesktopSettings.load(c2.data_dir)
+        _, url = c2._first_screen()
+        try:
+            assert url and c2.state == "app"                     # 설정 · 계정이 그대로 — 처음 설정 화면이 아님
+            op = opener()
+            assert login(op, c2.runner)[0] == 200
+            con = sqlite3.connect(str(new / "qis.db"))
+            assert con.execute("SELECT COUNT(*) FROM records WHERE coll='parts'").fetchone()[0] == 1
+            con.close()
+        finally:
+            c2.shutdown()
+        import shutil
+        shutil.rmtree(new)                                       # 옮긴 폴더가 사라짐 (외장 디스크 분리)
+        c3 = Controller()
+        assert c3.missing_data == new and c3.data_dir == data    # 기본 폴더로 조용히 열지 않고 안내
+    finally:
+        gui.user_data_dir = orig
+
+
+def test_controller_move_to_folder_that_has_data(ctl, data, tmp_path):
+    assert ctl.apply_setup(SETUP) == {"ok": True}
+    other = tmp_path / "other"
+    other.mkdir()
+    core.set_lan_admin(core.desktop_config(other), "admin", "다른", PW)
+    ctl.home = data
+    ctl.m_storage()
+    ctl._pick_folder = lambda start=None: other
+    ctl.apply_storage("move_data")
+    assert ctl.window.destroyed and core.read_pointer(data) == other
+    assert "이미 있습니다" in ctl.window.dialogs[-2] and not (other / "files").exists()   # 복사하지 않음

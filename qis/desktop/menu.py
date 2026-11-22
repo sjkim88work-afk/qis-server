@@ -37,6 +37,7 @@ class MenuActions:
             ]),
             Menu("설정", [
                 MenuAction("접속 설정 바꾸기 (접속 범위 · 관리자 비밀번호)…", c.m_switch_mode),
+                MenuAction("저장 위치 (데이터 · 백업 폴더)…", c.m_storage),
                 MenuAction("접속 주소 보기", self.addresses),
             ]),
             Menu("보기", [

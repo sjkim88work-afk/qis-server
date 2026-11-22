@@ -368,6 +368,223 @@ def prepare(cfg: Config, settings: DesktopSettings) -> None:
         raise AuthError("로그인할 관리자 계정이 필요합니다", "no_admin")
 
 
+# ---------------------------------------------------------------- 저장 위치 (데이터 폴더 · 자동 백업 폴더)
+POINTER = "location.json"     # 기본 폴더에 두는 표지: 데이터 폴더를 다른 곳으로 옮겼을 때 그 위치
+OLD_NOTE = "이 폴더는 예전 QIS 데이터입니다.txt"
+_SKIP_COPY = {"webview", "logs", "qis.lock", RUNNING, POINTER, "qis.db-wal", "qis.db-shm"}   # 옮길 때 복사하지 않는 것
+_SYNC_NAMES = ("onedrive", "dropbox", "google drive", "googledrive", "icloud", "mobile documents", "cloudstorage", "nextcloud", "naver mybox")
+
+
+class StorageError(Exception):
+    pass
+
+
+def read_pointer(home: Path) -> Path | None:
+    """기본 폴더(home)의 표지가 가리키는 데이터 폴더. 표지가 없거나 읽지 못하면 None."""
+    f = Path(home) / POINTER
+    if not f.is_file():
+        return None
+    try:
+        d = json.loads(f.read_text(encoding="utf-8"))
+        v = d.get("data_dir") if isinstance(d, dict) else None
+        return Path(v) if isinstance(v, str) and v.strip() else None
+    except (OSError, ValueError):
+        log.exception("%s 을 읽지 못함 — 기본 폴더를 씀", f)
+        return None
+
+
+def write_pointer(home: Path, target: Path | None) -> None:
+    f = Path(home) / POINTER
+    if target is None or Path(target).resolve() == Path(home).resolve():
+        f.unlink(missing_ok=True)
+        return
+    tmp = f.with_suffix(".tmp")
+    tmp.write_text(json.dumps({"data_dir": str(target), "at": now()}, ensure_ascii=False, indent=2), encoding="utf-8")
+    tmp.replace(f)
+
+
+def has_qis_data(p: Path) -> bool:
+    return (Path(p) / "qis.db").is_file()
+
+
+def dir_size(p: Path) -> tuple[int, int]:
+    """(바이트, 파일 수). 없는 폴더는 (0, 0)."""
+    size = n = 0
+    for root, _dirs, files in os.walk(p):
+        for name in files:
+            try:
+                size += os.path.getsize(os.path.join(root, name))
+                n += 1
+            except OSError:
+                pass
+    return size, n
+
+
+def disk_free(p: Path) -> int | None:
+    q = Path(p)
+    while not q.exists() and q.parent != q:
+        q = q.parent
+    try:
+        return shutil.disk_usage(q).free
+    except OSError:
+        return None
+
+
+def same_disk(a: Path, b: Path) -> bool:
+    """두 폴더가 같은 디스크(볼륨)에 있는지. 알 수 없으면 False."""
+    def dev(p):
+        q = Path(p)
+        while not q.exists() and q.parent != q:
+            q = q.parent
+        return os.stat(q).st_dev
+    try:
+        return dev(a) == dev(b)
+    except OSError:
+        return False
+
+
+def is_inside(child: Path, parent: Path) -> bool:
+    try:
+        c, p = Path(child).resolve(), Path(parent).resolve()
+    except OSError:
+        return False
+    return c == p or p in c.parents
+
+
+def risky_folder(p: Path) -> str:
+    """데이터 폴더로 쓰기에 위험한 곳이면 그 이유 (네트워크 · 동기화 폴더). 아니면 ''.
+    SQLite 의 WAL 방식은 네트워크 파일시스템에서 동작하지 않고, 동기화 프로그램은 쓰는 중인 DB 파일을 바꿀 수 있음."""
+    s = str(p)
+    low = s.lower().replace("\\", "/")
+    for part in low.split("/"):
+        if any(part == n or part.startswith(n + " ") or part.startswith(n + "-") for n in _SYNC_NAMES):
+            return "동기화 폴더 (OneDrive · Dropbox 등)"
+    if s.startswith("\\\\") or s.startswith("//"):
+        return "네트워크 폴더"
+    if sys.platform.startswith("win"):
+        try:
+            import ctypes
+            drive = os.path.splitdrive(s)[0]
+            if drive and ctypes.windll.kernel32.GetDriveTypeW(drive + "\\") == 4:   # DRIVE_REMOTE
+                return "네트워크 드라이브"
+        except Exception:
+            pass
+    elif sys.platform == "darwin" and low.startswith("/volumes/"):
+        try:
+            import subprocess
+            vol = "/" + "/".join(s.split("/")[1:3])
+            out = subprocess.run(["mount"], capture_output=True, text=True, timeout=5).stdout
+            for line in out.splitlines():
+                if f" on {vol} (" in line and any(t in line for t in ("smbfs", "afpfs", "nfs", "webdav")):
+                    return "네트워크 폴더"
+        except Exception:
+            pass
+    return ""
+
+
+def check_writable(p: Path) -> None:
+    """폴더를 만들 수 있고 쓸 수 있는지. 안 되면 StorageError."""
+    p = Path(p)
+    try:
+        p.mkdir(parents=True, exist_ok=True)
+        t = p / f".qis_write_test_{os.getpid()}"
+        t.write_text("ok", encoding="utf-8")
+        t.unlink()
+    except OSError as e:
+        raise StorageError(f"이 폴더에 쓸 수 없습니다: {p} ({e.strerror or e})") from e
+
+
+def set_backup_dir(cfg: Config, folder: Path) -> Path:
+    """자동 백업 폴더를 바꿔 qis.json 에 저장. 예전 백업 파일은 그대로 둠."""
+    folder = Path(folder)
+    if is_inside(cfg.data_dir, folder) and Path(folder).resolve() != (cfg.data_dir / "backup").resolve():
+        raise StorageError("데이터 폴더를 품은 폴더는 백업 폴더로 쓸 수 없습니다 — 다른 폴더를 고르세요")
+    if Path(folder).resolve() == cfg.data_dir.resolve():
+        raise StorageError("데이터 폴더와 같은 폴더입니다 — 다른 폴더를 고르세요")
+    check_writable(folder)
+    cfg.backup_dir = "" if Path(folder).resolve() == (cfg.data_dir / "backup").resolve() else str(folder)
+    cfg.save()
+    return cfg.backup_path
+
+
+def copy_data_dir(old: Path, new: Path) -> dict:
+    """데이터 폴더를 새 폴더로 복사하고 검사 (서버를 멈춘 상태에서). 예전 폴더는 바꾸지 않음.
+    실패하면 새 폴더에 복사한 것을 지우고 StorageError."""
+    old, new = Path(old), Path(new)
+    if is_inside(new, old) or is_inside(old, new):
+        raise StorageError("지금 데이터 폴더의 안쪽 · 바깥쪽 폴더로는 옮길 수 없습니다 — 다른 폴더를 고르세요")
+    if has_qis_data(new):
+        raise StorageError("고른 폴더에 QIS 데이터가 이미 있습니다")
+    if new.exists() and any(new.iterdir()):
+        raise StorageError("빈 폴더를 고르세요 (새 폴더를 만들어서 고르면 됩니다)")
+    check_writable(new)
+    items = [x for x in old.iterdir() if x.name not in _SKIP_COPY and not x.name.startswith("restore_before_")
+             and not x.name.endswith(".tmp")]
+    need = sum(dir_size(x)[0] if x.is_dir() else x.stat().st_size for x in items)
+    free = disk_free(new)
+    if free is not None and free < need * 1.1 + 50_000_000:
+        raise StorageError(f"새 폴더의 디스크에 남은 용량이 부족합니다 (필요 {need / 1048576:.0f}MB · 남음 {free / 1048576:.0f}MB)")
+    made = []
+    try:
+        for x in items:
+            dst = new / x.name
+            made.append(dst)
+            if x.is_dir():
+                shutil.copytree(x, dst)
+            else:
+                shutil.copy2(x, dst)
+        # 검사: DB 무결성 · 첨부 파일 수
+        from ..db import SqliteDB
+        if (old / "qis.db").is_file():
+            r = SqliteDB.check_file(new / "qis.db")
+            if r != "ok":
+                raise StorageError(f"복사한 기록 파일 검사 실패: {r}")
+        a, b = dir_size(old / "files"), dir_size(new / "files")
+        if a != b:
+            raise StorageError(f"첨부 파일이 다릅니다 (원본 {a[1]}개 · 복사본 {b[1]}개)")
+        from .paths import _fix_config_paths
+        _fix_config_paths(old, new)      # qis.json 안의 예전 폴더 경로 (인증서 · 백업 위치) 를 새 경로로
+    except Exception as e:
+        for d in made:
+            if d.is_dir():
+                shutil.rmtree(d, ignore_errors=True)
+            else:
+                d.unlink(missing_ok=True)
+        if isinstance(e, StorageError):
+            raise
+        raise StorageError(f"복사하지 못했습니다: {e}") from e
+    try:
+        (old / OLD_NOTE).write_text(
+            f"QIS 데이터 폴더를 {now()} 에 다음 위치로 옮겼습니다:\n{new}\n\n"
+            "이 폴더는 옮기기 전의 사본입니다. 새 위치에서 잘 동작하는 것을 확인한 뒤 지워도 됩니다.\n", encoding="utf-8")
+    except OSError:
+        pass
+    return {"bytes": need, "files": b[1], "new": str(new)}
+
+
+def storage_info(cfg: Config, app=None) -> dict:
+    """저장 위치 화면에 보일 값."""
+    data, bk = cfg.data_dir, cfg.backup_path
+    dbf = data / "qis.db"
+    fsize, fcount = dir_size(data / "files")
+    last = None
+    if app is not None:
+        try:
+            last = app.state.backup.last()
+        except Exception:
+            last = None
+    try:
+        check_writable(bk)
+        bk_ok, bk_err = True, ""
+    except StorageError as e:
+        bk_ok, bk_err = False, str(e)
+    return {"data": str(data), "db_bytes": dbf.stat().st_size if dbf.is_file() else 0, "files_bytes": fsize, "files": fcount,
+            "data_free": disk_free(data), "data_risky": risky_folder(data),
+            "backup": str(bk), "backup_free": disk_free(bk), "backup_ok": bk_ok, "backup_error": bk_err,
+            "backup_inside": is_inside(bk, data), "same_disk": same_disk(data, bk), "keep": cfg.backup_keep,
+            "hour": cfg.backup_hour, "last": last}
+
+
 # ---------------------------------------------------------------- 가져오기 · 복원 (서버를 멈춘 상태에서)
 def _keep_dir(cfg: Config) -> Path:
     return cfg.data_dir / f"restore_before_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
