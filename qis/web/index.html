@@ -3238,7 +3238,7 @@ function vfReworkHTML(v, onclick, label) {
   v = v || {};
   return `${
     vfNg(v.verifyResult) && onclick
-      ? `<div class="banner" style="background:var(--badb);border-color:transparent;margin-top:10px">검증 결과 <b>무효(재발)</b> — 대책이 효과가 없었습니다. <button type="button" class="b s p" onclick="${onclick}">${esc(label || '재대책 요청')}</button> <span class="muted">이번 검증 기록은 이력으로 남습니다.</span></div>`
+      ? `<div class="banner" style="background:var(--badb);border-color:transparent;margin-top:10px">검증 결과 <b>무효(재발)</b> — 대책이 효과가 없었습니다. <button type="button" class="b s" onclick="${onclick}">${esc(label || '재대책 요청')}</button> <span class="muted">이번 검증 기록은 이력으로 남습니다.</span></div>`
       : ''
   }${
     (v.verifyHist || []).length
