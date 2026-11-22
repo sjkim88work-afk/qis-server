@@ -62,3 +62,27 @@ def run(c):
     ok(r["def2"]["v"] == "judge" and r["def2"]["t"].startswith("귀책 판정 —") and r["def2"]["f"] == "취소,저장" and r["def2"]["sum"], "귀책 판정 창: 사내 분석 · 판정 구역만 · FAR 요약 표시")
     ok(r["kept"] == "2026-11-10|재현 시험|2026-11-15|협력사 귀책 인정", f"단계별로 저장해도 다른 단계 값은 그대로 ({r['kept']})")
     ok(r["req"] == "req" and r["foc"] == "judge", "단계를 지정해서 열기 · 판정 칸으로 열면 판정 창")
+
+    # FAR 메뉴는 불량 관리 안의 보기 ‘귀책 조사 중’ 으로 옮김 (2026-11): 메뉴에 FAR 없음 · 맨 위 줄에서 보기를 고름
+    r = A.evaluate("""async()=>{const wait=ms=>window.__settle(ms),o={};mfDirty=false;closeModal(true);
+      const navs=()=>[...document.querySelectorAll('#nav button')].map(b=>b.firstChild.textContent.trim());
+      const view=()=>({on:(document.querySelector('.dvb .b.on')||{dataset:{}}).dataset.dv,far:!!document.querySelector('#ivtab'),list:!!document.querySelector('#dtab'),
+        kpis:document.querySelectorAll('.kpis .kpi').length,add:!!document.querySelector('.dvb button.b.p'),navOn:(document.querySelector('#nav button.on')||{}).textContent||''});
+      go('defect');await wait(300);o.nav=navs();o.all=view();
+      o.chips=[...document.querySelectorAll('.dvb [data-dv]')].map(b=>b.textContent.replace(/\\s+/g,' ').trim());
+      document.querySelector('.dvb [data-dv=inv]').click();await wait(300);o.inv=view();
+      o.cnt={chip:+document.querySelector('.dvb [data-dv=inv] .mono').textContent,open:db.defects.filter(invOpen).length};
+      document.querySelector('.dvb [data-dv=all]').click();await wait(300);o.back=view();
+      go('inv');await wait(300);o.goInv=view();go('defect');await wait(300);o.goDef=view();
+      // 지연이 있으면 메뉴 ‘불량 관리’ 에 숫자 · 단추에 ‘지연 n’
+      const d=db.defects.find(x=>!x.ncrId)||db.defects[0],inv0=d.inv,resp0=d.resp;d.resp='미정';d.inv={farReq:addDays(today(),-30),farDue:addDays(today(),-20)};render();await wait(200);
+      o.late={n:invLateN(),badge:([...document.querySelectorAll('#nav button')].find(b=>b.textContent.includes('불량 관리'))||{}).textContent||'',chip:(document.querySelector('.dvb .dvl')||{}).textContent||''};
+      d.inv=inv0;d.resp=resp0;farSyncAll();render();return o}""")
+    ok("FAR" not in r["nav"] and "불량 관리" in r["nav"] and "NCR / 8D" in r["nav"], f"메뉴: FAR 없음 — 불량 관리 안으로 옮김 ({r['nav']})")
+    ok(r["all"] == {"on": "all", "far": False, "list": True, "kpis": 0, "add": True, "navOn": r["all"]["navOn"]} and "불량 관리" in r["all"]["navOn"]
+       and r["chips"][0].startswith("전체 ") and r["chips"][1].startswith("귀책 조사 중 "), f"불량 관리 맨 위 줄: 등록 단추 + 보기 2개 ({r['chips']})")
+    ok(r["inv"]["on"] == "inv" and r["inv"]["far"] and not r["inv"]["list"] and r["inv"]["kpis"] == 6 and r["inv"]["add"] and "불량 관리" in r["inv"]["navOn"]
+       and r["cnt"]["chip"] == r["cnt"]["open"], f"보기 ‘귀책 조사 중’: FAR 숫자 6개 + FAR 표 · 메뉴는 ‘불량 관리’ 그대로 · 단추의 숫자 = 조사 중 {r['cnt']['open']}건")
+    ok(r["back"]["on"] == "all" and r["back"]["list"] and r["goInv"]["on"] == "inv" and r["goInv"]["far"] and r["goDef"]["on"] == "all" and r["goDef"]["list"],
+       "보기 바꾸기: ‘전체’ 로 돌아옴 · go('inv') 는 ‘귀책 조사 중’ · 메뉴 ‘불량 관리’ 는 ‘전체’")
+    ok(r["late"]["n"] >= 1 and str(r["late"]["n"]) in r["late"]["badge"] and "지연" in r["late"]["chip"], f"FAR 회신 지연: 메뉴 ‘불량 관리’ 에 숫자 · 단추에 표시 ({r['late']})")
