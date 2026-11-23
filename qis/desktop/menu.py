@@ -13,7 +13,7 @@ from . import core, pages
 
 log = logging.getLogger("qis.desktop")
 
-COPYRIGHT = "© 2026 김선중. All rights reserved. 사내 사용 허락 (LICENSE 참고)"
+COPYRIGHT = "© 2026 kimseonjung"
 
 
 class MenuActions:
