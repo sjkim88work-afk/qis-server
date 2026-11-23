@@ -54,6 +54,6 @@ if MAC:
             "CFBundleVersion": VERSION,
             "NSHighResolutionCapable": True,
             "LSMinimumSystemVersion": "11.0",
-            "NSHumanReadableCopyright": "© 2026 김선중. All rights reserved.",
+            "NSHumanReadableCopyright": "© 2026 kimseonjung",
         },
     )
