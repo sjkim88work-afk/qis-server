@@ -83,6 +83,7 @@ function renderDash() {
     ownD = (d) => !czOwns(d, 'defect');
   const actions =
     issDashItems() +
+    qqDashItems() +
     czDashItems() +
     li(
       open.filter((n) => !czOwns(n, 'ncr') && ncrStatus(n) === '미통보').sort((a, b) => (a.issueDate || '').localeCompare(b.issueDate || '')),

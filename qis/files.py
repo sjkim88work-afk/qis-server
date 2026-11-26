@@ -84,7 +84,7 @@ class Files:
     def missing(self) -> dict:
         """기록이 가리키는데 내용이 없는 첨부 — 가져오기 때 '사진 정보만' 들어온 것 · 파일이 사라진 것.
         각 항목: id · 개인 QIS 사진 폴더의 파일 이름(file, 있으면) · 이름 · 종류 · 어느 기록이 쓰는지."""
-        LABEL = {"defects": "불량", "ncrs": "NCR", "issues": "이슈", "cases": "RCA", "receipts": "입고"}
+        LABEL = {"defects": "불량", "ncrs": "NCR", "issues": "이슈", "qrqcs": "신속대응", "cases": "RCA", "receipts": "입고"}
         refs: dict[str, list[str]] = {}
         for r in self.db.q("SELECT coll, id, data FROM records WHERE deleted=0 AND data IS NOT NULL"):
             try:

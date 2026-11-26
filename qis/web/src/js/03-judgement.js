@@ -924,6 +924,7 @@ const DOCNO = {
   rca: { label: 'RCA', key: 'rcaFormat', rk: 'rcaReset', def: 'RCA-{YYYY}{MM}{DD}-{SEQ4}' },
   i8d: { label: '사내 8D', key: 'i8dFormat', rk: 'i8dReset', def: 'I8D-{YYYY}{MM}{DD}-{SEQ4}' },
   iss: { label: '이슈', key: 'issFormat', rk: 'issReset', def: 'ISS-{YY}{MM}-{SEQ3}' },
+  qrqc: { label: '신속대응', key: 'qrqcFormat', rk: 'qrqcReset', def: 'QRQC-{YY}-{MM}-{SEQ2}' },
 };
 const DOC_RESETS = [
   ['auto', '형식에 따름'],
@@ -947,7 +948,7 @@ function docFmt(k) {
   return f;
 }
 function docReset(k, f) {
-  let r = db.settings[DOCNO[k].rk] || (k === 'ncr' || k === 'iss' ? 'auto' : 'none');
+  let r = db.settings[DOCNO[k].rk] || (k === 'ncr' || k === 'iss' || k === 'qrqc' ? 'auto' : 'none');
   if (r === 'auto') r = /\{DD\}/.test(f) ? 'day' : /\{MM\}/.test(f) ? 'month' : /\{Y{2,4}\}/.test(f) ? 'year' : 'none';
   return r;
 }
@@ -979,7 +980,9 @@ function genDocNo(k, date) {
       ? db.ncrs.map((n) => [n.no, n.issueDate])
       : k === 'iss'
         ? (db.issues || []).map((i) => [i.no, String(i.at || '').slice(0, 10)])
-        : db.cases.map((c) => [c.CaseNo, c.Created]);
+        : k === 'qrqc'
+          ? (db.qrqcs || []).map((r) => [r.no, String(r.date || '').slice(0, 10)])
+          : db.cases.map((c) => [c.CaseNo, c.Created]);
   let mx = 0;
   recs.forEach(([no, d]) => {
     const m = rx.exec(no || '');
