@@ -280,7 +280,7 @@ function renderData() {
   P.docno = () => {
     const row = (k) => {
       const d = DOCNO[k],
-        r = db.settings[d.rk] || (k === 'ncr' || k === 'iss' ? 'auto' : 'none');
+        r = db.settings[d.rk] || (k === 'ncr' || k === 'iss' || k === 'qrqc' ? 'auto' : 'none');
       return sv(
         `${d.label} 번호`,
         `다음 발행 번호: <b>${esc(genDocNo(k, today()).no)}</b>`,
@@ -298,7 +298,7 @@ function renderData() {
           '',
           1,
         ),
-      ) + sg('문서별 번호', row('ncr') + row('rca') + row('i8d') + row('iss'))
+      ) + sg('문서별 번호', row('ncr') + row('rca') + row('i8d') + row('iss') + row('qrqc'))
     );
   };
   P.ncr = () =>

@@ -38,6 +38,18 @@ const LOGCFG = {
     ph: '확인한 사실 · 원인 추정 · 결정 사항',
     head: '',
   },
+  // 신속대응(QRQC) 의 조치 · 진행 기록
+  qrqc: {
+    coll: () => db.qrqcs || [],
+    kinds: () => QQ_KINDS,
+    now: true,
+    reason: true,
+    ch: '조치 · 진행 기록 남기기',
+    hint: '실제로 한 일과 결과만 적습니다.',
+    text: '실행 내용',
+    ph: '무엇을 했는가 — 예: 출하 대기 재고 300개 전수 선별, 협력사에 불량 시료 5개 전달',
+    head: '',
+  },
 };
 const lgCfg = () => LOGCFG[tl.kind] || LOGCFG.defect;
 // 기록의 일시 표시: 날짜 + 시각 (없으면 시간대, 그것도 없으면 날짜만)
@@ -113,7 +125,7 @@ function autoEvents(d, n, lbl) {
   return E;
 }
 function caseReadonly(kind, obj) {
-  if (kind === 'issue') return [];
+  if (kind === 'issue' || kind === 'qrqc') return [];
   if (kind === 'defect') {
     const n = ncrOfDefect(obj);
     return [...autoEvents(obj, null), ...(n ? autoEvents(null, n) : []), ...(n ? (n.logs || []).map((l) => ({ ...l, src: 'NCR', ro: true })) : [])];
@@ -130,7 +142,7 @@ function caseReadonly(kind, obj) {
 // 보고서 · ‘마지막 진행’ 계산(caseEntries)에는 넣지 않음 — 화면과 기록 출력에서만 이어 보임
 function tlReadonly() {
   const o = tl.obj;
-  if (!o) return [];
+  if (!o || tl.kind === 'qrqc') return [];
   if (tl.kind === 'issue') {
     const L = issLinks(o);
     return [
@@ -373,7 +385,7 @@ function renderLogsInner(b) {
     pend = tl.own.filter((x) => x._new).length,
     pendEd = tl.own.filter((x) => x._dirty && !x._new).length;
   const ownCase =
-    tl.kind !== 'issue' && typeof czOwns === 'function' && czOwns(tl.obj, tl.kind)
+    tl.kind !== 'issue' && tl.kind !== 'qrqc' && typeof czOwns === 'function' && czOwns(tl.obj, tl.kind)
       ? (() => {
           const id = tl.obj.caseId || (db.ncrs.find((n) => n.id === tl.obj.ncrId) || {}).caseId;
           return czById('cases', id);
@@ -717,7 +729,7 @@ function tlCommit() {
 async function lgPrint() {
   const w = reportWin(),
     o = tl.obj,
-    isN = tl.kind === 'ncr' || tl.kind === 'issue'; // 번호(no)가 있는 문서
+    isN = tl.kind === 'ncr' || tl.kind === 'issue' || tl.kind === 'qrqc'; // 번호(no)가 있는 문서
   const L = [...tl.own.filter((x) => !x._new), ...tlReadonly()].sort((a, c) => lgCmpDesc(c, a));
   const ids = [...new Set(L.flatMap((l) => l.photos || []))];
   let P = {};
@@ -736,9 +748,11 @@ async function lgPrint() {
   const title =
     tl.kind === 'issue'
       ? `${o.no} · ${o.title || ''}`
-      : isN
-        ? `${o.no} · ${supName(o.supplierId) || ''}`
-        : `${defLabel(o)} · ${supName(o.supplierId) || ''}`;
+      : tl.kind === 'qrqc'
+        ? `${o.no} · ${qqTitle(o)}`
+        : isN
+          ? `${o.no} · ${supName(o.supplierId) || ''}`
+          : `${defLabel(o)} · ${supName(o.supplierId) || ''}`;
   const unsaved = tl.own.filter((x) => x._new || x._dirty).length;
   const html = reportFrame(`<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>실행기록_${esc(isN ? o.no : o.date)}</title><style>
   body{font-family:'Malgun Gothic','맑은 고딕',sans-serif;font-size:11px;color:#111;margin:24px}h1{font-size:17px;margin:6px 0 2px}.s{color:#555}

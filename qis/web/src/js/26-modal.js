@@ -149,6 +149,7 @@ function modalFoot(btns) {
 }
 function openModal(title, body, btns) {
   delete $('#modal').dataset.iss; // 이슈 상세 창 표시 (11-issue.js issShow 가 다시 붙임)
+  delete $('#modal').dataset.qq; // 신속대응 상세 창 표시 (12-qrqc.js qqShow 가 다시 붙임)
   delete $('#modal').dataset.inv; // FAR 창의 단계 표시 (15c-far.js editInv 가 다시 붙임)
   delete $('#modal').dataset.cz; // RCA 상세 창 표시 (27c-rca-views.js czShow 가 다시 붙임)
   $('#mt').textContent = title;
@@ -179,6 +180,18 @@ async function closeModal(force) {
   if (m.dataset.iss) {
     delete m.dataset.iss;
     state.issId = null;
+    return;
+  }
+  // 신속대응 상세 창을 닫음 → 보고 있던 건 없음 (적다 만 항목은 버림). 상세에서 연 다른 창(기본 정보 수정)을 닫음 → 상세로 돌아감
+  if (m.dataset.qq) {
+    delete m.dataset.qq;
+    qqDraftDrop();
+    state.qqCrit = null;
+    state.qqId = null;
+    return;
+  }
+  if (state.qqId && state.tab === 'qrqc' && qqById(state.qqId)) {
+    qqShow(state.qqId);
     return;
   }
   // RCA 창을 닫음 → 보고 있던 RCA 없음. RCA 창에서 연 다른 창(NCR · 불량 …)을 닫음 → RCA 창으로 돌아감

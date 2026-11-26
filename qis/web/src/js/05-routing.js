@@ -42,6 +42,7 @@ const TABS = [
   ['dash', '대시보드'],
   ['prog', '진행 현황'],
   ['issue', '이슈'],
+  ['qrqc', '신속대응'],
   ['defect', '불량 관리'],
   ['ncr', 'NCR / 8D'],
   ['case', 'RCA'],
@@ -64,9 +65,9 @@ const state = {
 };
 // 보이는 화면: 공유본은 협력사 품질 · 기준정보 · 설정을 숨김. 서버판은 관리자가 아니면 설정 · 백업을 숨김
 const RO_TABS = SHARE
-  ? ['dash', 'prog', 'issue', 'defect', 'ncr', 'case', 'copq']
+  ? ['dash', 'prog', 'issue', 'qrqc', 'defect', 'ncr', 'case', 'copq']
   : !srvCanAdmin()
-    ? ['dash', 'prog', 'issue', 'defect', 'ncr', 'case', 'sup', 'copq', 'master']
+    ? ['dash', 'prog', 'issue', 'qrqc', 'defect', 'ncr', 'case', 'sup', 'copq', 'master']
     : TABS.map((t) => t[0]);
 function go(t) {
   // FAR 는 불량 관리 안의 보기 ‘귀책 조사 중’ — go('inv') 는 그 보기를 엶 (예전 메뉴 이름을 쓰는 곳과 맞춤)

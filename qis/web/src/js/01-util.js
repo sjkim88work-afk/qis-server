@@ -1,6 +1,6 @@
 /* ================= 기본 유틸 ================= */
 const KEY = 'personalQMS_v1';
-const COLLS = ['suppliers', 'parts', 'defects', 'ncrs', 'receipts', 'reviews', 'cases', 'actions', 'issues'];
+const COLLS = ['suppliers', 'parts', 'defects', 'ncrs', 'receipts', 'reviews', 'cases', 'actions', 'issues', 'qrqcs'];
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const nl = (s) => esc(s).replace(/\n/g, '<br>');
@@ -255,6 +255,7 @@ function defaultDB() {
     cases: [],
     actions: [],
     issues: [],
+    qrqcs: [],
     deleted: [],
     bom: { updatedAt: '', rows: [] },
   };
@@ -326,6 +327,7 @@ function migrate(d) {
   });
   d.deleted = Array.isArray(d.deleted) ? d.deleted.filter((t) => t && t.id) : [];
   d.issues.forEach(issNorm); // 이슈 기록을 공통 기록 구조로 (불량 · NCR 실행 기록과 같음)
+  d.qrqcs.forEach(qqNorm); // 신속대응: Exit Criteria 9개 항목 · 기록을 공통 구조로
   if (d.settings.logo && !isImgURL(d.settings.logo)) d.settings.logo = '';
   Object.keys(d.settings.signs).forEach((k) => {
     if (!isImgURL(d.settings.signs[k])) delete d.settings.signs[k];

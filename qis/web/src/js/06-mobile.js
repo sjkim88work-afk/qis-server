@@ -505,7 +505,18 @@ function renderInner() {
   let navG = '';
   $('#nav').innerHTML = TABS.filter(([k]) => RO_TABS.includes(k))
     .map(([k, l]) => {
-      const n = k === 'case' ? czBadgeN() : k === 'prog' ? progBadgeN() : k === 'defect' ? invLateN() : k === 'issue' ? issWaitN() : 0;
+      const n =
+        k === 'case'
+          ? czBadgeN()
+          : k === 'prog'
+            ? progBadgeN()
+            : k === 'defect'
+              ? invLateN()
+              : k === 'issue'
+                ? issWaitN()
+                : k === 'qrqc'
+                  ? qqRedN()
+                  : 0;
       const g = NAV_GRP[k] || navG,
         gh = g !== navG ? `<div class="gh">${g}</div>` : '';
       navG = g;
@@ -525,6 +536,7 @@ function renderInner() {
   const f =
     {
       issue: renderIssue,
+      qrqc: renderQrqc,
       case: czRender,
       dash: renderDash,
       prog: renderProg,

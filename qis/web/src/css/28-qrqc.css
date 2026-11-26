@@ -1,0 +1,16 @@
+/* ===== 신속대응 (QRQC) — 추적표 · Exit Criteria 항목 ===== */
+.bg.qqs{display:inline-block;min-width:30px;text-align:center;font-weight:700;font-family:var(--f-mono,monospace)}
+table.qqt th.qqh{font-size:var(--fs-xs);line-height:1.25;text-align:center;min-width:62px;white-space:normal}
+table.qqt td.qqcc{text-align:center;cursor:pointer;white-space:nowrap}
+table.qqt td.qqcc:hover{box-shadow:0 0 0 2px var(--pri) inset}
+table.qqt .qqd{font-size:11px;margin-top:2px}table.qqt .qqd.late{color:var(--bad);font-weight:600}
+.qqclamp{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;white-space:normal}
+.qqg{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px}
+button.qqc{font:inherit;text-align:left;display:flex;flex-direction:column;gap:4px;padding:10px 12px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:inherit;cursor:pointer;min-width:0}
+button.qqc:hover{border-color:var(--pri)}button.qqc.on{border-color:var(--pri);box-shadow:0 0 0 2px var(--pri) inset}
+button.qqc .h{display:flex;justify-content:space-between;gap:8px;align-items:center}
+button.qqc .n{font-size:var(--fs-sm);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.qqe{border:1px solid var(--pri);border-radius:8px;padding:12px;margin-top:10px;background:var(--mut)}
+button.b.qqsb.on{font-weight:700;color:#fff}
+button.b.qqsb.on.bad{background:var(--bad);border-color:var(--bad)}button.b.qqsb.on.warn{background:var(--warn);border-color:var(--warn)}
+button.b.qqsb.on.ok{background:var(--ok);border-color:var(--ok)}button.b.qqsb.on.mut{background:var(--sub);border-color:var(--sub)}

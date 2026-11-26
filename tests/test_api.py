@@ -244,3 +244,36 @@ def test_admin_reset_and_replace_import(env):
     # 이력에 남음
     acts = [x["action"] for x in a.get("/api/admin/audit").json()["items"]]
     assert "reset" in acts and acts.count("import") >= 3
+
+
+def test_qrqc_collection(env):
+    """신속대응(QRQC): 저장 · 권한 · 항목별 동시 수정 · 변경 이력 · 첨부 참조"""
+    from qis.files import photo_refs
+
+    app, _ = env
+    ed = client(app, "kim", "Editor1234")
+    ad = client(app, "admin", "Qadm2026x")
+    vw = client(app, "lee", "Viewer1234")
+    crit = {k: {"s": "R", "done": "", "checker": "", "note": "", "photos": []}
+            for k in ("cont", "rca", "act", "ep", "lpa", "ver", "pfmea", "sw", "ll")}
+    q = {"id": "q1", "no": "QRQC-26-11-01", "date": "2026-11-17", "part": "프론트 도어래치", "line": "조립 2라인",
+         "issue": "래치 걸림", "owner": "김작성", "action": "", "crit": crit, "logs": []}
+    r = sync(ed, [{"coll": "qrqcs", "id": "q1", "rev": 0, "data": q}]).json()["results"][0]
+    assert r["ok"] and r["rev"] == 1
+    # 조회 권한은 저장 못 함, 읽기는 됨
+    assert sync(vw, [{"coll": "qrqcs", "id": "q1", "rev": 1, "data": {**q, "owner": "x"}}]).status_code == 403
+    assert [x["coll"] for x in vw.get("/api/boot").json()["records"]] == ["qrqcs"]
+    # 두 사람이 같은 버전에서 서로 다른 항목을 고침 → 둘 다 남음
+    a = {**q, "action": "봉쇄: 전수 선별"}
+    b = {**q, "crit": {**crit, "cont": {"s": "G", "done": "2026-11-18", "checker": "김작성", "note": "격리", "photos": ["ph_q1"]}}}
+    assert sync(ad, [{"coll": "qrqcs", "id": "q1", "rev": 1, "base": q, "data": a}]).json()["results"][0]["rev"] == 2
+    res = sync(ed, [{"coll": "qrqcs", "id": "q1", "rev": 1, "base": q, "data": b}]).json()["results"][0]
+    assert res["ok"] and res["merged"] and res["data"]["action"] == "봉쇄: 전수 선별" and res["data"]["crit"]["cont"]["s"] == "G"
+    # 변경 이력: 이름 · 표시 이름
+    items = ad.get("/api/admin/audit?coll=qrqcs&id=q1").json()["items"]
+    assert items[0]["collName"] == "신속대응" and "QRQC-26-11-01" in items[0]["label"] and "프론트 도어래치" in items[0]["label"]
+    assert [i["action"] for i in items].count("update") == 2
+    # 항목 첨부는 photos 목록 — 서버가 '쓰는 첨부'로 알아봄
+    assert photo_refs(res["data"]) == ["ph_q1"]
+    # 백업 내보내기에 들어감
+    assert [x["id"] for x in app.state.store.export()["qrqcs"]] == ["q1"]
